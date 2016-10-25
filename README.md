@@ -1,7 +1,5 @@
-# CS273: Data and Knowledge Base
-## GitHub data 
-## - Jack Alexander and Harshitha Chidananda
-
+## CS273: Data and Knowledge Base
+### GitHub data - Jack Alexander and Harshitha Chidananda
 
 ###Project Proposal: 
 
@@ -38,14 +36,15 @@ If possible (stretch goal), perform analysis on the changes to the codebase and 
 ___
 
 
-**Milestones**
+**Milestones:**
+
 Due Date | Milestones to be achieved
 --- | --- 
-Oct 18 | Proposal: Define problem statement, proposed solution, find data and make a project. proposal. 
-Oct 25 | Dataset: Finalizing on Dataset, preprocessing and normalizing the  obtained data.
-Nov 1 | Algorithms: Analyze various algorithms and finalize on what algorithms would work best for the obtained data.
-Nov 8 | Developing relationships: Developing relationships between various entities in the data. 
-Nov 15 | Results: Obtain results after algorithms and Natural Language Processing is applied on the dataset
-Nov 22 | Optimization: Optimizing algorithms and performing experiments to check if there is any room for improvement.
-Nov 29 | Performance study: Do Performance study and put everything together. Check if the project can be extended to other GitHub repositories 
-Dec 6 | Documentation and Report: Document every step undertaken, decisions made, algorithms used, what went well, what didn’t go well, results, scope for future improvement. 
+Oct 18 | **Proposal:** Define problem statement, proposed solution, find data and make a project. proposal. 
+Oct 25 | **Dataset:** Finalizing on Dataset, preprocessing and normalizing the  obtained data.
+Nov 1 | **Algorithms:** Analyze various algorithms and finalize on what algorithms would work best for the obtained data.
+Nov 8 | **Developing relationships:** Developing relationships between various entities in the data. 
+Nov 15 | **Results:** Obtain results after algorithms and Natural Language Processing is applied on the dataset
+Nov 22 | **Optimization:** Optimizing algorithms and performing experiments to check if there is any room for improvement.
+Nov 29 | **Performance study:** Do Performance study and put everything together. Check if the project can be extended to other GitHub repositories 
+Dec 6 | **Documentation and Report:** Document every step undertaken, decisions made, algorithms used, what went well, what didn’t go well, results, scope for future improvement. 
