@@ -1,7 +1,6 @@
 package edu.ucsb.cs273;
 
-import org.kohsuke.github.GHUser;
-import org.kohsuke.github.GitHub;
+import org.kohsuke.github.*;
 
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
@@ -23,7 +22,14 @@ public class Main {
         }
         GitHub gitHub = GitHub.connectUsingOAuth(oauth);
 
-        GHUser me = gitHub.getMyself();
-        System.out.println(me.getName());
+        int count = 0;
+        GHRepository rocksdb = gitHub.getRepository("facebook/rocksdb");
+        PagedIterable<GHIssue> issues = rocksdb.listIssues(GHIssueState.OPEN);
+        for(GHIssue issue : issues){
+            System.out.println(issue.getBody());
+            count++;
+        }
+
+        System.out.println("Count: " + count);
     }
 }
