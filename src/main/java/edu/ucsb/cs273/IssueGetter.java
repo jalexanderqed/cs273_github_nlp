@@ -13,6 +13,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.List;
 
 public class IssueGetter {
     private String repository;
@@ -36,17 +38,37 @@ public class IssueGetter {
         String filePrefix = "output/" + repository + "/";
 
         int count = 0;
+        int pullCount = 0;
+        int pullIssCount = 0;
         GHRepository rocksdb = gitHub.getRepository(repository);
         PagedIterable<GHIssue> issues = rocksdb.listIssues(GHIssueState.ALL);
         for (GHIssue issue : issues) {
             try {
-                PrintWriter writer = new PrintWriter(filePrefix + issue.getNumber() + ".txt", "UTF-8");
-                writer.println(issue.getBody());
-                writer.close();
+                PrintWriter issueWriter = new PrintWriter(filePrefix + issue.getNumber() + ".txt", "UTF-8");
+                issueWriter.println(issue.getBody());
+                List<GHIssueComment> comments = issue.getComments();
+                String originalPoster = issue.getUser().getLogin();
+
+                HashMap<String, Integer> relatedUsers = new HashMap<String, Integer>();
+
+                for(GHIssueComment comment : comments){
+                    issueWriter.println(comment.getBody());
+                    String poster = comment.getUser().getLogin();
+                    if(!originalPoster.equals(poster)) {
+                        relatedUsers.put(poster, 1);
+                    }
+                }
+
+                if(issue.isPullRequest()) {
+                    //relatedUsers.put(originalPoster, 2);
+                }
+
+                issueWriter.close();
             } catch (IOException e) {
                 throw e;
             }
             count++;
+            System.out.println(count);
         }
 
         System.out.println("Got " + count + " issues.");

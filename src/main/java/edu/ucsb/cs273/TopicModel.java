@@ -17,45 +17,24 @@ import java.io.*;
 
 public class TopicModel {
     private String directory;
+    File modelLocation;
+    File instancesLocation;
+    int numTopics = 100;
 
-    public TopicModel(String targetDir){
+    public TopicModel(String targetDir, File modelLoc, File instancesLoc){
         directory = targetDir;
+        modelLocation = modelLoc;
+        instancesLocation = instancesLoc;
     }
 
-    public void run() throws Exception {
+    public TopicModel(File modelLoc, File instancesLoc){
+        modelLocation = modelLoc;
+        instancesLocation = instancesLoc;
+    }
 
-        // Begin by importing documents from text to feature sequences
-        ArrayList<Pipe> pipeList = new ArrayList<Pipe>();
-
-        // Pipes: lowercase, tokenize, remove stopwords, map to features
-        pipeList.add(new Input2CharSequence());
-        pipeList.add(new CharSequenceLowercase());
-        pipeList.add(new CharSequence2TokenSequence(Pattern.compile("\\p{L}[\\p{L}\\p{P}]+\\p{L}")));
-        pipeList.add(new TokenSequenceRemoveStopwords(new File("stoplists/en.txt"), "UTF-8", false, false, false));
-        pipeList.add(new TokenSequence2FeatureSequence());
-
-        InstanceList instances = new InstanceList(new SerialPipes(pipeList));
-
-        instances.addThruPipe(new FileIterator(directory));
-
-        // Create a model with 100 topics, alpha_t = 0.01, beta_w = 0.01
-        //  Note that the first parameter is passed as the sum over topics, while
-        //  the second is the parameter for a single dimension of the Dirichlet prior.
-        int numTopics = 100;
-        ParallelTopicModel model = new ParallelTopicModel(numTopics, 1.0, 0.01);
-
-        model.addInstances(instances);
-
-        // Use two parallel samplers, which each look at one half the corpus and combine
-        //  statistics after every iteration.
-        model.setNumThreads(2);
-
-        // Run the model for 50 iterations and stop (this is for testing only,
-        //  for real applications, use 1000 to 2000 iterations)
-        model.setNumIterations(1000);
-        model.estimate();
-
-        // Show the words and topics in the first instance
+    public void load() throws Exception{
+        ParallelTopicModel model = ParallelTopicModel.read(modelLocation);
+        InstanceList instances = InstanceList.load(instancesLocation);
 
         // The data alphabet maps word IDs to strings
         Alphabet dataAlphabet = instances.getDataAlphabet();
@@ -116,4 +95,34 @@ public class TopicModel {
         System.out.println(topicZeroText.toString());
     }
 
+    public void run() throws Exception {
+
+        // Begin by importing documents from text to feature sequences
+        ArrayList<Pipe> pipeList = new ArrayList<Pipe>();
+
+        // Pipes: lowercase, tokenize, remove stopwords, map to features
+        pipeList.add(new Input2CharSequence());
+        pipeList.add(new CharSequenceLowercase());
+        pipeList.add(new CharSequence2TokenSequence(Pattern.compile("\\p{L}[\\p{L}\\p{P}]+\\p{L}")));
+        pipeList.add(new TokenSequenceRemoveStopwords(new File("stoplists/en.txt"), "UTF-8", false, false, false));
+        pipeList.add(new TokenSequence2FeatureSequence());
+
+        InstanceList instances = new InstanceList(new SerialPipes(pipeList));
+
+        instances.addThruPipe(new FileIterator(directory));
+
+        ParallelTopicModel model = new ParallelTopicModel(numTopics, 1.0, 0.01);
+
+        model.addInstances(instances);
+
+        // Use two parallel samplers, which each look at one half the corpus and combine
+        //  statistics after every iteration.
+        model.setNumThreads(2);
+
+        model.setNumIterations(2000);
+        model.estimate();
+
+        model.write(modelLocation);
+        instances.save(instancesLocation);;
+    }
 }
