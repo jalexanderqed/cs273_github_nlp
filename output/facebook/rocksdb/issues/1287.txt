@@ -1,0 +1,9 @@
+
+Thanks for spotting this, @adamretter!  The diff looks good to me in general.  I only have one minor comment.
+
+Thanks for importing. If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4045466).
+
+@yhchiang so?
+
+@adamretter so it's ready to go :)
+

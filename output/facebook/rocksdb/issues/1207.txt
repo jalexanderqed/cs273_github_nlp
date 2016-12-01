@@ -1,0 +1,27 @@
+getline on std::cin can be very inefficient when ldb is loading large values, with high CPU usage in libc _IO_(un)getc, this is because of the performance penalty that comes from synchronizing stdio and iostream buffers.
+See the reproducers and tests in #1133 .
+If an ifstream on /dev/stdin is used (when available) then using ldb to load large values can be much more efficient.
+I thought for ldb load, that this approach is preferable to using <cstdio> or std::ios_base::sync_with_stdio(false).
+I couldn't think of a use case where ldb load would need to support reading unbuffered input, an alternative approach would be to add support for passing --input_file=/dev/stdin.
+I have a CLA in place, thanks.
+
+The CI tests were failing at the time of https://github.com/facebook/rocksdb/pull/1156, so this change and PR will supersede it.
+
+The errors in https://ci.appveyor.com/project/Facebook/rocksdb/build/1.0.1357 
+
+```
+rocksdb\util\coding.h(157): error C2440: 'static_cast' : cannot convert from 'uint32_t *' to 'const char *'
+rocksdb\util\coding.h(167): error C2065: 'static_const' : undeclared identifier
+```
+
+look to be from https://github.com/facebook/rocksdb/commit/efd013d6d8ef3607e9c004dee047726538f0163d#diff-b39c139bfd761e5ccf7da232a813dd74R157
+
+The one Travis CI job that failed:
+  https://travis-ci.org/facebook/rocksdb/jobs/144466847
+seems far removed and unrelated to the change to `tools/ldb_cmd.cc`.
+
+Thanks @thatsafunnyname, LGTM.
+I just want to make sure that this change works with windows before merging
+
+LGTM, Thanks !
+

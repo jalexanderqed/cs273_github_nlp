@@ -1,0 +1,11 @@
+The verification condition of the test DBTest.RepeatedWritesToSameKey doesn't hold anymore after 3ce3bb3da2486c2c18a332128dda7c05a91abb85.
+Disable the test for now before we find a way to replace it.
+
+Test Plan: Run the test and make sure it is disabled.
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1420/files/207afdb131adcd1b3904d5abd065c89232ae3916..5440675c3d4cee703ccd7e7ef59257c9da5c9ffc)
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1420/files/5440675c3d4cee703ccd7e7ef59257c9da5c9ffc..0fba7d1c40c33203fa24811e5146a9d76e39fe4e)
+
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4071703).
+

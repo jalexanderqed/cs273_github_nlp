@@ -1,0 +1,27 @@
+Some times ,we write bad data into db and need rollback it 。
+For reader,  we can assigned the  snapshot with seqid=200. But evently  the data  with seq between seq 201 and 9800 must be deleted.  Can we  use   compaction filter  to filter them?
+
+key: type: put seqID: 1 
+
+key: B type: put seqID: 10000 
+key: B type: put seqID: 9900<=====  make snapshot with seqID 9900
+key: B type: put seqID: 9800               ||
+...                                                         bad data  
+                                                            bad data
+                                                            || 
+
+key: B type: put seqID: 300
+key: B type: put seqID: 200<=====  make snapshot with seqID 200
+... 
+key: B type: put seqID: 2 
+
+Compaction filters do not have access to RocksDB's internal sequence numbers.  However, if you stored your own sequence numbers in your data, you would be able to use a compaction filter to remove data you do not want.
+
+Rocksdb supports backups that would allow you to rollback your entire DB to a previous snapshot.  However, I'm not sure if there is an easy way to use Backups to only only rollback a time-window in the middle of your history.
+
+@superwood, As @agiardullo mentioned compaction filter have no access to internal sequence numbers. but I am wondering, do you want to delete these keys or rollback to the values with seqno 200 ? If you want to rollback to 200 then even if you have access to the internal sequence numbers the compaction filter wont be able to know the value of this key at seqno 200 to roll it back
+
+@IslamAbdelRahman, good point.  In order to guarantee that version 200 of your data still exists, you would need to hold a snapshot at that time.  Unfortunately, this would only work as long as the db isn't closed and re-opened.
+
+I wonder how easy it would be to extend incremental backup to let you choose which increments to apply/drop.  
+

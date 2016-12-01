@@ -1,0 +1,10 @@
+In file included from db/db_impl.cc:68:
+In file included from ./util/iostats_context_imp.h:7:
+./include/rocksdb/iostats_context.h:30:8: error: thread-local storage is
+      unsupported for the current target
+extern __thread IOStatsContext iostats_context;
+
+This should have been fixed with https://github.com/facebook/rocksdb/commit/d5bd6c772beac298b578cdf061fac00334e1f126
+
+I found another error which should be fixed with https://reviews.facebook.net/D22701
+

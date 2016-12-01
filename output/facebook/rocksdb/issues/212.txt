@@ -1,0 +1,20 @@
+I have the following error, when I issue "make rocksdbjava" command.
+
+[epattuk@epattuk-ld1 rocksdb]$ make rocksdbjava
+OPT="-fPIC -DNDEBUG -O2" make librocksdb.a -j32
+make[1]: Entering directory `/home/epattuk/Desktop/rocksdbSource/rocksdb'
+g++ -g -Wall -Werror -Wsign-compare -I. -I./include -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_ATOMIC_PRESENT -DROCKSDB_FALLOCATE_PRESENT -DZLIB   -DHAVE_JEMALLOC -fPIC -DNDEBUG -O2 -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c util/build_version.cc -o util/build_version.o 
+g++ -g -Wall -Werror -Wsign-compare -I. -I./include -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_ATOMIC_PRESENT -DROCKSDB_FALLOCATE_PRESENT -DZLIB   -DHAVE_JEMALLOC -fPIC -DNDEBUG -O2 -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c utilities/spatialdb/spatial_db.cc -o utilities/spatialdb/spatial_db.o 
+utilities/spatialdb/spatial_db.cc: In static member function ‘static rocksdb::Status rocksdb::spatial::SpatialDB::Open(const rocksdb::spatial::SpatialDBOptions&, const string&, rocksdb::spatial::SpatialDB**, bool)’:
+utilities/spatialdb/spatial_db.cc:708:65: error: ‘next_id’ may be used uninitialized in this function [-Werror=maybe-uninitialized]
+cc1plus: all warnings being treated as errors
+make[1]: *** [utilities/spatialdb/spatial_db.o] Error 1
+make[1]: Leaving directory`/home/epattuk/Desktop/rocksdbSource/rocksdb'
+make: **\* [rocksdbjava] Error 2
+
+Should have been fixed by https://github.com/facebook/rocksdb/commit/f780f35b06189b34a60810107324df0cb99e4824, can you try rebasing?
+
+I did a clean build, and yet the problem is still there. 
+
+no problem now. thanks for the help.
+

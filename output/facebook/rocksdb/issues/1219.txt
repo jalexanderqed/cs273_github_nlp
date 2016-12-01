@@ -1,0 +1,6 @@
+using an platform-neutral file(MAKE_DIRECTORY ${DIR}) function
+
+@yuslepukhin Could you give me an opinion on the changes to `java/CMakeLists.txt` for RocksJava on Windows please?
+
+Closes https://github.com/facebook/rocksdb/issues/1285
+

@@ -1,0 +1,4 @@
+Made delete_obsolete_files_period_micros option dynamic. It can be updating using DB::SetDBOptions().
+@yiwu-arbug has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4208184).
+
+@tonek updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1549/files/6e8fd789832bc0551bd8e86b62cda8b4a8d7be18..d616b0beee5f5b390e96c74d5c72f177688ff6bf) - [changes since last import](https://github.com/facebook/rocksdb/pull/1549/files/6e8fd789832bc0551bd8e86b62cda8b4a8d7be18..d616b0beee5f5b390e96c74d5c72f177688ff6bf)

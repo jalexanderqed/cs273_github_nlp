@@ -1,0 +1,19 @@
+Summary: This patch moves all posix thread logic to separate library.
+The motivation is to allow another environments to easily reuse posix
+threads. HDFS wraps already posix threads; this split would simplify
+this code.
+
+Test Plan: No new functionality is added to posix Env or the threading
+library, thus the current tests should suffice.
+
+@siying @igorcanadi Does this make sense to you? Thanks!
+
+Sorry I forgot the patch. The general approach is good to me. Can you move those implementation of functions from .h file to .cc files?
+
+No problem, thanks for looking into it :) The logic is moved to thread_posix.cc now.
+Let me know if I should make any further changes.
+
+@siying Rebased and pushed again with the changes you proposed. Let me know if something else should be changed. Thanks.
+
+Thanks @siying!
+

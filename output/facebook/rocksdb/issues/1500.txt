@@ -1,0 +1,6 @@
+char is unsigned on power by default causing this test to fail with the FF case. ppc64 return 255 while x86 returned -1. Casting works on both platforms.
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+**If you are contributing on behalf of someone else (eg your employer)**: the individual CLA is not sufficient - use https://developers.facebook.com/opensource/cla?type=company instead. Contact cla@fb.com if you have any questions.
+
+@grooverdan Can you sign the CLA so we can merge your PR? Thanks!

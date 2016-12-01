@@ -1,0 +1,8 @@
+These commits fix issues with `jtest` if build with debug symbols and enabled assertions. ColumnFamilies are now cleaned up properly before `db.close()` is called. Another fix was to disown the native handle for the default column family handle.
+
+@fyrz Can you open a Phabricator for this please?
+
+@adamretter this evening
+
+Differential: https://reviews.facebook.net/D34569
+

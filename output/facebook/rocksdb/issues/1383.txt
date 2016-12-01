@@ -1,0 +1,5 @@
+
+Thank you for your pull request.  As you may know, we require contributors to sign our Contributor License Agreement, and we don't seem to have you on file and listed as active anymore.  In order for us to review and merge your code, please email cla@fb.com with your details so we can update your status.
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+

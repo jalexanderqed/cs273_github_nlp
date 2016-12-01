@@ -1,0 +1,8 @@
+error: ‘res.rocksdb::BatchResult::sequence’ may be used uninitialized in this function [-Werror=maybe-uninitialized]
+   return res.sequence;
+              ^
+cc1plus: all warnings being treated as errors
+make: **\* [db/db_test.o] Error 1
+
+Does https://github.com/facebook/rocksdb/commit/b26dc9562801d935ceb1f4410fbb709851840c99 fix the problem?
+

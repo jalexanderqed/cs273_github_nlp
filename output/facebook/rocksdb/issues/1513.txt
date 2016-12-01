@@ -1,0 +1,21 @@
+Previously we used TableCache::NewIterator() for multiple purposes (data
+block iterator and range deletion iterator), and returned non-ok status in
+the data block iterator. In one case where the caller only used the range
+deletion block iterator (https://github.com/facebook/rocksdb/blob/9e7cf3469bc626b092ec48366d12873ecab22b4e/db/version_set.cc#L965-L973),
+we didn't check/free the data block iterator containing non-ok status, which
+caused a valgrind error.
+
+So, this diff decouples creation of data block and range deletion block iterators,
+and updates the callers accordingly. Both functions can return non-ok status
+in an InternalIterator. Since the non-ok status is returned in an iterator that the
+callers will definitely use, it should be more usable/less error-prone.
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4181423).
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1513/files/c273a98dbbf78439710866340cba9183f6934e79..e18346432938bb6ae9112b7b46354dafb041b167) - [changes since last import](https://github.com/facebook/rocksdb/pull/1513/files/c273a98dbbf78439710866340cba9183f6934e79..e18346432938bb6ae9112b7b46354dafb041b167)
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1513/files/e18346432938bb6ae9112b7b46354dafb041b167..2cffd6ff5fcb9f9219192fad6bebd1206704027b) - [changes since last import](https://github.com/facebook/rocksdb/pull/1513/files/e18346432938bb6ae9112b7b46354dafb041b167..2cffd6ff5fcb9f9219192fad6bebd1206704027b)
+
+i cannot believe the similarity in branch name between this PR and https://github.com/facebook/rocksdb/pull/1490
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1513/files/2cffd6ff5fcb9f9219192fad6bebd1206704027b..00cee9b5f0855e890f1664304a68243419aeb7e2) - [changes since last import](https://github.com/facebook/rocksdb/pull/1513/files/2cffd6ff5fcb9f9219192fad6bebd1206704027b..00cee9b5f0855e890f1664304a68243419aeb7e2)
+

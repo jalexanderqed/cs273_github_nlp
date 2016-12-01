@@ -1,0 +1,18 @@
+This changeset plugs a memory leak that exists in `DocumentDBImpl::CreateIndex`: if `CreateColumnFamily` fails, then we never deallocate the `Index` that we allocated a few lines back.
+
+Additionally, the variable names used in `VersionEdit::AddFile` were swapped, which could cause confusion when reviewing the code. Fix the issue. Note that all the call sites are _correctly_ passing the arguments in and the problem is entirely localized in `AddFile`.
+
+Both of those are nice catches! Thanks!
+
+Was PVS-Studio involved? :-)
+
+On 5 September 2014 05:46, Igor Canadi notifications@github.com wrote:
+
+> Merged #271 https://github.com/facebook/rocksdb/pull/271.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/pull/271#event-161581099.
+
+@donovanhide no - this was just good old-fashioned detective work. Another static analysis tool was, however, responsible for #273.
+

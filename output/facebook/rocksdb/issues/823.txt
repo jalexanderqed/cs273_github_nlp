@@ -1,0 +1,33 @@
+  in 64-bit.
+
+  Currently, a signed off_t type is being used for the following
+  interfaces for both offset and the length in bytes:
+- `Allocate`
+- `RangeSync`
+  
+  On Linux `off_t` is automatically either 32 or 64-bit depending on
+  the platform. On Windows it is always a 32-bit signed long which
+  limits file access and in particular space pre-allocation
+  to effectively 2 Gb.
+  
+  Proposal is to replace off_t with uint64_t as a portable type
+  always access files with 64-bit interfaces.
+  
+  May need to modify posix code but lack resources to test it.
+
+By the way, Windows build is broken by a recent check-in by us. We are fixing it.
+
+@siying thank you for letting me know. Let me know if I can help.
+
+@siying Looks like tmp_try_windows passed the build
+
+@siying Would be nice to merge windows build fix if possible
+
+The fix was pushed. Can you rebase?
+
+@yuslepukhin by the way, is there a way to not just build, but also run some tests in Windows CI?
+
+@siying Yes, there is a way and we run it. On my box against RAM drive all db_test cases run in 9 minutes in parallel. However, it is much longer against a hard drive, say 40 minutes which would still under an hour but the overall process would take ~50 minutes (build included). Bad news, RAM drive is not a standard feature.
+
+Maybe need to mention the API change in HISTORY.md as some users' Env implementation might fail.
+

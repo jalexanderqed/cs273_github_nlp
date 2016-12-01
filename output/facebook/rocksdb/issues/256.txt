@@ -1,0 +1,89 @@
+any problem, let me know
+
+I believe they are not loops for a reason: http://en.wikipedia.org/wiki/Loop_unwinding
+
+Can you post assembly before/after the change and test runtime differences? Thanks!
+
+run coding_test 100 times:
+
+``` bash
+sh press.sh  7.31s user 0.20s system 97% cpu 7.712 total
+```
+
+run coding_test 100 times with patch:
+
+``` bash
+sh press.sh  7.30s user 0.19s system 97% cpu 7.691 total
+```
+
+the test runtime is similar, I think compiler will optimize the loop.
+
+``` bash
+#press.sh
+for i in $(seq 100);do
+        ./coding_test
+done
+```
+
+To simple this problem, I write 2 programs:
+
+``` c++
+int main()
+{
+        unsigned long long value = 10001;
+        char buf[9];
+        buf[0] = value & 0xff;
+        buf[1] = (value >> 8) & 0xff;
+        buf[2] = (value >> 16) & 0xff;
+        buf[3] = (value >> 24) & 0xff;
+        buf[4] = (value >> 32) & 0xff;
+        buf[5] = (value >> 40) & 0xff;
+        buf[6] = (value >> 48) & 0xff;
+        buf[7] = (value >> 56) & 0xff;
+        return 0;
+}
+
+```
+
+``` c++
+int main()
+{
+        char buf[10];
+        unsigned long long value;
+        for (int i = 0; i < 8; ++i) {
+                buf[i] = (value >> (8*i)) & 0xff;
+        }
+return 0;
+}
+
+```
+
+then, I use comand:
+
+``` bash
+g++ -O2 -S a.cpp -o a_o2.asm
+g++ -O2 -S b.cpp -o b_o2.asm
+diff a_o2.asm b_o2.asm
+
+liuchang@us-vm ~/codes % diff a_o2.asm b_o2.asm
+1c1
+<       .file   "a.cpp"
+---
+>       .file   "b.cpp"
+
+```
+
+so, We know that g++ will compiled those files samely.
+
+@igorcanadi  thanks for reviewing.
+
+It compiles them the same because it optimizes away unused variable -- http://goo.gl/8C4q7p :)
+
+How about EncodeVarint32?
+
+I am afraid the change would make it to depend on compiler optimization. If there is no particular reason, we probably should just leave it as it is?
+
+Agreed with @ljinfb 
+
+OK, thanks @igorcanadi @ljinfb 
+

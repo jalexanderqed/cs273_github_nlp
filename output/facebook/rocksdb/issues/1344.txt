@@ -1,0 +1,37 @@
+For every multiGet call, a HashMap is ultimately created and returned to
+the caller. This HashMap is never created with a capacity hint, meaning
+that resizes during map buildup are likely. We know the upper bound on
+the number of items that will be placed in the map (`values.length`)
+which we can use to size the map appropriately on creation.
+`values.length` is only an upper bound though because some entries in
+`values` can be null.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+I'm making this contribution on behalf of my employer (LinkedIn); I'll need to check CLA stuff first. I _think_ we have a company CLA with Facebook, but I'll need to check.
+
+@Valloric thanks for your contribution. there are a bunch of people at linkedin who submit code changes to rocksdb, and I believe that they have signed the CLA. But please check with them to verify.
+
+@dhruba Yep, I know some of my co-workers have sent RocksDB patches. I've emailed the relevant people to ask about the CLA stuff.
+
+In the mean time, could I get a review of the PR when you find some time? If we can parallelize some of this stuff, that would be great. 
+
+Thanks for working on RocksDB! We love it to bits.
+
+PR looking good.
+
+I looked at the Travis failures and they're all on Mac (all Linux runs were good) and they all failed on some C++ code I didn't touch. Looks like a flake. Compiler error included below:
+
+``` c++
+db/db_impl.cc:3690:13: error: no matching function for call to 'min'
+    bsize = std::min(bsize, db_options_.max_total_wal_size);
+```
+
+The Mac failure is unrelated and we are fixing it.
+
+Still working out the CLA stuff. Might take a while. Sorry for the delay.
+
+I've been informed by our lawyers that I can't make this change. Apologies for the confusion.
+
+@Valloric I don't have any legal constraints with contributing, so I have done something similar to your attempt - https://github.com/facebook/rocksdb/pull/1367
+

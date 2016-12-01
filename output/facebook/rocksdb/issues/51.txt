@@ -1,0 +1,4 @@
+fix a bug in build_detect_platform that misses -DROCKSDB_PLATFORM_POSIX.
+
+Already fixed by https://github.com/facebook/rocksdb/pull/48
+

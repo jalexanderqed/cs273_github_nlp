@@ -1,0 +1,81 @@
+hi everyone
+
+I recently in the study of rocksdb.I find that the value of allow_mmap_reads is set to false by default and the the performance of readrandom with allow_mmap_reads=false is very lower than allow_mmap_reads=true,because of rocksdb uses mmap to load all the data of file to os buffer in the beginning.can anybody answers to me why the value of allow_mmap_reads is set to false by default? this setting can improving the performance in some cases? 
+
+Ask this question because of leveldb without this parameter, it can using mmap by default. so i want to know the purpose of doing so by rocksdb.
+
+The reason rocksdb is faster is because it does not use mmaped IO because mmaped IOs on some linux platforms are known to be slow.
+
+You need read the wiki before ask the question..
+
+What Zongzhi said. In many of the benchmarks and workloads we have run,
+especially when the entire data set cannot be memory resident, mmap only
+hurts performance.
+
+Zongzhi: Thanks for responding. It's great to see the community answer
+questions and help each other. It will be even better if we can do that in
+a kind way. Thanks!
+
+On Fri, Feb 13, 2015 at 5:26 AM, Zongzhi Chen notifications@github.com
+wrote:
+
+> The reason rocksdb is faster is because it does not use mmaped IO because
+> mmaped IOs on some linux platforms are known to be slow.
+> 
+> You need read the wiki before ask the question..
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/507#issuecomment-74252743.
+
+Thanks very much!  may be the reason that the test  data set  is too small, I draw an opposite conclusion,I will to verify with more data set.
+
+I've noticed that its possible to improve performance when the db is less
+than main memory size by simply cat-ing the .sst files to /dev/null. This
+causes Linux to cache the database and can improve read performance by
+many-fold when reads are latency or i/o bound.
+On Feb 14, 2015 2:56 PM, "pengxindong" notifications@github.com wrote:
+
+> Thanks very much! may be the reason that the test data set is too small, I
+> draw an opposite conclusion,I will to verify with more data set.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/507#issuecomment-74378043.
+
+You can also use utility called vmtouch to load the file into main memory (file cache).
+
+Closing this issue since the question is answered. Let us know if you have any other questions.
+
+@veeve can you tell me the reason why mmap hurts performance when the entire data set cannot be memory resident? I think we always running on 64 machine, so we don't need consider the problem of running out of virtual memory..
+
+I have reproduced this result many times -- when database is larger than
+RAM then I get more read IOPs with pread compared to mmap. I have not spent
+much time on the performance evaluation. And this is more obvious when
+storage is fast (like a good SSD that can do more than 10,000 IOPs).
+Perhaps it isn't significant for disk.
+
+However, even with disk you have to worry about setting the filesystem
+readahead to a good value when using mmap. If the database pages to be read
+are larger than filesystem pages, then mmap can be slower as it will fetch
+a filesystem page plus delta at a time on a page fault where delta might be
+determined by the filesystem readahead setting. So if the delta is too
+small then more than one disk read might be required per database page.
+
+On Sun, Mar 8, 2015 at 11:16 AM, Zongzhi Chen notifications@github.com
+wrote:
+
+> @veeve https://github.com/veeve can you tell me the reason why mmap
+> hurts performance when the entire data set cannot be memory resident? I
+> think we always running on 64 machine, so we don't need consider the
+> problem of running out of virtual memory..
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/507#issuecomment-77765367.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+

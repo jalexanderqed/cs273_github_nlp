@@ -1,0 +1,11 @@
+There is no way we can use HDFSEnv even if we compile with HDFS and install as shared_lib.
+implementing a factory method that creates the HDFS environment.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+@siying formatted.
+
+@siying formatted again to remove indents and additional blank lines. The building errors looks not related to this change, can you confirm? Thanks! happy new year!
+

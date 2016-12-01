@@ -1,0 +1,75 @@
+Commit d0c5f28a5c0ec27744512695c90be69c74281950 breaks cross-compiling for iOS, since it does not support the '__thread' specifier (utils/thread_status_impl.h:134).
+
+Compiler error:
+In file included from db/db_impl.cc:78:
+./util/thread_status_impl.h:134:10: error: thread-local storage is unsupported for the current target
+  static __thread ThreadStatusData\* thread_status_data_;
+
+Could be fixed with 'pthread_setspecific' or exclusion via 'NROCKSDB_THREAD_STATUS`
+
+Wow this was fast. cc @yhchiang 
+
+@BrainCookie if you're running iOS, please use RocksDB 3.8 version, which we specifically made sure works fine on iOS. In the future we'll do this with all other releases as well.
+
+Current the feature is guarded based following macros, will add also IOS_CROSS_COMPILE:
+
+```
+#define ROCKSDB_USING_THREAD_STATUS \
+    !defined(ROCKSDB_LITE) && \
+    !defined(NROCKSDB_THREAD_STATUS) && \
+    !defined(OS_MACOSX)
+#endif
+```
+
+Added https://github.com/facebook/rocksdb/commit/353307758b056dd328b3e5a9da9d9022d1794f9a
+
+@yhchiang I don't think that would be enough to fix it, since `util/thread_status_impl.h` is included from `db/db_impl.c` and the `__thread` specifier is still used even when `IOS_CROSS_COMPILE` is defined
+
+Oops, I terribly miss one thing.  Will have a patch soon.
+
+https://github.com/facebook/rocksdb/commit/9222a2d02495fb3b9b2868b2e31938e990ab7999 should fix the problem.
+
+The error I get is:
+
+In file included from db/db_impl.cc:78:
+./util/thread_status_impl.h:135:10: error: thread-local storage is unsupported for the current target
+  static __thread ThreadStatusData\* thread_status_data_;
+         ^
+1 error generated.
+make: **\* [db/db_impl.o] Error 1
+
+Here is a diff that should patch it:
+
+```
+diff --git a/util/thread_status_impl.h b/util/thread_status_impl.h
+index a76c02b..be10d71 100644
+--- a/util/thread_status_impl.h
++++ b/util/thread_status_impl.h
+@@ -130,12 +130,11 @@ class ThreadStatusImpl {
+       const std::vector<ColumnFamilyHandle*>& handles,
+       bool check_exist);
+
++#if ROCKSDB_USING_THREAD_STATUS
+  protected:
+   // The thread-local variable for storing thread status.
+   static __thread ThreadStatusData* thread_status_data_;
+
+-#if ROCKSDB_USING_THREAD_STATUS
+-
+   // Obtain the pointer to the thread status data.  It also performs
+   // initialization when necessary.
+   ThreadStatusData* InitAndGet();
+```
+
+... or what you just did :)
+
+@yhchiang This particular issue is fixed. However, the iOS build passes only if you remove `-Werror` from the WARNING_FLAGS in Makefile (see #381)
+
+@BrainCookie are you compiling tests for iOS, too? Just compile static_lib and it should work, even without removing -Werror.
+
+Anyways, we plan to support mobile more seriously going forward. This wasn't the case so far.
+
+@igorcanadi I wasn't compiling the tests, just the static_lib. It fails when compiling the ios-x86 part of the lib.
+
+Right now I'm sticking to a custom build configuration in Xcode, which does the job just fine. Looking forward for the mobile support. Keep up the good work :+1: 
+

@@ -1,0 +1,79 @@
+Hi,
+I download released rocksdb-2.8.fb and installed all the dependencies. There is no error in compilation until running 'make check' for the unit test. The following error applies to both static library build and shared library build. Any idea?
+
+****\* Running db_test
+==== Test DBTest.Empty
+==== Test DBTest.ReadOnlyDB
+==== Test DBTest.IndexAndFilterBlocksOfNewTableAddedToCache
+==== Test DBTest.GetPropertiesOfAllTablesTest
+==== Test DBTest.LevelLimitReopen
+==== Test DBTest.Preallocation
+==== Test DBTest.PutDeleteGet
+==== Test DBTest.GetFromImmutableLayer
+==== Test DBTest.GetFromVersions
+==== Test DBTest.GetSnapshot
+==== Test DBTest.GetLevel0Ordering
+==== Test DBTest.GetOrderedByLevels
+==== Test DBTest.GetPicksCorrectFile
+==== Test DBTest.GetEncountersEmptyLevel
+==== Test DBTest.KeyMayExist
+==== Test DBTest.NonBlockingIteration
+==== Test DBTest.FilterDeletes
+==== Test DBTest.IterSeekBeforePrev
+==== Test DBTest.IterLongKeys
+==== Test DBTest.IterNextWithNewerSeq
+==== Test DBTest.IterPrevWithNewerSeq
+==== Test DBTest.IterPrevWithNewerSeq2
+==== Test DBTest.IterEmpty
+==== Test DBTest.IterSingle
+==== Test DBTest.IterMulti
+==== Test DBTest.IterReseek
+==== Test DBTest.IterSmallAndLargeMix
+==== Test DBTest.IterMultiWithDelete
+==== Test DBTest.IterPrevMaxSkip
+==== Test DBTest.IterWithSnapshot
+==== Test DBTest.Recover
+==== Test DBTest.RecoverWithTableHandle
+==== Test DBTest.IgnoreRecoveredLog
+==== Test DBTest.RollLog
+==== Test DBTest.WAL
+==== Test DBTest.CheckLock
+==== Test DBTest.FlushMultipleMemtable
+==== Test DBTest.NumImmutableMemTable
+==== Test DBTest.GetProperty
+pthread destroy mutex: Device or resource busy
+/bin/sh: line 1: 17201 Aborted                 ./$t
+make: **\* [check] Error 1
+
+gcc version 4.7.2 20121015 (Red Hat 4.7.2-5) (GCC)
+OS  CentOS release 6.5 (Final)
+kernel-2.6.32-431.17.1.el6.x86_64
+
+Thanks
+
+Hi @clare2014. I have actually seen this error before, but not sure what it means. Can you try running on master or 3.0.fb branch?
+
+(We're releasing 3.0.fb soon and the branch should be stable)
+
+@igorcanadi 
+Thanks for your prompt reply! I downloaded to the master branch and passed all unit tests. 
+By the way, some test is run with compression options : window_bits = -14, level =  -1, strategy = 0 
+and some test is with compression options : window_bits = 15, level =  -1, strategy = 0. How does the windows_bits setting impact the performance? a brief explain or a link to the doc will be appreciated.
+
+Thanks
+Ying
+
+http://www.zlib.net/manual.html -- search for windowBits. We just pass CompressionOptions to our compression libraries. We use window bits only for zlib. Same with strategy. I think level is used for multiple compression libraries, but the meaning depends on which one.
+
+Hi
+I am running the 10GB in memory test following the instruction.After filling the DB, I got error 
+“open error: Corruption: While creating a new Db, wal_dir contains existing log file: : 000003.log”
+I tried a couple times by deleting the old log file 000003.log and reload the DB, but it always give the  corruption message after filling. 
+Is there anything I could do to avoid this error message? Or  I could just continue to run the test?
+
+After filling the DB, can you open the DB with options_.create_if_missing == false?
+
+Thanks for your prompt respond! Yes. The DB is read. But the performance is pretty slow due to Assertions enabled. Do you have advice on what assertion flags could be safely disable? :)
+
+`make release` turns off the assertions.
+

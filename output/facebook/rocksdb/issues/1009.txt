@@ -1,0 +1,14 @@
+Current implementation of histogram is accumulating all the samples from the starting of db instance. No sample is ever discarded. This is not a enough measurement for real-time monitoring, as it smooths out the busty change. 
+
+I am proposing to introduce a computation window for histogram, that is only taking X seconds of samples (or N samples) for histogram computing. X and N will be made configurable. 
+
+Any thoughts/comments? 
+
+@siying  @IslamAbdelRahman @igorcanadi 
+
+That's a good idea. In fact @kradhakrishnan is thinking about the question too.
+
+That's a good idea. Especially since resetting a counter from outside of RocksDB binary is not easy. Please go ahead and send us a diff.
+
+I have started coding already, will submit a patch soon.
+

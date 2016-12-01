@@ -1,0 +1,105 @@
+Some pressing bug fixes to the db_impl.cc v2 compaction pipeline. In particular, the compact object was keeping vectors of string copies for keys and values and also vectors of Slice objects references the underlying string copies. However, the vectors of the string copies are likely to resize, resulting in strings being reallocated and the slices becoming invalid. The fixes in this PR to db_impl.cc delay the creation of the SliceVectors until after the string copy vectors have been fully built.
+
+Test Plan: make c_test && ./c_test
+
+Wow, thanks for finding this bug. I'm surprised how it didn't blow up in production :)
+
+Yeah, I'm surprised too. It failed immediately from the c_test compaction filter v2 unittest I wrote. Thanks for the quick turnaround!
+
+There was a compile error in c_test that I fixed with https://github.com/facebook/rocksdb/commit/323d6e3542f67cf63eb307fa59dae33595929185. Let me know if that's not the correct fix.
+
+Thanks for contributing!
+
+valgrind failure of c_test. Likely caused by one of those commits. @spencerkimball can you take a look?
+
+Commit c1f588af71133483330564c058765e2503caa0fb by spencerk
+Add support for C bindings to the compaction V2 filter mechanism.
+
+Commit 38e8b727a8266f1b8bf16b12c2058c659d278fda by spencerk
+Fix typo, add missing inclusion of state void\* in invocation of
+create_compaction_filter_v2_.
+
+Commit 323d6e3542f67cf63eb307fa59dae33595929185 by icanadi
+Fix c_test
+
+==12920==
+==12920== HEAP SUMMARY:
+==12920==     in use at exit: 214 bytes in 6 blocks
+==12920==   total heap usage: 92,480 allocs, 92,474 frees, 20,510,094 bytes allocated
+==12920==
+==12920== 134 (64 direct, 70 indirect) bytes in 1 blocks are definitely lost in loss record 6 of 6
+==12920==    at 0x4C2B7D9: operator new(unsigned long) (in /usr/local/fbcode/gcc-4.8.1-glibc-2.17/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==12920==    by 0x410A63: rocksdb_slicetransform_create_fixed_prefix (c.cc:1942)
+==12920==    by 0x4092EC: main (c_test.c:586)
+==12920==
+==12920== LEAK SUMMARY:
+==12920==    definitely lost: 64 bytes in 1 blocks
+==12920==    indirectly lost: 70 bytes in 2 blocks
+==12920==      possibly lost: 0 bytes in 0 blocks
+==12920==    still reachable: 80 bytes in 3 blocks
+==12920==         suppressed: 0 bytes in 0 blocks
+==12920== Reachable blocks (those to which a pointer was found) are not shown.
+==12920== To see them, rerun with: --leak-check=full --show-reachable=yes
+==12920==
+==12920== For counts of detected and suppressed errors, rerun with: -v
+==12920== ERROR SUMMARY: 1 errors from 1 contexts (suppressed: 2 from 2)
+
+Sure. Sent a PR to address this.
+
+On Thu, Aug 7, 2014 at 5:53 PM, Siying Dong notifications@github.com
+wrote:
+
+> valgrind failure of c_test. Likely caused by one of those commits.
+> @spencerkimball https://github.com/spencerkimball can you take a look?
+> 
+> Commit c1f588a
+> https://github.com/facebook/rocksdb/commit/c1f588af71133483330564c058765e2503caa0fb
+> by spencerk
+> Add support for C bindings to the compaction V2 filter mechanism.
+> 
+> Commit 38e8b72
+> https://github.com/facebook/rocksdb/commit/38e8b727a8266f1b8bf16b12c2058c659d278fda
+> by spencerk
+> Fix typo, add missing inclusion of state void\* in invocation of
+> create_compaction_filter_v2_.
+> 
+> Commit 323d6e3
+> https://github.com/facebook/rocksdb/commit/323d6e3542f67cf63eb307fa59dae33595929185
+> by icanadi
+> Fix c_test
+> 
+> ==12920==
+> ==12920== HEAP SUMMARY:
+> ==12920== in use at exit: 214 bytes in 6 blocks
+> ==12920== total heap usage: 92,480 allocs, 92,474 frees, 20,510,094 bytes
+> allocated
+> ==12920==
+> ==12920== 134 (64 direct, 70 indirect) bytes in 1 blocks are definitely
+> lost in loss record 6 of 6
+> ==12920== at 0x4C2B7D9: operator new(unsigned long) (in
+> /usr/local/fbcode/gcc-4.8.1-glibc-2.17/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+> ==12920== by 0x410A63: rocksdb_slicetransform_create_fixed_prefix
+> (c.cc:1942)
+> ==12920== by 0x4092EC: main (c_test.c:586)
+> ==12920==
+> ==12920== LEAK SUMMARY:
+> ==12920== definitely lost: 64 bytes in 1 blocks
+> ==12920== indirectly lost: 70 bytes in 2 blocks
+> ==12920== possibly lost: 0 bytes in 0 blocks
+> ==12920== still reachable: 80 bytes in 3 blocks
+> ==12920== suppressed: 0 bytes in 0 blocks
+> ==12920== Reachable blocks (those to which a pointer was found) are not
+> shown.
+> ==12920== To see them, rerun with: --leak-check=full --show-reachable=yes
+> ==12920==
+> ==12920== For counts of detected and suppressed errors, rerun with: -v
+> ==12920== ERROR SUMMARY: 1 errors from 1 contexts (suppressed: 2 from 2)
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/pull/224#issuecomment-51537390.
+
+@siying https://github.com/facebook/rocksdb/commit/894a77abdfd60bc610d72a6b7451cfefbf6e1b2e
+
+Thanks guys.
+

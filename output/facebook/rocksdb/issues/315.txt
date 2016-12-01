@@ -1,0 +1,11 @@
+Reverse key handling is under certain conditions essential. E.g. while
+using timestamp versioned data access to most recent data might be the standard
+usecase.
+
+As comparators were not available using JAVA-API both(default and reverse version) built-in comparators
+were exposed via JNI to be set upon database creation time.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+

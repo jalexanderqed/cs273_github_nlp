@@ -1,0 +1,23 @@
+Is there any reason to keep [this logging warning about background threads around](https://github.com/facebook/rocksdb/blob/bf287b76e0e7b5998de49e3ceaa2b34d1f3c13ae/util/env_posix.cc#L1640)?
+
+I hope not.
+
+On Sun, Feb 1, 2015 at 12:28 PM, Erik Garrison notifications@github.com
+wrote:
+
+> Is there any reason to keep this logging warning about background threads
+> around
+> https://github.com/facebook/rocksdb/blob/bf287b76e0e7b5998de49e3ceaa2b34d1f3c13ae/util/env_posix.cc#L1640
+> ?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/487.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Resolved in 868bfa40336
+

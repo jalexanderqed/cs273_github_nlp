@@ -1,0 +1,70 @@
+Encountered a bug in a 2-process scenario, where writer opens
+the DB in write mode and reader opens in "OpenForReadOnly"
+
+The writer process was creating a column family and dropping it
+The reader process was reading the column family, but when
+it decided to close the DB handle, it would crash because
+the delete of the "cfd" in the ColumnFamilySet was being
+done without checking if the ColumnFamilyData::Unref()
+has returned true
+
+**Test Plan**: I can't find any 2-process tests in the repository.
+Ran "make check" on changes.   There is one failure
+in "SpatialDBTest.FeatureSetSerializeTest" which appears
+unrelated.
+
+Error output is as follows
+_utilities/spatialdb/spatial_db_test.cc:99: Failure
+Value of: !deserialized.Deserialize(serialized)
+  Actual: false
+Expected: true_
+
+@siying, please tell me how to resubmit the request to appveyor.  The build failure occurred because it ran out of time (60 minutes)
+
+Unref() returns true when the refcount reaches zero. The refcount is not shared among processes.
+
+Also, if the refcount is greater than one, this change will cause the enclosing loop to not terminate as it relies on "delete cfd;" to reduce the size of column_family_data_.
+
+Did this change fix the scenario you described? Maybe I am missing something, if so, please correct me :).
+
+@ajkr , I did read the code and realized the refcounts are not shared.  I was also puzzled by the crash.  
+
+I was able to reduce the problem to a sample program which illustrates the crash.   I have attached the "txt" file.   You can run it with the same options are seen in rocksdb/examples/Makefile and verify.
+
+What the program does is as follows:
+The writer process first creates a column family
+Then the reader process opens the column family
+Then the writer deletes the column family
+Then the reader tries to close the db handle (delete db) and crashes
+
+This is the stack of the reader crash failure
+
+#4  0x000000000055ae1b in rocksdb::ColumnFamilyData::~ColumnFamilyData (
+    this=<optimised out>, __in_chrg=<optimised out>) at db/column_family.cc:413
+#5  0x000000000055b5f8 in rocksdb::ColumnFamilySet::~ColumnFamilySet (
+    this=0x7fd0b0021300, __in_chrg=<optimised out>) at db/column_family.cc:881
+#6  0x00000000004d1de5 in operator() (this=<optimised out>, 
+    __ptr=0x7fd0b0021300) at /usr/include/c++/5/bits/unique_ptr.h:76
+#7  reset (__p=0x7fd0b0021300, this=0x7fd0b006b180)
+    at /usr/include/c++/5/bits/unique_ptr.h:344
+#8  rocksdb::VersionSet::~VersionSet (this=0x7fd0b006b180, 
+    __in_chrg=<optimised out>) at db/version_set.cc:2117
+#9  0x00000000004755a8 in operator() (this=<optimised out>, 
+    __ptr=0x7fd0b006b180) at /usr/include/c++/5/bits/unique_ptr.h:76
+#10 reset (__p=0x7fd0b006b180, this=0x7fd0b00ee218)
+    at /usr/include/c++/5/bits/unique_ptr.h:344
+#11 rocksdb::DBImpl::~DBImpl (this=0x7fd0b00ee200, __in_chrg=<optimised out>)
+    at db/db_impl.cc:489
+#12 0x00000000004901e8 in ~DBImplReadOnly (this=0x7fd0b00ee200, 
+    __in_chrg=<optimised out>) at db/db_impl_readonly.cc:26
+#13 rocksdb::DBImplReadOnly::~DBImplReadOnly (this=0x7fd0b00ee200, 
+    __in_chrg=<optimised out>) at db/db_impl_readonly.cc:27
+---Type <return> to continue, or q <return> to quit---
+#14 0x0000000000454b18 in reader () at reader_writer.cc:51
+#15 0x0000000000454f3f in main (argc=1, argv=0x7ffea3a40778)
+    at reader_writer.cc:95
+
+[reader_writer.txt](https://github.com/facebook/rocksdb/files/327075/reader_writer.txt)
+
+Thanks for providing the test code. You need to delete all ColumnFamilyHandles before deleting the db. Otherwise, the assertion in ColumnFamilyData will fail due to nonzero refcount. I tried this change with your test code and didn't see any problems.
+

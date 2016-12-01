@@ -1,0 +1,23 @@
+Dose rocksdb have the bug found in leveldb?
+
+Compaction causes data inconsistency when using snapshots
+https://github.com/google/leveldb/issues/320
+
+Thanks for the report. I ported the test from #339 PR and the tests pass (https://reviews.facebook.net/D54225). That doesn't mean we don't have a bug, though. I'll look a bit more into this.
+
+I just read the issue more throughly. RocksDB doesn't have the same bug. Looks like we actually found and fixed that bug years ago. I don't know why we didn't contribute back to LevelDB :(
+
+The function that avoids the mistake in RocksDB code is ExpandWhileOverlapping: https://github.com/facebook/rocksdb/blob/21e95811d14d556436ae849e40744806f31f00a0/db/compaction_picker.cc#L199
+
+Thanks for the report, though! I will close this issue now.
+
+It does feel a valid bug in RocksDB. @igorcanadi  if we always expand while overlapping, how come we had this bug? https://reviews.facebook.net/D51783
+
+So we fail to call ExpandWhileOverlapping()? If yes, then this is a valid bug.
+
+@igorcanadi you are right. I didn't find a place ExpandWhileOverlapping() fails to be called, and I'm not able to come up with a unit test that repros the issue.
+
+I read ExpandWhileOverlapping, it is the same logic of the bugfix in https://github.com/google/leveldb/pull/339
+
+And the unit test pass, should able to resolve this issue
+

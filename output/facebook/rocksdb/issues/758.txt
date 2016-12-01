@@ -1,0 +1,169 @@
+The Member `Mutex::lock` in the windows port is implemented by a `std::unique_lock`. It is called from different threads but it is not thread safe. This may leading to crashes (when the compactions is called for example).
+
+As a workaround i put the `std::unique_lock` in a map with thread id as key. So `Mutex` can provide a single  `std::unique_lock` for every thread its needed.
+
+@DoktorSeltsam Thanks for reporting this. This is a serious oversight. I will re-work this. Map is probably not a good solution here.
+
+You need to use CRITICAL_SECTION and CONDITION_VARIABLE. The current code is broken. I am working on a patch as well.
+
+Have to run more tests but this work better:
+
+``` cpp
+class Mutex {
+ public:
+  /* implicit */ Mutex(bool adaptive = false) { ::InitializeCriticalSection(&section_); }
+  ~Mutex() { ::DeleteCriticalSection(&section_); }
+
+  void Lock()
+  {
+    ::EnterCriticalSection(&section_);
+  #ifndef NDEBUG
+    locked_ = true;
+  #endif
+  }
+
+  void Unlock()
+  {
+  #ifndef NDEBUG
+    locked_ = false;
+  #endif
+    ::LeaveCriticalSection(&section_);
+  }
+
+
+  // this will assert if the mutex is not locked
+  // it does NOT verify that mutex is held by a calling thread
+  void AssertHeld()
+  {
+  #ifndef NDEBUG
+    assert(locked_);
+  #endif
+  }
+
+ private:
+  friend class CondVar;
+
+  CRITICAL_SECTION section_;
+
+#ifndef NDEBUG
+  bool locked_;
+#endif
+
+  // No copying
+  Mutex(const Mutex&);
+  void operator=(const Mutex&);
+};
+
+class CondVar {
+ public:
+  explicit CondVar(Mutex* mu): mu_(mu) { ::InitializeConditionVariable(&cv_); }
+  ~CondVar() {} 
+  void Wait()
+  {
+    #ifndef NDEBUG
+      mu_->locked_ = false;
+    #endif
+      ::SleepConditionVariableCS(&cv_, &(mu_->section_), INFINITE);
+    #ifndef NDEBUG
+      mu_->locked_ = true;
+    #endif
+  }
+
+  bool TimedWait(uint64_t expiration_time)
+  {
+    #ifndef NDEBUG
+      mu_->locked_ = false;
+    #endif
+
+      using namespace std::chrono;
+
+      microseconds usAbsTime(abs_time_us);
+      microseconds usNow(
+          duration_cast<microseconds>(system_clock::now().time_since_epoch()));
+      microseconds relTimeUs =
+          (usAbsTime > usNow) ? (usAbsTime - usNow) : microseconds::zero();
+
+      const BOOL great_success = ::SleepConditionVariableCS(&cv_, &(mu_->section_), duration_cast<milliseconds>(relTimeUs).count());
+
+    #ifndef NDEBUG
+      mu_->locked_ = true;
+    #endif
+
+      if ((!great_success) && (GetLastError() == ERROR_TIMEOUT))
+      {
+          return true;
+      }
+
+      return false;
+  }
+
+  void Signal()  { ::WakeConditionVariable(&cv_); }
+  void SignalAll()  { WakeAllConditionVariable(&cv_); }
+
+ private:
+  CONDITION_VARIABLE cv_;
+  Mutex* mu_;
+};
+```
+
+@edouarda The api requires microseconds sleep. std implementation at least promised that. There is a simple path under internal review that makes use std.
+
+Understood, you can indeed use _Mtx_t instead of CONDITION_VARIABLE then.
+
+@yuslepukhin Indeed, map is not a desirable solution. It was only used to make the project work with minor local changes of the code. A better solution would be for example to expand `InstrumentedMutexLock` with `Lock` and `Unlock` functionality like `std::unique_lock`. But this has a huge impact on the existing code as the use of `InstrumentedMutexLock` is mixed with the direct call of the `InstrumentedMutex` functions.
+
+A litle additional question.. Are there important reasons not to use `assert(lock.owns_lock());` in `Mutex::AssertHeld` ? That could eleminate some #ifdef and the `friend class CondVar` in `Mutex` ...
+
+Fix in pull request https://github.com/facebook/rocksdb/pull/763
+
+Please feel free to comment.
+
+Fix has been merged by Igor. Please get the latest and try.
+
+@DoktorSeltsam the usage of unique_lock was incorrect, hence owns_lock can't be used.
+
+The constructor of Mutex needs a little change for release mode yet...
+
+`/* implicit */ Mutex(bool adaptive = false)`
+`#ifndef NDEBUG`
+`: locked_(false)`
+`#endif`
+`{}`
+
+I took a more detailed look on the current implementation of the class `Mutex`. Unfortunately the method `AssertHeld` is useless because `locked_`is not thread save. It may be set or unset by another thread and the assertation leads to wrong assumptions. It's the same reason why `std::mutex`doesn't provide a test such as "`is_locked()`". `AssertHeld` takes only effect when it's coupledwith `Lock` and `Unlock` in the same thread. Relating to that, the initial idea to use `std::unique_lock` was not a bad idea.
+
+I was arguing on removing AssertHeld and all related things as useless everywhere. A better solution would be to get rid of Mutex and CondVar class all together and use std directly since RocksDB requires a C++11 compiler anyway. Things like instrumented Mutex may be used for other purposes.
+
+I agree with you that C++ 11 provides a satisfactory cross-platform abstraction for mutexes. This platform specific code around mutexes and condition variables is inherited from LevelDB. 
+
+Additionally the assertions are useless as there is already such assertion inside the implementation of mutexes. They will throw if you are doing something obviously wrong (such as double acquisition or releasing and unowned mutex):
+
+``` cpp
+    void _Validate() const
+        {   // check if the mutex can be locked
+        if (!_Pmtx)
+            _THROW_NCEE(system_error,
+                _STD make_error_code(errc::operation_not_permitted));
+
+        if (_Owns)
+            _THROW_NCEE(system_error,
+                _STD make_error_code(errc::resource_deadlock_would_occur));
+        }
+```
+
+One might argue that the abstraction enables an easier migration toward lightweight locks, but I disagree as such migration would probably be partial in the first place.
+
+@DoktorSeltsam @edouarda Do we want to close this with the last issue addressed?
+
+There is nothing to be said against it.
+
+I can't await an overhaul of the mutex system towards std :) ...
+
+Yes it's fine!
+
+Is there any plans of moving the windows code  to std::mutex?
+
+@dhruba Ready whenever you are. port::Mutex impl use std::mutex
+
+This particular issue was fixed here https://github.com/facebook/rocksdb/commit/a1d37602a0b9a31c0fc5a9869e57bd55884f6af9#diff-e438cc784cd0656061844d09ff9372ce
+

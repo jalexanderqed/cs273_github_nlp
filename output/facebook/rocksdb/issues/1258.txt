@@ -1,0 +1,38 @@
+This PR includes API for generating SST file and ingesting the file into RocksDB.
+
+Issue: #1248 
+
+@ijsong Thanks for this, I will try and review this in the first part of the coming week for you.
+
+@ijsong Generally looks good. Just a few minor items of cleanup. Can you also rebase to remove the merge conflict and please run `arc lint` and address any formatting issues from that too.
+
+Thank you, @adamretter.  I will follow up your feedback as soon as possible.
+
+@adamretter `arc lint --trace` throws exception like:
+
+```
+PHP Fatal error:  Uncaught PhutilMissingSymbolException: Failed to load symbol 'FacebookArcanistConfiguration'. If this symbol was recently added or moved, your library map may be out of date. You can rebuild the map by running 'arc liberate'. For more information, see: http://www.phabricator.com/docs/phabricator/article/libphutil_Libraries_User_Guide.html in /usr/local/Cellar/arcanist/5/libphutil/src/symbols/PhutilSymbolLoader.php:329
+Stack trace:
+#0 /usr/local/Cellar/arcanist/5/libexec/scripts/arcanist.php(157): PhutilSymbolLoader::loadClass('FacebookArcanis...')
+#1 {main}
+  thrown in /usr/local/Cellar/arcanist/5/libphutil/src/symbols/PhutilSymbolLoader.php on line 329
+
+Fatal error: Uncaught PhutilMissingSymbolException: Failed to load symbol 'FacebookArcanistConfiguration'. If this symbol was recently added or moved, your library map may be out of date. You can rebuild the map by running 'arc liberate'. For more information, see: http://www.phabricator.com/docs/phabricator/article/libphutil_Libraries_User_Guide.html in /usr/local/Cellar/arcanist/5/libphutil/src/symbols/PhutilSymbolLoader.php:329
+Stack trace:
+#0 /usr/local/Cellar/arcanist/5/libexec/scripts/arcanist.php(157): PhutilSymbolLoader::loadClass('FacebookArcanis...')
+#1 {main}
+  thrown in /usr/local/Cellar/arcanist/5/libphutil/src/symbols/PhutilSymbolLoader.php on line 329
+```
+
+I installed arcanist by using homebrew on mac osx. Do I have any missing point?
+
+@ijsong The Rocks team at Facebook have a customised version of Arcanist, every now and then we patch the config in `arcanist_util/` to try and ensure it works outside of Facebook. I submitted some patches that were merged recently: https://github.com/facebook/rocksdb/pull/1271 do you have those? If not you might like to rebase (or merge) your branch on master
+
+Thank you for the contribution, @ijsong!  Would you mind squashing the changes into one diff?  This will make the review process easier.
+
+@adamretter @yhchiang Thanks for your feedbacks. As you say, I will try to rebase/squash my commits.
+
+@adamretter @yhchiang This PR has been passed CI and has no conflicts. Please review again.  
+
+@ijsong Thanks for your contribution :-)
+

@@ -1,0 +1,55 @@
+Hi!
+
+Occasionally (rarely), we're getting a segfault:
+
+```
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  SIGSEGV (0xb) at pc=0x00007f423fc7a1f4, pid=7076, tid=139922048546560
+#
+# JRE version: OpenJDK Runtime Environment (8.0_45-b14) (build 1.8.0_45-internal-b14)
+# Java VM: OpenJDK 64-Bit Server VM (25.45-b02 mixed mode linux-amd64 compressed oops)
+# Problematic frame:
+# C  [librocksdbjni6440071248747063071..so+0x1921f4]  rocksdb::WriteBatchInternal::Sequence(rocksdb::WriteBatch const*)+0x4
+```
+
+The stack top:
+
+```
+Stack: [0x00007f4223eff000,0x00007f4224000000],  sp=0x00007f4223ffc668,  free space=1013k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  [librocksdbjni6440071248747063071..so+0x1921f4]  rocksdb::WriteBatchInternal::Sequence(rocksdb::WriteBatch const*)+0x4
+C  [librocksdbjni6440071248747063071..so+0x12c277]  rocksdb::DBImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch*)+0x9a7
+C  [librocksdbjni6440071248747063071..so+0xd5b6f]  Java_org_rocksdb_RocksDB_write0+0x6f
+J 7652  org.rocksdb.RocksDB.write0(JJ)V (0 bytes) @ 0x00007f42adb20c2a [0x00007f42adb20b80+0xaa]
+```
+
+RocksDB#write is being used in code that is something like:
+
+``` Java
+DBOptions options = new DBOptions()
+    .setCreateIfMissing(true)
+    .setCreateMissingColumnFamilies(true)
+    .setWalSizeLimitMB(0L)
+    .setWalTtlSeconds(10L);
+
+RocksDB database = RocksDB.open(options, path, cfDescriptors, cfHandles);
+WriteOptions defaultWriteOptions = new WriteOptions();
+...
+WriteBatch writeBatch = new WriteBatch();
+writeBatch.put(cfHandle, bytesOfKey, bytesOfValue);
+...
+database.write(defaultWriteOptions, writeBatch);
+```
+
+Hey @cardamon.  Sorry for the late reply.  As it happens occasionally, can I also know in which case you are more likely to reproduce the crash?
+
+We only have two crash logs and they look pretty much identical except for the memory addresses and such.
+
+There has been no crash since this issue was created.
+If it ever happens again I may be able to figure out some more by comparing the crash log to the logs of the program...
+
+@cardamon Did you experience this issue any further? If not I would like to close the issue.
+
+I'll close the issue because we're currently no longer using RocksDB and apparently were the only ones who experienced the issue in the first place...
+

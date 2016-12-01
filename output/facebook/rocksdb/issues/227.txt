@@ -1,0 +1,19 @@
+`make check` fails:
+
+```
+==== Test BlockBasedTableTest.BlockCacheDisabledTest
+Received signal 11 (Segmentation fault)
+#0   ./table_test() [0x4c630e] get  /usr/include/c++/4.9/bits/unique_ptr.h:305  
+#1   ./table_test() [0x42fe96] ~Status  /home/team/rocksdb/./include/rocksdb/status.h:29    
+#2   ./table_test() [0x43d3aa] ~unique_ptr  /usr/include/c++/4.9/bits/unique_ptr.h:235  
+#3   ./table_test() [0x55fa8e] RunAllTests  /home/team/rocksdb/util/testharness.cc:48 (discriminator 2) 
+#4   /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf5) [0x2b7636c68b45] ????:0    
+#5   ./table_test() [0x4265fe] _start   ??:?    
+Segmentation fault
+make: *** [check] Error 1
+```
+
+Revision 894a77abdfd
+
+make check works fine now. pl reopen if you feel otherwise with more details (platform, compiler, etc)
+

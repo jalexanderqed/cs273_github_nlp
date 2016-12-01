@@ -1,0 +1,15 @@
+Fix Compile with Issue #60
+
+Thanks for the fix.
+
+Thanks for your merge.
+
+发自我的 iPhone
+
+> 在 2014年1月11日，2:29，Kai Liu notifications@github.com 写道：
+> 
+> Merged #61.
+> 
+> —
+> Reply to this email directly or view it on GitHub.
+

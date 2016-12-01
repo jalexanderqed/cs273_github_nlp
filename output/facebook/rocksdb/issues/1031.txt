@@ -1,0 +1,63 @@
+Hi,
+
+i am using MongoDB with RocksDB as the storage engine. i want to compare the performance with or without block cache. For both case i disabled OS buffer and there's nocompression. when enable block cache, the size is 4GB. 
+the workload is YCSB's workloada,load data is 24,000,000 1KB records. operation count is 48,000,000.  
+distribution is uniform. 
+i suppose it would be not much different between enable block cache and disable it, since cache size is much smaller than total loaded data, and the distribution is uniform, there's no locality. 
+However, with block cache, the performance is much better (2.5X) than without block cache. By doing a little profiling, i found the benefits is coming from index locate path inside MongoDB. In MongoDB, RocksDB engine stores the index as a key-value, key is the indexed fields and value is the document id. For with block cache case, it seems this key-value which stores the index information is in memory. Considering the index data is a normal key-value as the actual document in RocksDB, how could RocksDB ping the index key-values in memory? 
+
+Thanks
+Sheng
+
+I am assuming that the Mongodb-index-information is frequently accessed by a large section of queries. That means that those blocks of kvs are more frequently accessed than the remainder of the data. RocksDB uses a LRU cache policy, and that policy could easily detect frequently accessed blocks of kvs and keep them in the cache.
+Please re-open if you have additional questions.
+
+For questions like these, please use our Facebook group: https://www.facebook.com/groups/rocksdb.dev
+
+There's many more members of our open source community in the public group, who can help in answering your questions.
+
+We also have a google group that could use more interesting questions, like this one.
+https://groups.google.com/forum/#!forum/rocksdb
+
+> We also have a google group that could use more interesting questions,
+> like this one.
+> https://groups.google.com/forum/#!forum/rocksdb
+
+Personally I find it very hard to use/follow technical discussions on a
+Facebook wall. IMHO it is not well suited to it at all. I would really like
+to see the GoogleGroup promoted and ideally replace the Facebook wall for
+technical discussion. Is there any appetite for that inside the RocksDB
+group at Facebook?
+
+
+## 
+
+Adam Retter
+
+skype: adam.retter
+tweet: adamretter
+http://www.adamretter.org.uk
+
+I am the #1 promoter of the Google group.
+https://groups.google.com/forum/#!topic/rocksdb/bbXDdzf0CCY
+
+Okay cool :-)
+
+On 8 March 2016 at 11:13, Mark Callaghan notifications@github.com wrote:
+
+> I am the #1 https://github.com/facebook/rocksdb/issues/1 promoter of
+> the Google group.
+> https://groups.google.com/forum/#!topic/rocksdb/bbXDdzf0CCY
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1031#issuecomment-193843571.
+
+## 
+
+Adam Retter
+
+skype: adam.retter
+tweet: adamretter
+http://www.adamretter.org.uk
+

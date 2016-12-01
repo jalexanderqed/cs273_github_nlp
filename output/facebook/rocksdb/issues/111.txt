@@ -1,0 +1,335 @@
+I'm use next options:
+rocksdb::Options options;
+options.error_if_exists = false;
+options.create_if_missing = true;
+options.compaction_style = rocksdb::kCompactionStyleLevel;
+options.compression = rocksdb::kSnappyCompression;
+options.compression_per_level.push_back(rocksdb::kSnappyCompression);
+options.compression_per_level.push_back(rocksdb::kBZip2Compression);
+options.comparator = new MyComparator();
+
+options.num_levels = 2;
+options.max_open_files = 12000;
+options.write_buffer_size = 128_1024_1024;
+options.max_write_buffer_number = 10000;
+options.min_write_buffer_number_to_merge = 250;
+options.max_background_compactions = 2;
+options.max_background_flushes = 2;
+options.disable_seek_compaction = false;
+options.disable_auto_compactions = false;
+options.block_size = 512_1024;
+options.block_cache = rocksdb::NewLRUCache(2_1024_1024_1024, 10);
+options.block_cache_compressed = rocksdb::NewLRUCache(2_1024_1024_1024, 10);
+options.filter_policy = rocksdb::NewBloomFilterPolicy(10);
+options.db_stats_log_interval = -1;
+options.keep_log_file_num = 10;
+options.max_log_file_size = 128_1024;
+options.target_file_size_base = 2_1024_1024;
+options.target_file_size_multiplier = 5;
+
+but requests to get archived data:
+table/format.cc:192: rocksdb::Status rocksdb::UncompressBlockContents(const char_, size_t, rocksdb::BlockContents_): Assertion `data[n] != kNoCompression' failed.
+
+after this check is the code:
+assert(data[n] != kNoCompression);
+switch (data [n]) {
+case kSnappyCompression: {...}
+case kZlibCompression: {...}
+case kBZip2Compression: {...}
+case kLZ4Compression: {...}
+case kLZ4HCCompression: {...}
+default: {...}
+}
+
+what for is necessary this assertions?
+
+UncompressBlockContents() is never called in case `data[n] == kNoCompression`. Did you make any changes to the code?
+
+I am looking at table/block_based_table_reader.cc:548, looks like it does not check compress type before putting data into block_cache_compressed
+
+@ljinfb look at line 543. If compression_type() is kNoCompression, then raw_block will be nullptr and line 548 will not be executed.
+
+yeah, then I don't see any reason that assertion can be triggered. @Rustam12345, did you change any code?
+
+Thanks for answers!
+My code is:
+
+```
+// g++ -std=c++11 rocksdb_test.cpp -lrocksdb -lpthread -lrt -lsnappy -lgflags -lz -lbz2
+
+#include <stdlib.h>
+#include <time.h>
+#include <assert.h>
+#include <string>
+#include <stdint.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <iostream>
+#include <pthread.h>
+#include <sched.h>
+
+#include <rocksdb/env.h>
+#include <rocksdb/db.h>
+#include <rocksdb/slice.h>
+#include <rocksdb/comparator.h>
+#include <rocksdb/filter_policy.h>
+#include <rocksdb/cache.h>
+
+using namespace std;
+
+class MyComparator : public rocksdb::Comparator
+{
+public:
+    MyComparator() {}
+    ~MyComparator() {}
+
+    int Compare(const rocksdb::Slice& a, const rocksdb::Slice& b) const {
+        uint64_t *av = (uint64_t *)a.data();
+        uint64_t *bv = (uint64_t *)b.data();
+
+        if (*av == *bv) {
+            return 0;
+        } else if (*av < *bv) {
+            return -1;
+        } else {
+            return 1;
+        }
+    }
+
+    const char* Name() const { return "MyComparator"; }
+    void FindShortestSeparator(std::string* start, const rocksdb::Slice& limit) const { }
+    void FindShortSuccessor(std::string* key) const {}
+};
+
+int main()
+{
+    int retval, policy = SCHED_FIFO;
+    struct sched_param param;
+
+    retval = pthread_getschedparam(pthread_self(), &policy, &param);
+    if (retval != 0) {
+        return -1;
+    }
+    policy = SCHED_FIFO;
+    param.sched_priority = 1;
+    retval = pthread_setschedparam(pthread_self(), policy, &param);
+    if (retval != 0) {
+        return -2;
+    }
+
+    srand (time(NULL));
+
+    rocksdb::DB* db;
+    rocksdb::Options options;
+    options.error_if_exists = true;
+    options.create_if_missing = true;
+    options.compaction_style = rocksdb::kCompactionStyleLevel;
+    //options.compression = rocksdb::kNoCompression;
+    options.compression_per_level.push_back(rocksdb::kSnappyCompression);
+    options.compression_per_level.push_back(rocksdb::kBZip2Compression);
+    options.comparator = new MyComparator();
+
+    options.num_levels = 2;
+    options.max_open_files = 12000;
+    options.write_buffer_size = 128*1024*1024;
+    options.max_write_buffer_number = 7500;
+    options.min_write_buffer_number_to_merge = 250;
+    options.max_background_compactions = 2;
+    options.max_background_flushes = 2;
+    options.disable_seek_compaction = false;
+    options.disable_auto_compactions = false;
+    options.block_size = 512*1024;
+    options.block_cache = rocksdb::NewLRUCache((uint64_t)2*1024*1024*1024, 10);
+    options.block_cache_compressed = rocksdb::NewLRUCache((uint64_t)2*1024*1024*1024, 10);
+    options.filter_policy = rocksdb::NewBloomFilterPolicy(10);
+    options.db_stats_log_interval = -1;
+    options.keep_log_file_num = 10;
+    options.max_log_file_size = 128*1024;
+    options.target_file_size_base = 2*1024*1024;
+    options.target_file_size_multiplier = 5;
+
+    rocksdb::Status status = rocksdb::DB::Open(options, "/save_data/", &db);
+    if (!status.ok()) {
+        cerr << status.ToString() << endl;
+        return -3;
+    }
+
+    timeval t1, t2;
+    uint64_t tt1 = 0, tt2 = 0, count = 1, max = 0, min = 1e8;
+    double avg = 0;
+    for (int i=0;i<1*1e6;i++) {
+        uint64_t *key = new uint64_t;
+        char *value = new char[4096];
+
+        rocksdb::Slice sKey((char *)key, sizeof(uint64_t));
+        rocksdb::Slice sValue((char *)value, 4096);
+
+        *key = i;
+
+        gettimeofday(&t1, NULL);
+        status = db->Put(rocksdb::WriteOptions(), sKey, sValue);
+        gettimeofday(&t2, NULL);
+
+        tt1 = t1.tv_sec*1e6 + t1.tv_usec;
+        tt2 = t2.tv_sec*1e6 + t2.tv_usec;
+        avg = (avg*(count - 1) + (tt2 - tt1))/count;
+        count++;
+        if (tt2 - tt1 < min)
+            min = tt2 - tt1;
+        if (tt2 - tt1 > max)
+            max = tt2 - tt1;
+
+        delete key;
+        delete []value;
+
+        if ((i % 1000) == 0) {
+            cerr << "Max = " << max << " min = " << min
+                << " avg = " << avg << " count = " << count << endl;
+        }
+    }
+
+    cerr << "Max = " << max << " min = " << min
+        << " avg = " << avg << " count = " << count << endl;
+
+    // create new iterator
+    rocksdb::Iterator* it = db->NewIterator(rocksdb::ReadOptions());
+
+    // first
+    it->SeekToFirst();
+    if (it->Valid()) {
+        cerr << "First key: " << *(uint64_t *)it->key().data() << endl;
+    }
+
+    // last
+    it->SeekToLast();
+    if (it->Valid()) {
+        cerr << "Last key: " << *(uint64_t *)it->key().data() << endl;
+    }
+
+    // iterate all entries
+    /*
+    for (it->SeekToFirst();it->Valid();it->Next()) {
+        cerr << "Key = " << *(uint64_t *)it->key().data() << endl;
+    }
+    */
+    delete it;
+
+    // close the database
+    delete db;
+    return 0;
+}
+```
+
+After the line
+
+```
+it->SeekToFirst();
+```
+
+a.out: table/format.cc:192: rocksdb::Status rocksdb::UncompressBlockContents(const char_, size_t, rocksdb::BlockContents_): Assertion `data[n] != kNoCompression' failed.
+Aborted (core dumped)
+
+But if i comment
+
+```
+//options.block_cache_compressed = rocksdb::NewLRUCache((uint64_t)2*1024*1024*1024, 10);
+```
+
+this good work
+
+yeah, have the same problem using pyrocksdb: if `block_cache_compressed` were set, then assertion is triggered.
+
+What behavior it intended to be when both `block_cache` and `block_cache_compressed` are set?
+
+If block_cache is set, then the system will use an uncompressed block cache. If block_cache_compressed is set, then the system will use a compressed block cache. 
+
+if both are set then both the caches will be used. Data will be first read into the compressed block cache and purged from the OS cache. Then a block will read in from the compressedcache, uncompress it, and then inserted into the block_cache.
+
+I have the same problem, using 2.8.fb.trunk no changes. 
+
+I'm not doing any reading only writing using WriteBatch. I suddenly got the exception after writing about 575MiB at 15B-800kiB per value, key is around 15 bytes average (I'm copying from a MySQL db to rocksdb to test performance). With the same data it seems to repeat at the same point.
+
+```
+options.create_if_missing = true;
+options.disableDataSync = true; // Doing bulk inserting so better disable 
+// Cache is good
+options.block_cache = rocksdb::NewLRUCache(100 * 1048576);  // 100MB uncompressed cache
+options.block_cache_compressed = rocksdb::NewLRUCache(100 * 1048576);  // 100MB compressed cache
+options.write_buffer_size = 128*1024*1024;
+```
+
+If I disable the compressed cache it works fine.
+
+I see. Any reasons why you are using the compressed cache (and not the OS cache)?
+
+Data is compressed in both the block_cache_compressed as well as the OS cache.
+
+Not really, just getting into rocksdb, both were set in the example, I'm fine without it, but better report it.
+
+hey, but even `block_cache` is not set, then still write fails. That means, that `block_cache_compressed` prevents writing in any configuration :( This is just a bug and need to be solved
+
+Hi, I would like to revive this issue again. I know 'block_cache_compressed' is not really needed if you can rely on the filesystem cache. However I have some situations where the filesystem cache is polluted/filled by other programs. So the OS is stealing buffer cache from rocksdb. In that case it would be nice to reserve a specific/fixed amount of memory to rocksdb, which can be achieved with 'block_cache_compressed'.
+
+I think the assertion above is triggered by the data inserted into the cache (I'm testing with rocksdb-3.2).
+- BlockBasedTableBuilder::InsertBlockInCache inserts the pure compressed contents of the block
+- BlockBasedTableBuilder::WriteRawBlock writes the pure compressed contents of the block + compression type + CRC
+
+=> in cache [block_data] in filesystem [block_data + compression_type + crc]
+
+Unfortunately UncompressBlockContents expects [block_data + compression_type] but the data from the cache contains only [block_data]. So the access of data[n] goes into a not valid memory region. I did a test with valgrind to verify
+
+```
+==21119== Invalid read of size 1
+==21119==    at 0x80E0112: rocksdb::UncompressBlockContents(char const*, unsigned int, rocksdb::BlockContents*) (format.cc:301)
+==21119==    by 0x80D8010: rocksdb::BlockBasedTable::GetDataBlockFromCache(rocksdb::Slice const&, rocksdb::Slice const&, rocksdb::Cache*, rocksdb::Cache*, rocksdb::Statistics*, rocksdb::ReadOptions const&, rocksdb::BlockBasedTable::CachableEntry<rocksdb::Block>*) (block_based_table_reader.cc:544)
+==21119==    by 0x80D8826: rocksdb::BlockBasedTable::NewDataBlockIterator(rocksdb::BlockBasedTable::Rep*, rocksdb::ReadOptions const&, bool*, rocksdb::Slice const&) (block_based_table_reader.cc:795)
+==21119==    by 0x80DC46B: rocksdb::BlockBasedTable::BlockEntryIteratorState::NewSecondaryIterator(rocksdb::Slice const&) (block_based_table_reader.cc:848)
+==21119==    by 0x80AC80E: rocksdb::(anonymous namespace)::TwoLevelIterator::InitDataBlock() (two_level_iterator.cc:176)
+==21119==    by 0x80ACC96: rocksdb::(anonymous namespace)::TwoLevelIterator::SeekToFirst() (two_level_iterator.cc:96)
+==21119==    by 0x80A7E04: rocksdb::(anonymous namespace)::MergingIterator::SeekToFirst() (iterator_wrapper.h:48)
+==21119==    by 0x805BC0D: rocksdb::DBImpl::DoCompactionWork(rocksdb::DBImpl::CompactionState*, rocksdb::DBImpl::DeletionState&, rocksdb::LogBuffer*) (db_impl.cc:2863)
+==21119==    by 0x805E48B: rocksdb::DBImpl::BackgroundCompaction(bool*, rocksdb::DBImpl::DeletionState&, rocksdb::LogBuffer*) (db_impl.cc:2166)
+==21119==    by 0x8065875: rocksdb::DBImpl::BackgroundCallCompaction() (db_impl.cc:1996)
+==21119==    by 0x80B2205: rocksdb::(anonymous namespace)::PosixEnv::ThreadPool::BGThreadWrapper(void*) (env_posix.cc:1490)
+==21119==    by 0x41AA953: start_thread (pthread_create.c:304)
+==21119==  Address 0x4391a87 is 0 bytes after a block of size 807 alloc'd
+==21119==    at 0x40278F4: operator new[](unsigned int) (vg_replace_malloc.c:343)
+==21119==    by 0x80E845F: rocksdb::BlockBasedTableBuilder::InsertBlockInCache(rocksdb::Slice const&, rocksdb::CompressionType, rocksdb::BlockHandle const*) (block_based_table_builder.cc:507)
+==21119==    by 0x80E87AF: rocksdb::BlockBasedTableBuilder::WriteRawBlock(rocksdb::Slice const&, rocksdb::CompressionType, rocksdb::BlockHandle*) (block_based_table_builder.cc:476)
+==21119==    by 0x80E89E3: rocksdb::BlockBasedTableBuilder::WriteBlock(rocksdb::Slice const&, rocksdb::BlockHandle*) (block_based_table_builder.cc:437)
+==21119==    by 0x80E8F86: rocksdb::BlockBasedTableBuilder::WriteBlock(rocksdb::BlockBuilder*, rocksdb::BlockHandle*) (block_based_table_builder.cc:420)
+==21119==    by 0x80E902B: rocksdb::BlockBasedTableBuilder::Flush() (block_based_table_builder.cc:407)
+==21119==    by 0x80E9228: rocksdb::BlockBasedTableBuilder::Add(rocksdb::Slice const&, rocksdb::Slice const&) (block_based_table_builder.cc:369)
+==21119==    by 0x80C37A2: rocksdb::BuildTable(std::string const&, rocksdb::Env*, rocksdb::Options const&, rocksdb::EnvOptions const&, rocksdb::TableCache*, rocksdb::Iterator*, rocksdb::FileMetaData*, rocksdb::InternalKeyComparator const&, unsigned long long, unsigned long long, rocksdb::CompressionType) (builder.cc:149)
+==21119==    by 0x805A0CA: rocksdb::DBImpl::WriteLevel0TableForRecovery(rocksdb::ColumnFamilyData*, rocksdb::MemTable*, rocksdb::VersionEdit*) (db_impl.cc:1374)
+==21119==    by 0x805B42C: rocksdb::DBImpl::RecoverLogFile(unsigned long long, unsigned long long*, bool) (db_impl.cc:1324)
+==21119==    by 0x80644B0: rocksdb::DBImpl::Recover(std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, bool, bool) (db_impl.cc:1185)
+==21119==    by 0x80670CA: rocksdb::DB::Open(rocksdb::DBOptions const&, std::string const&, std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, std::vector<rocksdb::ColumnFamilyHandle*, std::allocator<rocksdb::ColumnFamilyHandle*> >*, rocksdb::DB**) (db_impl.cc:4420)
+```
+
+I did a very simple patch and the issue faded away
+
+```
+diff --git a/table/block_based_table_builder.cc b/table/block_based_table_builder.cc
+index ae27734..4505467 100644
+--- a/table/block_based_table_builder.cc
++++ b/table/block_based_table_builder.cc
+@@ -622,8 +622,9 @@ Status BlockBasedTableBuilder::InsertBlockInCache(const Slice& block_contents,
+     Cache::Handle* cache_handle = nullptr;
+     size_t size = block_contents.size();
+
+-    char* ubuf = new char[size];             // make a new copy
++    char* ubuf = new char[size + 1];             // make a new copy
+     memcpy(ubuf, block_contents.data(), size);
++    ubuf[size] = type;
+
+     BlockContents results;
+     Slice sl(ubuf, size);
+```
+
+This looks like a appropriate fix to me. 
+
+Awesome work @stephan-hof ! https://github.com/facebook/rocksdb/commit/1614284eff49f28c5320dba6905e8d66f760f096
+
+This seems to be fixed.
+

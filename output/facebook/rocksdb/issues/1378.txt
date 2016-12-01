@@ -1,0 +1,10 @@
+This will prevent integer overflow to return negative values.
+
+I think you probably want to squash my diffs because some of my pushes are synchronization pushes with you guys.
+
+Is the build error related to my changes?
+
+@edouarda not related, and it should have been fixed.
+
+Ok let me know what you need to merge this.
+

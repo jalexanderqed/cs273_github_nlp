@@ -1,0 +1,14 @@
+This will enable users to distinguish "out of disk space" errors from other I/O error and maybe take the appropriate action.
+
+It mostly looks fine to me. I'll merge if tests pass.
+
+There was a missing include.
+
+Mac build failed. Can you fix it?
+
+I can fix anything :-) It seems it cannot find ENOSPC despite the inclusion of `<errno.h>`. I will check tomorrow as I have no Macintosh accessible here.
+
+Not sure the failures are related to this subcode.
+
+Right it is not related. I'm merging it.
+

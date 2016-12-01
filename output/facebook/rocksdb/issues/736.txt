@@ -1,0 +1,8 @@
+OPT needs this on OS X to compile master.
+
+```
+-Wno-unused-private-field
+```
+
+Should be fixed by https://github.com/facebook/rocksdb/commit/0fdb4f1688ebe160944c30c213f5afad4b13fb0f. Thanks for the report.
+

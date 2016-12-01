@@ -1,0 +1,46 @@
+I have been trying to implement Counter using RocksDB
+What i have implemented is a simple hit Counter using rest-Express which increments the counter
+I have two counters in place 
+A Rocksdb Counter using merge operator
+and a simple java atomic-Long Counter.
+the Rocksdb counter does not store the right values compared with the atomic-Long counter
+I fired the requests using Apache Benchmark with high concurrency
+I'm not sure if the implementation is right or if there is some other issues here
+I have the sample code of my implementation here 
+
+https://github.com/vishnu667/rocksdbSample/blob/master/src/main/java/org/example/RocksDBConnector.java
+
+So i could reproduce your problem using a slightly different version of your sample.
+
+What you are doing is you convert a long to a byte array. Byte arrays are ByteOrder dependent and your conversion is not using the correct ByteOrder. Something like the following should work for you.
+
+Note: The followup conversions are sample code and for sure not the most efficient way.
+
+### Java long to byte array conversion
+
+```
+  public static byte[] longToByte(long value) {
+    ByteBuffer longBuffer = ByteBuffer.allocate(8)
+        .order(ByteOrder.nativeOrder());
+    longBuffer.clear();
+    longBuffer.putLong(value);
+    return longBuffer.array();
+  }
+```
+
+### Byte array to Java long conversion
+
+```
+  public static long byteToLong(byte[] data)
+  { ByteBuffer longBuffer = ByteBuffer.allocate(8)
+      .order(ByteOrder.nativeOrder());
+    longBuffer.put(data, 0, 8);
+    longBuffer.flip();
+    return longBuffer.getLong();
+  }
+```
+
+@vishnu667 if that solved your problem please close the issue.
+
+Thanks @fyrz  the counters works perfectly and I've also updated the project
+

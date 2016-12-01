@@ -1,0 +1,10 @@
+Also add unity rule to the makefile.
+
+Should we also have a simple amalgation_test.cc that includes amalgated "rocksdb.h" and verifies that some simple commands (Put, Get) work?
+
+I can do that. Any suggestions on where to put it?
+
+Hmm. Let's put it in tools/
+
+Yo, this went a bit stale, so going to close it. Please create a new issue if you still plan to work on it.
+

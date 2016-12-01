@@ -1,0 +1,12 @@
+- Modified the code to make it work on Visual Studio too
+- Now using fast crc for the first and the last bytes of the data (STEP1)
+
+Really sorry for the delay. It's not that we we don't want to review but it's just too hard for us. Let me try again.
+
+Linux code looks identical to me, except removing line
+-  while ((e-p) >= 16) {
+  -    CRC32(&l, &p);
+  -    CRC32(&l, &p);
+  -  }
+    I understand the logic looks the same, but the lines are there must be because of some reason. I would keep it. If you revert those lines, I can merge it.
+

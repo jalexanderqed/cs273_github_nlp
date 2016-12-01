@@ -1,0 +1,22 @@
+```
+  // Current Requirements:
+  // (1) Memtable is empty.
+  // (2) All existing files (if any) have sequence number = 0.
+  // (3) Key range in loaded table file don't overlap with existing
+  //     files key ranges.
+  // (4) No other writes happen during AddFile call, otherwise
+  //     DB may get corrupted.
+  // (5) Database have at least 2 levels.
+```
+
+ items 1 and 4 apply to the destination column family, not the whole db, correct?
+
+also, what's the motivation for requirements 2 & 3 v. just dropping the new files into L0 and letting compaction sort things out?   i have two use cases in mind for this feature:
+
+1) generate a new column family off-line or export a column family from another host
+2) update a large set of records into an existing, read-only, column family
+
+@IslamAbdelRahman it is already relaxed in master: https://github.com/facebook/rocksdb/blob/master/include/rocksdb/db.h#L712-L716
+
+And I think "No other writes happen during AddFile call" only applies for the range for files added. @IslamAbdelRahman can correct me if I'm wrong.
+

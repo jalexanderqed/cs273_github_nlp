@@ -1,0 +1,7 @@
+StringToMap() becomes handy to use together with DB::SetOptions(), since SetOptions() accepts options in the std::unoroder_map format.
+
+Hi @IslamAbdelRahman, this is a one line change and passed the travis build.
+Could you please merge? 
+
+Thanks @SherlockNoMad 
+

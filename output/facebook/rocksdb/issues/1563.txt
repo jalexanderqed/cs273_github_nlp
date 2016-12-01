@@ -1,0 +1,4 @@
+I want to use rocksdb in java application on x86 windows pc. is it possible or it will require too much changes?
+There are released artifacts for Windows on Maven. At the moment we only support 64bit windows, and you can build from that, see CMakeLists.txt.
+
+If you want 32bit support, you would need to work on that, we have in general 32bit support including a Linux 32 bit build, but at the moment it is not supported for Windows.

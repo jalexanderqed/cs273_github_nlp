@@ -1,0 +1,62 @@
+I have been testing RocksDB (both Master and v4.1 branches) in a Fedora 23
+PPC64LE environment using the stock GCC 5.1.1 compilers. During "make check" one
+and only one test fails, ldb_cmd_test:
+
+```
+[bcbrock@ppc64le]$ ./ldb_cmd_test
+[==========] Running 2 tests from 1 test case.
+[----------] Global test environment set-up.
+[----------] 2 tests from LdbCmdTest
+[ RUN      ] LdbCmdTest.HexToString
+util/ldb_cmd_test.cc:22: Failure
+Value of: static_cast<int>(actual[i])
+  Actual: 255
+Expected: expected[i]
+Which is: -1
+[  FAILED  ] LdbCmdTest.HexToString (0 ms)
+[ RUN      ] LdbCmdTest.HexToStringBadInputs
+Invalid hex input 123.  Must start with 0x
+Invalid hex input Ox12.  Must start with 0x
+[       OK ] LdbCmdTest.HexToStringBadInputs (0 ms)
+[----------] 2 tests from LdbCmdTest (1 ms total)
+
+[----------] Global test environment tear-down
+[==========] 2 tests from 1 test case ran. (2 ms total)
+[  PASSED  ] 1 test.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] LdbCmdTest.HexToString
+
+ 1 FAILED TEST
+```
+
+Simply exporting
+
+```
+EXTRA_CFLAGS=-fsigned-char EXTRA_CXXFLAGS=-fsigned-char
+```
+
+prior to the build solves the problem. However, given that this is the only
+test that fails I wonder if the solution is actually to modify how the test
+checks the result of HexToString?
+
+I suspect the correct solution is to add the -fsigned-char option to the build flags because even if this is the only test that fails there may be other places in the code where 'char' is assumed to be 'signed char' and where having it actually be unsigned will cause a problem.  
+
+However, I _think_ a fix is to change the following in the test:
+
+```
+-ASSERT_EQ(expected[i], static_cast<int>(actual[i]));
++ASSERT_EQ(expected[i], static_cast<int>(static_cast<signed char>(actual[i])));
+```
+
+If you have a chance, try this change and let us know.
+
+Thank you for your reply; Your suggested change to the test case works. 
+
+The POWER architecture is an example of why the C specification does not specify the signedness of type char. POWER does not include a "load signed byte" instruction like X86; instead you have to first load the byte (unsigned) and then sign-extend it with a second instruction. So in theory specifying            -fsigned-char could be inefficient on POWER (although I assume modern compilers are smart enough to know if signedness is important in byte expressions and not sign-extend them needlessly).
+
+Since assuming char-(un)signed-ness is non-portable, and we want to guarantee top performance using RocksDB on POWER in my project, wearing my POWER hat I would request that RocksDB not force        -fsigned-char.
+
+Can anyone on the RocksDB team comment on whether we should fix this one test or add the -fsigned-char flag to the build?
+
+If we add the -fsigned-char option there may be some conflict with user apps that don't have this option set if any of our API calls take or return 'char' types.  If we just fix the test we risk leaving in a bug because caused by code that assumes chars are signed.
+

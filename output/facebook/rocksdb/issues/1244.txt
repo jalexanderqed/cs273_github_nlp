@@ -1,0 +1,6 @@
+There's an errata in include numaif.h file.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+

@@ -1,0 +1,12 @@
+From the source code, I know rocksdb has support redis's list structure.
+
+Will rocksdb support some other structure, such as map, set?  
+Is this in you plan?
+
+I do not know of any existing plans to support more redis-like data structures, but if somebody volunteers to do it, that would be great!
+
+The project https://github.com/yinqiwen/ardb build with rocksdb already support all redis data structure.
+ It  could be embed into other project with some effort.
+
+@baotiao please use @yinqiwen's project if you wish to use redis on top of rocksdb. We do not plan to add new redis data structures to rocksdb.
+

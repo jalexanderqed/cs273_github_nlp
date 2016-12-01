@@ -1,0 +1,49 @@
+I'm trying to run `make check` so that the tests use a custom directory (rather than e.g. `/tmp/rocksdbtest-0/db_test/LOG`). Looking at the Makefile it seems as though `TMPD=/path/ make check` should work, but /tmp is still being used. Am I invoking make check incorrectly?
+
+That should work.  What file(s) do you see being used in /tmp?  And what version rocksdb are you running?
+
+I'm using master, but I've also tested with 3.12.1 and saw the same issue.
+
+I'm running like this:
+
+```
+nwatkins@node:~/rocksdb$ TMPD=/tmp/testdir make check
+```
+
+And I can example what's going on, and I don't see my TMPD utilized. I don't see any files open in the directory I specified:
+
+```
+sudo lsof | grep -i testdir
+```
+
+But in tmp there are plenty of rocksdb files open.
+
+```
+sudo lsof | grep -i rocks
+rocksdb:b 42833 42855   nwatkins    3w      REG                8,1    22937     475199 /tmp/rocksdbtest-20001/db_test/LOG
+rocksdb:b 42833 42855   nwatkins    4r      DIR                8,1     4096     475198 /tmp/rocksdbtest-20001/db_test
+rocksdb:b 42833 42855   nwatkins    5uW     REG                8,1        0     475202 /tmp/rocksdbtest-20001/db_test/LOCK
+rocksdb:b 42833 42855   nwatkins    6u      REG                8,1        0     475203 /tmp/rocksdbtest-20001/db_test/000015.log
+rocksdb:b 42833 42855   nwatkins    7u      REG                8,1    30300     475206 /tmp/rocksdbtest-20001/db_test/000013.log
+rocksdb:b 42833 42855   nwatkins    8r      REG                8,1    31860     475208 /tmp/rocksdbtest-20001/db_test/000005.sst
+rocksdb:b 42833 42855   nwatkins    9u      REG                8,1     1060     475209 /tmp/rocksdbtest-20001/db_test/MANIFEST-000006
+rocksdb:b 42833 42855   nwatkins   10r      REG                8,1    32012     475204 /tmp/rocksdbtest-20001/db_test/000008.sst
+rocksdb:b 42833 42855   nwatkins   11r      REG                8,1    32095     475207 /tmp/rocksdbtest-20001/db_test/000010.sst
+rocksdb:b 42833 42855   nwatkins   12r      REG                8,1    31779     475211 /tmp/rocksdbtest-20001/db_test/000012.sst
+rocksdb:b 42833 42855   nwatkins   13r      REG                8,1    31855     475212 /tmp/rocksdbtest-20001/db_test/000014.sst
+rocksdb:b 42833 42855   nwatkins   14r      REG                8,1    31558     475213 /tmp/rocksdbtest-20001/db_test/000016.sst
+```
+
+It is `TEST_TMPDIR=<your_tmp_dir>`
+
+Doh. Thanks!
+
+On Tue, Sep 22, 2015 at 3:49 PM, Siying Dong notifications@github.com
+wrote:
+
+> It is TEST_TMPDIR=<your_tmp_dir>
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/732#issuecomment-142432102.
+

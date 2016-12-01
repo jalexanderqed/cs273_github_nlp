@@ -1,0 +1,4 @@
+Some older tags don't run GCC 4.8 with FB internal setting. Fixed them and created branches. Change the format compatible script accordingly.
+
+Also add more releases to check format compatibility.
+

@@ -1,0 +1,50 @@
+
+@yiwu-arbug has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4094732).
+
+LGTM. Please mention the change in HISTORY.md.
+
+Also please fix travis test failures.
+
+Do I create a new 4.14.0 for this change in the HISTORY.md?
+
+@bgirard add "## Unreleased" like this: https://github.com/facebook/rocksdb/blame/d88dff4ef2052cfb031128da9f4dc3be25872d68/HISTORY.md#L2
+
+@bgirard updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1427/files/f33428011d8be83033a456383a9ae1f42ab98a23..87a287a73b03314ebaa66079bd2f5dcb328c3f6f) - [changes since last import](https://github.com/facebook/rocksdb/pull/1427/files/f33428011d8be83033a456383a9ae1f42ab98a23..87a287a73b03314ebaa66079bd2f5dcb328c3f6f)
+
+@bgirard updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1427/files/87a287a73b03314ebaa66079bd2f5dcb328c3f6f..d1d69fe364fa78623f1eea567bf7a17bb45be8d2) - [changes since last import](https://github.com/facebook/rocksdb/pull/1427/files/87a287a73b03314ebaa66079bd2f5dcb328c3f6f..d1d69fe364fa78623f1eea567bf7a17bb45be8d2)
+
+Can you also fix AppVeyor build error? Thanks!
+
+@bgirard updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1427/files/d1d69fe364fa78623f1eea567bf7a17bb45be8d2..155d022d938ceef0ddb80ea09258fbf966a3e163) - [changes since last import](https://github.com/facebook/rocksdb/pull/1427/files/d1d69fe364fa78623f1eea567bf7a17bb45be8d2..155d022d938ceef0ddb80ea09258fbf966a3e163)
+
+@bgirard updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1427/files/155d022d938ceef0ddb80ea09258fbf966a3e163..328b062a505d7db69776ac7196f2665cf3af7c15) - [changes since last import](https://github.com/facebook/rocksdb/pull/1427/files/d1d69fe364fa78623f1eea567bf7a17bb45be8d2..328b062a505d7db69776ac7196f2665cf3af7c15)
+
+Sorry for the spam, I don't have a windows dev machine and msvc is giving me new compile errors each time.
+
+@bgirard ah, I guess you can look at the error and update PR to see if AppVeyor passes.
+
+@bgirard updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1427/files/328b062a505d7db69776ac7196f2665cf3af7c15..8c5f34364103432e4f125832e77a436316d00d3b) - [changes since last import](https://github.com/facebook/rocksdb/pull/1427/files/d1d69fe364fa78623f1eea567bf7a17bb45be8d2..8c5f34364103432e4f125832e77a436316d00d3b)
+
+@bgirard updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1427/files/8c5f34364103432e4f125832e77a436316d00d3b..0299b93f74294ba23329cd6084b3b83dc48f11c9) - [changes since last import](https://github.com/facebook/rocksdb/pull/1427/files/d1d69fe364fa78623f1eea567bf7a17bb45be8d2..0299b93f74294ba23329cd6084b3b83dc48f11c9)
+
+Looking good! One last thing: can you run `make format` and update the PR? Thanks!
+
+@bgirard updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1427/files/0299b93f74294ba23329cd6084b3b83dc48f11c9..807b8417520452563c6181229bbf803d4cda7137) - [changes since last import](https://github.com/facebook/rocksdb/pull/1427/files/0299b93f74294ba23329cd6084b3b83dc48f11c9..807b8417520452563c6181229bbf803d4cda7137)
+
+Thanks for the quick review!
+
+FYI running 'make format' is broken. I had to read what it was trying to do and do the following:
+
+```
+# Location has moved
+wget https://raw.githubusercontent.com/leaningtech/duetto-clang/master/tools/clang-format/clang-format-diff.py
+# Not sure if I needed clang-format, or it got it from the step below
+brew install clang-format
+# depot tools is looking for a chromium tree root
+touch .gclient
+# It was looking for it in a particular location
+mkdir -p buildtools/mac
+# Happened to have a local checkout of chromium with the script it was looking for
+cp ~/browsers/chromium_moved/src/buildtools/mac/clang-format buildtools/mac/clang-format 
+```
+

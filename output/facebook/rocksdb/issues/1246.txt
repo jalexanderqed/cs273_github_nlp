@@ -1,0 +1,62 @@
+I'm not sure if it's a bug or intentional. On Linux you need to set `ROCKSDB_PLATFORM_POSIX` explicitly if certain header files are used.
+
+Here's a minimal example:
+
+```
+#include "table/block_based_table_factory.h"
+
+int main() {
+  rocksdb::Options options;
+  rocksdb::BlockBasedTableOptions table_options;
+  options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
+
+  return 0;
+}
+```
+
+Put this file into the root of a RocksDB checkout and compile it e.g. with:
+
+```
+clang++ table_options.cc -L../ -Iinclude -I. -L. --std=c++11 -lrocksdb_debug -lpthread -lbz2 -lz -lsnappy
+```
+
+You'll get:
+
+```
+In file included from table_options.cc:1:
+In file included from ./table/block_based_table_factory.h:18:
+In file included from ./db/dbformat.h:20:
+./util/coding.h:84:7: error: use of undeclared identifier 'port'
+  if (port::kLittleEndian) {
+      ^
+./util/coding.h:98:7: error: use of undeclared identifier 'port'
+  if (port::kLittleEndian) {
+      ^
+2 errors generated
+```
+
+It compiles fine when `-DROCKSDB_PLATFORM_POSIX` is set:
+
+```
+clang++ table_options.cc -L../ -Iinclude -I. -L. --std=c++11 -lrocksdb_debug -lpthread -lbz2 -lz -lsnappy -DROCKSDB_PLATFORM_POSIX
+```
+
+Hi @vmx, this looks like the right behaviour to me we have a port for POSIX and a port for windows
+https://github.com/facebook/rocksdb/blob/master/port/port.h
+
+`ROCKSDB_PLATFORM_POSIX` will be set automatically if you are using the Makefile
+
+I just thought if it would make sense to have use preprocessor directives that use defines that are predefined. Something like:
+
+```
+#if defined(_WIN32)
+#include "port/win/port_win.h"
+#else
+#include "port/port_posix.h"
+#endif
+```
+
+@vmx Don't we already have it in `port/port.h`?
+
+@yuslepukhin My point was about using defines that are _predefined_ by the compilers instead of using custom ones like `ROCKSDB_PLATFORM_POSIX` that need to be set manually.
+

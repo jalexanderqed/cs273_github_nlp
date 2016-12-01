@@ -1,0 +1,105 @@
+Source code refactoring. Extracted out common functionalities into merge.d functions .
+
+Hi,
+   My Build passed. I am unsure why the db_test fails. Could you someone look over and comment on it? Any feedback and help is appreciated. I have not changed anything semnatically in the code. Just used a research tool to detect duplicate code and merged them. 
+
+Never mind. Build and tests passed. Looking for feedback. 
+
+Hey @krishnanm86, thanks this effort for making RocksDB code cleaner.
+
+I'm not sure about the value of C++ changes in this patch. Sure, you reduced code repetition, but added one more function, which is not necessarily cleaner.
+
+I'll leave it to @yhchiang to review the Java changes.
+
+Hi 
+   Thanks for your feedback, I am working on a research tool that identifies potential duplicate code and merges them. It would be very nice to hear about how acceptable this change is, as it is vital for my evaluation and continued extension of my tool which I plan to apply on your code base..
+
+The one more function could come in handy when more similar functionalities are added and can be just extended into this code. 
+
+P.S: Thanks a lot for the feedback. This was really helpful. 
+
+There are definitely situations where it might make sense to merge similar parts of code into the same function. However, I don't think it makes sense when the similar parts are only 1-3 lines of code and you need to add one more function to avoid repeating those 1-3 lines of code.
+
+Hi,
+   I understand that. This is just an initial commit to get my tool to understand and be involved in your code base. I could possibly remove the wrapper and change the call sites, which would eliminate the number of functions in the code. 
+
+The reason I still let my tool merge the file operations was :
+1) It reduced number of lines of code
+2) It would allow my tool to later work on multiple asts and possibly allow extensions of these file operations . 
+
+I thought once I have initial responses for my tool, I could work on select code bases and extend my tool to work on them and identify code duplication and merges that make sense for the maintainers. 
+
+P.S: The code in the rocksjni had about 10 lines of code that were common with only one line different. I hope that merge is acceptable. 
+
+For the rocksjni.cc merge, I could consider using only one boolean if that would help the pull request. 
+
+Thanks for making your tool involved in our code base :) We're definitely interested if there is some big code duplication that we can simplify.
+
+I can't comment on the rocksjni. cc @yhchiang @fryz, who are actively working on RocksJava
+
+Hello @krishnanm86.  Thanks for contributing to the rocksdb code base.  First off,  can you try submitting this as a diff through review.facebook.net? It should be as easy as running `arc diff` once you install phabricator utils (http://phabricator.org/).   For example, pull request https://github.com/facebook/rocksdb/pull/437 uses `arc diff` to do the code review.
+
+Hi, thanks for the positive feedback. Such responses really strengthen my case to pursue such a tool as research. 
+
+Anyway, I am unable to get the Phabricator.org activation email. I tried many times since last evening. Is there anyway to bypass that activation email? 
+
+Without activation email and logging in , I am unable to get the token for the arc configuration. Any help is appreciated here
+
+@krishnanm86 there is a url which pops up in the command-line window. You need to just copy that one in a browser window.
+
+@fyrz I got my Phabricatr account running. But I am getting a "No changes
+found" error when I run arc diff. Should I specify that the diff should be
+made in comparison to the facebook/rocksdb repository?
+
+On Fri, Dec 12, 2014 at 8:06 AM, fyrz notifications@github.com wrote:
+
+> @krishnanm86 https://github.com/krishnanm86 there is a url which pops
+> up in the command-line window. You need to just copy that one in a browser
+> window.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/pull/436#issuecomment-66739162.
+
+## 
+
+---
+
+I dare do all that may become a man; Who dares do more, is none - Macbeth,
+twelfh night!
+Regards
+       Krishna
+
+@krishnanm86 if you develop on a branch you can run the following command:
+`arc diff origin/master`.
+
+@fyrz Here is the link
+
+ https://reviews.facebook.net/D30159
+
+There is a lot of lint issues. My first commit, so I am not sure what a
+lint issue issue is. I will work on resolving them right now. Other
+feedback welcome.
+
+On Fri, Dec 12, 2014 at 8:15 AM, fyrz notifications@github.com wrote:
+
+> @krishnanm86 https://github.com/krishnanm86 if you develop on a branch
+> you can run the following command:
+> arc diff origin/master.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/pull/436#issuecomment-66739693.
+
+## 
+
+---
+
+I dare do all that may become a man; Who dares do more, is none - Macbeth,
+twelfh night!
+Regards
+       Krishna
+
+The diff and lint issues are now resolved. Hope we can land this now. 
+Looking forward to hearing from you. 
+

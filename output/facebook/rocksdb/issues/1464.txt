@@ -1,0 +1,13 @@
+Summary:
+
+Note: reviewed in  https://reviews.facebook.net/D65115
+
+- DBIter maintains a range tombstone accumulator. We don't cleanup obsolete tombstones yet, so if the user seeks back and forth, the same tombstones would be added to the accumulator multiple times.
+- DBImpl::NewInternalIterator() (used to make DBIter's underlying iterator) adds memtable/L0 range tombstones, L1+ range tombstones are added on-demand during NewSecondaryIterator() (see D62205)
+- DBIter uses ShouldDelete() when advancing to check whether keys are covered by range tombstones
+
+Test Plan:
+
+new end-to-end tests (https://reviews.facebook.net/D63927)
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4131753).
+

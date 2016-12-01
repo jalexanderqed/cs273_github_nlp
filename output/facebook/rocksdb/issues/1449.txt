@@ -1,0 +1,72 @@
+Summary:
+
+Implement a insert hint into skip-list to hint insert position. This is
+to optimize for the write workload where there are multiple stream of
+sequential writes. For example, there is a stream of keys of a1, a2,
+a3... but also b1, b2, b2... Each stream are not neccessary strictly
+sequential, but can get reorder a little bit. User can specify a prefix
+extractor and the `SkipListRep` can thus maintan a hint for each of the
+stream for fast insert into memtable.
+
+This is the internal implementation part. See #1419 for the interface part.
+See inline comments for details.
+
+Test Plan:
+See the new tests.
+cc @nbronson @mvm3k @al13n321
+
+@yiwu-arbug has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4106781).
+
+Will take a look. By the way, the Windows build failed.
+
+Offline discussed with @siying @IslamAbdelRahman @lightmark yesterday. Will try the follow way:
+- Only store a few levels of `prev` for binary search in small range.
+- If `prev` is not helping do a full binary search.
+  In this way the code will be much simpler and takes less memory overhead, and hopefully have comparable performance.
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1449/files/b8a277428bbcab59ca23db19b8739f9593c3b74e..6560d3f4e2f8c63d9b222c6bcd66bd6dc9cf0191) - [changes since last import](https://github.com/facebook/rocksdb/pull/1449/files/b8a277428bbcab59ca23db19b8739f9593c3b74e..6560d3f4e2f8c63d9b222c6bcd66bd6dc9cf0191)
+
+PR updated. Will update inline comment and prepare docs to explain the implementation.
+
+In terms of correctness, does it make sense to write a validation function to validate the skip list and use it in the unit test? It's very hard to prove correctness just by code review.
+
+@siying that's my plan. I'm wanting to send the PR before finishing the test to get early feedback.
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1449/files/6560d3f4e2f8c63d9b222c6bcd66bd6dc9cf0191..0c4de2373bf558c0d2978204ff6d1978f49c51b8) - [changes since last import](https://github.com/facebook/rocksdb/pull/1449/files/6560d3f4e2f8c63d9b222c6bcd66bd6dc9cf0191..0c4de2373bf558c0d2978204ff6d1978f49c51b8)
+
+Updated with inline comments, address comments and fix test failures.
+
+Pending unit test. Will send benchmark code in a separate PR.
+
+@siying If you want I can prepare a quip doc with better explanation.
+
+@siying I added some inline comments which hopefully give better explanation. Hope they helps, or we can discuss offline.
+
+@siying I agree with you. After reading your comment, I think the upper half of `prev` together with `FindWithHint()` gives little benefit. I'm to remove them and make it cleaner.
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1449/files/0c4de2373bf558c0d2978204ff6d1978f49c51b8..cb5edc3614ed5a209ec6c1c3543a9b6775638eb1) - [changes since last import](https://github.com/facebook/rocksdb/pull/1449/files/0c4de2373bf558c0d2978204ff6d1978f49c51b8..cb5edc3614ed5a209ec6c1c3543a9b6775638eb1)
+
+Removed `FindWithHint()` and related logic.
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1449/files/cb5edc3614ed5a209ec6c1c3543a9b6775638eb1..984f09b3fcc71b26371c1528835cb62a44ffeb9b) - [changes since last import](https://github.com/facebook/rocksdb/pull/1449/files/cb5edc3614ed5a209ec6c1c3543a9b6775638eb1..984f09b3fcc71b26371c1528835cb62a44ffeb9b)
+
+Make `InsertHint` struct public. Add unit tests to inlineskiplist_test.
+
+clang-format; Fix windows build.
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1449/files/984f09b3fcc71b26371c1528835cb62a44ffeb9b..c4c7114cb3483613749a9bd622811dbb3dd22899) - [changes since last import](https://github.com/facebook/rocksdb/pull/1449/files/984f09b3fcc71b26371c1528835cb62a44ffeb9b..c4c7114cb3483613749a9bd622811dbb3dd22899)
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1449/files/c4c7114cb3483613749a9bd622811dbb3dd22899..b1dea0276d24e9cd4b69ab3955c824bc8945d21f) - [changes since last import](https://github.com/facebook/rocksdb/pull/1449/files/c4c7114cb3483613749a9bd622811dbb3dd22899..b1dea0276d24e9cd4b69ab3955c824bc8945d21f)
+
+Tests validate the skiplist on all levels.
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1449/files/b1dea0276d24e9cd4b69ab3955c824bc8945d21f..ae0d98d07edb814090b74fefaf93ce4ad67ab690) - [changes since last import](https://github.com/facebook/rocksdb/pull/1449/files/b1dea0276d24e9cd4b69ab3955c824bc8945d21f..ae0d98d07edb814090b74fefaf93ce4ad67ab690)
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1449/files/ae0d98d07edb814090b74fefaf93ce4ad67ab690..391e8ec45f566de960e5ee5bbbf392692b4cc277) - [changes since last import](https://github.com/facebook/rocksdb/pull/1449/files/ae0d98d07edb814090b74fefaf93ce4ad67ab690..391e8ec45f566de960e5ee5bbbf392692b4cc277)
+
+Assert nodes[0] < nodes[0]->Next().
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1449/files/391e8ec45f566de960e5ee5bbbf392692b4cc277..416933657da2855459fc72a1e1616a7bb6cbc24e) - [changes since last import](https://github.com/facebook/rocksdb/pull/1449/files/391e8ec45f566de960e5ee5bbbf392692b4cc277..416933657da2855459fc72a1e1616a7bb6cbc24e)
+
+Fix lint error.
+

@@ -1,0 +1,29 @@
+i am using vs community under windows7
+
+there are warnings about some 32bit/64bit conversion or bit-wise operations, vs complains with C4244 and C4334 warnings.
+but the original CMakeLists.txt set /WX on in CMAKE_CXX_FLAGS, thus my compilation fails
+so i remove this /WX from CMakeLists.txt, although the warning still exists, 32bit rocksdb.dll was generated successfully.
+
+so does rocksdb support 32bit dll generating? can i ignore these warnings safely?
+
+there are there are two slice.cc files, db/slice.cc and util/slice.cc
+with the same base name, the latter generated slice.obj will overwrite the previous one, incurs a link warning LNK4042
+maybe the content of db/slice.cc should be in slice.h directly?
+
+@yuslepukhin and @PraveenSinghRao will have the final say but I don't think RocksDB build on 32-bit on Windows. It's more likely to build on other 32-bit platforms.
+
+I can move the contents of db/slice.cc into util/slice.cc if it solves your problem. Or you can send a PR for that by yourself and I'll merge it.
+
+We do not build 32-bit. 
+Moving slices would not solve the problem. I think it is the same names of the files that may be confusing sometimes not their location. We had not have troubles with it for a while. Try getting the latest CMake for the start.
+
+@yuslepukhin if I copy the content of db/slice.cc into util/slice.cc and remove db/slice.cc, would that work?
+
+okay, i read CMakeList.txt carefully, and find out if i add this option to cmake(with or without Win64)
+`-G "Visual Studio 14 Win64"`
+then that  LNK4042 error will gone.
+
+this is because db and util sub-folders is created specially for the two slice.obj by cmake with -G option set.
+
+however, i still think it is good practice NOT to use the same file basename, which is compiler independent
+

@@ -1,0 +1,35 @@
+Heya,
+
+First off I'd like to thank you for all the great work on rocksdb. It matches pretty perfectly to a use case we have been having recently and we've ended up using it all over the place.
+
+We've been having a problem with rocksdbs that open in read only mode that still apparently read and change files!
+
+Specifically, in java, when opening a rocksdb with openReadOnly, some files still change, namely the LOG files.
+
+Now, this wouldn't be a problem, but we are using rocksdb by placing the database in a single zip file, throwing it on S3 and downloading the zip and decompressing the rocksdb as it is required. When used in this use case the rocksdb is never being written to, just read. The way we are checking whether this download/decompress operation actually needs to occur is by checking the file names and file sizes. Should certain files just be ignored for such a check? Or is this is a silly way to approach this problem overall
+
+Any thoughts?
+
+I think the quickest way to get this to work is to modify your check so that you ignore all filenames that match  LOG*. Will that work?
+
+By changing options.db_log_dir when you open the read-only DB, you can make RocksDB put *.LOG files to any directory you want. If you put it in a local writable directory, then your initial DB directory won't be touch. You can even implement your own Logger class and pass it to options.info_log to treat the log files in whatever ways you want, even throwing it away. It is probably not doable through Java though.
+
+Providing a own logger is not possible yet in Java. What`s possible is that you can limit the amount of logs written, the amount of backdata and the verbosity which is used while using RocksDB.
+
+Changing verbosity is also pretty essential if used in a production environment.
+
+Ah yes perfect!
+In the java we have a setDbLogDir() which is the option i want
+great! I'll put it in a different place from my data and construct my zips more carefully.
+
+Cheers
+
+@sinjax btw. i have Logger functionality for Java on my list of open todos. Because it would be neat to reuse Java logging infrastructure to have a single source of log information. I keep you posted.
+
+@sinjax can we close the issue?
+
+@siying yep! sorry for the no-reply. The solution was got and I scuttled off to carry on-a-hackin :)
+@fyrz for me throwing the logs at a directory is enough but, yeah! hooking it into existing logging frameworks (sl4j would be a good choice) would be awesome, proper control of rocksdb interactions, that'd be just lovely.
+
+Thanks for your help! :)
+

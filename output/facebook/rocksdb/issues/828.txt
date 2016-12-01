@@ -1,0 +1,49 @@
+i had read leveldb's sourcecode before，i am reading rocksdb's source code now, i am so confused that  ttl is supported in rocksdb，but it may return expired keys....after i read sourcecode，i learned the code like below,
+
+  int32_t timestamp_value = DecodeFixed32(str.data() + str.size() - kTSLength);
+  if (timestamp_value < kMinTimestamp) {
+    return Status::Corruption("Error: Timestamp < ttl feature release time!\n");
+  }
+
+if save  curtime + ttl in ts info while write, we can just change the code to filter expired keys, and there are no expired keys returned any more...
+
+  int32_t timestamp_value = DecodeFixed32(str.data() + str.size() - kTSLength);
+  if (timestamp_value <  curtimevalue) {
+    return Status::NotFound();
+  }
+
+i want to know why we do not implement like this? is there any design problem?
+
+PS: i am reading and analyzing rocksdb's source code now, and i am ready to write some blogs about my learns..haha~~
+
+Hi @followheart 
+The code you mentioned is a sanity check, it check that the timestamp for the key is not older than [05/09/2013:5:40PM GMT-8]
+If this happened that mean there is a corruption because the timestamp is older than the release date of the ttl feature.
+
+We delete the expired keys in the compaction filter
+https://github.com/facebook/rocksdb/blob/master/utilities/ttl/db_ttl_impl.h#L137-L177
+
+you can check this wiki page about the TTL feature https://github.com/facebook/rocksdb/wiki/Time-to-Live
+
+Maybe @dhruba remembers the initial reason why we don't do another round of filtering of TTL in Get() time.
+
+Anyway, for now, to implementing something like that is more complicated than what you said. We also need to implement it in iterators. Maybe we can have a mode of TTL that does that. If you are interested in contributing, you can send a PR and we will appreciate it!
+
+thanks for your answers~~ @IslamAbdelRahman and @siying ~~
+
+i had already read wiki about ttl feature，and learned that expired keys are only deleted in the compaciton filter，we can also implent custom compaction filter to do something~~
+Maybe we do not want schedule compaciton very often in some cases，becase compaction and flush may affect get/set time~~but expired keys shoule be filtered~~
+
+we can implent a method that each key can have its own ttl, it sounds more flexable~~
+step1: key/value/expire ttl
+step1: implent custome compaction filter, so we can filter expried keys, and 
+step2: filter expried keys in Get(),
+
+maybe we could make nothing change in iterators~~
+However, it's just ideas and suggestions, i can design and implent by myself~~~
+
+Thanks~~
+
+find a way to implent this~~
+thanks~~
+

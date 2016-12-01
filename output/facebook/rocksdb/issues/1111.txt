@@ -1,0 +1,10 @@
+I am wondering what the most performant approach to achieving read-your-own-writes semantics via a WBWI (`WriteBatchWithIndex`) is?
+
+I can see 4 possible approaches:
+1. Take a `WBWIIterator` on the WBWI by calling `NewIterator`, seek, and if no item is found then fallback to `db->Get`. This was described by @siying in http://rocksdb.org/blog/1901/write-batch-with-index/ and is used in MongoRocks - https://github.com/mongodb-partners/mongo-rocks/blob/master/src/rocks_recovery_unit.cpp#L387
+2. Take a database `Iterator`, and then take an `Iterator` on the WBWI by calling `NewIteratorWithBase` and passing in the database `Iterator`, and then seek.
+3. Call `GetFromBatch` on the WBWI, and if no item is found then fallback to `db->Get`.
+4. Call `GetFromBatchAndDB` on the WBWI.
+
+Personally (4) looks to be the easiest option, and I would guess has the most potential for future internal optimization in Rocks?
+

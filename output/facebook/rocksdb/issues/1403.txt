@@ -1,0 +1,54 @@
+We have an app that uses RocksDB (rocksdbjni-3.13.1.jar). We observe a Compaction IO error. The error seems quite general (I ensured that there was free space in the host at the time of the error.) and I'd really appreciate some insight on what causes this.
+
+```
+2016/10/14-13:13:35.160260 7f25c931b700 [WARN] Compaction error: IO error: /export/content/data/../06.sst: Input/output error
+2016/10/14-13:13:35.160268 7f25c931b700 (Original Log Time 2016/10/14-13:13:35.159784) [default] compacted to: files[1 0 17 20 26 33 53] max score 1.50, MB/sec: 0.5 rd, 0.5 wr, level 2, files in(1, 17) out(16) MB in(0.0, 33.5) out(32.7), read-write-amplify(17269.6) write-amplify(8535.0) IO error: /export/../274206.sst: Input/output error, records in: 583474, records dropped: 0
+2016/10/14-13:13:35.160272 7f25c931b700 (Original Log Time 2016/10/14-13:13:35.160238) EVENT_LOG_v1 {"time_micros": 1476450815160021, "job": 5696, "event": "compaction_finished", "output_level": 2, "num_output_files": 16, "total_output_size": 34319108, "num_input_records": 570442, "num_output_records": 570442, "lsm_state": [1, 0, 17, 20, 26, 33, 53]}
+2016/10/14-13:13:35.160277 7f25c931b700 [ERROR] Waiting after background compaction error: IO error: /export/../274206.sst: Input/output error, Accumulated background error counts: 1
+2016/10/14-13:13:36.176650 7f25c931b700 EVENT_LOG_v1 {"time_micros": 1476450816176637, "job": 5696, "event": "table_file_deletion", "file_number": 274206}
+2016/10/14-13:13:36.177563 7f25c931b700 EVENT_LOG_v1 {"time_micros": 1476450816177557, "job": 5696, "event": "table_file_deletion", "file_number": 274205}
+2016/10/14-13:13:36.178574 7f25c931b700 EVENT_LOG_v1 {"time_micros": 1476450816178567, "job": 5696, "event": "table_file_deletion", "file_number": 274204}
+2016/10/14-13:13:36.179745 7f25c931b700 EVENT_LOG_v1 {"time_micros": 1476450816179738, "job": 5696, "event": "table_file_deletion", "file_number": 274203}
+2016/10/14-13:13:36.180790 7f25c931b700 EVENT_LOG_v1 {"time_micros": 1476450816180785, "job": 5696, "event": "table_file_deletion", "file_number": 274202}
+2016/10/14-13:13:36.181765 7f25c931b700 EVENT_LOG_v1 {"time_micros": 1476450816181759, "job": 5696, "event": "table_file_deletion", "file_number": 274201}
+2016/10/14-13:13:36.182739 7f25c931b700 EVENT_LOG_v1 {"time_micros": 1476450816182734, "job": 5696, "event": "table_file_deletion", "file_number": 274200}
+2016/10/14-13:13:36.184003 7f25c931b700 EVENT_LOG_v1 {"time_micros": 1476450816183996, "job": 5696, "event": "table_file_deletion", "file_number": 274199}
+2016/10/14-13:13:36.185124 7f25c931b700 EVENT_LOG_v1 {"time_micros": 1476450816185117, "job": 5696, "event": "table_file_deletion", "file_number": 274198}
+2016/10/14-13:13:36.186225 7f25c931b700 EVENT_LOG_v1 {"time_micros": 1476450816186217, "job": 5696, "event": "table_file_deletion", "file_number": 274197}
+2016/10/14-13:13:36.187240 7f25c931b700 EVENT_LOG_v1 {"time_micros": 1476450816187235, "job": 5696, "event": "table_file_deletion", "file_number": 274196}
+2016/10/14-13:13:36.188205 7f25c931b700 EVENT_LOG_v1 {"time_micros": 1476450816188200, "job": 5696, "event": "table_file_deletion", "file_number": 274195}
+2016/10/14-13:13:36.189640 7f25c931b700 EVENT_LOG_v1 {"time_micros": 1476450816189627, "job": 5696, "event": "table_file_deletion", "file_number": 274194}
+2016/10/14-13:13:36.191339 7f25c931b700 EVENT_LOG_v1 {"time_micros": 1476450816191330, "job": 5696, "event": "table_file_deletion", "file_number": 274193}
+2016/10/14-13:13:36.192962 7f25c931b700 EVENT_LOG_v1 {"time_micros": 1476450816192954, "job": 5696, "event": "table_file_deletion", "file_number": 274192}
+2016/10/14-13:13:36.194374 7f25c931b700 EVENT_LOG_v1 {"time_micros": 1476450816194366, "job": 5696, "event": "table_file_deletion", "file_number": 274191}
+2016/10/14-13:13:36.818933 7f25c931b700 [ERROR] Waiting after background compaction error: IO error: /export/...Partition_165/274206.sst: Input/output error, Accumulated background error counts: 2
+
+```
+
+The error said "Input/output error". This is usually some file system/hardware issue. You can search "Input/output error" online and see the reference. Check the file 274206.sst and see whether you can read it form the file system.
+
+Can RocksDB log the errno?
+
+On Tue, Oct 18, 2016 at 12:27 PM, Siying Dong notifications@github.com
+wrote:
+
+> The error said "Input/output error". This is usually some file
+> system/hardware issue. You can search "Input/output error" online and see
+> the reference. Check the file 274206.sst and see whether you can read it
+> form the file system.
+> 
+> —
+> You are receiving this because you are subscribed to this thread.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1403#issuecomment-254612859,
+> or mute the thread
+> https://github.com/notifications/unsubscribe-auth/ABkKTfq48noz-amAj5Z4e_dVpXuyBTTRks5q1R2XgaJpZM4KZRP3
+> .
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@mcallahan something we can do. The message is generated using strerror(), so it's easy to go back and check errno anyway.
+

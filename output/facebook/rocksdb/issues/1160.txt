@@ -1,0 +1,9 @@
+Errors running "make shared_lib":
+./include/rocksdb/options.h:69:32: error: enumerator value -1 is outside the range of underlying type ‘char’
+./include/rocksdb/perf_level.h:17:21: error: enumerator value -1 is outside the range of underlying type ‘char’
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thanks @vmorris
+@siying fixed this issue
+

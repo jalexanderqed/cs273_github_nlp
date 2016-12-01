@@ -1,0 +1,20 @@
+Summary:
+Currently plain table bloom filter is required if storing metadata on file. Remove the constraint.
+
+Test Plan: Relax existing unit test to cover this scenario.
+@siying has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4190977).
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1525/files/f321864ba051b33b9f52924065069292b213a285..3bcc6ad5c17591437109c9824e3781b0e2d51bb7) - [changes since last import](https://github.com/facebook/rocksdb/pull/1525/files/f321864ba051b33b9f52924065069292b213a285..3bcc6ad5c17591437109c9824e3781b0e2d51bb7)
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1525/files/3bcc6ad5c17591437109c9824e3781b0e2d51bb7..564c7fd02f406eb7b13524f9085fe413264e3105) - [changes since last import](https://github.com/facebook/rocksdb/pull/1525/files/f321864ba051b33b9f52924065069292b213a285..564c7fd02f406eb7b13524f9085fe413264e3105)
+
+Some changes to make it the code easier to understand.
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1525/files/564c7fd02f406eb7b13524f9085fe413264e3105..e365a0d518f185521218b45449f4aaf9e7aaa4dc) - [changes since last import](https://github.com/facebook/rocksdb/pull/1525/files/564c7fd02f406eb7b13524f9085fe413264e3105..e365a0d518f185521218b45449f4aaf9e7aaa4dc)
+
+Revert a previous change in test, which is not needed now.
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1525/files/e365a0d518f185521218b45449f4aaf9e7aaa4dc..f39e7125e93ddfd9624e820e0e3b0e2266b249f0) - [changes since last import](https://github.com/facebook/rocksdb/pull/1525/files/564c7fd02f406eb7b13524f9085fe413264e3105..f39e7125e93ddfd9624e820e0e3b0e2266b249f0)
+
+asan, ubsan failure, and the Travis failure don't seem to be related.
+

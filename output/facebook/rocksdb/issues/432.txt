@@ -1,0 +1,9 @@
+I want know how many keys without repetition in the rocksdb.
+Dose rocksdb has a simple interface to return the number, or I need the iterator the whole database.. 
+
+I saw basho's leveldb uses a shared memory to log the number of key in database, will rocksdb support this function 
+
+@baotiao accurate number of keys is not easy to get, because knowing which keys are for deleting which entries need a full scan. We have a DB property to give you a reasonable estimation. Try DB property "rocksdb.estimate-num-keys".
+
+@siying  Thanks. rocksdb.estimate-num-keys is really a convenience way..
+

@@ -1,0 +1,27 @@
+Hi guys,
+
+We am very interested in this feature,
+
+https://github.com/facebook/rocksdb/blob/master/include/rocksdb/sst_file_manager.h
+
+I see the C-API hasn't been updated to reflect it however. Basically we want to be able to limit the resources used by RocksDB. In our current thinking that comes down to:
+- Limiting memory. This can be done with the read cache size for workloads with data in the Gb range and bigger.
+- Limiting disk space. This is where SstFileTracker would be great.
+
+Thanks,
+
+Ethan.
+
+Hi @ehamilto 
+That's correct, we dont have a C-API for SstFileManager yet, would you be interested in submitting a pull request to expose it in ?
+
+Hi @IslamAbdelRahman 
+
+Thanks for the quick reply. I am not, in principle opposed to submitting the pull request it but I need to double check with my management about TIBCO's open source contribution policies and whether they approve. This is not something we need right away. Let me get back to you guys with an answer.
+
+Best,
+
+Ethan. 
+
+It will be great if you can contribute back to the RocksDb community. It will definitely help other RocksDB C users in the long-term.
+

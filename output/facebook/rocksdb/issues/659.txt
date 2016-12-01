@@ -1,0 +1,11 @@
+Hi,
+
+What is the timeline for having a custom merge operator in rocksdbjni ?
+
+Thanks,
+Ashish
+
+@anagav At the moment there is no time-frame that I am aware of. Implementation of this is probably only 1 days work; However, from our experience with Comparators, JNI callback from C++ to Java can be significantly slower than the native C++ implementation. If performance of this is an issue, I would suggest to implement your merge operator in C++ and then just set it from Java by name in the Options of the DB or Column Family.
+
+@adamretter  thanks for the suggestion. Will write my custom merge operator in c++ and invoke it from java.
+

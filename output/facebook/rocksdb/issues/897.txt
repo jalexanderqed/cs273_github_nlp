@@ -1,0 +1,12 @@
+  Status is a class which is frequently returned by value from functions.
+  Making it movable avoids 99% of the copies automatically
+  on return by value.
+
+Travis failure does not look related
+
+Looks good to me. Let me apply it locally and run some valgrind tests. Will merge if it passes.
+
+Full valgrind run takes too long. I ran some tests and didn't see error reported. This should be a frequent code path so it should be OK to me. Merging it now and I'll keep an eye on our automatic 
+
+@siying Thanks, indeed it is very frequent.
+

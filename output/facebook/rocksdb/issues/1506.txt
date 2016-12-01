@@ -1,0 +1,11 @@
+Summary:
+Parallize persistent_cache_test and transaction_test
+
+Test Plan:
+`make check`
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4179392).
+
+Now it finish faster ?
+
+transaction_test was usually the last test to finish and persistent_cache_test is also a slow one.
+

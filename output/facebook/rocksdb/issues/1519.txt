@@ -1,0 +1,13 @@
+Summary:
+Return an error from DeleteRange() (or Write() if the user is using the
+low-level WriteBatch API) if an unsupported table type is configured.
+
+Test Plan: unit test
+
+Reviewers: sdong, IslamAbdelRahman, lightmark, yhchiang
+
+Subscribers: andrewkr, wanning, dhruba, leveldb
+
+Differential Revision: https://reviews.facebook.net/D65331
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4185933).
+

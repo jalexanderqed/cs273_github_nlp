@@ -1,0 +1,39 @@
+Rocksdb,
+
+Unpacking 3.9.1 and then "make static_lib" prints just
+Makefile:34: **\* unterminated call to function `shell': missing`)'.  Stop.
+
+Same thing with 3.8 and probably others. I have bash 4.3.11 on a Linux Mint 14
+system. 
+
+Niels L
+
+On Fri, Feb 13, 2015 at 2:29 PM, nielsl notifications@github.com wrote:
+
+> Rocksdb,
+> 
+> Unpacking 3.9.1 and then "make static_lib" prints just
+> Makefile:34: **\* unterminated call to function shell': missing)'. Stop.
+> 
+> Same thing with 3.8 and probably others. I have bash 4.3.11 on a Linux
+> Mint 14
+> system.
+
+What version of GNU make are you using?
+If you change that line to begin with a dummy assignment, e.g.,
+
+d := $(shell...
+
+I think it will get you past that with any version of GNU make.
+
+It is  GNU Make 3.80. Yes it did work, thanks. I myself am a Makefile-dummy and others like me exist, so I think it ought to be fixed. 
+
+On Fri, Feb 13, 2015 at 3:02 PM, nielsl notifications@github.com wrote:
+
+> It is GNU Make 3.80. Yes it did work, thanks. I myself is a Makefile-dummy
+> and others like me exist, so I think it ought to be fixed.
+
+I pushed the fix.
+
+This is fixed.
+

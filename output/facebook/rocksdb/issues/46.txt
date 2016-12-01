@@ -1,0 +1,17 @@
+I ran `make` and see that it created static library only for the librocks.
+
+There are some systems (e.g. Linux Arch) that strongly prefer to use shared libraries. It would be great that the build system provide shared libs as well.
+
+Assign to me for now. Pull request welcomed.
+
+In order to create shared lib, you should run `make librocksdb.so`.
+
+It is not at the default target, because facebook does not use shared libs. See #29 
+
+Perhaps the instructions should be in INSTALL.md then.
+
+when I run make librocksdb.so, I get "make: **\* No rule to make target `librocksdb.so'.  Stop."
+and I can't continue
+
+Try `make shared_lib`
+

@@ -1,0 +1,100 @@
+Summary:
+cmake was previously supported only on windows.
+This diff makes it possible to use cmake on linux
+and adds support for building debs and rpms.
+
+Distributions may want to package the binaries
+differently to meet their standards
+
+Test Plan:
+mkdir build
+cd build; cmake ..
+make -j
+
+Reviewers: IslamAbdelRahman, sdong
+
+Subscribers: andrewkr, dhruba
+
+Differential Revision: https://reviews.facebook.net/D58713
+
+Not sure what the checks are, but :+1: to everything else.
+
+@swong15 - checks are for windows. I asked the maintainers of the windows port to help resolve them.
+
+@adsharma Made some progress today. TB continued.
+
+@yuslepukhin thanks for looking into it. Please let me know if you figure out what's wrong with windows. I suspect it has something to do with the reordering of commands in CmakeLists.txt after breaking it up by platform.
+
+Why removing the steps for the MSBuild on Windows? Maybe it's worth be kept in a README somewhere?
+
+On vacation. I thought I moved it to a file called win64.cmake
+
+On Jul 27, 2016 6:27 AM, "Alexander Jipa" notifications@github.com wrote:
+
+> Why removing the steps for the MSBuild on Windows? Maybe it's worth be
+> kept in a README somewhere?
+> 
+> —
+> You are receiving this because you were mentioned.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/pull/1135#issuecomment-235451090, or
+> mute the thread
+> https://github.com/notifications/unsubscribe-auth/AAoNA-yARZ_YeVP5rGskjdmtQXHdpwynks5qZqzegaJpZM4Il068
+> .
+
+Sorry, missed that one.
+Is there any pending work on this one?
+Does the patch work for OS X?
+
+Back from vacation.
+Main pending work is fix up windows build (Need help).
+Patch not tested on OS X, but might work out of the box (because I use if
+UNIX) or with minimal fix up.
+
+On Tue, Jul 26, 2016 at 7:39 PM, Alexander Jipa notifications@github.com
+wrote:
+
+> Sorry, missed that one.
+> Is there any pending work on this one?
+> Does the patch work for OS X?
+> 
+> —
+> You are receiving this because you were mentioned.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/pull/1135#issuecomment-235465449,
+> or mute the thread
+> https://github.com/notifications/unsubscribe-auth/AAoNA19Mogp3QySLB9D86rLI1DcCClZiks5qZsTegaJpZM4Il068
+> .
+
+FWIW we'd love to see this so that ceph can use cmake for the embedded rocksdb build.
+
+Has someone agreed to support this going forward (adsharma or the RocksDB team at FB)? Keeping it working is more work than making it work. I am a fan of as few build scripts as possible, so I am curious whether this will replace the existing build script.
+
+I'm happy to maintain this for Linux. The diff is stuck on making these
+changes in a way that doesn't break windows. I'm looking for someone to
+either fix the windows build (or make changes that would make it acceptable
+there).
+
+On Mon, Sep 26, 2016 at 9:25 AM, Mark Callaghan notifications@github.com
+wrote:
+
+> Has someone agreed to support this going forward (adsharma or the RocksDB
+> team at FB)? Keeping it working is more work than making it work. I am a
+> fan of as few build scripts as possible, so I am curious whether this will
+> replace the existing build script.
+> 
+> —
+> You are receiving this because you were mentioned.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/pull/1135#issuecomment-249620879,
+> or mute the thread
+> https://github.com/notifications/unsubscribe-auth/AAoNAyx8gVrttyGHefu8cohGarI4-hPBks5qt_H_gaJpZM4Il068
+> .
+
+@adsharama i posted another PR at #1358 trying to fix the build on osx and windows. let's see if it works or not.
+
+Closing, since #1358 was merged. 
+
+I wonder if using #if (WIN64) instead of WIN32 was causing all the problems on windows.
+Either way, packaging functionality still missing from the merged PR. I might make it into a separate pull request if I find some time to work on it.
+

@@ -1,0 +1,44 @@
+I know (Free)BSD is currently not supported and there's a FreeBSD port of version 3.2 available, but is this something your planning to add in a future release?
+I'm using InfluxDB on FreeBSD and upgrading versions is always painful, because RocksDB doesn't compile natively on FreeBSD.
+
+@nichdiekuh do you have idea what will FreeBSD support require? Can you send us the link to 3.2 port?
+
+Here's the port of 3.2 https://svnweb.freebsd.org/ports/head/databases/rocksdb/
+
+Unfortunately in 3.3 something changed and rocksdb probably needs some more changes to compile under FreeBSD. Unfortunately I couldn't figure the nessecary steps, due to my lack of C++ compiler knowledge ;)
+
+Do you perhaps have an idea what's wrong here: 
+
+```
+gmake[1]: Entering directory `/usr/ports/databases/rocksdb/work/facebook-rocksdb-91c0148'
+c++ -shared -Wl,-soname -Wl,librocksdb.so -O2 -pipe -I/usr/local/include -fno-strict-aliasing -g -Wall -Werror -Wsign-compare -I. -I./include -std=c++11 -O2 -pipe -I/usr/local/include -fno-strict-aliasing -DROCKSDB_PLATFORM_POSIX -O2 -pipe -I/usr/local/include -fno-strict-aliasing -D_REENTRANT -DOS_FREEBSD -DROCKSDB_ATOMIC_PRESENT -DSNAPPY -DGFLAGS=google -DZLIB -DBZIP2   -DHAVE_JEMALLOC -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -fPIC db/builder.cc db/c.cc db/column_family.cc db/compaction.cc db/compaction_picker.cc db/db_filesnapshot.cc db/db_impl.cc db/db_impl_debug.cc db/db_impl_readonly.cc db/db_iter.cc db/dbformat.cc db/file_indexer.cc db/filename.cc db/forward_iterator.cc db/internal_stats.cc db/log_reader.cc db/log_writer.cc db/memtable.cc db/memtable_list.cc db/merge_helper.cc db/merge_operator.cc db/repair.cc db/table_cache.cc db/table_properties_collector.cc db/tailing_iter.cc db/transaction_log_impl.cc db/version_edit.cc db/version_set.cc db/write_batch.cc table/adaptive_table_factory.cc table/block.cc table/block_based_table_builder.cc table/block_based_table_factory.cc table/block_based_table_reader.cc table/block_builder.cc table/block_hash_index.cc table/block_prefix_index.cc table/bloom_block.cc table/cuckoo_table_builder.cc table/cuckoo_table_reader.cc table/filter_block.cc table/flush_block_policy.cc table/format.cc table/iterator.cc table/merger.cc table/meta_blocks.cc table/plain_table_builder.cc table/plain_table_factory.cc table/plain_table_index.cc table/plain_table_key_coding.cc table/plain_table_reader.cc table/table_properties.cc table/two_level_iterator.cc util/arena.cc util/auto_roll_logger.cc util/blob_store.cc util/bloom.cc util/build_version.cc util/cache.cc util/coding.cc util/comparator.cc util/crc32c.cc util/dynamic_bloom.cc util/env.cc util/env_hdfs.cc util/env_posix.cc util/filter_policy.cc util/hash.cc util/hash_cuckoo_rep.cc util/hash_linklist_rep.cc util/hash_skiplist_rep.cc util/histogram.cc util/iostats_context.cc util/ldb_cmd.cc util/ldb_tool.cc util/log_buffer.cc util/logging.cc util/murmurhash.cc util/options.cc util/options_builder.cc util/perf_context.cc util/rate_limiter.cc util/skiplistrep.cc util/slice.cc util/statistics.cc util/status.cc util/string_util.cc util/sync_point.cc util/thread_local.cc util/vectorrep.cc util/xxhash.cc utilities/backupable/backupable_db.cc utilities/document/document_db.cc utilities/document/json_document.cc utilities/geodb/geodb_impl.cc utilities/merge_operators/put.cc utilities/merge_operators/string_append/stringappend.cc utilities/merge_operators/string_append/stringappend2.cc utilities/merge_operators/uint64add.cc utilities/redis/redis_lists.cc utilities/spatialdb/spatial_db.cc utilities/ttl/db_ttl_impl.cc  port/port_posix.cc port/stack_trace.cc    -L/usr/local/lib -pthread -lsnappy -lgflags -lz -lbz2 -o librocksdb.so
+
+
+In file included from db/builder.cc:10:
+./db/builder.h:45:37: error: no type named 'IOPriority' in 'rocksdb::Env'; did you mean 'Priority'?
+                         const Env::IOPriority io_priority = Env::IO_HIGH);
+                               ~~~~~^~~~~~~~~~
+                                    Priority
+
+/usr/local/include/rocksdb/env.h:197:8: note: 'Priority' declared here
+  enum Priority { LOW, HIGH, TOTAL };
+       ^
+
+In file included from db/builder.cc:10:
+./db/builder.h:45:67: error: no member named 'IO_HIGH' in 'rocksdb::Env'
+                         const Env::IOPriority io_priority = Env::IO_HIGH);
+                                                             ~~~~~^
+```
+
+These (and plenty of similar) errors occured with version 3.3 and I can't figure what needs to be changed to make it compile. 
+
+This is just an enum, I have no idea why it wouldn't compile on FreeBSD: https://github.com/facebook/rocksdb/blob/master/include/rocksdb/env.h#L205
+
+I found the issue while trying to compile 3.5.1 - for some reason the build took the header files from `/usr/local/includes/rocksdb` instead of the port's working directory. It should be possible to compile 3.5.1 with the exact changes I posted ealier, not sure about 3.6.x though.
+
+Hey @nichdiekuh -- I think we fixed this in master, can you please check? We'll release with 3.10 soon so we want to make sure everything is OK
+
+@nichdiekuh ping
+
+Closing this since we now have FreeBSD support. Please open a new issue if FreeBSD compile doesn't work for you.
+

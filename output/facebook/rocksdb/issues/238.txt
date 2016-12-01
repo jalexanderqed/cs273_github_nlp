@@ -1,0 +1,99 @@
+When running `arc linters` inside a rocksdb git clone on Mac OSX you end up with the following error:
+
+```
+hollowcore:rocksdb aretter$ arc linters
+PHP Fatal error:  Call to undefined method FacebookFbcodeLintEngine::getPEP8WithTextOptions() in /Users/aretter/NetBeansProjects/rocksdb/linters/lint_engine/FacebookFbcodeLintEngine.php on line 39
+
+Fatal error: Call to undefined method FacebookFbcodeLintEngine::getPEP8WithTextOptions() in /Users/aretter/NetBeansProjects/rocksdb/linters/lint_engine/FacebookFbcodeLintEngine.php on line 39
+```
+
+I have the latest from git as of right now for rocksdb, phabricator/arcanist and phabricator/libphutil. I also have PHP 5.4.24 and Mac OS X 10.9.4.
+Ultimately I want to communicate with https://reviews.facebook.net/D22269 using `arc diff`.
+
+I have just tested this on CentOS Linux 6.5, with a completely clean checkout of arcanist and RocksDB and I can confirm that the same problem happens there. Please advise...
+
+Not sure what goes wrong here.  Have reported this to the linter group and hope to get back to you soon :)
+
+Hey @adamretter, it seems like someone breaks the latest arcanist, can you try arcanist: 23c9e87fdfb05555caf3d41e307d047df3629235 and 
+libphutil: 3ca028dec2e77ec8780c644f453b5700b606ab60 to see if the error goes away?
+
+I am not sure which commit fixed it, but it does appear to be fixed with the head of the `master` branch now.
+
+Actually it works now if I run `arc linters` in the `arcanist` clone folder, but still not in the `rocksdb` clone folder.
+
+@yhchiang The revisions you suggested do appear to work. However, I cannot remember how to use `arc` to send a new diff to your Phabricator from the head of my cloned fork. Would you mind reminding me of the command?
+
+arc diff
+
+@igorcanadi I wanted to update https://reviews.facebook.net/D22269, however what you suggested seems to have created https://reviews.facebook.net/D22779. Any idea if I can link these or also update the older one?
+
+@adamretter: `arc diff` should update and track the existing diff in most cases, D22269 it's a bit different as it was originally created by me on behalf you.  I think we could continue the review process in D22779, or you optionally could try `arc patch D22269` and then `arc diff` to do the update to see if it can correctly track and update D22269?
+
+@yhchiang the problem reported by adam retter is still the case. Without your revision reference there is no way to get `arc diff` working
+
+https://reviews.facebook.net/D24195
+
+Actually this does not appear to be fixed. Instead it just seems to have moved the issue. I now get the following errors when running `arc lint` inside the `rocksdb` cloned folder:
+
+``` bash
+hollowcore:rocksdb aretter$ arc lint .
+PHP Fatal error:  Call to undefined method ArcanistPEP8Linter::setConfig() in /Users/aretter/NetBeansProjects/rocksdb/linters/lint_engine/FacebookFbcodeLintEngine.php on line 42
+
+Fatal error: Call to undefined method ArcanistPEP8Linter::setConfig() in /Users/aretter/NetBeansProjects/rocksdb/linters/lint_engine/FacebookFbcodeLintEngine.php on line 42
+
+```
+
+How about now?
+
+Nope the problem just moved again (this seems like EDD ;-)):
+
+```
+PHP Fatal error:  Call to undefined method ArcanistCpplintLinter::setConfig() in /Users/aretter/NetBeansProjects/rocksdb/linters/lint_engine/FacebookFbcodeLintEngine.php on line 47
+
+Fatal error: Call to undefined method ArcanistCpplintLinter::setConfig() in /Users/aretter/NetBeansProjects/rocksdb/linters/lint_engine/FacebookFbcodeLintEngine.php on line 47
+```
+
+argh
+
+Found it! https://secure.phabricator.com/D9067
+
+I'm not sure how to make this work for old arcanist that we use and new one :(
+
+Just run `arc diff --nolint`
+
+The whole point is that I need lint, that is one of the things that failed code review for my pull request. Do we really need backward compatibility? I mean, this is the master branch so surely it makes sense to use the latest and greatest?
+
++1 Having the lint functionality before creating a review revision would be great. I think also that the detached head solution proposed earlier in this thread should be no option.
+
+The problem is that internally we use very old lint version, so if we make the linter compatible with arcanist's master, lint will stop working for us internally. I'll try to figure something out. In the meanwhile, use `--nolint` option.
+
+Any solution to this? My pull request is running into lint problems as well.
+
+@vladb38 there are some commit references in this thread (post from 29.8.). These still work just detach the head of the repository to this revisions and everything is fine(not long term but for the moment). 
+
+I am still getting the error: Linting...
+PHP Fatal error:  Call to undefined method FacebookFbcodeLintEngine::getPEP8WithTextOptions() in /Users/vlad/work/rocksdb_cl/linters/lint_engine/FacebookFbcodeLintEngine.php on line 39
+
+Fatal error: Call to undefined method FacebookFbcodeLintEngine::getPEP8WithTextOptions() in /Users/vlad/work/rocksdb_cl/linters/lint_engine/FacebookFbcodeLintEngine.php on line 39
+
+after trying to use those versions. @adamretter , can you confirm that this has worked for you?
+
+Guys,
+
+We don't have bandwidth currently to tackle this. However, if somebody could fix our `linters/` directory to follow the current arcanist API, that would be great. You can find some info here: https://secure.phabricator.com/book/phabricator/article/arcanist_lint/, shouldn't be too hard.
+
+See: https://github.com/facebook/rocksdb/pull/341
+
+pep8 needs to be installed anyways separately. Either one of those
+
+```
+pep8 - Python PEP 8 code style checker - python2
+python3-pep8 - Python PEP 8 code style checker - python3
+```
+
+Tnx @fyrz  on fixing. @vladb38 , @adamretter , does the lint work now?
+
+@yhchiang @igorcanadi thats solved in my opinion and can be closed. I lately even pulled to latest HEAD in arc relevant repositories and it still works :-)
+
+Thanks.  Closing the issue for now, please feel free to reopen if the problem still exist.
+

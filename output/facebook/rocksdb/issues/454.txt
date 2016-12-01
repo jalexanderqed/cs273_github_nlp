@@ -1,0 +1,37 @@
+May add a method to class org.rocksdb.RocksDB ? 
+like: "public RocksIterator newIterator(ReadOptions opt)"
+It's available in C++ version
+For we want use snapshot feature  in both GET and ITERATE
+thanks
+
+I will add this feature after https://github.com/facebook/rocksdb/pull/450 is merged.
+
+@adamretter cc
+
+In the Java API, I think I would prefer to see `db->GetSnapshot()` return a `Snapshot` class which also implements or encloses `ReadOptions` rather than a `ReadOptions` instance directly. In this way you could call `snapshot.dispose` or `snapshot.close` rather than `db->ReleaseSnapshot(readOptions)`. This is a better fit in the Java world as we can eventually implement AutoCloseable throughout the Java API, so that with this (and other instances) we can work with Java 7 style _use-with-resources_ e.g.
+
+``` java
+try(Snapshot snapshot = db.getSnapshot()) {
+    // do something with the snapshot here
+}
+```
+
+@adamretter  the `db.getSnapshot`method returns a `Snapshot`. and `db.releaseSnasphot` takes a `Snapshot`instance. This issue here is about something completely different. Some operations can work with `ReadOptions`instances but some are not ported yet. Like the one mentioned by gao-jin-xin.
+
+Also the `ReadOptions` instance is not solely about passing a `Snapshot` it is more than this see also: https://github.com/facebook/rocksdb/blob/master/java/org/rocksdb/ReadOptions.java
+
+Thanks @fyrz I misunderstood the C++ example. I am looking forward to being able to take an Iterator against a Snapshot.
+
+Thanks @fyrz !!
+
+@gao-jing-xin only as a short note. I have a working version on my machine here. I will file the pull request when stability is solved (ref.: https://github.com/facebook/rocksdb/pull/462)
+
+@gao-jing-xin pull request is there - https://github.com/facebook/rocksdb/pull/466
+
+After this one gets merged functionality is available within RocksJava.
+
+thanks a lot!
+@fyrz
+
+@gao-jing-xin i close this one as the functionality is available on master.
+

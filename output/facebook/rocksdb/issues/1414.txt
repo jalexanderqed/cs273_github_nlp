@@ -1,0 +1,12 @@
+The comment says "we need to use the highest-numbered ValueType", but the value is actually from the middle of the enum, presumably because it wasn't updated when values were added to the enum. I'm guessing no one ever puts these new enum values into memtables and ssts, and I'm guessing no one uses kValueTypeForSeek for anything except memtables and ssts, so this probably didn't break anything. Fixing it just for cleanness.
+
+Oh, we are currently developing a feature that regrettably requires this Seek() value type to be a middle value. Specifically, the seek key we forge needs to be greater than all the point data types (kTypeValue, kTypeDeletion, etc.) but less than the interval data type (i.e., kTypeRangeDeletion).
+
+The reason for this is subtle and needs to be documented somewhere. In our file metadata we store the min and max key contained by the file. With this feature, the mins/maxes can now be interval endpoints. In that case for file max key, we store (user key, kMaxSequenceNumber, kTypeRangeDeletion).
+
+Then, when Seek() for that user key is called, we prefer the Seek() key to find the next file, i.e., not the one whose max key has been extended by range deletion. Since kTypeSingleDeletion < kTypeRangeDeletion, seeking to (user key, kMaxSequenceNumber, kTypeSingleDeletion) will go to the next file, not the one extended by range deletion.
+
+So, I think we should just update the comment instead ;).
+
+Thanks for the explanation! I'll leave updating the comment to you.
+

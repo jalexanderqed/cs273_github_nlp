@@ -1,0 +1,10 @@
+I am trying to subscribe to the RSS feed for the rocksdb blog: http://rocksdb.org/blog, but cannot find the feed. Can someone provide the feed URL? Thanks!
+
+Does http://rocksdb.org/blog/feed/ work?
+
+I am using Feedspot, thanks for the hint, feed://rocksdb.org/blog/feed/ works, but http://rocksdb.org/blog/feed/ does not. Not sure how the feed search is implemented by Feedspot.
+
+BTW, is it possible to add a small rss icon to the blog page with the feed link? Thanks!
+
+I added an rss icon with the link to the blog. Thanks for your feedback.
+

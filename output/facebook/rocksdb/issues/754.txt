@@ -1,0 +1,17 @@
+Hello guys
+
+I see from the rocksdb's wiki that rocksdb support atomic update.
+But after I saw the source code, I find the rocksdb doesn't support atomic operator.
+
+In the rocksdb's writeBatch operation, It divide into two part. The first is write the Batch into the log file, and the second is write the Batch into the memtable. Rocksdb did write the log file with atomic by make the all writes in a single batch. But writing the memtable, rocksdb write the batch one by one, and the annotation is also show that there exist a situation that some write ops might have succeeded in memtable but others may not.
+
+```
+    // Note that existing logic was not sound. Any partial failure writing
+    // into the memtable would result in a state that some write ops might
+    // have succeeded in memtable but Status reports error for all writes.
+```
+
+maybe I misunderstanding something. If I have, thanks for pointing out..
+
+After review the code, I find that It is atomic operation. It is different from leveldb that it will check the status of WriteBatchInternal, if any operation failed, it won't update the last_sequence
+

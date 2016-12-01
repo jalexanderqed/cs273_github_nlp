@@ -1,0 +1,12 @@
+Implemented:
+1. `WriteBatch#setSavePoint`
+2. `WriteBatch#rollbackToSavePoint`
+3. `WriteBatchWithIndex#setSavePoint`
+4. `WriteBatchWithIndex#rollbackToSavePoint`
+
+Good stuff!  The patch looks good to me.  I only have some style-related comments.  Once they are addressed it's good to go!
+
+@yhchiang Sorry about that, those formatting issues should be addressed now.
+
+LGTM.  Thanks for the contribution!!
+

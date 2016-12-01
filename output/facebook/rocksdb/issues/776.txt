@@ -1,0 +1,4 @@
+On https://github.com/facebook/rocksdb/wiki/Basic-Operations, it says `#include <assert>`, but I think it should be `#include <cassert>`. (C++ newbie here - maybe I'm wrong.)
+
+Tnx for the report @joliss . I fixed it.
+

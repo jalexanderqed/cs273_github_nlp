@@ -1,0 +1,4 @@
+Options return now the correct value for createMissingColumnFamilies.
+
+@yhchiang can you look at this plz. It leads to sometimes failing tests.
+

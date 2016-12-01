@@ -1,0 +1,253 @@
+My apologies if this is not the best place to ask.
+
+I want to run a test with a single process accessing a 100 Gb dataset. The main reason we took a look at RocksDB is that doing so with LevelDB would require an incredibly high number of files.
+
+We are fine with running with files that are 200 MB (instead of the default of 2 Mb). From looking at the code, it seems that this should be done changing some flags in  rocksdb::Options . But I am not even sure if that's the best way either because you have other options about the file sizes of the files beyond level 1.
+
+In short, given that we want to maximize throughput in a workload that is 50% read, 50% write, and a dataset which is 100 Gb, what options do you recommend that keeps the total number of files opened by the process manageable and maximize throughput?
+
+After we have run the single process test successfully, we would then run several of these processes in parallel (each with its own dataset), which is why the number of files opened by the process must be manageable (as to not reach a system wide max of open files). 
+
+Thank you in advance, 
+
+Ethan. 
+
+Hey @ehamilto. In general, good place to start looking when optimizing RocksDB are functions:
+- OptimizeLevelStyleCompaction()
+- IncreaseParallelism()
+  (you can just call all of them on rocksdb::Options, see https://github.com/facebook/rocksdb/blob/master/examples/simple_example.cc)
+
+Specifically, to increase file size and reduce number of open files, you are interested in:
+- write_buffer_size (default is 4MB, feel free to set to 200MB) -- this is for Level 0 files
+- target_file_size_base (default is 2MB) -- this is for Level N > 1 files
+
+Let us know if you have any more questions.
+
+Also set max_bytes_for_level_base to 512MB. Default is too small, it's 10MB.
+
+We are planning to write tuning book that should make this much easier. :)
+
+What's your write rate? SSD or disk?
+
+set  file size to 64 MB by setting target_file_size_base = 64 MB
+
+are these files on disk or flash? If disks, how many disks do you have per 100 GB of data?
+
+Thanks Igor!
+
+We are using both disk and SSD. The write rate is pretty intensive, and it resembles the scenario called “Bulk Load of keys in Random Order” here (the rate is also in the tens of MB/s) ,
+
+https://github.com/facebook/rocksdb/wiki/Performance-Benchmarks
+
+Would you mind to be a bit more specific about how to set the options to enable this scenario? Now I am using,
+
+```
+                            rocksdb::Options options;
+
+                            options.create_if_missing = true;
+
+                            rocksdb::Status status = rocksdb::DB::Open(options, "directory", &m_rdb);
+```
+
+Would this work,
+
+```
+                            rocksdb::Options options;
+
+                            options.create_if_missing = true;
+
+                            options. target_file_size_base = 200; // Do I put 200 or 200000000?
+
+                            options.max_bytes_for_level_base = 512; // Do I put 512 or 512000000?
+
+                            rocksdb::Status status = rocksdb::DB::Open(options, "directory", &m_rdb);
+```
+
+Thank you in advance!
+
+Ethan. 
+
+From: Igor Canadi [mailto:notifications@github.com] 
+Sent: Wednesday, May 14, 2014 4:23 PM
+To: facebook/rocksdb
+Cc: ehamilto
+Subject: Re: [rocksdb] I want to run a test on a 100 Gb dataset, what are the optimal parameters? (#149)
+
+Also set max_bytes_for_level_base to 512MB. Default is too small, it's 10MB.
+
+We are planning to write tuning book that should make this much easier. :)
+
+What's your write rate? SSD or disk?
+
+—
+Reply to this email directly or view it on GitHub https://github.com/facebook/rocksdb/issues/149#issuecomment-43150370 .  https://github.com/notifications/beacon/7267817__eyJzY29wZSI6Ik5ld3NpZXM6QmVhY29uIiwiZXhwaXJlcyI6MTcxNTcyODk2NiwiZGF0YSI6eyJpZCI6MzIyNTU4MDR9fQ==--18c34a235ce6978154367f84bb6eda901d447d1b.gif 
+
+Hi there!
+
+Two of the previous emails went to the “junk” folder, so I missed them L.
+
+So, to summarize, are those parameters OK? Or should I set write_buffer_size
+to also 200? Or 64? 
+
+With respect to the question of the disks, in either case (ie SSD or disk) ,
+the 100 Gb will be contained in a single partition. 
+
+Thanks,
+
+Ethan.
+
+From: Ethan Hamilton [mailto:ehamilto@tibco.com] 
+Sent: Wednesday, May 14, 2014 4:38 PM
+To: 'facebook/rocksdb'
+Subject: RE: [rocksdb] I want to run a test on a 100 Gb dataset, what are
+the optimal parameters? (#149)
+
+Thanks Igor!
+
+We are using both disk and SSD. The write rate is pretty intensive, and it
+resembles the scenario called “Bulk Load of keys in Random Order” here (the
+rate is also in the tens of MB/s) ,
+
+https://github.com/facebook/rocksdb/wiki/Performance-Benchmarks
+
+Would you mind to be a bit more specific about how to set the options to
+enable this scenario? Now I am using,
+
+```
+                            rocksdb::Options options;
+
+                            options.create_if_missing = true;
+
+                            rocksdb::Status status =
+```
+
+rocksdb::DB::Open(options, "directory", &m_rdb);
+
+Would this work,
+
+```
+                            rocksdb::Options options;
+
+                            options.create_if_missing = true;
+
+                            options. target_file_size_base = 200; // Do
+```
+
+I put 200 or 200000000?
+
+```
+                            options.max_bytes_for_level_base = 512; //
+```
+
+Do I put 512 or 512000000?
+
+```
+                            rocksdb::Status status =
+```
+
+rocksdb::DB::Open(options, "directory", &m_rdb);
+
+Thank you in advance!
+
+Ethan. 
+
+From: Igor Canadi [mailto:notifications@github.com] 
+Sent: Wednesday, May 14, 2014 4:23 PM
+To: facebook/rocksdb
+Cc: ehamilto
+Subject: Re: [rocksdb] I want to run a test on a 100 Gb dataset, what are
+the optimal parameters? (#149)
+
+Also set max_bytes_for_level_base to 512MB. Default is too small, it's 10MB.
+
+We are planning to write tuning book that should make this much easier. :)
+
+What's your write rate? SSD or disk?
+
+—
+Reply to this email directly or view it on GitHub
+https://github.com/facebook/rocksdb/issues/149#issuecomment-43150370 .
+<https://github.com/notifications/beacon/7267817__eyJzY29wZSI6Ik5ld3NpZXM6Qm
+VhY29uIiwiZXhwaXJlcyI6MTcxNTcyODk2NiwiZGF0YSI6eyJpZCI6MzIyNTU4MDR9fQ==--18c3
+4a235ce6978154367f84bb6eda901d447d1b.gif> 
+
+To get more information on what specific options mean, take a look at `include/rocksdb/options.h`. Documentation there is somewhat verbose.
+
+Also, look at implementations of the functions I mentioned above. You might want to consider Universal style compaction if your write rate is really high (tens of MB/s). This wiki page does a good job of describing Universal style compaction: https://github.com/facebook/rocksdb/wiki/Rocksdb-Architecture-Guide
+
+Thanks!
+
+I figured the values indeed looking at the examples,
+
+```
+                            rocksdb::Options options;
+
+                            options.write_buffer_size = 256*1024*1024;
+
+                            options.target_file_size_base  = 256*1024*1024;
+
+                            options.max_bytes_for_level_base = 512*1024*1024;
+
+                            options.create_if_missing = true;
+```
+
+Apparently, the following is not available in the version that I have (which is from a couple of months back)
+
+  options.IncreaseParallelism();
+
+  options.OptimizeLevelStyleCompaction();
+
+I am running the test and so far so good. It is more to get a feel of what kind of performance we can expect from RocksDB. Feel free to close this issue.
+
+Thank you for taking your time addressing my questions. 
+
+Best,
+
+Ethan. 
+
+From: Igor Canadi [mailto:notifications@github.com] 
+Sent: Wednesday, May 14, 2014 8:47 PM
+To: facebook/rocksdb
+Cc: ehamilto
+Subject: Re: [rocksdb] I want to run a test on a 100 Gb dataset, what are the optimal parameters? (#149)
+
+To get more information on what specific options mean, take a look at include/rocksdb/options.h. Documentation there is somewhat verbose.
+
+Also, look at implementations of the functions I mentioned above. You might want to consider Universal style compaction if your write rate is really high (tens of MB/s). This wiki page does a good job of describing Universal style compaction: https://github.com/facebook/rocksdb/wiki/Rocksdb-Architecture-Guide
+
+—
+Reply to this email directly or view it on GitHub https://github.com/facebook/rocksdb/issues/149#issuecomment-43165761 .Image removed by sender.
+
+If you really want performance from RocksDB, I suggest increasing number of threads in a thread pool. 
+
+env->SetBackgroundThreads(16)
+options.max_background_compactions = 16
+
+@igorcanadi 
+Hi Igor! Currently I was running the benchmark for RocksDB on SSD. There is a situation always happning, at first the throughput will over ten thousand and then fall to several thousand even several hundred, at that time, I notice that the read latency will increase significantly, and I think this is because of compaction happening from reading the DB log.
+
+I would like to get some suggestions for how to keep our throughput stable and make the performance optimized. Oh , I benchmark them using 32 read threads and 4 write threads. Here is my configuration as below:
+Options.block_cache_size : 48 GB
+Options.block_size : 32 KB
+Options.write_buffer_size : 1024MB
+Options.compression : 1
+Options.max_open_files: 500000
+Options.target_file_size_base : 512MB
+Options.max_bytes_for_level_base : 1024MB
+Options.level0_file_num_compaction_trigger: 4
+Options.level0_slowdown_writes_trigger: 16
+Options.level0_stop_writes_trigger: 64
+Options.disableDataSync: 0
+Options.max_background_compactions: 8
+Options.max_write_buffer_number: 16
+Options.rate_limit_delay_max_milliseconds: 1000
+Options.arena_block_size:12800KB
+Options.delete_obsolete_files_period_micros: 300000000
+Options.disable_seek_compaction: 0
+Options.min_write_buffer_number_to_merge: 4
+Options.max_background_flushes: 2
+
+Thanks a lot for your responce!
+
+Hi Aaron, igor is on vacation. Let's continue the discussion on the other thread you started.
+

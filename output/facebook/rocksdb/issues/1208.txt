@@ -1,0 +1,447 @@
+following code hangs forever after 10-30minutes
+
+```
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <pthread.h>
+#include "rocksdb/c.h"
+
+typedef struct {
+        rocksdb_t *db;
+        rocksdb_writeoptions_t *woptions;
+        rocksdb_readoptions_t *roptions;
+} rocksdb_data_t;
+
+size_t create_random_key(char *prefix, size_t prefix_size, char *key, size_t key_size)
+{
+        memcpy(key, prefix, prefix_size);
+        for (size_t i = 0; i < key_size - prefix_size; i++) {
+                key[prefix_size + i] = rand() % 255;
+        }
+
+        return key_size;
+}
+
+void *write_thread(void *arg) {
+        rocksdb_data_t *data = (rocksdb_data_t *)arg;
+
+        while (1) {
+                char key[16];
+                size_t key_size = create_random_key("wt", 2, key, sizeof(key));
+
+                char *err_str = NULL;
+                rocksdb_put(data->db, data->woptions, key, key_size, "test1234", 8, &err_str);
+                if (err_str) {
+                        fprintf(stderr, "rocksdb_put error: %s\n", err_str);
+                        free(err_str);
+                }
+                usleep(rand() % 1000);
+        }
+}
+int main() {
+        rocksdb_options_t *options = rocksdb_options_create();
+        rocksdb_options_set_create_if_missing(options, 1);
+        rocksdb_options_enable_statistics(options);
+
+        rocksdb_env_t *env = rocksdb_create_default_env();
+        rocksdb_env_set_high_priority_background_threads(env, 2);
+        rocksdb_env_set_background_threads(env, 2);
+
+        rocksdb_options_set_env(options, env);
+        rocksdb_options_set_max_background_flushes(options, 2);
+        //rocksdb_options_set_max_background_compactions(options, 1);
+        rocksdb_options_set_disable_auto_compactions(options, 1);
+
+        rocksdb_options_set_write_buffer_size(options, 64 * 1024 * 1024);
+        rocksdb_options_set_max_write_buffer_number(options, 8);
+        rocksdb_options_set_max_log_file_size(options, 1 * 1024 * 1024 * 1024);
+        rocksdb_options_set_keep_log_file_num(options, 5);
+        rocksdb_options_set_log_file_time_to_roll(options, 0);
+
+        char *err_str = NULL;
+        rocksdb_t *db = rocksdb_open(options, "/tmp/test_storage", &err_str);
+        if (err_str) {
+                fprintf(stderr, "rocksdb_open error: %s\n", err_str);
+                free(err_str);
+                exit(1);
+        }
+        rocksdb_data_t data;
+        data.db = db;
+        data.woptions = rocksdb_writeoptions_create();
+        data.roptions = rocksdb_readoptions_create();
+
+        pthread_t wthreads[30];
+        for (size_t i = 0; i < sizeof(wthreads) / sizeof(wthreads[0]); i++) {
+                pthread_create(&wthreads[i], NULL, write_thread, &data);
+        }
+
+        void *result;
+        pthread_join(wthreads[0], &result);
+}
+
+```
+
+gdb output:
+
+```
+
+Thread 35 (Thread 0x7ff06d230700 (LWP 22361)):
+#0  0x00007ff06d5ec0af in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+#1  0x000000000052b9c7 in rocksdb::ThreadPool::BGThread (this=this@entry=0xe6ba90, thread_id=thread_id@entry=0) at util/thread_posix.cc:68
+#2  0x000000000052bbf3 in rocksdb::BGThreadWrapper (arg=0xe76440) at util/thread_posix.cc:143
+#3  0x00007ff06d5e80db in start_thread () from /lib64/libpthread.so.0
+#4  0x00007ff06d31890d in clone () from /lib64/libc.so.6
+
+.....
+
+Thread 31 (Thread 0x7ff06b22c700 (LWP 22365)):
+#0  0x00007ff06d5ec0af in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+#1  0x00007ff06ddcaa2c in std::condition_variable::wait(std::unique_lock<std::mutex>&) () from /usr/lib64/libstdc++.so.6
+#2  0x00000000004edeac in wait<rocksdb::WriteThread::BlockingAwaitState(rocksdb::WriteThread::Writer*, uint8_t)::__lambda4> (__p=..., __lock=..., this=0x7ff06b22ba80) at /usr/include/c++/4.8/condition_variable:93
+#3  rocksdb::WriteThread::BlockingAwaitState (this=<optimized out>, w=0x7ff06b22ba00, goal_mask=<optimized out>) at db/write_thread.cc:37
+#4  0x00000000004edf7d in rocksdb::WriteThread::AwaitState (this=this@entry=0xe77188, w=w@entry=0x7ff06b22ba00, goal_mask=goal_mask@entry=14 '\016',
+    ctx=ctx@entry=0x7ff3e0 <rocksdb::WriteThread::JoinBatchGroup(rocksdb::WriteThread::Writer*)::ctx>) at db/write_thread.cc:157
+#5  0x00000000004ee274 in rocksdb::WriteThread::JoinBatchGroup (this=this@entry=0xe77188, w=w@entry=0x7ff06b22ba00) at db/write_thread.cc:227
+#6  0x00000000004844a2 in rocksdb::DBImpl::WriteImpl (this=0xe76ca0, write_options=..., my_batch=<optimized out>, callback=callback@entry=0x0) at db/db_impl.cc:4201
+#7  0x00000000004861a4 in rocksdb::DBImpl::Write (this=<optimized out>, write_options=..., my_batch=<optimized out>) at db/db_impl.cc:4155
+#8  0x0000000000486234 in rocksdb::DB::Put (this=this@entry=0xe76ca0, opt=..., column_family=0xe84550, key=..., value=...) at db/db_impl.cc:5297
+#9  0x0000000000486281 in rocksdb::DBImpl::Put (this=this@entry=0xe76ca0, o=..., column_family=<optimized out>, key=..., val=...) at db/db_impl.cc:4130
+#10 0x000000000048654a in rocksdb::DB::Put (this=0xe76ca0, options=..., key=..., value=...) at ./include/rocksdb/db.h:185
+#11 0x0000000000457ea7 in rocksdb_put (db=<optimized out>, options=<optimized out>, key=<optimized out>, keylen=<optimized out>, val=<optimized out>, vallen=<optimized out>, errptr=0x7ff06b22bd28) at db/c.cc:641
+#12 0x0000000000456fb1 in write_thread (arg=0x7fff22013fb0) at test.c:35
+#13 0x00007ff06d5e80db in start_thread () from /lib64/libpthread.so.0
+#14 0x00007ff06d31890d in clone () from /lib64/libc.so.6
+```
+
+Can you paste all of the options from $datadir/LOG? My guess is you need to
+increase the number of L0 files that are allowed before write stalls are
+triggered. This problem has happened to me a few times. I wonder if we can
+make it easier to avoid.
+
+The options are:
+- level0_stop_writes_trigger -
+  https://github.com/facebook/rocksdb/blob/master/include/rocksdb/options.h#L411
+- level0_slowdown_writes_trigger -
+  https://github.com/facebook/rocksdb/blob/master/include/rocksdb/options.h#L418
+
+On Thu, Jul 14, 2016 at 7:47 AM, HolodovAlexander notifications@github.com
+wrote:
+
+> following code hangs forever after 10-30minutes
+> 
+> #include <string.h>
+> #include <stdlib.h>
+> #include <unistd.h>
+> #include <stdio.h>
+> #include <pthread.h>
+> #include "rocksdb/c.h"
+> 
+> typedef struct {
+>         rocksdb_t *db;
+>         rocksdb_writeoptions_t *woptions;
+>         rocksdb_readoptions_t *roptions;
+> } rocksdb_data_t;
+> 
+> size_t create_random_key(char *prefix, size_t prefix_size, char *key, size_t key_size)
+> {
+>         memcpy(key, prefix, prefix_size);
+>         for (size_t i = 0; i < key_size - prefix_size; i++) {
+>                 key[prefix_size + i] = rand() % 255;
+>         }
+> 
+> ```
+>     return key_size;
+> ```
+> 
+> }
+> 
+> void *write_thread(void *arg) {
+>         rocksdb_data_t *data = (rocksdb_data_t *)arg;
+> 
+> ```
+>     while (1) {
+>             char key[16];
+>             size_t key_size = create_random_key("wt", 2, key, sizeof(key));
+> 
+>             char *err_str = NULL;
+>             rocksdb_put(data->db, data->woptions, key, key_size, "test1234", 8, &err_str);
+>             if (err_str) {
+>                     fprintf(stderr, "rocksdb_put error: %s\n", err_str);
+>                     free(err_str);
+>             }
+>             usleep(rand() % 1000);
+>     }
+> ```
+> 
+> }
+> int main() {
+>         rocksdb_options_t *options = rocksdb_options_create();
+>         rocksdb_options_set_create_if_missing(options, 1);
+>         rocksdb_options_enable_statistics(options);
+> 
+> ```
+>     rocksdb_env_t *env = rocksdb_create_default_env();
+>     rocksdb_env_set_high_priority_background_threads(env, 2);
+>     rocksdb_env_set_background_threads(env, 2);
+> 
+>     rocksdb_options_set_env(options, env);
+>     rocksdb_options_set_max_background_flushes(options, 2);
+>     //rocksdb_options_set_max_background_compactions(options, 1);
+>     rocksdb_options_set_disable_auto_compactions(options, 1);
+> 
+>     rocksdb_options_set_write_buffer_size(options, 64 * 1024 * 1024);
+>     rocksdb_options_set_max_write_buffer_number(options, 8);
+>     rocksdb_options_set_max_log_file_size(options, 1 * 1024 * 1024 * 1024);
+>     rocksdb_options_set_keep_log_file_num(options, 5);
+>     rocksdb_options_set_log_file_time_to_roll(options, 0);
+> 
+>     char *err_str = NULL;
+>     rocksdb_t *db = rocksdb_open(options, "/tmp/test_storage", &err_str);
+>     if (err_str) {
+>             fprintf(stderr, "rocksdb_open error: %s\n", err_str);
+>             free(err_str);
+>             exit(1);
+>     }
+>     rocksdb_data_t data;
+>     data.db = db;
+>     data.woptions = rocksdb_writeoptions_create();
+>     data.roptions = rocksdb_readoptions_create();
+> 
+>     pthread_t wthreads[30];
+>     for (size_t i = 0; i < sizeof(wthreads) / sizeof(wthreads[0]); i++) {
+>             pthread_create(&wthreads[i], NULL, write_thread, &data);
+>     }
+> 
+>     void *result;
+>     pthread_join(wthreads[0], &result);
+> ```
+> 
+> }
+> 
+> gdb output:
+> 
+> Thread 35 (Thread 0x7ff06d230700 (LWP 22361)):
+> #0  0x00007ff06d5ec0af in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+> #1  0x000000000052b9c7 in rocksdb::ThreadPool::BGThread (this=this@entry=0xe6ba90, thread_id=thread_id@entry=0) at util/thread_posix.cc:68
+> #2  0x000000000052bbf3 in rocksdb::BGThreadWrapper (arg=0xe76440) at util/thread_posix.cc:143
+> #3  0x00007ff06d5e80db in start_thread () from /lib64/libpthread.so.0
+> #4  0x00007ff06d31890d in clone () from /lib64/libc.so.6
+> 
+> .....
+> 
+> Thread 31 (Thread 0x7ff06b22c700 (LWP 22365)):
+> #0  0x00007ff06d5ec0af in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+> #1  0x00007ff06ddcaa2c in std::condition_variable::wait(std::unique_lockstd::mutex&) () from /usr/lib64/libstdc++.so.6
+> #2  0x00000000004edeac in wait<rocksdb::WriteThread::BlockingAwaitState(rocksdb::WriteThread::Writer*, uint8_t)::__lambda4> (__p=..., __lock=..., this=0x7ff06b22ba80) at /usr/include/c++/4.8/condition_variable:93
+> #3  rocksdb::WriteThread::BlockingAwaitState (this=<optimized out>, w=0x7ff06b22ba00, goal_mask=<optimized out>) at db/write_thread.cc:37
+> #4  0x00000000004edf7d in rocksdb::WriteThread::AwaitState (this=this@entry=0xe77188, w=w@entry=0x7ff06b22ba00, goal_mask=goal_mask@entry=14 '\016',
+>     ctx=ctx@entry=0x7ff3e0 rocksdb::WriteThread::JoinBatchGroup(rocksdb::WriteThread::Writer*)::ctx) at db/write_thread.cc:157
+> #5  0x00000000004ee274 in rocksdb::WriteThread::JoinBatchGroup (this=this@entry=0xe77188, w=w@entry=0x7ff06b22ba00) at db/write_thread.cc:227
+> #6  0x00000000004844a2 in rocksdb::DBImpl::WriteImpl (this=0xe76ca0, write_options=..., my_batch=<optimized out>, callback=callback@entry=0x0) at db/db_impl.cc:4201
+> #7  0x00000000004861a4 in rocksdb::DBImpl::Write (this=<optimized out>, write_options=..., my_batch=<optimized out>) at db/db_impl.cc:4155
+> #8  0x0000000000486234 in rocksdb::DB::Put (this=this@entry=0xe76ca0, opt=..., column_family=0xe84550, key=..., value=...) at db/db_impl.cc:5297
+> #9  0x0000000000486281 in rocksdb::DBImpl::Put (this=this@entry=0xe76ca0, o=..., column_family=<optimized out>, key=..., val=...) at db/db_impl.cc:4130
+> #10 0x000000000048654a in rocksdb::DB::Put (this=0xe76ca0, options=..., key=..., value=...) at ./include/rocksdb/db.h:185
+> #11 0x0000000000457ea7 in rocksdb_put (db=<optimized out>, options=<optimized out>, key=<optimized out>, keylen=<optimized out>, val=<optimized out>, vallen=<optimized out>, errptr=0x7ff06b22bd28) at db/c.cc:641
+> #12 0x0000000000456fb1 in write_thread (arg=0x7fff22013fb0) at test.c:35
+> #13 0x00007ff06d5e80db in start_thread () from /lib64/libpthread.so.0
+> #14 0x00007ff06d31890d in clone () from /lib64/libc.so.6
+> 
+> —
+> You are receiving this because you are subscribed to this thread.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1208, or mute the thread
+> https://github.com/notifications/unsubscribe/ABkKTRw780TmA6b-eMwoHTs0d5fgDKXkks5qVkv7gaJpZM4JMgsV
+> .
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+ok, thank you
+
+my options
+
+```
+016/06/29-13:13:09.163871 7ff06e851900          Options.error_if_exists: 0
+2016/06/29-13:13:09.163872 7ff06e851900        Options.create_if_missing: 1
+2016/06/29-13:13:09.163874 7ff06e851900          Options.paranoid_checks: 1
+2016/06/29-13:13:09.163875 7ff06e851900                      Options.env: 0x7ffa80
+2016/06/29-13:13:09.163877 7ff06e851900                 Options.info_log: 0xe774b0
+2016/06/29-13:13:09.163878 7ff06e851900           Options.max_open_files: 1024
+2016/06/29-13:13:09.163880 7ff06e851900 Options.max_file_opening_threads: 1
+2016/06/29-13:13:09.163881 7ff06e851900       Options.max_total_wal_size: 0
+2016/06/29-13:13:09.163883 7ff06e851900        Options.disableDataSync: 0
+2016/06/29-13:13:09.163884 7ff06e851900              Options.use_fsync: 0
+2016/06/29-13:13:09.163886 7ff06e851900      Options.max_log_file_size: 1073741824
+2016/06/29-13:13:09.163887 7ff06e851900 Options.max_manifest_file_size: 18446744073709551615
+2016/06/29-13:13:09.163889 7ff06e851900      Options.log_file_time_to_roll: 0
+2016/06/29-13:13:09.163890 7ff06e851900      Options.keep_log_file_num: 5
+2016/06/29-13:13:09.163892 7ff06e851900   Options.recycle_log_file_num: 0
+2016/06/29-13:13:09.163893 7ff06e851900        Options.allow_os_buffer: 1
+2016/06/29-13:13:09.163895 7ff06e851900       Options.allow_mmap_reads: 0
+2016/06/29-13:13:09.163896 7ff06e851900       Options.allow_fallocate: 1
+2016/06/29-13:13:09.163898 7ff06e851900      Options.allow_mmap_writes: 0
+2016/06/29-13:13:09.163899 7ff06e851900          Options.create_missing_column_families: 0
+2016/06/29-13:13:09.163900 7ff06e851900                              Options.db_log_dir:
+2016/06/29-13:13:09.163902 7ff06e851900                                 Options.wal_dir: /tmp/test_storage
+2016/06/29-13:13:09.163905 7ff06e851900                Options.table_cache_numshardbits: 4
+2016/06/29-13:13:09.163907 7ff06e851900     Options.delete_obsolete_files_period_micros: 21600000000
+2016/06/29-13:13:09.163908 7ff06e851900              Options.base_background_compactions: 1
+2016/06/29-13:13:09.163911 7ff06e851900              Options.max_background_compactions: 1
+2016/06/29-13:13:09.163912 7ff06e851900                      Options.max_subcompactions: 1
+2016/06/29-13:13:09.163914 7ff06e851900                  Options.max_background_flushes: 2
+2016/06/29-13:13:09.163915 7ff06e851900                         Options.WAL_ttl_seconds: 0
+2016/06/29-13:13:09.163917 7ff06e851900                       Options.WAL_size_limit_MB: 0
+2016/06/29-13:13:09.163918 7ff06e851900             Options.manifest_preallocation_size: 4194304
+2016/06/29-13:13:09.163920 7ff06e851900                          Options.allow_os_buffer: 1
+2016/06/29-13:13:09.163921 7ff06e851900                         Options.allow_mmap_reads: 0
+2016/06/29-13:13:09.163922 7ff06e851900                        Options.allow_mmap_writes: 0
+2016/06/29-13:13:09.163924 7ff06e851900                      Options.is_fd_close_on_exec: 1
+2016/06/29-13:13:09.163925 7ff06e851900                    Options.stats_dump_period_sec: 600
+2016/06/29-13:13:09.163927 7ff06e851900                    Options.advise_random_on_open: 1
+2016/06/29-13:13:09.163928 7ff06e851900                     Options.db_write_buffer_size: 0d
+2016/06/29-13:13:09.163930 7ff06e851900          Options.access_hint_on_compaction_start: NORMAL
+2016/06/29-13:13:09.163931 7ff06e851900   Options.new_table_reader_for_compaction_inputs: 0
+2016/06/29-13:13:09.163933 7ff06e851900                Options.compaction_readahead_size: 0d
+2016/06/29-13:13:09.163934 7ff06e851900                Options.random_access_max_buffer_size: 1048576d
+2016/06/29-13:13:09.163936 7ff06e851900               Options.writable_file_max_buffer_size: 1048576d
+2016/06/29-13:13:09.163943 7ff06e851900                       Options.use_adaptive_mutex: 0
+2016/06/29-13:13:09.163945 7ff06e851900                             Options.rate_limiter: (nil)
+2016/06/29-13:13:09.163946 7ff06e851900      Options.sst_file_manager.rate_bytes_per_sec: 0
+2016/06/29-13:13:09.163948 7ff06e851900                           Options.bytes_per_sync: 0
+2016/06/29-13:13:09.163949 7ff06e851900                       Options.wal_bytes_per_sync: 0
+2016/06/29-13:13:09.163951 7ff06e851900                        Options.wal_recovery_mode: 0
+2016/06/29-13:13:09.163952 7ff06e851900                   Options.enable_thread_tracking: 0
+2016/06/29-13:13:09.163953 7ff06e851900          Options.allow_concurrent_memtable_write: 0
+2016/06/29-13:13:09.163955 7ff06e851900       Options.enable_write_thread_adaptive_yield: 0
+2016/06/29-13:13:09.163956 7ff06e851900              Options.write_thread_max_yield_usec: 100
+2016/06/29-13:13:09.163958 7ff06e851900             Options.write_thread_slow_yield_usec: 3
+2016/06/29-13:13:09.163961 7ff06e851900                                Options.row_cache: None
+2016/06/29-13:13:09.163962 7ff06e851900        Options.wal_filter: None
+2016/06/29-13:13:09.163964 7ff06e851900 Compression algorithms supported:
+2016/06/29-13:13:09.163966 7ff06e851900         Snappy supported: 1
+2016/06/29-13:13:09.163967 7ff06e851900         Zlib supported: 1
+2016/06/29-13:13:09.163968 7ff06e851900         Bzip supported: 1
+2016/06/29-13:13:09.163970 7ff06e851900         LZ4 supported: 0
+2016/06/29-13:13:09.163972 7ff06e851900 Fast CRC32 supported: 1
+2016/06/29-13:13:09.164007 7ff06e851900 Creating manifest 1
+2016/06/29-13:13:09.168707 7ff06e851900 Recovering from manifest file: MANIFEST-000001
+2016/06/29-13:13:09.168756 7ff06e851900 --------------- Options for column family [default]:
+2016/06/29-13:13:09.168763 7ff06e851900               Options.comparator: rocksdb.InternalKeyComparator:leveldb.BytewiseComparator
+2016/06/29-13:13:09.168766 7ff06e851900           Options.merge_operator: None
+2016/06/29-13:13:09.168767 7ff06e851900        Options.compaction_filter: None
+2016/06/29-13:13:09.168769 7ff06e851900        Options.compaction_filter_factory: None
+2016/06/29-13:13:09.168770 7ff06e851900         Options.memtable_factory: SkipListFactory
+2016/06/29-13:13:09.168772 7ff06e851900            Options.table_factory: BlockBasedTable
+2016/06/29-13:13:09.168787 7ff06e851900            table_factory options:   flush_block_policy_factory: FlushBlockBySizePolicyFactory (0xe6c300)
+  cache_index_and_filter_blocks: 0
+  index_type: 0
+  hash_index_allow_collision: 1
+  checksum: 1
+  no_block_cache: 0
+  block_cache: 0xe6c358
+  block_cache_size: 8388608
+  block_cache_compressed: (nil)
+  block_size: 4096
+  block_size_deviation: 10
+  block_restart_interval: 16
+  index_block_restart_interval: 1
+  filter_policy: nullptr
+  whole_key_filtering: 1
+  skip_table_builder_flush: 0
+  format_version: 2
+2016/06/29-13:13:09.168790 7ff06e851900        Options.write_buffer_size: 67108864
+2016/06/29-13:13:09.168791 7ff06e851900  Options.max_write_buffer_number: 8
+2016/06/29-13:13:09.168793 7ff06e851900          Options.compression: Snappy
+2016/06/29-13:13:09.168795 7ff06e851900       Options.prefix_extractor: nullptr
+2016/06/29-13:13:09.168797 7ff06e851900             Options.num_levels: 7
+2016/06/29-13:13:09.168798 7ff06e851900        Options.min_write_buffer_number_to_merge: 1
+2016/06/29-13:13:09.168799 7ff06e851900     Options.max_write_buffer_number_to_maintain: 0
+2016/06/29-13:13:09.168801 7ff06e851900            Options.compression_opts.window_bits: -14
+2016/06/29-13:13:09.168803 7ff06e851900                  Options.compression_opts.level: -1
+2016/06/29-13:13:09.168804 7ff06e851900               Options.compression_opts.strategy: 0
+2016/06/29-13:13:09.168805 7ff06e851900      Options.level0_file_num_compaction_trigger: 4
+2016/06/29-13:13:09.168807 7ff06e851900          Options.level0_slowdown_writes_trigger: 20
+2016/06/29-13:13:09.168808 7ff06e851900              Options.level0_stop_writes_trigger: 24
+2016/06/29-13:13:09.168810 7ff06e851900                   Options.target_file_size_base: 2097152
+2016/06/29-13:13:09.168821 7ff06e851900             Options.target_file_size_multiplier: 1
+2016/06/29-13:13:09.168823 7ff06e851900                Options.max_bytes_for_level_base: 10485760
+2016/06/29-13:13:09.168824 7ff06e851900 Options.level_compaction_dynamic_level_bytes: 0
+2016/06/29-13:13:09.168826 7ff06e851900          Options.max_bytes_for_level_multiplier: 10
+2016/06/29-13:13:09.168828 7ff06e851900 Options.max_bytes_for_level_multiplier_addtl[0]: 1
+2016/06/29-13:13:09.168829 7ff06e851900 Options.max_bytes_for_level_multiplier_addtl[1]: 1
+2016/06/29-13:13:09.168831 7ff06e851900 Options.max_bytes_for_level_multiplier_addtl[2]: 1
+2016/06/29-13:13:09.168834 7ff06e851900 Options.max_bytes_for_level_multiplier_addtl[3]: 1
+2016/06/29-13:13:09.168835 7ff06e851900 Options.max_bytes_for_level_multiplier_addtl[4]: 1
+2016/06/29-13:13:09.168837 7ff06e851900 Options.max_bytes_for_level_multiplier_addtl[5]: 1
+2016/06/29-13:13:09.168838 7ff06e851900 Options.max_bytes_for_level_multiplier_addtl[6]: 1
+2016/06/29-13:13:09.168840 7ff06e851900       Options.max_sequential_skip_in_iterations: 8
+2016/06/29-13:13:09.168841 7ff06e851900              Options.expanded_compaction_factor: 25
+2016/06/29-13:13:09.168843 7ff06e851900                Options.source_compaction_factor: 1
+2016/06/29-13:13:09.168844 7ff06e851900          Options.max_grandparent_overlap_factor: 10
+2016/06/29-13:13:09.168845 7ff06e851900                        Options.arena_block_size: 8388608
+2016/06/29-13:13:09.168847 7ff06e851900   Options.soft_pending_compaction_bytes_limit: 0
+2016/06/29-13:13:09.168849 7ff06e851900   Options.hard_pending_compaction_bytes_limit: 0
+2016/06/29-13:13:09.168850 7ff06e851900       Options.rate_limit_delay_max_milliseconds: 1000
+2016/06/29-13:13:09.168852 7ff06e851900                Options.disable_auto_compactions: 1
+2016/06/29-13:13:09.168853 7ff06e851900                           Options.filter_deletes: 0
+2016/06/29-13:13:09.168854 7ff06e851900           Options.verify_checksums_in_compaction: 1
+2016/06/29-13:13:09.168856 7ff06e851900                         Options.compaction_style: 0
+2016/06/29-13:13:09.168857 7ff06e851900                           Options.compaction_pri: 0
+2016/06/29-13:13:09.168859 7ff06e851900  Options.compaction_options_universal.size_ratio: 1
+2016/06/29-13:13:09.168860 7ff06e851900 Options.compaction_options_universal.min_merge_width: 2
+2016/06/29-13:13:09.168862 7ff06e851900 Options.compaction_options_universal.max_merge_width: 4294967295
+2016/06/29-13:13:09.168863 7ff06e851900 Options.compaction_options_universal.max_size_amplification_percent: 200
+2016/06/29-13:13:09.168865 7ff06e851900 Options.compaction_options_universal.compression_size_percent: -1
+2016/06/29-13:13:09.168866 7ff06e851900 Options.compaction_options_fifo.max_table_files_size: 1073741824
+2016/06/29-13:13:09.168868 7ff06e851900                   Options.table_properties_collectors:
+2016/06/29-13:13:09.168870 7ff06e851900                   Options.inplace_update_support: 0
+2016/06/29-13:13:09.168871 7ff06e851900                 Options.inplace_update_num_locks: 10000
+2016/06/29-13:13:09.168873 7ff06e851900               Options.min_partial_merge_operands: 2
+2016/06/29-13:13:09.168874 7ff06e851900               Options.memtable_prefix_bloom_bits: 0
+2016/06/29-13:13:09.168875 7ff06e851900             Options.memtable_prefix_bloom_probes: 6
+2016/06/29-13:13:09.168877 7ff06e851900   Options.memtable_prefix_bloom_huge_page_tlb_size: 0
+2016/06/29-13:13:09.168878 7ff06e851900                           Options.bloom_locality: 0
+2016/06/29-13:13:09.168880 7ff06e851900                    Options.max_successive_merges: 0
+2016/06/29-13:13:09.168881 7ff06e851900                Options.optimize_filters_for_hits: 0
+2016/06/29-13:13:09.168883 7ff06e851900                Options.paranoid_file_checks: 0
+2016/06/29-13:13:09.168884 7ff06e851900                Options.compaction_measure_io_stats: 0
+
+```
+
+Do you have stack traces for other threads. These two threads seem to be irrelevant.
+
+Siying - am I right? If compaction is disabled then there will be a large
+number of files in L0. But from the LOG writes are throttled when there are
+20 L0 files and writes are stopped when there are 24 L0 files.
+
+2016/06/29-13:13:09.168807 7ff06e851900
+Options.level0_slowdown_writes_trigger: 20
+2016/06/29-13:13:09.168808 7ff06e851900 Options.level0_stop_writes_trigger:
+24
+
+On Fri, Jul 15, 2016 at 10:22 AM, Siying Dong notifications@github.com
+wrote:
+
+> Do you have stack traces for other threads. These two threads seem to be
+> irrelevant.
+> 
+> —
+> You are receiving this because you commented.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1208#issuecomment-233013667,
+> or mute the thread
+> https://github.com/notifications/unsubscribe-auth/ABkKTfuEKKTPIOf3_g4uh6-WSzxf5w8_ks5qV8HzgaJpZM4JMgsV
+> .
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@mdcallag yes, you are right. It's very likely the issue.
+

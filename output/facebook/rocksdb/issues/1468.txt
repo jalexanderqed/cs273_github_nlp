@@ -1,0 +1,5 @@
+It is helpful when we want to get a specified statistics in these languages that limited to call C api like rust. The `rocksdb_options_statistics_get_string` return the whole statistics in the form of a string is not we want. 
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4138386).
+
+@yiwu-arbug PTAL, thanks.
+

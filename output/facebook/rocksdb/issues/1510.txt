@@ -1,0 +1,29 @@
+in: https://github.com/facebook/rocksdb/wiki/Performance-Benchmarks
+rocksdb performance is shown.
+
+i have a couple of questions regarding the setup:
+
+1.   2 FusionIO devices in SW RAID 0 that can do ~200k 4kb read/second at peak
+      What is the write performance of the devices? 
+       is 200k 4kb read/second at peak is for each device or for both of them?
+
+2.  Machine has 144 GB of RAM
+     1G rocksdb block cache
+     Is the whole 144 GB can be used for data caching ? if not,  what is the difference between the 2 lines
+
+3.  total database size is 800GB
+    but in Test1: total data size 481 GB 
+    why there is a missmatch?
+
+4. Difference in performance between Test1 and Test2
+    In first Scenario the Write amplification is 2 (first the DB is being written to disc. Then it is being read          again, merge sorted, and being writtent again). is it true?
+   In the second scenario, the WA is at least 2, but merge sort is very quick, becaese there are no overlaps.
+   the difference in Throughput is 80MB/s vs 370MB/s.
+    So the whole difference is because the SW merge-sort is very slow?
+    Also , what are the DB parametrs? (compaction type, number of levels, MaxLevelRatio etc')
+
+Thanks a lot.
+
+
+
+

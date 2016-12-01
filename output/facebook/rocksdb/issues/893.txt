@@ -1,0 +1,9 @@
+```
+db/db_compaction_test.cc:604:58: error: implicit conversion loses integer precision: 'unsigned long long' to 'const int'
+      [-Werror,-Wshorten-64-to-32]
+  const int key_len = compact_opt.output_file_size_limit / 5;
+            ~~~~~~~   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~
+```
+
+Thank you for fixing it!
+

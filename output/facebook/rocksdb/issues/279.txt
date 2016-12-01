@@ -1,0 +1,25 @@
+Is there someone working to add support for Column Families in the java bindings?
+Or I should do it myself?
+
+I don't think we are working on it. We would really appreciate your contribution. :)
+
+cc @yhchiang 
+
+Ok, I can give it a try.
+I see the current version from github doesn't even compile: there are some obvious copy&paste errors in /java/rocksjni/write_batch.cc
+Maybe a forgotten commit?
+
+Isn't there a system that at least checks that the build is not broken?
+
+Sorry for my late reply.
+
+Yes, as @igorcanadi mentioned, we currently have no resource on adding Java support for Column Families, but we will do our best on supporting external contributions.
+
+We've included Java in our daily build check, and the latest build should fix the java compilation issue (but please feel free to let me know if it's not the case.) 
+
+Only as short note. I am currently working on the Java API extension for column families. It is just not finished enough to file a pull request. 
+
+State can be seen here: https://github.com/fyrz/rocksdb/tree/column_families_java
+
+@yhchiang as most of column families is in now this one can be probably closed. The rest will come in the next two weeks.
+

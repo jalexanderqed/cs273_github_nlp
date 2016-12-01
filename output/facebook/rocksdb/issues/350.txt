@@ -1,0 +1,2 @@
+Within the last commit the Options-Test was accidentally diabled. This commit resolves this situation.
+

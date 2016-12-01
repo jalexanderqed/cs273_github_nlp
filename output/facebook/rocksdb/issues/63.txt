@@ -1,0 +1,58 @@
+**This PR probably isn't ready to merge yet** (see FIXMEs) but I wanted to solicit any early comments/feedback.
+
+Adds a read option for RocksDB iterators to schedule background thread tasks to "prefetch" upcoming data blocks. This can significantly speed up forward sequential scans by overlapping disk I/O and decompression with the reader's activities. The benefit is quite marked on large, universally-compacted databases residing on rotating disk(s), since scanning these incurs a lot of seeks that currently block iterators. The new behavior must be enabled by creating the iterator with ReadOptions.prefetch = true.
+
+options.h has advise_random_on_open but that is instance-wide (enabled for all reads or no reads) so the functionality here is more useful. If a separate thread pool were used to handle these prefetch requests then prefetch won't compete with compaction and possibly make compaction get behind. I like that the diff isn't huge. I am curious whether there is a significant benefit from doing larger reads, like 256kb at a time, rather than a logical block at a time especially on spinning disks.
+
+I am not against the diff and I think this is a good idea, just trying to have a discussion on the topic.
+
+I agree readahead at the file level is a good idea and would probably be useful over a wider range of use cases than the approach here. Our application has a large block size (2MB) which makes this PR's approach especially appealing.
+
+This is cool stuff!
+1. Does the async thread do de-compression (if needed) as well?
+2. Do you have any perf comparison numbers?
+3. I would very much like to see if we can use the filesystem read-head code to implement this functionality (using fadvise). Do you think that it would be  worthwhile attempt to try out? The pros is that the code complexity in the rocksdb codebase will be lesser but it is yet to be demonstrated whether it will have optimal readahead performance.
+
+This is an interesting problem. I think there are a couple of variants that might need a solution for the cross product of big/small blocks versus slow/fast compression. With fast compression (snappy) it might be sufficient to only hide the disk read latency as decompression might be fast enough to be done in the foreground. With slow compression (zlib, bzip2) extra threads to do decompression are a big deal.
+
+For big blocks block-at-a-time read is good enough to minimize seeks. For small blocks I think we need multi-block reads especially when spinning disk is used.
+
+Another issue is that this shouldn't starve compaction so I think a separate thread pool is needed assuming background threads are used to prefetch data.
+
+If background decompression isn't needed then posix_fadvise might be sufficient assuming we trust it to start prefetching quickly especially when leveled compaction is used with 2MB or 4MB files.
+
+If background decompression is needed, then another thread pool would work. But if a background thread is doing a large read then it won't start decompression until the read finishes. So there are likely to be cases where the background thread is only avoiding the IO latency and doesn't do anything for decompression latency.
+
+So I think a separate background thread pool where the threads do multi-block reads, but not too large reads, is likely to cover the most use cases. Regardless this has been interesting to consider and I like that you provided a very small diff to show what could be done.
+
+Thanks. Yes, I'm happy if this PR mainly serves to stimulate further optimization in this direction.
+
+@dhruba decompression does happen on a background thread, but as @mdcallag notes, sometimes the effort is partially wasted or duplicated. Avoiding that would require more thread synchronization, which is totally doable but noone's idea of fun.
+
+We had gotten into a situation where seeks during iteration were killing us, and this change makes a huge difference (>2X faster), but I think this is a very atypical case. (We'll have a blog post about our application soon...) The following db_bench incantations, on an EC2 instance with a RAID0 of four rotating disks, shows me about 25% speedup:
+
+```
+n=160000000
+mbc=6
+bs=1048576
+wbs=16777216
+vs=512
+./db_bench -benchmarks fillseq -max_background_compactions $mbc -num $n -block_size $bs -write_buffer_size $wbs -value_size $vs -compaction_style 1 -db /mnt/db_bench
+echo 3 > /proc/sys/vm/drop_caches
+./db_bench -benchmarks readseq -max_background_compactions $mbc -num $n -block_size $bs -write_buffer_size $wbs -value_size $vs -compaction_style 1 -db /mnt/db_bench -use_existing_db
+echo 3 > /proc/sys/vm/drop_caches
+./db_bench -benchmarks readseq -max_background_compactions $mbc -num $n -block_size $bs -write_buffer_size $wbs -value_size $vs -compaction_style 1 -db /mnt/db_bench -use_existing_db -prefetch
+```
+
+Hi Mike, do you have any new feedback on the readahead-design that you have in production? Is it working well for you? Any other tricks/tweaks that you had to do to make it work?
+
+Hi @dhruba thanks for checking in. We're still using this patch which is highly beneficial for our specific configuration (with really big blocks), however, I think the above discussion with @mdcallag correctly determined that further work is needed to cover more typical configurations. 
+
+One approach might be quite straightforward and largely orthogonal to this patch, namely, [BlockBasedTable can use posix_fadvise](https://github.com/facebook/rocksdb/blob/88a1691a1e76e09c0e2eca8751281a4f90373753/table/block_based_table_reader.cc#L495) to specifically optimize _compactions_, and it might be easy to allow users to enable that for their iterators too. 
+
+Beyond that, this patch also gets partway to background decompression during iteration which would be nice to have. I think the approach is basically sound but as noted above, some work is needed to isolate the thread pool and avoid duplication of effort (meaning more thread synchronization). 
+
+I would love to find time to write a relevant benchmark and then hack on the above items...regrettably, it's proven difficult so far! I'll leave it up to you what to do with this pull request.
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

@@ -1,0 +1,18 @@
+This PR adds JNI calls to set/get the max_table_files_size option for FIFO compaction.
+
+The java API call is setMaxTableFilesSizeFIFO on Options and ColumnFamilyOptions. It does not directly expose the FIFO options struct since there is only one option to set.
+
+This PR should not be merged until tests are working again. Currently they dont. (Which is not related to this PR)
+
+@fyrz OK, yes I saw some unit tests seems to fail. I tried to take a look at it too, but couldn't find what was wrong (I noticed that some of them passes sometimes).
+
+The naming convention is OK?
+
+Thanks!
+
+@cleaton for some i got fixes for one remaining problem i need to find a solution these days. Probably today so it shouldn`t be much of a problem. Just wanted to inform about the delay. 
+
+@fyrz any updates?
+
+@cleaton we did some fixes last week. So i`ll check this this evening. Sorry for the delay.
+

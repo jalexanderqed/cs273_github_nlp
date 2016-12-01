@@ -1,0 +1,7 @@
+There are two tests missing from the Windows build because they were added after it was developed.  This includes them in Windows builds.
+
+db/compaction_iterator_test
+util/delete_scheduler_test
+
+Both tests appear to be passing.
+

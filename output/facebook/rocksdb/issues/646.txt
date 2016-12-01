@@ -1,0 +1,110 @@
+ Summary: Make RocksDb build and run on Windows to be functionally
+ complete and performant. All existing test cases run with no
+ regressions. Performance numbers are in the pull-request.
+
+ Test plan: make all of the existing unit tests pass, obtain perf numbers.
+
+ Co-authored-by: Praveen Rao praveensinghrao@outlook.com
+ Co-authored-by: Sherlock Huang baihan.huang@gmail.com
+ Co-authored-by: Alex Zinoviev alexander.zinoviev@me.com
+ Co-authored-by: Dmitri Smirnov dmitrism@microsoft.com
+
+Wow, this is amazing! Thanks a lot for doing this!
+
+Would it be possible to split this pull request into a series of a lot of smaller PRs? For example, one PR could be adding ROCKSDB_LIBRARY_API into C API, another could be adding ROCKSDB_PRIszt instead of %zu, etc. That will make the review process much easier.
+
+Also, once we get RocksDB working on Windows, would it be possible to setup some continuous builds on your side? We want to make sure we keep it working :)
+
+Igor, we are trying to evaluate the effort involved into different parts of your request.
+This morning this PR looks a lot more deficient than yesterday.
+Continuous integration is a desirable feature.
+For the benefit of interested folks, this port is functional and is targeted for production use within MS.
+
+Need to update INSTALL.md to introduce how to build it in Windows?
+
+Sying, current instructions are inside the CMakeLists.txt which is the CMake file. We will add those to the INSTALL.md per convention.
+
+@yuslepukhin sure. Just mention in the INSTALL.md, if to build in Windows, follow instruction in CMakeLists.txt. It will be great.
+
+I'm not an expert of make systems, but is there a way for CMakeLists.txt to use src.mk, instead of duplicating the list?
+
+In MyRocks, we get a list of files from src.mk in a somewhat hacky way. See https://github.com/MySQLOnRocksDB/mysql-5.6/blob/webscalesql-5.6.23.71/storage/rocksdb/get_rocksdb_files.sh 
+
+@yuslepukhin  any idea this message means?
+
+CMake Error at CMakeLists.txt:33 (string):
+  string sub-command REGEX, mode REPLACE needs at least 6 arguments total to
+  command.
+
+@yuslepukhin I think I figured out the problem of the failure. Please mention in CMakeLists.txt that command line tool "git" needs to be available to run (in PATH) while running cmake.
+
+I think the best way would be to merge both build systems (make/Linux and cmake/Windows) into a single one and thus have no duplication for the list.
+
+On Jul 06, 2015, at 12:11 PM, Siying Dong notifications@github.com wrote:
+
+I'm not an expert of make systems, but is there a way for CMakeLists.txt to use src.mk, instead of duplicating the list?
+—
+Reply to this email directly or view it on GitHub.
+
+Thank you for the great patch! It mostly looks good to me. Need to improve documents about build instruction, especially how to install/disable the dependencies. Need to fix kInlineSize, which is breaking the build using gcc. Some merge error needs to be fixed.
+
+I'm not able to review codes for OS_WIN. I will leave to the community to comment on it.
+
+env_win.cc, line 972 "assert(!options.use_mmap_reads);" fails on my 32-bit laptop, because mmap is chosen to be not executed:
+if (options.use_mmap_reads && sizeof(void*) >= 8) {
+}
+Need to fix this assert.
+
+Will add in the documentation that this is a 64-bit only port.
+
+@yuslepukhin that is fine.
+
+@igorcanadi We are actively exploring ways to setup a CI.
+
+@siying I think this represents the latest we would like to check in unless others have more comments. We have addressed all but one. We still do not have a single list of source files.
+
+@yuslepukhin  that is fine. We can address it later. I'll take a look and merge it if it is generally OK. I don't want to hold big patch for too long.
+
+@igorcanadi We are thinking along these lines. https://msdn.microsoft.com/en-us/Library/vs/alm/Build/github/index
+
+I just took a quick look because I assume @siying already reviewed this in detail. LGTM.
+
+I'm going to merge it. Any time we see, we'll fix it as a follow-up. Next week is our TechDebt week. If we hold this patch to next week, there will be lots of rebasing/retesting works to do.
+
+If people have any comments, feel free to continue commenting here. We'll actively fix them after the merge.
+
+As discussed offline. I'm running a "make format" against this patch and sending a code review for it: https://reviews.facebook.net/D41961
+
+Current build is broken. I am moving port/port.h includes out of public headers. Perhaps, we could format after that?
+
+Thanks,
+Dmitri
+
+From: Siying Dong [mailto:notifications@github.com]
+Sent: Monday, July 13, 2015 12:26 PM
+To: facebook/rocksdb
+Cc: Dmitri Smirnov
+Subject: Re: [rocksdb] Windows Port from Microsoft (#646)
+
+As discussed offline. I'm running a "make format" against this patch and sending a code review for it: https://reviews.facebook.net/D41961
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/pull/646#issuecomment-121030433.
+
+Too late. I already reformatted...
+
+OK, I will include those into the PR.
+
+Dmitri
+
+From: Siying Dong [mailto:notifications@github.com]
+Sent: Monday, July 13, 2015 1:52 PM
+To: facebook/rocksdb
+Cc: Dmitri Smirnov
+Subject: Re: [rocksdb] Windows Port from Microsoft (#646)
+
+Too late. I already reformatted...
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/pull/646#issuecomment-121055193.
+

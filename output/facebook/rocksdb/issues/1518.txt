@@ -1,0 +1,14 @@
+Summary:
+When option_change_migration_test decides to go with a full compaction, we don't force a compaction but allow trivial move. This can cause assert failure if the destination is level 0. Fix it by forcing the full compaction to skip trivial move if the destination level is L0.
+
+Test Plan: Add tests.
+@siying has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4183610).
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1518/files/23b76c13289b881af1ec41fb73f7dc555cef8eee..2d431f13a0166a3e61f1686579655f096d2a5930) - [changes since last import](https://github.com/facebook/rocksdb/pull/1518/files/23b76c13289b881af1ec41fb73f7dc555cef8eee..2d431f13a0166a3e61f1686579655f096d2a5930)
+
+Updated to fix another issue.
+
+LGTM, let's land after tests pass
+
+Failures look unrelated
+

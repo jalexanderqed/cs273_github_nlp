@@ -1,0 +1,41 @@
+I have got the Uint64 example to work fine using the example from https://github.com/facebook/rocksdb/blob/master/db/merge_test.cc
+
+Is there an example for List or Set? Do I have to redefine counters, merge based counters and a set add operator all over again? Is it possible to trim down the lines of code?
+
+WIP code at https://github.com/sshivaji/polyglot/blob/leveldb/src/book_make.cpp (just moved from leveldb)
+
+Thanks in advance.
+
+I’m not sure what you are asking.  Do you want to store a List/Set as a value in a rocksdb key?  If so, you’d have to write your own merge operator to do this.
+
+But depending on what you are trying to accomplish, you may want to consider storing each element in your list/set as separate keys (and then iterate through the keys to find all the values).
+
+On Jun 22, 2015, at 9:18 AM, Shivkumar Shivaji <notifications@github.com<mailto:notifications@github.com>> wrote:
+
+I have got the Uint64 example to work fine using the example from https://github.com/facebook/rocksdb/blob/master/db/merge_test.cc
+
+Is there an example for List or Set? Do I have to redefine counters, merge based counters and a set add operator all over again? Is it possible to trim down the lines of code?
+
+WIP code at https://github.com/sshivaji/polyglot/blob/leveldb/src/book_make.cpp (just moved from leveldb)
+
+Thanks in advance.
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/640.
+
+An example with List would be great.
+
+However, for the Int example, I implemented Counters, MergeBasedCounters, and the UINT64AddOperator. Do I have to repeat all steps for the List merge?
+
+Is there an example or way to accomplish this without defining a new Counters class (for lists)?
+
+Details->
+  I had to do this:
+  //    std::shared_ptrrocksdb::DB dc (db);
+  //    MergeBasedCounters counters(dc);
+  //    counters.add("a", 1);
+
+  I hope I dont have to do this all over again for Lists.
+
+@sshivaji I have a working Merge Operator which I use here which is basically a merge on a byte array, so it will add/remove entries from a key/value where the value is a byte array. I would like to make this generic and get it back into the Rocks code base as a Utility for everyone to benefit from, however that will take some time. If you haven't solved this contact me privately and I can share with you some code.
+

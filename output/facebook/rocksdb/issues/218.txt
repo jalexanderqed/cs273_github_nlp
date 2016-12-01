@@ -1,0 +1,70 @@
+After I used the current master branch code, I got some error when the app running, and crash.
+The following is the error message, and I found if I put some garbage code (ex, counter++;) before calling put(key,value), the error may not occur.
+Do you have any suggestion to solve this problem?
+
+Thanks.
+
+Yuchi
+# 
+
+Assertion failed: (cfd_->internal_comparator().Compare( (*files)[files->size() - 1]->largest, f->smallest) < 0), function MaybeAddFile, file db/version_set.cc, line 1722.
+# 
+
+Hey yuchi, do you happen to provide custom comparator or prefix_extractor via options?  There are some requirements on these options:
+
+https://github.com/facebook/rocksdb/blob/master/include/rocksdb/options.h#L121-L130
+
+https://github.com/facebook/rocksdb/blob/master/include/rocksdb/options.h#L277-L291
+
+In addition, if you happen to change the custom comparator before reopening a DB such that the total order is not consistent, then it might also cause such error.
+
+Does any of them apply to your case?
+
+Hi yhchiang,
+
+Thanks for your answer, I used rocksdb by Java JNI lib, and the java lib seems not yet support comparator.
+
+The prefix_extractor seems also not be supported in java lib.
+
+Do you have any other suggestions? 
+
+Thanks very much.
+
+Hello yuchi,
+
+We currently not yet have support for comparator prefix_extractor for Java binding, but it would be great if someone can add it.
+
+Since you didn't specify the comparator and prefix_extractor, I can't tell what other parts might go wrong.  Do you mind pasting some part of your code or explain in more detail how to get that error?
+
+Hi yhchiang,
+
+Very thanks your explanation.
+
+Because I used rocksdb by Java binding lib, I never use the comparator. I don't understand how to specify the comparator and prefix_extractor. Or, did I misunderstand what you say?
+
+The program extracts some data and save in rocksdb. And the strange things are:
+1. It occurs after rocksdb 3.3
+2. When the program extract data by one thread and save in rocksdb by one thread, it seems not occur. But if the program extract data by multiple threads and save in rocksdb by one thread, it will occurs. But change the put timing (such as, adding log code), it may occurs in different position.
+
+And the program in this phase, only put data in rocksdb.
+
+I just don't know how it happens and how to find the reason.
+
+I had try to modify the code (rocksdb sources) to get some information, but I still can't find the root cause. 
+
+Thanks for any idea.
+
+Hello yuchi,
+
+As we've not yet support comparator and prefix_extractor in Java, RocksDB will use the default one.  So there's nothing wrong with your configuration.
+
+Note that while it is safe to access single rocksdb instance via multiple threads, it is not safe to access a single rocksdb instance using multiple processes.
+
+We've not yet heard / seen such issues in rocksdb 3.3, and how RocksDB process reads and writes should be the same in Java and C++.  Please feel free to keep us posted what you've found.
+
+Hi yhchiang,
+
+Thank you for the information.
+
+Closing since the discussion went stale. @yuchi518  please open a new issue if you're still having troubles.
+

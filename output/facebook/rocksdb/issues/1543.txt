@@ -1,0 +1,3 @@
+First of all, it's pretty cool that Facebook released RocksDB under a BSD license. It also comes with a patent grant, which, although [slightly](https://news.ycombinator.com/item?id=9356508) [controversial](https://news.ycombinator.com/item?id=9111849), seems to generally be received quite well - many thanks for that, too!
+
+Having thought about it, I became a little curious which patents are actually related to RocksDB. After all, its underlying data structures are quite well-understood. I did a quick search on google patents, and also looked at some wikipedia pages (for example for LSM trees and bloom filters), but couldn't really find anything. Is there a list of patents that are related to RocksDB?

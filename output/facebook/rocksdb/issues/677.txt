@@ -1,0 +1,39 @@
+So judging from previous blog posts[1] and a conversation on twitter[2], I'm lead to believe that I should be able to read in a leveldb and begin working with it with rocks. However, I've noticed the first issue in doing this is that rocks is looking for sst files when leveldb is using ldb files.
+
+`Can't access /27799377.sst: IO error: /path/goes/here/27799377.sst: No such file or directory`
+
+The second issue, if I just go "Sure, i'll just rename them" is that it generates lots of warnings processing the files[3].
+
+So is it generally possible to migrate/move/dump/load/whatever this existing leveldb into rocksdb without having to do the heavy processing that generated the initial database.
+
+1 - http://rocksdb.org/blog/1811/migrating-from-leveldb-to-rocksdb-2/
+2 - https://twitter.com/OverlordQ/status/626887860944248832
+3 - http://pastebin.com/5quBh96f
+
+@OverlordQ how did you open levelDB database using RocksDB? Can you share your statement to open it?
+
+Not using rocksdb directly, using a python wrapper[1] around it. The leveldb code was utilizing plyvel[2]. The only options passed to either DB open was setting create_if_missing to True. If need be, I can probably try to put together a pure C++ repro case.
+
+1 - http://github.com/stephan-hof/pyrocksdb.git
+2 - https://plyvel.readthedocs.org/en/latest/
+
+It's probably because LevelDB renamed file names from "_.sst" to "_.ldb" and rocksDB is not yet recognize them. We should add the support. In the mean time, do you mind trying to rename all the "XXX.ldb" to "XXX.sst" and see whether you can open it?
+
+Running the `simple_example.cc` against the leveldb results in [this](http://sprunge.us/XNIG) LOG output.
+
+@OverlordQ yes, I confirmed that you are right and they cannot be opened. The only way for now to make it work is to manually rename all those xxxxx.ldb files to xxxx.sst, before opening it.
+
+Aside from that, it's safe to ignore the `Unable to load table properties for file --- NotFound:` and other warnings until all the leveldb files get compacted into rocks files?
+
+@OverlordQ "Unable to load table properties for file" is OK.
+
+Just of note, once the DB is loaded and operations begin on it, a slightly different but similar warning appears:
+
+`Cannot find Properties block from file.`
+
+@OverlordQ that should be fine too. Did you see the data of the DB correct?
+
+Just to follow up, yes data reads fine, it's just when copying the DB from leveldb nodes it requires the extra manual step of renaming all the files from .ldb to .sst. It then gives the 'properties' errors reported above until those particular files get 'rocksified'
+
+Note that there is a unit test in db_test.cc (DBTest.SSTsWithLdbSuffixHandling) that pretends to verify that this works, but the test is flawed--it never causes rocksdb to read the .ldb files.
+

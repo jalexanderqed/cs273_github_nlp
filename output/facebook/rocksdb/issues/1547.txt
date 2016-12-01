@@ -1,0 +1,7 @@
+The Arena construction/destruction introduced significant overhead to read-heavy workload just by creating empty vectors for its blocks, so avoid it in RangeDelAggregator.
+
+Test Plan: batched benchmarking together with https://github.com/facebook/rocksdb/pull/1548
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4207781).
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1547/files/7c7f25310552c6e1da6efb4c1bceed463d70ae48..159e99eac9ccf32dbc7fc6c683b4a8e36d96b9ee) - [changes since last import](https://github.com/facebook/rocksdb/pull/1547/files/7c7f25310552c6e1da6efb4c1bceed463d70ae48..159e99eac9ccf32dbc7fc6c683b4a8e36d96b9ee)
+

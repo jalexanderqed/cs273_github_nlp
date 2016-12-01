@@ -1,0 +1,9 @@
+Hello,
+
+I am using TransactionDB object in multithreaded environment.  There are two threads trying to update the value for the same key. See the attached program. One thread, T1, successfully PUTs the data (on a key) - a pessimistic transaction, while at the same time if thread (T2) attempts to PUT on the same key, the PUT fails, which is understandable, but when thread T1 invokes Commit(), commit by T1 aborts. The scenario is similar to "LostUpdate" test case (but with 2 threads) - which should have worked.
+
+I am just wondering if I'm missing or doing something wrong? Any input is appreciated. 
+Thank you.
+
+[code and output.zip](https://github.com/facebook/rocksdb/files/210030/code.and.output.zip)
+

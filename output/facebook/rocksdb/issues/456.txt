@@ -1,0 +1,8 @@
+Hi RocksDB team,
+
+I'm experimenting with RocksDB C API.  The rocksdb_get() method returns a buffer of data.  I'm wondering if the caller should free this buffer after usage.  The "rocksdb/c.h" says this buffer is malloc()ed.  However the given c example code "examples/c_simple_example.c" doesn't call free afterwards.
+
+Thanks!
+
+Hey @neutronsharc . You're right, it has to be freed. This was an external contribution and we should have taken a closer look at the code. I fixed it with https://github.com/facebook/rocksdb/commit/402c1152a7b69c2aee7d4aa8f678d65a0f222058
+

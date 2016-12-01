@@ -1,0 +1,24 @@
+Fixing unused variable for release JNI build:
+V=1 make rocksdbjavastatic
+
+java/rocksjni/write_batch_test.cc: In function ‘_jbyteArray\* Java_org_rocksdb_WriteBatchTest_getContents(JNIEnv*, jclass, jobject)’:
+java/rocksjni/write_batch_test.cc:63:10: warning: unused variable ‘parsed’ [-Wunused-variable]
+     bool parsed = rocksdb::ParseInternalKey(iter->key(), &ikey);
+          ^
+
+@adamretter Can you please review?
+
+@siying Can we merge this fix?
+
+@koldat Sorry for the delay. I will review this evening
+
+@koldat so I find this kind of interesting. I am not a big C++ person, I mostly work in Java or Scala. I am guessing from your commit, that the `assert(parsed);` is effectively erased when you are doing a release build, is that correct? If that is the case I have no problem with your change, but I am wondering how can we ensure that this doesn't happen again? In the `.travis.yml` it looks like we only CI with clang, would you consider also adding an entry for GCC to the build matrix?
+
+@adamretter  Yes you are right. assert macro evaluates as nothing. It was actually that bug, because in release the code that was doing something was removed. I had to put there that if so that compiler does not scream about unused variable. We can add release build of JNI to build, but it will take longer to validate. I will leave decision to maintainers.
+
+@yhchiang, what do you think about adding a release build to the CI as well?
+
+> what do you think about adding a release build to the CI as well?
+
+Definitely a good idea :)
+

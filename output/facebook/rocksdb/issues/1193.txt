@@ -1,0 +1,8 @@
+I saw that rocksdb supports Android and iOS but I didn't find any document for building/integrating it for/into those platforms. So if I'm correct (that it indeed supports those platforms), could you guys give some time to write some document for it ? Such as:
+- Common use cases for using Rocksdb on those platforms (when should use, when should not use, ...).
+- How to build it for Android/iOS.
+- Specific build options for those platforms.
+- Good practices when wrapping/using it on those platforms.
+
+Thank you.
+

@@ -1,0 +1,12 @@
+Is there a way to set compression algorithm per level? If not, can this feature be added please?
+Thanks
+
+I'm also interested in this.
+
+This feature is not available at the moment. I`ll port it this week.
+
+Thanks, @fyrz!
+
+@pshareghi @alugowski 
+See: https://github.com/facebook/rocksdb/pull/545
+

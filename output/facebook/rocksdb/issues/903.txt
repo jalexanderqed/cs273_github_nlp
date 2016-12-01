@@ -1,0 +1,2 @@
+Presumably a leftover from optimistic_transaction_example.cc.
+

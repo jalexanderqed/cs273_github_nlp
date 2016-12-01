@@ -1,0 +1,63 @@
+I have a rather large database of about 3Tb in size and billions of rows. It was created using `PrepareForBulkLoad()` options set.
+
+Trying to reopen database (even in read-only mode) and either positioning iterator to the first key or reading any key ends up in quick (minutes) allocation of the whole RAM (32Gb) and OOM.
+
+I experimented with `BlockBasedTableOptions` but it doesn't seem to help.
+
+Attached LOG dumped every 60 seconds. It was made with `disable_auto_compactions = true;` option when trying to position iterator to the first key. Iterator's options are:
+```
+                ro.managed = true;
+                ro.fill_cache = false;
+                ro.verify_checksums = false;
+```
+but I tried many other combinations without any luck.
+[LOG.txt](https://github.com/facebook/rocksdb/files/603857/LOG.txt)
+
+What are the best options to read large database without getting into OOM? I use current rocksdb version as of commit a0deec960f3a8190831c673e5ba998fe6fb7ea90
+
+I'm not an expert at this, but looks like your DB instance is running out of resources while trying to recover the database at the time of opening the DB itself. I don't think reading or iterating has anything to do with the OOM.
+
+FWIW, `PrepareForBulkLoad()` disables compaction and you're supposed to manually call `Compact()` at the end. It seems in this case that did not happen (or it did happen, but the MANIFEST is out of sync), and now at the time of opening the DB it's freaking out. I guess you should:
+
+1. Limit the number of compaction threads 
+2. Wait for a while (or manually call `Compact()`)
+3. Close the DB
+
+That should help with OOM, assuming that out of sync MANIFEST problem is a red-herring.
+
+```
+2016/11/21-17:22:25.124599 7fd76a9d0980 [WARN] [token_shards] Increasing compaction threads because we have 32738 level-0 files 
+2016/11/21-17:22:25.124614 7fd76a9d0980 [WARN] [indexes] Increasing compaction threads because we have 33119 level-0 files 
+```
+
+Relevant log lines:
+```
+2016/11/21-17:22:24.580468 7fd76a9d0980 Recovered from manifest file:/mnt/index/rocksdb.indexes//MANIFEST-192580 succeeded,manifest_file_number is 192580, next_file_number is 192582, last_sequence is 150846673753, log_number is 0,prev_log_number is 0,max_column_family is 5
+2016/11/21-17:22:24.580484 7fd76a9d0980 Column family [default] (ID 0), log number is 192579
+2016/11/21-17:22:24.580485 7fd76a9d0980 Column family [documents] (ID 1), log number is 192579
+2016/11/21-17:22:24.580487 7fd76a9d0980 Column family [document_ids] (ID 2), log number is 192579
+2016/11/21-17:22:24.580488 7fd76a9d0980 Column family [token_shards] (ID 3), log number is 192579
+2016/11/21-17:22:24.580489 7fd76a9d0980 Column family [indexes] (ID 4), log number is 192579
+2016/11/21-17:22:24.580490 7fd76a9d0980 Column family [meta] (ID 5), log number is 192579
+2016/11/21-17:22:24.749635 7fd76a9d0980 EVENT_LOG_v1 {"time_micros": 1479738144749619, "job": 1, "event": "recovery_started", "log_files": [192581]}
+2016/11/21-17:22:24.749655 7fd76a9d0980 Recovering log #192581 mode 2
+2016/11/21-17:22:24.749713 7fd76a9d0980 Creating manifest 192583
+2016/11/21-17:22:25.122743 7fd76a9d0980 EVENT_LOG_v1 {"time_micros": 1479738145122730, "job": 1, "event": "recovery_finished"}
+2016/11/21-17:22:25.124599 7fd76a9d0980 [WARN] [token_shards] Increasing compaction threads because we have 32738 level-0 files 
+2016/11/21-17:22:25.124614 7fd76a9d0980 [WARN] [indexes] Increasing compaction threads because we have 33119 level-0 files 
+2016/11/21-17:22:25.329791 7fd76a9d0980 EVENT_LOG_v1 {"time_micros": 1479738145329783, "job": 2, "event": "table_file_deletion", "file_number": 192586}
+2016/11/21-17:22:25.337286 7fd76a9d0980 EVENT_LOG_v1 {"time_micros": 1479738145337283, "job": 2, "event": "table_file_deletion", "file_number": 192585}
+2016/11/21-17:22:25.344734 7fd76a9d0980 EVENT_LOG_v1 {"time_micros": 1479738145344732, "job": 2, "event": "table_file_deletion", "file_number": 192584}
+2016/11/21-17:22:25.352867 7fd76a9d0980 [JOB 2] Tried to delete a non-existing file /mnt/index/rocksdb.indexes///MANIFEST-192580 type=3 #192580 -- IO error: /mnt/index/rocksdb.indexes///MANIFEST-192580: No such file or directory
+2016/11/21-17:22:25.352890 7fd76a9d0980 [JOB 2] Tried to delete a non-existing file /mnt/index/rocksdb.indexes//192586.sst type=2 #192586 -- IO error: /mnt/index/rocksdb.indexes//192586.sst: No such file or directory
+2016/11/21-17:22:25.352901 7fd76a9d0980 EVENT_LOG_v1 {"time_micros": 1479738145352898, "job": 2, "event": "table_file_deletion", "file_number": 192586, "status": "IO error: /mnt/index/rocksdb.indexes//192586.sst: No such file or directory"}
+2016/11/21-17:22:25.352913 7fd76a9d0980 [JOB 2] Tried to delete a non-existing file /mnt/index/rocksdb.indexes//192585.sst type=2 #192585 -- IO error: /mnt/index/rocksdb.indexes//192585.sst: No such file or directory
+2016/11/21-17:22:25.352918 7fd76a9d0980 EVENT_LOG_v1 {"time_micros": 1479738145352916, "job": 2, "event": "table_file_deletion", "file_number": 192585, "status": "IO error: /mnt/index/rocksdb.indexes//192585.sst: No such file or directory"}
+2016/11/21-17:22:25.352926 7fd76a9d0980 [JOB 2] Tried to delete a non-existing file /mnt/index/rocksdb.indexes//192584.sst type=2 #192584 -- IO error: /mnt/index/rocksdb.indexes//192584.sst: No such file or directory
+2016/11/21-17:22:25.352931 7fd76a9d0980 EVENT_LOG_v1 {"time_micros": 1479738145352929, "job": 2, "event": "table_file_deletion", "file_number": 192584, "status": "IO error: /mnt/index/rocksdb.indexes//192584.sst: No such file or directory"}
+2016/11/21-17:22:25.352938 7fd76a9d0980 [JOB 2] Tried to delete a non-existing file /mnt/index/rocksdb.indexes//192581.log type=0 #192581 -- IO error: /mnt/index/rocksdb.indexes//192581.log: No such file or directory
+2016/11/21-17:22:25.415947 7fd76a9d0980 DB pointer 0x7fd766a06c00
+```
+Running `Compact()` at the very end of the bulk upload ended up with OOM crash. Running compaction in the current state is not possible either, it runs out of memory at the database open time.
+
+I disabled automatic compaction because it ended up either with OOM, no matter what were the write options, eventually rocksdb tries to move a lot of data layer-to-layer, and it is, first, became extremely slow, and second, it frequently ran out of 32Gb of memory; or with extremely slow performance, it was virtually impossible to upload a tens-to-hundred of billions of rather small objects into rocksdb with automatic compaction, with `PrepareForBulkLoad()` it took reasonable amount of time.

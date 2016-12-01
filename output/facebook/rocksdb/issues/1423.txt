@@ -1,0 +1,55 @@
+Also fixes #1286
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+**If you are contributing on behalf of someone else (eg your employer)**: the individual CLA is not sufficient - use https://developers.facebook.com/opensource/cla?type=company instead. Contact cla@fb.com if you have any questions.
+
+@avsej updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1423/files/4a8474b1976b8efb146ff30b77f903c08ec075ad..d8843d6d459804307d7a292229594e0c138fcaa9)
+
+@avsej updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1423/files/d8843d6d459804307d7a292229594e0c138fcaa9..1a8006a43c19ef04a37c7d90c1a0afc0297c0bac)
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+@avsej So I am trying to reproduce this, I am not that familiar with building on FreeBSD, I used to use FreeBSD as my operating system but that was a few years ago now.
+
+The process I am following on FreeBSD 11 is:
+
+```
+cd /usr/ports/devel/gflags
+sudo make install
+
+cd /usr/ports/archivers/bzip2
+sudo make install
+
+cd /usr/ports/archivers/snappy
+sudo make install
+
+(Optional for RocksJava)
+cd /usr/ports/java/openjdk7
+sudo make install
+```
+
+```
+git clone https://github.com/facebook/rocksdb.git
+cd rocksdb
+CXX=clang++ CPPFLAGS="-I/usr/local/include -I/usr/local/openjdk7/include -I/usr/local/openjdk7/freebsd" CFLAGS="-I/usr/local/include -I/usr/local/openjdk7/include -I/usr/local/openjdk7/include/freebsd" LDFLAGS="-L/usr/local/lib" gmake -j4 rocksdbjava
+```
+
+Unfortunately this gives the error:
+
+```
+gmake[1]: Leaving directory '/usr/home/aretter/rocksdb/java'
+/usr/bin/ld: cannot find -lsnappy
+clang++: error: linker command failed with exit code 1 (use -v to see invocation)
+gmake: *** [Makefile:1407: rocksdbjava] Error 1
+```
+
+I am not clear why it can't find libsnappy as I have added `/usr/local/lib` to the `LDFLAGS` above  can see it is present in `/usr/local/lib`:
+
+```
+$ ls /usr/local/lib/libsnappy*
+/usr/local/lib/libsnappy.a      /usr/local/lib/libsnappy.so     /usr/local/lib/libsnappy.so.1       /usr/local/lib/libsnappy.so.1.3.0
+```
+
+What am I missing?
+

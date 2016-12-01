@@ -1,0 +1,36 @@
+In traversing DB using Iterator API ,  it show significant difference between c++ API and Java API. Why?
+
+I took a quick look at our Java iterator API, it looks to me that the only overhead we do over the c++ work is doing a memcpy of the Key and the Value when accessing them.
+
+The ideal optimization would be to eliminate this memcpy intearly and pass the Slice directly.
+but as a starting point we could cache the key and value the first time we access them.
+Instead of doing memcpy on every key() and value() call.
+
+I have very little experience with Java, @adamretter .. do you know how we can achive that ?
+
+This is the code that I am talking about
+Key memcpy overhead : https://github.com/facebook/rocksdb/blob/master/java/rocksjni/iterator.cc#L121-L126
+
+Value memcpy overhead : https://github.com/facebook/rocksdb/blob/master/java/rocksjni/iterator.cc#L137-L143
+
+@IslamAbdelRahman Hi yes, we have been talking about adding in some zero-copy stuff (or reducing copies) to the Java API in a few threads now, see the following for reference:
+
+https://github.com/facebook/rocksdb/pull/1247#issuecomment-238017960
+https://github.com/facebook/rocksdb/issues/1227
+https://github.com/facebook/rocksdb/issues/1251
+
+There are a few things that should be explored here including Direct Byte Buffers (and perhaps even pooling them as they have higher allocation/deallocation costs and/or reusing the same ones within a single iterator instance).
+
+What we would really need first is a good way of benchmarking this, so we can be certain we are increasing performance.
+
+In addition we could also consider the cost of the Java/C++ boundary transition which is not very cheap when you do a lot of them (just like with an iterator), we can explore things like JNI Critical perhaps for this.
+
+I do have some time left to work on RocksDB, so I would be happy to look into this in the near future if @yhchiang agrees?
+
+The JNI code is very clean and readable, so new API can be easily added:
+- return native address for key/value. Java Unsafe will allow to read directly from native address.
+- some API to get next Key/Value length
+- key() and value() into existing byte array and DirectByteBuffer
+- group operation: next n keys/values into DirectByteBuffer. JNI overhead is high and aggregating k-v in a single call is a good idea.
+- GetPrimitiveArrayCritical/ReleasePrimitiveArrayCritical should be used in put() and get() API. This is the fastest way to get access to java byte array.
+

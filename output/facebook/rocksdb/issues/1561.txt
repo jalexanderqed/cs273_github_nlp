@@ -1,0 +1,36 @@
+Summary:
+This PR is based on @nbronson's diff with small
+modifications to wire it up with existing interface. Comparing to
+previous version, this approach works better for inserting keys in
+decreasing order or updating the same key, and impose less restriction
+to the prefix extractor.
+
+---- Summary from original diff ----
+
+This diff introduces a single InlineSkipList::Insert that unifies
+the existing sequential insert optimization (prev_), concurrent insertion,
+and insertion using externally-managed insertion point hints.
+
+There's a deep symmetry between insertion hints (cursors) and the
+concurrent algorithm.  In both cases we have partial information from
+the recent past that is likely but not certain to be accurate.  This diff
+introduces the struct InlineSkipList::Splice, which encodes predecessor
+and successor information in the same form that was previously only used
+within a single call to InsertConcurrently.  Splice holds information
+about an insertion point that can be used to leverage locality between
+subsequent inserts.  If a call to Insert(k1, splice) is followed by
+Insert(k2, splice), the second call's cost is O(log D), where D is the
+distance (number of intervening nodes) from k1 to k2.
+
+Although the insert algorithm is now unified between single-threaded
+and concurrent, the choice of whether to use compare-and-swap must be
+made at compile time via a template parameter.  (Note that the Splice
+instance itself is not concurrent.)  Concurrent insert no longer needs
+to invalidate the sequential insertion cache (the former prev_).
+
+Test Plan:
+make sure it pass inlineskiplist_test and other existing unit tests.
+@yiwu-arbug has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4217283).
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1561/files/3991877f7990f95998a72d9beb06fe39978ce631..8f8bf5a8934b7f20996d0da3fb89a29bf47559b9) - [changes since last import](https://github.com/facebook/rocksdb/pull/1561/files/3991877f7990f95998a72d9beb06fe39978ce631..8f8bf5a8934b7f20996d0da3fb89a29bf47559b9)
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1561/files/8f8bf5a8934b7f20996d0da3fb89a29bf47559b9..f2fe089e8f7e9438f7422fc37668bae46c4a3da6) - [changes since last import](https://github.com/facebook/rocksdb/pull/1561/files/8f8bf5a8934b7f20996d0da3fb89a29bf47559b9..f2fe089e8f7e9438f7422fc37668bae46c4a3da6)
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1561/files/f2fe089e8f7e9438f7422fc37668bae46c4a3da6..09070b070559954c7c4ca7d124b36c1c8193d482) - [changes since last import](https://github.com/facebook/rocksdb/pull/1561/files/f2fe089e8f7e9438f7422fc37668bae46c4a3da6..09070b070559954c7c4ca7d124b36c1c8193d482)

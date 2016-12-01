@@ -1,0 +1,16 @@
+overriding existing library in tmp folder
+
+@clumsy This doesn't build. Please see the output from Travis-CI https://travis-ci.org/facebook/rocksdb/jobs/146554616
+
+Looks like you are missing an import in your Test class
+
+https://github.com/facebook/rocksdb/issues/1228
+
+My bad, did not amend my last commit locally.
+
+@clumsy Okay can you squash into one commit
+
+Done!
+
+LGTM :-)
+

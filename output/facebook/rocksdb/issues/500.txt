@@ -1,0 +1,10 @@
+Is there any PPA, or any way to install rocksdb without building from source?
+
+Others can confirm but as far as I know, we don't have it for now.
+
+Sorry @Raduh , only way to install rocksdb currently is from source. :(
+
+It looks like there's a [rocksdb package](https://ftp-master.debian.org/new/rocksdb_3.13.1-1.html) languishing in Debian NEW. Once it passes, it'd be pretty easy to port this over to Ubuntu for a PPA.
+
+That's awesome news!  :+1: 
+

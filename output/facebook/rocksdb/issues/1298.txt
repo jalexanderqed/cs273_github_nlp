@@ -1,0 +1,16 @@
+Closes https://github.com/facebook/rocksdb/issues/697
+Closes https://github.com/facebook/rocksdb/issues/1151
+
+Review: https://reviews.facebook.net/D62499
+
+@yiwu-arbug has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4113663).
+
+@yhchiang Do you mind take a look and merge? Thanks!
+
+@adamretter do you mind rebase onto master? Thanks!
+
+@adamretter updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1298/files/704ebc5dc716b2ece711235cf98138c6c8491e1e..85714fe37f44f21bc105f56528ecb7ae6ea0cc77) - [changes since last import](https://github.com/facebook/rocksdb/pull/1298/files/704ebc5dc716b2ece711235cf98138c6c8491e1e..85714fe37f44f21bc105f56528ecb7ae6ea0cc77)
+
+@yiwu-arbug @yhchiang Sorry I only just saw the request. I have just rebased it now :-)
+
+Hello @adamretter.  Sorry for the long reviewing process!  The diff looks good to me, but the Java test on travis fails due to unrelated thing to this PR.  Would you mind rebasing again and see whether the failure can be solved?

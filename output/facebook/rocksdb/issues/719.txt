@@ -1,0 +1,171 @@
+Hi,
+
+I have a rocksdb with ~280GB data and our process is running with memory limit set to 16G. Every few days, our process is getting killed by oom-killer. 
+According to the heap profiles collected just before crash: ~75% of memory is used by TableIndexReader & Filter data created as a result of BackgroundCompaction.
+
+Increasing the memory limit to 24G didn't help either. It eventually hits the limit and crashes.
+Is there a way to limit the memory usage by rocksdb compaction?
+
+Here is the list of DB options we use:
+table_options.filter_policy.reset(NewBloomFilterPolicy(8, false /\* use_block_based_builder */));
+
+table_options.block_size = 8 \* 1024;
+table_options.block_cache = NewLRUCache(128 \* 1024 \* 1024);
+
+options->min_write_buffer_number_to_merge = 3;
+options->max_write_buffer_number = 5;
+
+options->env->SetBackgroundThreads(3, Env::Priority::HIGH);
+options->max_background_flushes = 3;
+
+options->env->SetBackgroundThreads(4, Env::Priority::LOW);
+options->max_background_compactions = 4;
+
+options->level0_file_num_compaction_trigger = 8;
+options->level0_slowdown_writes_trigger = 17;
+options->level0_stop_writes_trigger = 24;
+options->target_file_size_base = 64 \* 1024 \* 1024;
+options->max_bytes_for_level_base = 8 \* options->target_file_size_base;
+options->max_bytes_for_level_multiplier = 8;
+options->target_file_size_multiplier = 3;
+
+Thanks!
+
+One more data point:
+When the memory usage was climbing up, I inspected the db compaction stats. It looked something like:
+
+##  Level   Files   Size(MB) 
+
+  L0     6/0        568  
+  L1    11/0        457  
+  L2    73/0       4043  
+  L3   523/7      32663  
+  L4   245/66    260382  
+
+Why did it end up opening > 70 files? Is this expected? Is there a way to estimate / limit # of sstable compaction thread can bring into the memory?
+
+I'm just about to write a wiki page on how RocksDB uses memory. Here's the short story:
+1. block cache -- just a normal LRU cache that keeps the block. the size is configurable, default is 8MB
+2. indexes -- you can estimate the size we need for indexes like this: (database_size / block_size) \* average_key_size. Default block size is 4KB (uncompressed, so this can go down to 2KB if you have 0.5 compression ratio). I would recommend increasing this to 32KB for example. This will decrease your memory usage for indexes 8x.
+3. bloom filters -- you can estimate the size of bloom filters like this: number_of_keys \* bloom_bits_per_key (this will give you size in bits).
+
+By default, max_open_files is 5000. I would recommend configuring your system such that all files are always open (which can be setup by setting max_open_files == -1) because that gives the best performance, especially on in-memory databases.
+
+Also, from your options I see that you set L1 size to 512MB.
+
+```
+options->target_file_size_base = 64 * 1024 * 1024;
+options->max_bytes_for_level_base = 8 * options->target_file_size_base;
+```
+
+ We usually recommend setting L0 size to be equal to L1 size. L0 size is `write_buffer_size * level0_file_num_compaction_trigger`. So in your case, I would set write_buffer_size to 64MB. Default is 4MB.
+
+Hi Igor,
+
+Really appreciate your quick response!
+
+Few months ago, we had similar memory growth problems and we tried changing the block size to 32K. Since that resulted in performance degradation we ended up increasing the process memory limit and went back to 8K. I will change the block size to 16K and check if the performance is acceptable.
+
+Some questions for our understanding: 
+1. Since we are leaving cache_index_and_filter_blocks=false, is it fair to assume that the index and filter data brought into memory stays in memory as long as the corresponding SSTable is open?
+2. In steady state, (i.e., when there are no compactions and light load of reads & writes), the memory usage of our process stays around 8 - 9GB. It is only when compaction starts (especially at L4), we see the memory spiking up. Our current hypotheses is: it is because the indexes and filters of new SSTs being created as part of the compaction and the old SSTs are both in memory. Does it sound correct?
+3. Do you have any suggestions on estimating the peak memory usage which accounts for any extra memory consumption by compaction?
+
+Thank you!
+
+> 1. Since we are leaving cache_index_and_filter_blocks=false, is it fair to assume that the index and filter data brought into memory stays in memory as long as the corresponding SSTable is open?
+
+That is correct.
+
+> 1. In steady state, (i.e., when there are no compactions and light load of reads & writes), the memory usage of our process stays around 8 - 9GB. It is only when compaction starts (especially at L4), we see the memory spiking up. Our current hypotheses is: it is because the indexes and filters of new SSTs being created as part of the compaction and the old SSTs are both in memory. Does it sound correct?
+
+What you could do is decrease target_file_size_base. That way, each compaction should be smaller, which means the memory spikes will also be smaller. The temporary doubling of space will also have less of an effect.
+
+> 1. Do you have any suggestions on estimating the peak memory usage which accounts for any extra memory consumption by compaction?
+
+You could try to estimate how much percent of DB is going through the compaction. If the percent is too big, it would be better to decrease compaction size by decreasing file size.
+
+I will play with target_file_size_base and target_file_size_multiplier options and check if that reduces memory pressure during compaction.
+
+Thank you!
+
+Hey @JeevithaK, did the additional tuning help?
+
+Hi Igor, I haven't gotten a chance to verify performance with the changed options. For now, we increased the memory limit of the process to get around the issue. I will update the thread after my experiments.
+
+@igorcanadi -
+
+I am seeing a similar increase in memory during background compaction from L0->L1 with my rocksdb environment, which eventually leads to out of memory (OOM killer) on my box. I looked at your responses above and also looked at your memory usage in rocksdb wiki page - thanks for writing that :-).
+https://github.com/facebook/rocksdb/wiki/Memory-usage-in-RocksDB
+
+But I am still unable to justify the huge memory usage (above 2GB) by rocksdb during compaction. 
+As per my calculation,
+
+block_cache_size = 128MB.
+cache_index_and_filter_blocks: 1 for my database - so there should be no extra memory used for these, it should all be within the 128MB block_cache_size limit - right?
+memtable write buffers = 4 \* 12MB each = 48MB 
+Blocks pinned by iterators - I am not using any iterators, so I guess this will not come into picture for my scenario.
+
+Also I used this formula to estimate memory usage for the index = (database_size / block_size) \* average_key_size. In my case, avg key size = 4Kb, block_size = 16K and database_size = 150Gb.
+So memory usage of index = (128Gb/16Kb)\* 4Kb = 32GB.
+But does that mean that compaction will try to load this much data in memory??
+
+target_file_size_base = 12582912 = 12MB.
+target_file_size_multiplier = 1.
+
+So once a file at level-0 reaches around 12MB, it is a candidate for compaction - right.
+And the target_file_size at L1 = 12Mb \* (1 ^ 0) = 12MB. So at each level, 12MB files will be compacted. Is there a problem with this setting? Can this cause memory pressure if there are large number of small files when compaction begins?
+I am seeing this in the LOG file:
+
+2015/11/26-05:01:13.737147 fff0e68080 [default] [JOB 37969] Compacting 32@0 + 44@1 files to L1, score 8.00
+2015/11/26-05:01:13.737422 fff0e68080 [default] Compaction start summary: Base version 21072 Base level 0, inputs: [416347(491KB) 416344(514KB) 416342(486KB) 416339(490KB) 416336(506KB) 416333(514KB) 416331(503KB) 416328(499KB) 416326(474KB) 416323(471KB) 416320(486KB) 416318(506KB) 416315(514KB) 416313(514KB) 416310(486KB) 416307(490KB) 416305(470KB) 416302(474KB) 416300(490KB) 416297(506KB) 416295(454KB) 416292(446KB) 416289(490KB) 416286(458KB) 416284(478KB) 416281(462KB) 416279(486KB) 416276(447KB) 416274(466KB) 416271(446KB) 416269(470KB) 416266(462KB)], [416264(12MB) 416268(14MB) 416272(14MB) 416277(14MB) 416282(14MB) 416287(8345KB) 416290(14MB) 416293(14MB) 416298(14MB) 416303(14MB) 416308(14MB) 416312(14MB) 416316(14MB) 416321(14MB) 416324(14MB) 416329(14MB) 416334(14MB) 416337(14MB) 416341(14MB) 416345(14MB) 416348(14MB) 416349(14MB) 416350(8894KB) 416351(14MB) 416352(14MB) 416353(14MB) 416354(14MB) 416355(14MB) 416356(14MB) 416357(14MB) 416358(14MB) 416359(14MB) 416360(14MB) 416361(14MB) 416362(14MB) 416363(14MB) 416364(14MB) 416365(14MB) 416366(14MB) 416367(14MB) 416368(14MB) 416369(14MB) 416370(14MB) 416371(2683KB)]
+2015/11/26-05:01:13.742740 fff0e68080 EVENT_LOG_v1 {"time_micros": 1448514073737469, "job": 37969, "event": "compaction_started", "files_L0": [416347, 416344, 416342, 416339, 416336, 416333, 416331, 416328, 416326, 416323, 416320, 416318, 416315, 416313, 416310, 416307, 416305, 416302, 416300, 416297, 416295, 416292, 416289, 416286, 416284, 416281, 416279, 416276, 416274, 416271, 416269, 416266], "files_L1": [416264, 416268, 416272, 416277, 416282, 416287, 416290, 416293, 416298, 416303, 416308, 416312, 416316, 416321, 416324, 416329, 416334, 416337, 416341, 416345, 416348, 416349, 416350, 416351, 416352, 416353, 416354, 416355, 416356, 416357, 416358, 416359, 416360, 416361, 416362, 416363, 416364, 416365, 416366, 416367, 416368, 416369, 416370, 416371], "score": 8, "input_data_size": 672111976}
+
+Can you please help us identify any tunable which has not been set right that could cause spike in memory usage. I would really appreciate your help.
+
+My database size is around 150GB and my rocksdb options are:
+
+  max_open_files: 5000
+  cache_index_and_filter_blocks: 1
+  index_type: 0
+  hash_index_allow_collision: 1
+  checksum: 1
+  no_block_cache: 0
+  block_cache: 0x10141578
+  block_cache_size: 134217728
+  block_cache_compressed: (nil)
+  block_size: 16384
+  block_size_deviation: 10
+  block_restart_interval: 8
+  filter_policy: nullptr
+Options.write_buffer_size: 12582912
+Options.max_write_buffer_number: 4
+Options.target_file_size_base: 12582912
+Options.target_file_size_multiplier: 1
+Options.max_bytes_for_level_base: 100663296
+Options.level_compaction_dynamic_level_bytes: 0
+Options.max_bytes_for_level_multiplier: 12
+ Options.level0_file_num_compaction_trigger: 4
+Options.level0_slowdown_writes_trigger: 48
+Options.level0_stop_writes_trigger: 64
+
+Thanks!
+
+@igorcanadi - Igor, can you please let us know what may be wrong with our configuration above which is causing high memory usage during compaction?
+
+> So memory usage of index = (128Gb/16Kb)\* 4Kb = 32GB.
+> But does that mean that compaction will try to load this much data in memory??
+
+It's usually advisable to keep your entire index in memory. Compaction will not load all of it, but it will load some parts + you'll have a issues with performance if your index doesn't fit in memory.
+
+32GB is way too big for an index with 150GB database. Do your keys have to be 4KB? That's rather big.
+
+We changed the rocksdb block size from 8K to 32K. This did not affect the performance and our memory usage was under control.
+
+Thanks for all the help!
+
+@igorcanadi is compaction scoped to a mysql table partition?
+that will curb the memory need?
+
+I'm not sure what you mean by 'scoped'? For MyRocks questions, I would recommend posting to https://github.com/facebook/mysql-5.6/issues
+

@@ -1,0 +1,604 @@
+We are experiencing PUT request hang on 3.11.0.
+## Below is the stack trace:
+
+Thread 58 (Thread 0xfff126f080 (LWP 1332)):
+#0  __pthread_cond_wait (cond=0x1010e048, mutex=0x1010e020) at pthread_cond_wait.c:158
+#1  0x00000062882e76d8 in ?? () from /usr/lib64/librocksdb.so.3.11
+#2  0x00000062879cba4c in start_thread (arg=0xfff126f080) at pthread_create.c:310
+#3  0x00000062878fa21c in __thread_start () from /lib64/libc.so.6
+
+Thread 57 (Thread 0xfff0a6f080 (LWP 1333)):
+#0  __pthread_cond_wait (cond=0x1010e048, mutex=0x1010e020) at pthread_cond_wait.c:158
+#1  0x00000062882e76d8 in ?? () from /usr/lib64/librocksdb.so.3.11
+#2  0x00000062879cba4c in start_thread (arg=0xfff0a6f080) at pthread_create.c:310
+#3  0x00000062878fa21c in __thread_start () from /lib64/libc.so.6
+
+Thread 56 (Thread 0xffebfff080 (LWP 1334)):
+#0  __pthread_cond_wait (cond=0x1010e048, mutex=0x1010e020) at pthread_cond_wait.c:158
+#1  0x00000062882e76d8 in ?? () from /usr/lib64/librocksdb.so.3.11
+#2  0x00000062879cba4c in start_thread (arg=0xffebfff080) at pthread_create.c:310
+#3  0x00000062878fa21c in __thread_start () from /lib64/libc.so.6
+
+Thread 55 (Thread 0xffeb7ff080 (LWP 1335)):
+#0  __pthread_cond_wait (cond=0x1010e048, mutex=0x1010e020) at pthread_cond_wait.c:158
+#1  0x00000062882e76d8 in ?? () from /usr/lib64/librocksdb.so.3.11
+#2  0x00000062879cba4c in start_thread (arg=0xffeb7ff080) at pthread_create.c:310
+#3  0x00000062878fa21c in __thread_start () from /lib64/libc.so.6
+
+Thread 52 (Thread 0xffdcffe080 (LWP 1368)):
+#0  __pthread_cond_wait (cond=0xffdcffcd08, mutex=0x1013a888) at pthread_cond_wait.c:158
+#1  0x0000006288296d08 in rocksdb::port::CondVar::Wait() () from /usr/lib64/librocksdb.so.3.11
+#2  0x00000062882ffce0 in rocksdb::InstrumentedCondVar::WaitInternal() () from /usr/lib64/librocksdb.so.3.11
+#3  0x00000062882ffef4 in rocksdb::InstrumentedCondVar::Wait() () from /usr/lib64/librocksdb.so.3.11
+#4  0x00000062882957b8 in rocksdb::WriteThread::EnterWriteThread(rocksdb::WriteThread::Writer*, unsigned long) () from /usr/lib64/librocksdb.so.3.11
+#5  0x000000628820cca8 in rocksdb::DBImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch*) () from /usr/lib64/librocksdb.so.3.11
+#6  0x00000062881fd030 in rocksdb::DB::Put(rocksdb::WriteOptions const&, rocksdb::ColumnFamilyHandle*, rocksdb::Slice const&, rocksdb::Slice const&) () from /usr/lib65/librocksdb.so.3.11
+#7  0x00000062881fd0c0 in rocksdb::DBImpl::Put(rocksdb::WriteOptions const&, rocksdb::ColumnFamilyHandle*, rocksdb::Slice const&, rocksdb::Slice const&) () from /usr/lib64/librocksdb.so.3.11
+#8  0x0000006288214678 in ?? () from /usr/lib64/librocksdb.so.3.11
+#9  0x00000062881bea70 in rocksdb_put () from /usr/lib64/librocksdb.so.3.11
+
+Thread 8 (Thread 0xff76fff080 (LWP 1419)):
+#0  __pthread_cond_wait (cond=0xff76ffddf8, mutex=0x1013a888) at pthread_cond_wait.c:158
+#1  0x0000006288296d08 in rocksdb::port::CondVar::Wait() () from /usr/lib64/librocksdb.so.3.11
+#2  0x00000062882ffce0 in rocksdb::InstrumentedCondVar::WaitInternal() () from /usr/lib64/librocksdb.so.3.11
+#3  0x00000062882ffef4 in rocksdb::InstrumentedCondVar::Wait() () from /usr/lib64/librocksdb.so.3.11
+#4  0x00000062882957b8 in rocksdb::WriteThread::EnterWriteThread(rocksdb::WriteThread::Writer*, unsigned long) ()  from /usr/lib64/librocksdb.so.3.11
+#5  0x000000628820cca8 in rocksdb::DBImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch*) () from /usr/lib64/librocksdb.so.3.11
+#6  0x00000062881fd030 in rocksdb::DB::Put(rocksdb::WriteOptions const&, rocksdb::ColumnFamilyHandle*, rocksdb::Slice const&, rocksdb::Slice const&) () from /usr/lib64/librocksdb.so.3.11
+#7  0x00000062881fd0c0 in rocksdb::DBImpl::Put(rocksdb::WriteOptions const&, rocksdb::ColumnFamilyHandle*, rocksdb::Slice const&, rocksdb::Slice const&) () from /usr/lib64/librocksdb.so.3.11
+#8  0x0000006288214678 in ?? () from /usr/lib64/librocksdb.so.3.11
+#9  0x00000062881bea70 in rocksdb_put () from /usr/lib64/librocksdb.so.3.11
+
+Thread 6 (Thread 0xff75fff080 (LWP 1421)):
+#0  __pthread_cond_wait (cond=0xff75ffdd08, mutex=0x1013a888) at pthread_cond_wait.c:158
+#1  0x0000006288296d08 in rocksdb::port::CondVar::Wait() () from /usr/lib64/librocksdb.so.3.11
+#2  0x00000062882ffce0 in rocksdb::InstrumentedCondVar::WaitInternal() () from /usr/lib64/librocksdb.so.3.11
+#3  0x00000062882ffef4 in rocksdb::InstrumentedCondVar::Wait() () from /usr/lib64/librocksdb.so.3.11
+#4  0x00000062882957b8 in rocksdb::WriteThread::EnterWriteThread(rocksdb::WriteThread::Writer*, unsigned long) () from /usr/lib64/librocksdb.so.3.11
+#5  0x000000628820cca8 in rocksdb::DBImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch*) () from /usr/lib64/librocksdb.so.3.11
+#6  0x00000062881fd030 in rocksdb::DB::Put(rocksdb::WriteOptions const&, rocksdb::ColumnFamilyHandle*, rocksdb::Slice const&, rocksdb::Slice const&) () from /usr/lib64/librocksdb.so.3.11
+#7  0x00000062881fd0c0 in rocksdb::DBImpl::Put(rocksdb::WriteOptions const&, rocksdb::ColumnFamilyHandle*, rocksdb::Slice const&, rocksdb::Slice const&) () from /usr/lib64/librocksdb.so.3.11
+#8  0x0000006288214678 in ?? () from /usr/lib64/librocksdb.so.3.11
+#9  0x00000062881bea70 in rocksdb_put () from /usr/lib64/librocksdb.so.3.11
+
+Note: All other threads have stack trace similar to Thread 6 or Thread 58.
+## Configuration details are as below:
+
+2015/08/19-23:56:47.814093 fff1d93000 RocksDB version: 3.11.0
+2015/08/19-23:56:47.814288 fff1d93000 Git sha rocksdb_build_git_sha:812c461c96869ebcd8e629da8f01e1cea01c00ca
+2015/08/19-23:56:47.814315 fff1d93000 Compile date Jul 30 2015
+2015/08/19-23:56:47.814326 fff1d93000 DB SUMMARY
+2015/08/19-23:56:47.815267 fff1d93000 CURRENT file:  CURRENT
+2015/08/19-23:56:47.815290 fff1d93000 IDENTITY file:  IDENTITY
+2015/08/19-23:56:47.815399 fff1d93000 MANIFEST file:  MANIFEST-000804 size: 1578 Bytes
+2015/08/19-23:56:47.815414 fff1d93000 SST files in /rocksdb/user-container-1 dir, Total Num: 7, files: 000184.sst 000186.sst 000187.sst 000189.sst 000191.sst 000192.sst 000194.sst
+2015/08/19-23:56:47.815428 fff1d93000 Write Ahead Log file in /rocksdb/user-container-1: 000805.log size: 0
+2015/08/19-23:56:47.815529 fff1d93000          Options.error_if_exists: 0
+2015/08/19-23:56:47.815543 fff1d93000        Options.create_if_missing: 0
+2015/08/19-23:56:47.815553 fff1d93000          Options.paranoid_checks: 1
+2015/08/19-23:56:47.815564 fff1d93000                      Options.env: 0x62884704e0
+2015/08/19-23:56:47.815574 fff1d93000                 Options.info_log: 0x10117010
+2015/08/19-23:56:47.815585 fff1d93000           Options.max_open_files: 5000
+2015/08/19-23:56:47.815595 fff1d93000       Options.max_total_wal_size: 16777192
+2015/08/19-23:56:47.815606 fff1d93000        Options.disableDataSync: 0
+2015/08/19-23:56:47.815616 fff1d93000              Options.use_fsync: 0
+2015/08/19-23:56:47.815627 fff1d93000      Options.max_log_file_size: 0
+2015/08/19-23:56:47.815637 fff1d93000 Options.max_manifest_file_size: 18446744073709551615
+2015/08/19-23:56:47.815648 fff1d93000      Options.log_file_time_to_roll: 0
+2015/08/19-23:56:47.815658 fff1d93000      Options.keep_log_file_num: 1000
+2015/08/19-23:56:47.815668 fff1d93000        Options.allow_os_buffer: 1
+2015/08/19-23:56:47.815679 fff1d93000       Options.allow_mmap_reads: 0
+2015/08/19-23:56:47.815689 fff1d93000      Options.allow_mmap_writes: 0
+2015/08/19-23:56:47.815700 fff1d93000          Options.create_missing_column_families: 0
+2015/08/19-23:56:47.815710 fff1d93000                              Options.db_log_dir:
+2015/08/19-23:56:47.815721 fff1d93000                                 Options.wal_dir: /rocksdb/user-container-1
+2015/08/19-23:56:47.815731 fff1d93000                Options.table_cache_numshardbits: 4
+2015/08/19-23:56:47.815742 fff1d93000     Options.delete_obsolete_files_period_micros: 21600000000
+2015/08/19-23:56:47.815752 fff1d93000              Options.max_background_compactions: 4
+2015/08/19-23:56:47.815763 fff1d93000                  Options.max_background_flushes: 1
+2015/08/19-23:56:47.815773 fff1d93000                         Options.WAL_ttl_seconds: 0
+2015/08/19-23:56:47.815784 fff1d93000                       Options.WAL_size_limit_MB: 0
+2015/08/19-23:56:47.815815 fff1d93000             Options.manifest_preallocation_size: 4194304
+2015/08/19-23:56:47.815826 fff1d93000                          Options.allow_os_buffer: 1
+2015/08/19-23:56:47.815836 fff1d93000                         Options.allow_mmap_reads: 0
+2015/08/19-23:56:47.815847 fff1d93000                        Options.allow_mmap_writes: 0
+2015/08/19-23:56:47.815857 fff1d93000                      Options.is_fd_close_on_exec: 1
+2015/08/19-23:56:47.815867 fff1d93000                    Options.stats_dump_period_sec: 3600
+2015/08/19-23:56:47.815878 fff1d93000                    Options.advise_random_on_open: 1
+2015/08/19-23:56:47.815888 fff1d93000                     Options.db_write_buffer_size: 0
+2015/08/19-23:56:47.815899 fff1d93000          Options.access_hint_on_compaction_start: NORMAL
+2015/08/19-23:56:47.815910 fff1d93000                       Options.use_adaptive_mutex: 0
+2015/08/19-23:56:47.815920 fff1d93000                             Options.rate_limiter: (nil)
+2015/08/19-23:56:47.815931 fff1d93000                           Options.bytes_per_sync: 0
+2015/08/19-23:56:47.815942 fff1d93000                       Options.wal_bytes_per_sync: 0
+2015/08/19-23:56:47.816004 fff1d93000                   Options.enable_thread_tracking: 0
+2015/08/19-23:56:47.816022 fff1d93000 Compression algorithms supported:
+2015/08/19-23:56:47.816032 fff1d93000   Snappy supported: 1
+2015/08/19-23:56:47.816042 fff1d93000   Zlib supported: 1
+2015/08/19-23:56:47.816053 fff1d93000   Bzip supported: 1
+2015/08/19-23:56:47.816063 fff1d93000   LZ4 supported: 0
+2015/08/19-23:56:47.816334 fff1d93000 Recovering from manifest file: MANIFEST-000804
+2015/08/19-23:56:47.816448 fff1d93000 --------------- Options for column family [default]:
+2015/08/19-23:56:47.816475 fff1d93000          Options.error_if_exists: 0
+2015/08/19-23:56:47.816485 fff1d93000        Options.create_if_missing: 0
+2015/08/19-23:56:47.816496 fff1d93000          Options.paranoid_checks: 1
+2015/08/19-23:56:47.816506 fff1d93000                      Options.env: 0x62884704e0
+2015/08/19-23:56:47.816517 fff1d93000                 Options.info_log: 0x10117010
+2015/08/19-23:56:47.816527 fff1d93000           Options.max_open_files: 5000
+2015/08/19-23:56:47.816537 fff1d93000       Options.max_total_wal_size: 16777192
+2015/08/19-23:56:47.816548 fff1d93000        Options.disableDataSync: 0
+2015/08/19-23:56:47.816558 fff1d93000              Options.use_fsync: 0
+2015/08/19-23:56:47.816569 fff1d93000      Options.max_log_file_size: 0
+2015/08/19-23:56:47.816579 fff1d93000 Options.max_manifest_file_size: 18446744073709551615
+2015/08/19-23:56:47.816590 fff1d93000      Options.log_file_time_to_roll: 0
+2015/08/19-23:56:47.816600 fff1d93000      Options.keep_log_file_num: 1000
+2015/08/19-23:56:47.816611 fff1d93000        Options.allow_os_buffer: 1
+2015/08/19-23:56:47.816621 fff1d93000       Options.allow_mmap_reads: 0
+2015/08/19-23:56:47.816631 fff1d93000      Options.allow_mmap_writes: 0
+2015/08/19-23:56:47.816642 fff1d93000          Options.create_missing_column_families: 0
+2015/08/19-23:56:47.816652 fff1d93000                              Options.db_log_dir:
+2015/08/19-23:56:47.816662 fff1d93000                                 Options.wal_dir: /rocksdb/user-container-1
+2015/08/19-23:56:47.816673 fff1d93000                Options.table_cache_numshardbits: 4
+2015/08/19-23:56:47.816683 fff1d93000     Options.delete_obsolete_files_period_micros: 21600000000
+2015/08/19-23:56:47.816694 fff1d93000              Options.max_background_compactions: 4
+2015/08/19-23:56:47.816704 fff1d93000                  Options.max_background_flushes: 1
+2015/08/19-23:56:47.816715 fff1d93000                         Options.WAL_ttl_seconds: 0
+2015/08/19-23:56:47.816725 fff1d93000                       Options.WAL_size_limit_MB: 0
+2015/08/19-23:56:47.816757 fff1d93000             Options.manifest_preallocation_size: 4194304
+2015/08/19-23:56:47.816767 fff1d93000                          Options.allow_os_buffer: 1
+2015/08/19-23:56:47.816777 fff1d93000                         Options.allow_mmap_reads: 0
+2015/08/19-23:56:47.816788 fff1d93000                        Options.allow_mmap_writes: 0
+2015/08/19-23:56:47.816798 fff1d93000                      Options.is_fd_close_on_exec: 1
+2015/08/19-23:56:47.816808 fff1d93000                    Options.stats_dump_period_sec: 3600
+2015/08/19-23:56:47.816819 fff1d93000                    Options.advise_random_on_open: 1
+2015/08/19-23:56:47.816830 fff1d93000                     Options.db_write_buffer_size: 0
+2015/08/19-23:56:47.816840 fff1d93000          Options.access_hint_on_compaction_start: NORMAL
+2015/08/19-23:56:47.816851 fff1d93000                       Options.use_adaptive_mutex: 0
+2015/08/19-23:56:47.816861 fff1d93000                             Options.rate_limiter: (nil)
+2015/08/19-23:56:47.816872 fff1d93000                           Options.bytes_per_sync: 0
+2015/08/19-23:56:47.816882 fff1d93000                       Options.wal_bytes_per_sync: 0
+2015/08/19-23:56:47.816892 fff1d93000                   Options.enable_thread_tracking: 0
+2015/08/19-23:56:47.816903 fff1d93000               Options.comparator: rocksdb.InternalKeyComparator:internal
+2015/08/19-23:56:47.816914 fff1d93000           Options.merge_operator: None
+2015/08/19-23:56:47.816925 fff1d93000        Options.compaction_filter: None
+2015/08/19-23:56:47.816936 fff1d93000        Options.compaction_filter_factory: DefaultCompactionFilterFactory
+2015/08/19-23:56:47.816947 fff1d93000        Options.compaction_filter_factory_v2: DefaultCompactionFilterFactoryV2
+2015/08/19-23:56:47.817011 fff1d93000         Options.memtable_factory: SkipListFactory
+2015/08/19-23:56:47.817028 fff1d93000            Options.table_factory: BlockBasedTable
+2015/08/19-23:56:47.817077 fff1d93000            table_factory options:   flush_block_policy_factory: FlushBlockBySizePolicyFactory (0x101101c0)
+  cache_index_and_filter_blocks: 1
+  index_type: 0
+  hash_index_allow_collision: 1
+  checksum: 1
+  no_block_cache: 0
+  block_cache: 0x1011bd18
+  block_cache_size: 100000
+  block_cache_compressed: (nil)
+  block_size: 16384
+  block_size_deviation: 10
+  block_restart_interval: 8
+  filter_policy: nullptr
+  format_version: 0
+2015/08/19-23:56:47.817092 fff1d93000        Options.write_buffer_size: 4194304
+2015/08/19-23:56:47.817102 fff1d93000  Options.max_write_buffer_number: 3
+2015/08/19-23:56:47.817114 fff1d93000        Options.compression[0]: NoCompression
+2015/08/19-23:56:47.817125 fff1d93000        Options.compression[1]: NoCompression
+2015/08/19-23:56:47.817135 fff1d93000        Options.compression[2]: NoCompression
+2015/08/19-23:56:47.817146 fff1d93000        Options.compression[3]: NoCompression
+2015/08/19-23:56:47.817157 fff1d93000       Options.prefix_extractor: nullptr
+2015/08/19-23:56:47.817167 fff1d93000             Options.num_levels: 7
+2015/08/19-23:56:47.817178 fff1d93000        Options.min_write_buffer_number_to_merge: 1
+2015/08/19-23:56:47.817188 fff1d93000         Options.purge_redundant_kvs_while_flush: 1
+2015/08/19-23:56:47.817199 fff1d93000            Options.compression_opts.window_bits: -14
+2015/08/19-23:56:47.817209 fff1d93000                  Options.compression_opts.level: -1
+2015/08/19-23:56:47.817220 fff1d93000               Options.compression_opts.strategy: 0
+2015/08/19-23:56:47.817230 fff1d93000      Options.level0_file_num_compaction_trigger: 8
+2015/08/19-23:56:47.817241 fff1d93000          Options.level0_slowdown_writes_trigger: 20
+2015/08/19-23:56:47.817251 fff1d93000              Options.level0_stop_writes_trigger: 24
+2015/08/19-23:56:47.817261 fff1d93000                Options.max_mem_compaction_level: 2
+2015/08/19-23:56:47.817272 fff1d93000                   Options.target_file_size_base: 67108864
+2015/08/19-23:56:47.817282 fff1d93000             Options.target_file_size_multiplier: 1
+2015/08/19-23:56:47.817293 fff1d93000                Options.max_bytes_for_level_base: 671088640
+2015/08/19-23:56:47.817303 fff1d93000 Options.level_compaction_dynamic_level_bytes: 0
+2015/08/19-23:56:47.817314 fff1d93000          Options.max_bytes_for_level_multiplier: 10
+2015/08/19-23:56:47.817324 fff1d93000 Options.max_bytes_for_level_multiplier_addtl[0]: 1
+2015/08/19-23:56:47.817336 fff1d93000 Options.max_bytes_for_level_multiplier_addtl[1]: 1
+2015/08/19-23:56:47.817346 fff1d93000 Options.max_bytes_for_level_multiplier_addtl[2]: 1
+2015/08/19-23:56:47.817357 fff1d93000 Options.max_bytes_for_level_multiplier_addtl[3]: 1
+2015/08/19-23:56:47.817368 fff1d93000 Options.max_bytes_for_level_multiplier_addtl[4]: 1
+2015/08/19-23:56:47.817379 fff1d93000 Options.max_bytes_for_level_multiplier_addtl[5]: 1
+2015/08/19-23:56:47.817390 fff1d93000 Options.max_bytes_for_level_multiplier_addtl[6]: 1
+2015/08/19-23:56:47.817401 fff1d93000       Options.max_sequential_skip_in_iterations: 8
+2015/08/19-23:56:47.817411 fff1d93000              Options.expanded_compaction_factor: 25
+2015/08/19-23:56:47.817421 fff1d93000                Options.source_compaction_factor: 1
+2015/08/19-23:56:47.817432 fff1d93000          Options.max_grandparent_overlap_factor: 10
+2015/08/19-23:56:47.817442 fff1d93000                        Options.arena_block_size: 419430
+2015/08/19-23:56:47.817453 fff1d93000                       Options.soft_rate_limit: 0.00
+2015/08/19-23:56:47.817472 fff1d93000                       Options.hard_rate_limit: 0.00
+2015/08/19-23:56:47.817484 fff1d93000       Options.rate_limit_delay_max_milliseconds: 1000
+2015/08/19-23:56:47.817495 fff1d93000                Options.disable_auto_compactions: 0
+2015/08/19-23:56:47.817505 fff1d93000          Options.purge_redundant_kvs_while_flush: 1
+2015/08/19-23:56:47.817557 fff1d93000                           Options.filter_deletes: 0
+2015/08/19-23:56:47.817572 fff1d93000           Options.verify_checksums_in_compaction: 0
+2015/08/19-23:56:47.817583 fff1d93000                         Options.compaction_style: 0
+2015/08/19-23:56:47.817593 fff1d93000  Options.compaction_options_universal.size_ratio: 1
+2015/08/19-23:56:47.817604 fff1d93000 Options.compaction_options_universal.min_merge_width: 2
+2015/08/19-23:56:47.817614 fff1d93000 Options.compaction_options_universal.max_merge_width: 4294967295
+2015/08/19-23:56:47.817625 fff1d93000 Options.compaction_options_universal.max_size_amplification_percent: 200
+2015/08/19-23:56:47.817635 fff1d93000 Options.compaction_options_universal.compression_size_percent: -1
+2015/08/19-23:56:47.817646 fff1d93000 Options.compaction_options_fifo.max_table_files_size: 1073741824
+2015/08/19-23:56:47.817657 fff1d93000                   Options.table_properties_collectors:
+2015/08/19-23:56:47.817668 fff1d93000                   Options.inplace_update_support: 0
+2015/08/19-23:56:47.817678 fff1d93000                 Options.inplace_update_num_locks: 10000
+2015/08/19-23:56:47.817689 fff1d93000               Options.min_partial_merge_operands: 2
+2015/08/19-23:56:47.817699 fff1d93000               Options.memtable_prefix_bloom_bits: 0
+2015/08/19-23:56:47.817710 fff1d93000             Options.memtable_prefix_bloom_probes: 6
+2015/08/19-23:56:47.817720 fff1d93000   Options.memtable_prefix_bloom_huge_page_tlb_size: 0
+2015/08/19-23:56:47.817730 fff1d93000                           Options.bloom_locality: 0
+2015/08/19-23:56:47.817741 fff1d93000                    Options.max_successive_merges: 0
+2015/08/19-23:56:47.817751 fff1d93000                Options.optimize_fllters_for_hits: 0
+2015/08/19-23:56:47.818983 fff1d93000 Recovered from manifest file:/rocksdb/user-container-1/MANIFEST-000804 succeeded,manifest_file_number is 804, next_file_number is 806, last_sequence is 2380539, log_number is 0,prev_log_number is 0,max_column_family is 0
+2015/08/19-23:56:47.819020 fff1d93000 Column family [default](ID 0), log number is 803
+2015/08/19-23:56:47.819935 fff1d93000 EVENT_LOG_v1 {"time_micros": 1440028607819914, "job": 1, "event": "recovery_started", "log_files": [805]}
+2015/08/19-23:56:47.820000 fff1d93000 Recovering log #805
+2015/08/19-23:56:47.820137 fff1d93000 Creating manifest 807
+2015/08/19-23:56:47.878036 fff1d93000 Deleting manifest 804 current manifest 807
+2015/08/19-23:56:47.878335 fff1d93000 EVENT_LOG_v1 {"time_micros": 1440028607878319, "job": 1, "event": "recovery_finished"}
+2015/08/19-23:56:47.880348 fff1d93000 [DEBUG] [JOB 2] Delete /rocksdb/user-container-1//000805.log type=0 #805 -- OK
+2015/08/19-23:56:47.909102 fff1d93000 DB pointer 0x1011bfe0
+## Last few lines of the LOG are as below:
+
+2015/08/20-01:44:13.806745 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053806729, "job": 134, "event": "table_file_deletion", "file_number": 1097}
+2015/08/20-01:44:13.808517 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001097.sst type=2 #1097 -- OK
+2015/08/20-01:44:13.808627 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053808612, "job": 134, "event": "table_file_deletion", "file_number": 1095}
+2015/08/20-01:44:13.810338 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001095.sst type=2 #1095 -- OK
+2015/08/20-01:44:13.810443 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053810427, "job": 134, "event": "table_file_deletion", "file_number": 1093}
+2015/08/20-01:44:13.867749 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001093.sst type=2 #1093 -- OK
+2015/08/20-01:44:13.867893 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053867874, "job": 134, "event": "table_file_deletion", "file_number": 1092}
+2015/08/20-01:44:13.869657 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001092.sst type=2 #1092 -- OK
+2015/08/20-01:44:13.869766 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053869751, "job": 134, "event": "table_file_deletion", "file_number": 1090}
+2015/08/20-01:44:13.930074 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001090.sst type=2 #1090 -- OK
+2015/08/20-01:44:13.930218 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053930200, "job": 134, "event": "table_file_deletion", "file_number": 1089}
+2015/08/20-01:44:13.932096 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001089.sst type=2 #1089 -- OK
+2015/08/20-01:44:13.932215 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053932199, "job": 134, "event": "table_file_deletion", "file_number": 1087}
+2015/08/20-01:44:13.933964 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001087.sst type=2 #1087 -- OK
+2015/08/20-01:44:13.934084 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053934069, "job": 134, "event": "table_file_deletion", "file_number": 1085}
+2015/08/20-01:44:13.994680 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001085.sst type=2 #1085 -- OK
+2015/08/20-01:44:13.994830 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053994812, "job": 134, "event": "table_file_deletion", "file_number": 1084}
+2015/08/20-01:44:13.996628 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001084.sst type=2 #1084 -- OK
+2015/08/20-01:44:13.996743 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053996727, "job": 134, "event": "table_file_deletion", "file_number": 1082}
+2015/08/20-01:44:13.998485 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001082.sst type=2 #1082 -- OK
+2015/08/20-01:44:13.998598 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053998583, "job": 134, "event": "table_file_deletion", "file_number": 1080}
+2015/08/20-01:44:14.060166 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001080.sst type=2 #1080 -- OK
+2015/08/20-01:44:14.060312 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035054060293, "job": 134, "event": "table_file_deletion", "file_number": 1079}
+2015/08/20-01:44:14.062291 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001079.sst type=2 #1079 -- OK
+2015/08/20-01:44:14.062582 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035054062563, "job": 134, "event": "table_file_deletion", "file_number": 1077}
+2015/08/20-01:44:14.124123 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001077.sst type=2 #1077 -- OK
+
+> Last few lines of the LOG are as below:
+
+Can you please send a couple of more last LOG lines? All of these LOG lines are just file deletions. It would be good to get the full output for JOB 134.
+
+Here you go.
+
+2015/08/20-01:42:14.041963 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034934041934, "job": 132, "event": "flush_started", "num_memtables": 1, "num_entries": 28252, "num_deletes": 0, "memory_usage": 4091941}
+2015/08/20-01:42:14.041990 ff547ff080 [default] [JOB 132] Level-0 flush table #1097: started
+2015/08/20-01:42:14.853984 ff547ff080 [default] [JOB 132] Level-0 flush table #1097: 1770278 bytes OK
+2015/08/20-01:42:14.854181 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034934854080, "job": 132, "event": "table_file_creation", "file_number": 1097, "file_size": 1770278, "table_properties": {"data_size": 1758142, "index_size": 12034, "filter_size": 0, "raw_key_size": 1345164, "raw_average_key_size": 95.0982, "raw_value_size": 480730, "raw_average_value_size": 33.9859, "num_data_blocks": 108, "num_entries": 14145, "filter_policy_name": "", "kDeletedKeys": "0"}}
+2015/08/20-01:42:14.943735 ff547ff080 (Original Log Time 2015/08/20-01:42:14.899215) [default] Level-0 commit table #1097 started
+2015/08/20-01:42:14.943769 ff547ff080 (Original Log Time 2015/08/20-01:42:14.943210) [default] Level-0 commit table #1097: memtable #1 done
+2015/08/20-01:42:14.943788 ff547ff080 (Original Log Time 2015/08/20-01:42:14.943313) EVENT_LOG_v1 {"time_micros": 1440034934943285, "job": 132, "event": "flush_finished", "lsm_state": [16, 5, 0, 0, 0, 0, 0]}
+2015/08/20-01:42:14.943806 ff547ff080 (Original Log Time 2015/08/20-01:42:14.943601) [default] Level summary: base level 1 max bytes base 671088640 files[16 5 0 0 0 0 0] max score 1.00
+2015/08/20-01:42:14.943883 ffdffff080 (Original Log Time 2015/08/20-01:42:14.943819) Compaction nothing to do
+2015/08/20-01:42:14.944036 ff547ff080 [DEBUG] [JOB 132] Delete /rocksdb/user-container-1/001094.log type=0 #1094 -- OK
+2015/08/20-01:42:20.989418 ffecd91080 [default] [JOB 124] Generated table #1093: 524659 keys, 64587069 bytes
+2015/08/20-01:42:20.989733 ffecd91080 EVENT_LOG_v1 {"time_micros": 1440034940989611, "job": 124, "event": "table_file_creation", "file_number": 1093, "file_size": 64587069, "table_properties": {"data_size": 64161729, "index_size": 440531, "filter_size": 0, "raw_key_size": 49766511, "raw_average_key_size": 94.855, "raw_value_size": 17086788, "raw_average_value_size": 32.5674, "num_data_blocks": 3933, "num_entries": 524659, "filter_policy_name": "", "kDeletedKeys": "0"}}
+2015/08/20-01:42:21.018612 ffecd91080 [default] compaction output being applied to a different base version from input version
+2015/08/20-01:42:21.018755 ffecd91080 [default] [JOB 124] Compacted 8@0 + 5@1 files to L1 => 334867184 bytes
+2015/08/20-01:42:21.063469 ffecd91080 (Original Log Time 2015/08/20-01:42:21.063018) [default] compacted to: base level 1 max bytes base 671088640 files[8 5 0 0 0 0 0] max score 1.00, MB/sec: 1.8 rd, 1.8 wr, level 1, files in(8, 5) out(5) MB in(13.5, 306.0) out(319.4), read-write-amplify(47.3) write-amplify(23.6) OK, records in: 112484, records dropped: 169
+2015/08/20-01:42:21.063506 ffecd91080 (Original Log Time 2015/08/20-01:42:21.063232) EVENT_LOG_v1 {"time_micros": 1440034941063091, "job": 124, "event": "compaction_finished", "output_level": 1, "num_output_files": 5, "total_output_size": 334867184, "num_input_records": 2714806, "num_output_records": 2714637, "lsm_state": [8, 5, 0, 0, 0, 0, 0]}
+2015/08/20-01:42:21.063654 ffedd91080 [default] [JOB 134] Compacting 8@0 + 5@1 files to L1, score 1.00
+2015/08/20-01:42:21.063786 ffedd91080 [default] Compaction start summary: Base version 132 Base level 0, inputs: [1097(1728KB) 1095(1728KB) 1092(1729KB) 1089(1731KB) 1087(1730KB) 1084(1731KB) 1082(1731KB) 1079(1730KB)], [1077(64MB) 1080(64MB) 1085(64MB) 1090(64MB) 1093(61MB)]
+2015/08/20-01:42:21.063912 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440034941063845, "job": 134, "event": "compaction_started", "files_L0": [1097, 1095, 1092, 1089, 1087, 1084, 1082, 1079], "files_L1": [1077, 1080, 1085, 1090, 1093], "score": 1, "input_data_size": 349041630}
+2015/08/20-01:42:33.798852 ffc37ff080 [DEBUG] [default] New memtable created with log file: #1099
+2015/08/20-01:42:33.877227 ff547ff080 (Original Log Time 2015/08/20-01:42:33.877154) Calling FlushMemTableToOutputFile with column family [default], flush slots available 0, compaction slots available 3
+2015/08/20-01:42:33.877253 ff547ff080 [default] [JOB 135] Flushing memtable with next log file: 1099
+2015/08/20-01:42:33.877354 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034953877307, "job": 135, "event": "flush_started", "num_memtables": 1, "num_entries": 28139, "num_deletes": 0, "memory_usage": 4093666}
+2015/08/20-01:42:33.877385 ff547ff080 [default] [JOB 135] Level-0 flush table #1100: started
+2015/08/20-01:42:34.758687 ff547ff080 [default] [JOB 135] Level-0 flush table #1100: 1769990 bytes OK
+2015/08/20-01:42:34.758905 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034954758797, "job": 135, "event": "table_file_creation", "file_number": 1100, "file_size": 1769990, "table_properties": {"data_size": 1757963, "index_size": 11925, "filter_size": 0, "raw_key_size": 1349521, "raw_average_key_size": 95.7379, "raw_value_size": 478934, "raw_average_value_size": 33.9766, "num_data_blocks": 108, "num_entries": 14096, "filter_policy_name": "", "kDeletedKeys": "0"}}
+2015/08/20-01:42:34.846361 ff547ff080 (Original Log Time 2015/08/20-01:42:34.804453) [default] Level-0 commit table #1100 started
+2015/08/20-01:42:34.846389 ff547ff080 (Original Log Time 2015/08/20-01:42:34.846072) [default] Level-0 commit table #1100: memtable #1 done
+2015/08/20-01:42:34.846408 ff547ff080 (Original Log Time 2015/08/20-01:42:34.846172) EVENT_LOG_v1 {"time_micros": 1440034954846142, "job": 135, "event": "flush_finished", "lsm_state": [9, 5, 0, 0, 0, 0, 0]}
+2015/08/20-01:42:34.846426 ff547ff080 (Original Log Time 2015/08/20-01:42:34.846276) [default] Level summary: base level 1 max bytes base 671088640 files[9 5 0 0 0 0 0] max score 0.12
+2015/08/20-01:42:34.846717 ff547ff080 [DEBUG] [JOB 135] Delete /rocksdb/user-container-1/001096.log type=0 #1096 -- OK
+2015/08/20-01:42:34.846855 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034954846834, "job": 135, "event": "table_file_deletion", "file_number": 1076}
+2015/08/20-01:42:34.848768 ff547ff080 [DEBUG] [JOB 135] Delete /rocksdb/user-container-1/001076.sst type=2 #1076 -- OK
+2015/08/20-01:42:34.848921 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034954848901, "job": 135, "event": "table_file_deletion", "file_number": 1074}
+2015/08/20-01:42:34.850881 ff547ff080 [DEBUG] [JOB 135] Delete /rocksdb/user-container-1/001074.sst type=2 #1074 -- OK
+2015/08/20-01:42:34.851031 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034954851012, "job": 135, "event": "table_file_deletion", "file_number": 1072}
+2015/08/20-01:42:35.127998 ff547ff080 [DEBUG] [JOB 135] Delete /rocksdb/user-container-1/001072.sst type=2 #1072 -- OK
+2015/08/20-01:42:35.128195 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034955128169, "job": 135, "event": "table_file_deletion", "file_number": 1071}
+2015/08/20-01:42:35.152675 ff547ff080 [DEBUG] [JOB 135] Delete /rocksdb/user-container-1/001071.sst type=2 #1071 -- OK
+2015/08/20-01:42:35.153330 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034955153303, "job": 135, "event": "table_file_deletion", "file_number": 1069}
+2015/08/20-01:42:35.485982 ff547ff080 [DEBUG] [JOB 135] Delete /rocksdb/user-container-1/001069.sst type=2 #1069 -- OK
+2015/08/20-01:42:35.486153 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034955486131, "job": 135, "event": "table_file_deletion", "file_number": 1068}
+2015/08/20-01:42:35.488217 ff547ff080 [DEBUG] [JOB 135] Delete /rocksdb/user-container-1/001068.sst type=2 #1068 -- OK
+2015/08/20-01:42:35.488385 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034955488364, "job": 135, "event": "table_file_deletion", "file_number": 1066}
+2015/08/20-01:42:35.490300 ff547ff080 [DEBUG] [JOB 135] Delete /rocksdb/user-container-1/001066.sst type=2 #1066 -- OK
+2015/08/20-01:42:35.490479 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034955490458, "job": 135, "event": "table_file_deletion", "file_number": 1064}
+2015/08/20-01:42:35.969271 ff547ff080 [DEBUG] [JOB 135] Delete /rocksdb/user-container-1/001064.sst type=2 #1064 -- OK
+2015/08/20-01:42:35.969433 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034955969412, "job": 135, "event": "table_file_deletion", "file_number": 1063}
+2015/08/20-01:42:35.971384 ff547ff080 [DEBUG] [JOB 135] Delete /rocksdb/user-container-1/001063.sst type=2 #1063 -- OK
+2015/08/20-01:42:35.971547 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034955971525, "job": 135, "event": "table_file_deletion", "file_number": 1061}
+2015/08/20-01:42:36.014271 ff547ff080 [DEBUG] [JOB 135] Delete /rocksdb/user-container-1/001061.sst type=2 #1061 -- OK
+2015/08/20-01:42:36.014461 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034956014439, "job": 135, "event": "table_file_deletion", "file_number": 1059}
+2015/08/20-01:42:36.453632 ff547ff080 [DEBUG] [JOB 135] Delete /rocksdb/user-container-1/001059.sst type=2 #1059 -- OK
+2015/08/20-01:42:36.453823 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034956453802, "job": 135, "event": "table_file_deletion", "file_number": 1058}
+2015/08/20-01:42:36.455814 ff547ff080 [DEBUG] [JOB 135] Delete /rocksdb/user-container-1/001058.sst type=2 #1058 -- OK
+2015/08/20-01:42:36.455975 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034956455955, "job": 135, "event": "table_file_deletion", "file_number": 1056}
+2015/08/20-01:42:37.034507 ff547ff080 [DEBUG] [JOB 135] Delete /rocksdb/user-container-1/001056.sst type=2 #1056 -- OK
+2015/08/20-01:42:52.128712 ffbefff080 [DEBUG] [default] New memtable created with log file: #1101
+2015/08/20-01:42:52.226464 ff547ff080 (Original Log Time 2015/08/20-01:42:52.226383) Calling FlushMemTableToOutputFile with column family [default], flush slots available 0, compaction slots available 3
+2015/08/20-01:42:52.226492 ff547ff080 [default] [JOB 136] Flushing memtable with next log file: 1101
+2015/08/20-01:42:52.226574 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034972226545, "job": 136, "event": "flush_started", "num_memtables": 1, "num_entries": 28021, "num_deletes": 0, "memory_usage": 4091678}
+2015/08/20-01:42:52.226598 ff547ff080 [default] [JOB 136] Level-0 flush table #1102: started
+2015/08/20-01:42:52.948741 ff547ff080 [default] [JOB 136] Level-0 flush table #1102: 1769528 bytes OK
+2015/08/20-01:42:52.948931 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034972948828, "job": 136, "event": "table_file_creation", "file_number": 1102, "file_size": 1769528, "table_properties": {"data_size": 1757220, "index_size": 12206, "filter_size": 0, "raw_key_size": 1351381, "raw_average_key_size": 96.2728, "raw_value_size": 477058, "raw_average_value_size": 33.9858, "num_data_blocks": 108, "num_entries": 14037, "filter_policy_name": "", "kDeletedKeys": "0"}}
+2015/08/20-01:42:53.021794 ff547ff080 (Original Log Time 2015/08/20-01:42:52.977842) [default] Level-0 commit table #1102 started
+2015/08/20-01:42:53.021821 ff547ff080 (Original Log Time 2015/08/20-01:42:53.021525) [default] Level-0 commit table #1102: memtable #1 done
+2015/08/20-01:42:53.021839 ff547ff080 (Original Log Time 2015/08/20-01:42:53.021604) EVENT_LOG_v1 {"time_micros": 1440034973021580, "job": 136, "event": "flush_finished", "lsm_state": [10, 5, 0, 0, 0, 0, 0]}
+2015/08/20-01:42:53.021858 ff547ff080 (Original Log Time 2015/08/20-01:42:53.021723) [default] Level summary: base level 1 max bytes base 671088640 files[10 5 0 0 0 0 0] max score 0.25
+2015/08/20-01:42:53.022061 ff547ff080 [DEBUG] [JOB 136] Delete /rocksdb/user-container-1/001099.log type=0 #1099 -- OK
+2015/08/20-01:42:55.162939 ffedd91080 [default] [JOB 134] Generated table #1098: 542901 keys, 67585847 bytes
+2015/08/20-01:42:55.163157 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440034975163051, "job": 134, "event": "table_file_creation", "file_number": 1098, "file_size": 67585847, "table_properties": {"data_size": 67120363, "index_size": 481407, "filter_size": 0, "raw_key_size": 54253429, "raw_average_key_size": 99.9325, "raw_value_size": 17712397, "raw_average_value_size": 32.6255, "num_data_blocks": 4116, "num_entries": 542901, "filter_policy_name": "", "kDeletedKeys": "0"}}
+2015/08/20-01:43:13.517056 ffc27ff080 [DEBUG] [default] New memtable created with log file: #1104
+2015/08/20-01:43:13.599185 ff547ff080 (Original Log Time 2015/08/20-01:43:13.599107) Calling FlushMemTableToOutputFile with column family [default], flush slots available 0, compaction slots available 3
+2015/08/20-01:43:13.599212 ff547ff080 [default] [JOB 137] Flushing memtable with next log file: 1104
+2015/08/20-01:43:13.599292 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034993599262, "job": 137, "event": "flush_started", "num_memtables": 1, "num_entries": 28001, "num_deletes": 0, "memory_usage": 4091658}
+2015/08/20-01:43:13.599315 ff547ff080 [default] [JOB 137] Level-0 flush table #1105: started
+2015/08/20-01:43:14.273945 ff547ff080 [default] [JOB 137] Level-0 flush table #1105: 1772220 bytes OK
+2015/08/20-01:43:14.274238 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440034994274133, "job": 137, "event": "table_file_creation", "file_number": 1105, "file_size": 1772220, "table_properties": {"data_size": 1759859, "index_size": 12259, "filter_size": 0, "raw_key_size": 1351454, "raw_average_key_size": 96.3741, "raw_value_size": 476532, "raw_average_value_size": 33.9822, "num_data_blocks": 108, "num_entries": 14023, "filter_policy_name": "", "kDeletedKeys": "0"}}
+2015/08/20-01:43:14.367495 ff547ff080 (Original Log Time 2015/08/20-01:43:14.318529) [default] Level-0 commit table #1105 started
+2015/08/20-01:43:14.367523 ff547ff080 (Original Log Time 2015/08/20-01:43:14.367096) [default] Level-0 commit table #1105: memtable #1 done
+2015/08/20-01:43:14.367541 ff547ff080 (Original Log Time 2015/08/20-01:43:14.367289) EVENT_LOG_v1 {"time_micros": 1440034994367257, "job": 137, "event": "flush_finished", "lsm_state": [11, 5, 0, 0, 0, 0, 0]}
+2015/08/20-01:43:14.367560 ff547ff080 (Original Log Time 2015/08/20-01:43:14.367412) [default] Level summary: base level 1 max bytes base 671088640 files[11 5 0 0 0 0 0] max score 0.38
+2015/08/20-01:43:14.367773 ff547ff080 [DEBUG] [JOB 137] Delete /rocksdb/user-container-1/001101.log type=0 #1101 -- OK
+2015/08/20-01:43:34.891319 ffedd91080 [default] [JOB 134] Generated table #1103: 548632 keys, 67568249 bytes
+2015/08/20-01:43:34.891614 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035014891498, "job": 134, "event": "table_file_creation", "file_number": 1103, "file_size": 67568249, "table_properties": {"data_size": 67123925, "index_size": 460243, "filter_size": 0, "raw_key_size": 52042194, "raw_average_key_size": 94.8581, "raw_value_size": 17899577, "raw_average_value_size": 32.6258, "num_data_blocks": 4115, "num_entries": 548632, "filter_policy_name": "", "kDeletedKeys": "0"}}
+2015/08/20-01:43:36.126786 ffc3fff080 [DEBUG] [default] New memtable created with log file: #1107
+2015/08/20-01:43:36.203329 ff547ff080 (Original Log Time 2015/08/20-01:43:36.203253) Calling FlushMemTableToOutputFile with column family [default], flush slots available 0, compaction slots available 3
+2015/08/20-01:43:36.203356 ff547ff080 [default] [JOB 138] Flushing memtable with next log file: 1107
+2015/08/20-01:43:36.203439 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440035016203411, "job": 138, "event": "flush_started", "num_memtables": 1, "num_entries": 28086, "num_deletes": 0, "memory_usage": 4091694}
+2015/08/20-01:43:36.203464 ff547ff080 [default] [JOB 138] Level-0 flush table #1108: started
+2015/08/20-01:43:36.924719 ff547ff080 [default] [JOB 138] Level-0 flush table #1108: 1772433 bytes OK
+2015/08/20-01:43:36.924999 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440035016924889, "job": 138, "event": "table_file_creation", "file_number": 1108, "file_size": 1772433, "table_properties": {"data_size": 1760279, "index_size": 12052, "filter_size": 0, "raw_key_size": 1349685, "raw_average_key_size": 95.9401, "raw_value_size": 478062, "raw_average_value_size": 33.9822, "num_data_blocks": 108, "num_entries": 14068, "filter_policy_name": "", "kDeletedKeys": "0"}}
+2015/08/20-01:43:37.014651 ff547ff080 (Original Log Time 2015/08/20-01:43:36.964179) [default] Level-0 commit table #1108 started
+2015/08/20-01:43:37.014677 ff547ff080 (Original Log Time 2015/08/20-01:43:37.014382) [default] Level-0 commit table #1108: memtable #1 done
+2015/08/20-01:43:37.014696 ff547ff080 (Original Log Time 2015/08/20-01:43:37.014463) EVENT_LOG_v1 {"time_micros": 1440035017014439, "job": 138, "event": "flush_finished", "lsm_state": [12, 5, 0, 0, 0, 0, 0]}
+2015/08/20-01:43:37.014714 ff547ff080 (Original Log Time 2015/08/20-01:43:37.014582) [default] Level summary: base level 1 max bytes base 671088640 files[12 5 0 0 0 0 0] max score 0.50
+2015/08/20-01:43:37.014969 ff547ff080 [DEBUG] [JOB 138] Delete /rocksdb/user-container-1/001104.log type=0 #1104 -- OK
+2015/08/20-01:43:56.725797 ffa4fff080 [DEBUG] [default] New memtable created with log file: #1109
+2015/08/20-01:43:56.810698 ff547ff080 (Original Log Time 2015/08/20-01:43:56.810623) Calling FlushMemTableToOutputFile with column family [default], flush slots available 0, compaction slots available 3
+2015/08/20-01:43:56.810731 ff547ff080 [default] [JOB 139] Flushing memtable with next log file: 1109
+2015/08/20-01:43:56.810807 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440035036810778, "job": 139, "event": "flush_started", "num_memtables": 1, "num_entries": 28075, "num_deletes": 0, "memory_usage": 4091729}
+2015/08/20-01:43:56.810830 ff547ff080 [default] [JOB 139] Level-0 flush table #1110: started
+2015/08/20-01:43:57.509067 ff547ff080 [default] [JOB 139] Level-0 flush table #1110: 1773239 bytes OK
+2015/08/20-01:43:57.509402 ff547ff080 EVENT_LOG_v1 {"time_micros": 1440035037509292, "job": 139, "event": "table_file_creation", "file_number": 1110, "file_size": 1773239, "table_properties": {"data_size": 1760832, "index_size": 12305, "filter_size": 0, "raw_key_size": 1349755, "raw_average_key_size": 96.0065, "raw_value_size": 477826, "raw_average_value_size": 33.9872, "num_data_blocks": 108, "num_entries": 14059, "filter_policy_name": "", "kDeletedKeys": "0"}}
+2015/08/20-01:43:57.583450 ff547ff080 (Original Log Time 2015/08/20-01:43:57.538635) [default] Level-0 commit table #1110 started
+2015/08/20-01:43:57.583478 ff547ff080 (Original Log Time 2015/08/20-01:43:57.583167) [default] Level-0 commit table #1110: memtable #1 done
+2015/08/20-01:43:57.583498 ff547ff080 (Original Log Time 2015/08/20-01:43:57.583259) EVENT_LOG_v1 {"time_micros": 1440035037583233, "job": 139, "event": "flush_finished", "lsm_state": [13, 5, 0, 0, 0, 0, 0]}
+2015/08/20-01:43:57.583516 ff547ff080 (Original Log Time 2015/08/20-01:43:57.583372) [default] Level summary: base level 1 max bytes base 671088640 files[13 5 0 0 0 0 0] max score 0.62
+2015/08/20-01:43:57.583778 ff547ff080 [DEBUG] [JOB 139] Delete /rocksdb/user-container-1/001107.log type=0 #1107 -- OK
+2015/08/20-01:44:02.626567 ffedd91080 [default] [JOB 134] Generated table #1106: 548601 keys, 67560880 bytes
+2015/08/20-01:44:02.626818 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035042626721, "job": 134, "event": "table_file_creation", "file_number": 1106, "file_size": 67560880, "table_properties": {"data_size": 67117327, "index_size": 459472, "filter_size": 0, "raw_key_size": 52036073, "raw_average_key_size": 94.8523, "raw_value_size": 17899446, "raw_average_value_size": 32.6274, "num_data_blocks": 4115, "num_entries": 548601, "filter_policy_name": "", "kDeletedKeys": "0"}}
+2015/08/20-01:44:07.745708 ffedd91080 [default] [JOB 134] Generated table #1111: 548786 keys, 67564065 bytes
+2015/08/20-01:44:07.745962 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035047745863, "job": 134, "event": "table_file_creation", "file_number": 1111, "file_size": 67564065, "table_properties": {"data_size": 67120104, "index_size": 459880, "filter_size": 0, "raw_key_size": 52033306, "raw_average_key_size": 94.8153, "raw_value_size": 17905542, "raw_average_value_size": 32.6275, "num_data_blocks": 4115, "num_entries": 548786, "filter_policy_name": "", "kDeletedKeys": "0"}}
+2015/08/20-01:44:12.828028 ffedd91080 [default] [JOB 134] Generated table #1112: 548770 keys, 67568232 bytes
+2015/08/20-01:44:12.828278 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035052828179, "job": 134, "event": "table_file_creation", "file_number": 1112, "file_size": 67568232, "table_properties": {"data_size": 67123787, "index_size": 460364, "filter_size": 0, "raw_key_size": 52037528, "raw_average_key_size": 94.8258, "raw_value_size": 17904772, "raw_average_value_size": 32.6271, "num_data_blocks": 4115, "num_entries": 548770, "filter_policy_name": "", "kDeletedKeys": "0"}}
+2015/08/20-01:44:13.718160 ffedd91080 [default] [JOB 134] Generated table #1113: 89570 keys, 11035787 bytes
+2015/08/20-01:44:13.718338 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053718244, "job": 134, "event": "table_file_creation", "file_number": 1113, "file_size": 11035787, "table_properties": {"data_size": 10963467, "index_size": 74471, "filter_size": 0, "raw_key_size": 8501709, "raw_average_key_size": 94.9169, "raw_value_size": 2921626, "raw_average_value_size": 32.6184, "num_data_blocks": 673, "num_entries": 89570, "filter_policy_name": "", "kDeletedKeys": "0"}}
+2015/08/20-01:44:13.762442 ffedd91080 [default] compaction output being applied to a different base version from input version
+2015/08/20-01:44:13.762492 ffedd91080 [default] [JOB 134] Compacted 8@0 + 5@1 files to L1 => 348883060 bytes
+2015/08/20-01:44:13.806483 ffedd91080 (Original Log Time 2015/08/20-01:44:13.806223) [default] compacted to: base level 1 max bytes base 671088640 files[5 6 0 0 0 0 0] max score 0.62, MB/sec: 3.1 rd, 3.1 wr, level 1, files in(8, 5) out(6) MB in(13.5, 319.4) out(332.7), read-write-amplify(49.2) write-amplify(24.6) OK, records in: 112776, records dropped: 153
+2015/08/20-01:44:13.806509 ffedd91080 (Original Log Time 2015/08/20-01:44:13.806326) EVENT_LOG_v1 {"time_micros": 1440035053806276, "job": 134, "event": "compaction_finished", "output_level": 1, "num_output_files": 6, "total_output_size": 348883060, "num_input_records": 2827413, "num_output_records": 2827260, "lsm_state": [5, 6, 0, 0, 0, 0, 0]}
+2015/08/20-01:44:13.806745 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053806729, "job": 134, "event": "table_file_deletion", "file_number": 1097}
+2015/08/20-01:44:13.808517 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001097.sst type=2 #1097 -- OK
+2015/08/20-01:44:13.808627 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053808612, "job": 134, "event": "table_file_deletion", "file_number": 1095}
+2015/08/20-01:44:13.810338 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001095.sst type=2 #1095 -- OK
+2015/08/20-01:44:13.810443 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053810427, "job": 134, "event": "table_file_deletion", "file_number": 1093}
+2015/08/20-01:44:13.867749 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001093.sst type=2 #1093 -- OK
+2015/08/20-01:44:13.867893 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053867874, "job": 134, "event": "table_file_deletion", "file_number": 1092}
+2015/08/20-01:44:13.869657 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001092.sst type=2 #1092 -- OK
+2015/08/20-01:44:13.869766 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053869751, "job": 134, "event": "table_file_deletion", "file_number": 1090}
+2015/08/20-01:44:13.930074 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001090.sst type=2 #1090 -- OK
+2015/08/20-01:44:13.930218 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053930200, "job": 134, "event": "table_file_deletion", "file_number": 1089}
+2015/08/20-01:44:13.932096 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001089.sst type=2 #1089 -- OK
+2015/08/20-01:44:13.932215 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053932199, "job": 134, "event": "table_file_deletion", "file_number": 1087}
+2015/08/20-01:44:13.933964 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001087.sst type=2 #1087 -- OK
+2015/08/20-01:44:13.934084 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053934069, "job": 134, "event": "table_file_deletion", "file_number": 1085}
+2015/08/20-01:44:13.994680 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001085.sst type=2 #1085 -- OK
+2015/08/20-01:44:13.994830 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053994812, "job": 134, "event": "table_file_deletion", "file_number": 1084}
+2015/08/20-01:44:13.996628 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001084.sst type=2 #1084 -- OK
+2015/08/20-01:44:13.996743 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053996727, "job": 134, "event": "table_file_deletion", "file_number": 1082}
+2015/08/20-01:44:13.998485 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001082.sst type=2 #1082 -- OK
+2015/08/20-01:44:13.998598 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035053998583, "job": 134, "event": "table_file_deletion", "file_number": 1080}
+2015/08/20-01:44:14.060166 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001080.sst type=2 #1080 -- OK
+2015/08/20-01:44:14.060312 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035054060293, "job": 134, "event": "table_file_deletion", "file_number": 1079}
+2015/08/20-01:44:14.062291 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001079.sst type=2 #1079 -- OK
+2015/08/20-01:44:14.062582 ffedd91080 EVENT_LOG_v1 {"time_micros": 1440035054062563, "job": 134, "event": "table_file_deletion", "file_number": 1077}
+2015/08/20-01:44:14.124123 ffedd91080 [DEBUG] [JOB 134] Delete /rocksdb/user-container-1/001077.sst type=2 #1077 -- OK
+
+Hitting this issue on GET path as well.
+Able to consistently reproduce the issue.
+
+Thread 48 (Thread 0xffd57fe080 (LWP 1669)):
+#0  0x00000062882e21e8 in ?? () from /usr/lib64/librocksdb.so.3.11
+#1  0x00000062882bf2e0 in rocksdb::ReadBlockContents(rocksdb::RandomAccessFile_, rocksdb::Footer const&, rocksdb::ReadOptions const&, rocksdb::BlockHandle const&, rocksdb::BlockContents_, rocksdb::Env_, bool) () from /usr/lib64/librocksdb.so.3.11
+#2  0x00000062882a5c20 in ?? () from /usr/lib64/librocksdb.so.3.11
+#3  0x00000062882a825c in rocksdb::BlockBasedTable::CreateIndexReader(rocksdb::BlockBasedTable::IndexReader__, rocksdb::Iterator_) ()
+   from /usr/lib64/librocksdb.so.3.11
+#4  0x00000062882a8a64 in rocksdb::BlockBasedTable::NewIndexIterator(rocksdb::ReadOptions const&, rocksdb::BlockIter_) ()
+   from /usr/lib64/librocksdb.so.3.11
+#5  0x00000062882ad55c in rocksdb::BlockBasedTable::Get(rocksdb::ReadOptions const&, rocksdb::Slice const&, rocksdb::GetContext_) ()
+   from /usr/lib64/librocksdb.so.3.11
+#6  0x000000628826231c in rocksdb::TableCache::Get(rocksdb::ReadOptions const&, rocksdb::InternalKeyComparator const&, rocksdb::FileDescriptor const&, rocksdb::Slice const&, rocksdb::GetContext_) () from /usr/lib64/librocksdb.so.3.11
+#7  0x0000006288272edc in rocksdb::Version::Get(rocksdb::ReadOptions const&, rocksdb::LookupKey const&, std::string_, rocksdb::Status_, rocksdb::MergeContext_, bool_) () from /usr/lib64/librocksdb.so.3.11
+#8  0x0000006288205264 in rocksdb::DBImpl::GetImpl(rocksdb::ReadOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, std::string_, bool_) () from /usr/lib64/librocksdb.so.3.11
+#9  0x0000006288205484 in rocksdb::DBImpl::Get(rocksdb::ReadOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, std::string_) () from /usr/lib64/librocksdb.so.3.11
+#10 0x0000006288214818 in ?? () from /usr/lib64/librocksdb.so.3.11
+#11 0x00000062881befb8 in rocksdb_get () from /usr/lib64/librocksdb.so.3.11
+
+Your GET call seems to be stuck on reading blocks from files. That shouldn't wait for any lock. Are you running on a normal filesystem? Can you explain your reproduction steps?
+
+Also, since you're able to reproduce this reliably, can you check if it reproduces with 3.13?
+
+BTW Your configuration seems suboptimal. You're memtable size is 4MB, but your L1 size is configured to be ~640MB. Usually we recommend to set L1 size to be similar to L0 size (which is 4 times the memtable size, or 16MB). You can see from the LOG that your write-amplification is 23 (grep for "write-amplify") just for L0->L1 compaction. We usually see write amp of ~15 for the total database.
+
+Sorry if my comments caused confusion. GET path hang was hit only once.
+Able to reproduce consistently on PUT path. I will try out the suggested configuration and 3.13.
+Mean while any luck with PUT hang stack ? Do you think suboptimal config might be reason for PUT hang as well?
+
+If Get was stuck on a call to read in the kernel/filesystem then I suspect
+a problem with your storage.
+
+On Mon, Aug 24, 2015 at 5:46 PM, Sandeep notifications@github.com wrote:
+
+> Sorry if my comments caused confusion. GET path hang was hit only once.
+> Able to reproduce consistently on PUT path. I will try out the suggested
+> configuration and 3.13.
+> Mean while any luck with PUT hang stack ? Do you think suboptimal config
+> might be reason for PUT hang as well?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/696#issuecomment-134427458.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@lookforsandy We did have some hang bugs in the past, but they only happened when RocksDB's stall mechanism kicked in. When stalls are triggered, we actually stop the writes until compaction finishes -- we had a bug where compaction wasn't started and writes were waiting until it finishes. Ooops.
+
+However, this doesn't seem like the case here.
+
+From your LOG files, it doesn't seem like stalls were triggered at all. Because stalls weren't triggered, nothing should stop the write. It's interesting that Get() was stuck in the call to the FS. We have never seen this before, and we run quite a big deployment at FB. What storage solution do you use (if you're allowed to share)?
+
+@igorcanadi @rven1 do you still remember the bug we found about missing scheduled flush/compaction? I don't remember the details. Can that be related?
+
+@siying I remember the bug. It only triggered when stall happened. Also, when more than one column families were used. None of this is the case here.
+
+@lookforsandy just to confirm, by "hang", you mean hanging forever, or stopping for very long and recovering later?
+
+@siying It is a complete hang.
+
+@igorcanadi @siying In which version the "missing-scheduled-flush/compaction-bug" fixed? I think I hit the similar problem: the Rocksdb (3.13.1 in Samza on Yarn) totally hanged, the "Stopping writes" triggered but no compaction started. Below is my last few lines of `LOG`, I waited it for about one hour but nothing happened, please help.
+
+> 2016/03/12-20:44:17.980737 7f3bdb92e700 [WARN] [default] Stalling writes because we have 23 level-0 files
+> 2016/03/12-20:44:17.981029 7f3bdb92e700 (Original Log Time 2016/03/12-20:44:17.978079) [default] Level-0 commit table #11500 started
+> 2016/03/12-20:44:17.981035 7f3bdb92e700 (Original Log Time 2016/03/12-20:44:17.980706) [default] Level-0 commit table #11500: memtable #1 done
+> 2016/03/12-20:44:17.981040 7f3bdb92e700 (Original Log Time 2016/03/12-20:44:17.980727) EVENT_LOG_v1 {"time_micros": 1457786657980719, "job": 3527, "event": "flush_finished", "lsm_state": [23, 259, 412, 1592, 0, 0, 0]}
+> 2016/03/12-20:44:17.981044 7f3bdb92e700 (Original Log Time 2016/03/12-20:44:17.980858) [default] Level summary: base level 1 max bytes base 10485760 files[23 259 412 1592 0 0 0] max score 50.26
+> 2016/03/12-20:44:48.405805 7f3c251d4700 [WARN] [default] Stalling writes because we have 23 level-0 files
+> 2016/03/12-20:44:48.405913 7f3bdb92e700 (Original Log Time 2016/03/12-20:44:48.405899) Calling FlushMemTableToOutputFile with column family [default], flush slots available 0, compaction slots available 0
+> 2016/03/12-20:44:48.405920 7f3bdb92e700 [default] [JOB 3528] Flushing memtable with next log file: 3
+> 2016/03/12-20:44:48.405967 7f3bdb92e700 EVENT_LOG_v1 {"time_micros": 1457786688405954, "job": 3528, "event": "flush_started", "num_memtables": 1, "num_entries": 43914, "num_deletes": 0, "memory_usage": 32717948}
+> 2016/03/12-20:44:48.405976 7f3bdb92e700 [default] [JOB 3528] Level-0 flush table #11501: started
+> 2016/03/12-20:44:48.960889 7f3bdb92e700 [default] [JOB 3528] Level-0 flush table #11501: 32154822 bytes OK
+> 2016/03/12-20:44:48.960970 7f3bdb92e700 EVENT_LOG_v1 {"time_micros": 1457786688960928, "cf_name": "default", "job": 3528, "event": "table_file_creation", "file_number": 11501, "file_size": 32154822, "table_properties": {"data_size": 31812385, "index_size": 372520, "filter_size": 0, "raw_key_size": 2283528, "raw_average_key_size": 52, "raw_value_size": 29479156, "raw_average_value_size": 671.293, "num_data_blocks": 7656, "num_entries": 43914, "filter_policy_name": "", "kDeletedKeys": "0"}}
+> 2016/03/12-20:44:48.977764 7f3bdb92e700 [WARN] [default] Stopping writes because we have 24 level-0 files
+> 2016/03/12-20:44:48.978171 7f3bdb92e700 (Original Log Time 2016/03/12-20:44:48.962014) [default] Level-0 commit table #11501 started
+> 2016/03/12-20:44:48.978178 7f3bdb92e700 (Original Log Time 2016/03/12-20:44:48.977716) [default] Level-0 commit table #11501: memtable #1 done
+> 2016/03/12-20:44:48.978184 7f3bdb92e700 (Original Log Time 2016/03/12-20:44:48.977751) EVENT_LOG_v1 {"time_micros": 1457786688977741, "job": 3528, "event": "flush_finished", "lsm_state": [24, 259, 412, 1592, 0, 0, 0]}
+> 2016/03/12-20:44:48.978188 7f3bdb92e700 (Original Log Time 2016/03/12-20:44:48.977968) [default] Level summary: base level 1 max bytes base 10485760 files[24 259 412 1592 0 0 0] max score 50.26
+
+Can you please send us the full LOG?
+
+@igorcanadi I can send you the full LOG but it's 13MB, what's the proper way to send it to you? Below is the first and last 1k lines of it.
+First 1k lines: http://pastebin.com/fbCBBKvR
+Last 1k lines: http://pastebin.com/EVp8T1Pp
+
+@igorcanadi I've tried using another version of Samza(0.9.0) with Rocksdb(3.5.1) on another Yarn(2.4.1),  but the HANGING still were there.
+
+The 2.4 Yarn cluster is mix of bare metal with CentOS 5 and CentOS 6, the hanged Rocksdb is always on CentOS 6 in all my 3 test rounds, it's wired. I'll do more tests tomorrow to see if the OS is relevant to the issue.
+
+The LOG this time is smaller so I paste all of it: http://pastebin.com/8i1h9XGs.
+
+BTW: There is `INFO: task java:69266 blocked for more than 120 seconds.` in my dmesg, I dunno if that's relevant.
+
+> The LOG this time is smaller so I paste all of it: http://pastebin.com/8i1h9XGs.
+
+In this particular LOG there is no mention of stalling anywhere, so I don't think this was a problem with RocksDB. Can you find a stack trace of the hanged threads?
+
+jstack: http://pastebin.com/b8inYP1h
+LOG: http://pastebin.com/99GWTpmf
+
+It's on spinning disk, so I did some tuning this time which like larger sst file size, but it's no help... And the iostat showed low workload as below, please advice.
+
+> avg-cpu:  %user   %nice %system %iowait  %steal   %idle
+>            0.09    0.00    0.06    0.19    0.00   99.66
+> 
+> Device:         rrqm/s   wrqm/s     r/s     w/s    rMB/s    wMB/s avgrq-sz avgqu-sz   await  svctm  %util
+> sdb               0.00     0.00    8.00    0.00     1.00     0.00   256.00     0.00    0.50   0.38   0.30
+> sda               0.00     3.00    0.00    5.00     0.00     0.03    12.80     0.01    1.20   0.60   0.30
+> sdc               0.00     0.00    8.00    0.00     1.00     0.00   256.00     0.04    4.62   2.38   1.90
+> sdd               0.00     0.00   20.00    0.00     1.00     0.00   102.80     0.13    6.30   1.10   2.20
+> sde               0.00     0.00   14.00    0.00     1.03     0.00   150.86     0.05    3.29   1.93   2.70
+> sdg               1.00     0.00    8.00    0.00     0.88     0.00   225.00     0.01    0.50   1.75   1.40
+> sdf               0.00     0.00    8.00    0.00     1.00     0.00   256.00     0.00    0.50   0.25   0.20
+> sdh               0.00     0.00    8.00    0.00     1.00     0.00   256.00     0.01    0.62   0.38   0.30
+> sdi               0.00     0.00    8.00    0.00     1.00     0.00   256.00     0.01    1.88   1.88   1.50
+> sdk               0.00     0.00    8.00    0.00     1.00     0.00   256.00     0.00    0.50   0.38   0.30
+> sdj               0.00     0.00    8.00    0.00     1.00     0.00   256.00     0.00    0.50   0.38   0.30
+> sdl               0.00     0.00    8.00    0.00     1.00     0.00   256.00     0.00    0.38   0.38   0.30
+> sdm               0.00     0.00    8.00    0.00     1.00     0.00   256.00     0.02    2.62   2.62   2.10
+
+We started seeing this recently at LinkedIn with a Samza job running RocksDB version: 3.13.1 with TTL enabled. The performance degraded by an order of magnitude (not a complete hang) for around 23hrs and then magically fixed itself. 
+
+The log is 47MB compressed, much too large for paste bin. So here's what I've noticed:
+1. The "Interval Stall" ratio is <10% in the normal case and >60% during the degradation.
+2. Throughout the logfile, the following 2 messages are printed.
+
+> [WARN] [default] Stalling writes because we have 21 level-0 files
+> [WARN] [default] Stopping writes because we have 24 level-0 files
+
+I did some visual (inexact) analysis. Before the performance issue, there are around 60 stalls for every 1 stop. During the performance issue that ratio decreases to about 11 to 1.
+
+I'm attaching a file with the config and some samples of the stats. 
+[RocksDbStallStats.txt](https://github.com/facebook/rocksdb/files/288048/RocksDbStallStats.txt)
+
+Any help would be appreciated!
+
+-Jake
+
+Looking at the compaction stats, you flushed a total of 23GB with 177321 flushes, or 140 KB per flush on average. Why do you flush a memtable with only 140 KB? Are you calling db->Flush() too often?
+
+You can also see this here:
+
+```
+Level    Files   Size(MB) 
+----------------------------------------------------------
+ L0     18/0          1   
+```
+
+18 L0 files, but total size is only 1MB.
+
+Thanks, @igorcanadi 
+
+> Are you calling db->Flush() too often?
+
+That's entirely possible. It looks like Samza's cache in front of RocksDB has been liberal with the flushes. 
+https://github.com/apache/samza/blob/master/samza-kv/src/main/scala/org/apache/samza/storage/kv/CachedStore.scala
+There was a recent patch that avoids flushing on each cache eviction. We'll upgrade the job to include that patch and see if it resolves the issue. 
+
+Since this job is doing a stream join, I wouldn't expect the access pattern to change much, so I'm a little surprised that the performance was so binary (great/terrible) and that it was able to recover. Do the stats provide any explanation for this?
+
+If you overload RocksDB with work (i.e. do bunch of writes really fast, or in your case, bunch of small flushes), it will begin stalling writes while the compactions (deferred work) completes. An interesting thing with RocksDB and LSM architecture is that the more behind you are on compactions, the more expensive the compactions are (due to increased write amplifications and single-threadness of L0->L1 compaction). So our write stalls have to be tuned _exactly_ right for RocksDB to behave well with extremely high write rate.
+
+@jmakes which version did you upgrade from?
+
+Thanks again, Igor!
+
+@siying The job was running samza 10.0, we're upgrading them essentially to HEAD, which is a LinkedIn prerelease of version 10.1.
+

@@ -1,0 +1,35 @@
+If I seek to a position that I know should be immediately past the end of particular range, I can then use `Iterator::Prev()` only if I haven't hit the end of the db.
+
+As a workaround, I call `Iterator::SeekToLast` if the iterator isn't valid after the first seek. However, it leads to a question: What is the safe way to get to the last element in a range, guarding against the case that "just past" your key of interest is another key that you can seek to? Or, how do you get something like a C++ `reverse_iterator` to the db?
+
+@ekg you can use the `ReverseBytewiseComparator`. I added this one last year because of the reason that you want to seek for a timestamped key within the database. So if you use regular timestamps you can do something like the following example:
+
+Assuming the following things are in the database:
+
+```
+key3333333333:value3
+key2222222222:value2
+key1111111111:value1
+```
+
+using the `ReverseByteWiseComparator` cou can simply do one seek with the key `key9999999999`. The iterator will then be positioned at `key3333333333`. Using the `ReverseByteWiseComparator` is slower than using the opposite direction. But i didn`t analyze why yet.
+
+@ekg we do consider add something like SeekPrev() to have it possible. We'll keep you updated on this. Now you are using in a right way. Just to remember this approach doesn't work with prefix-based iterating.
+
+That would be great. I think this is an essential feature of a sorted
+key/value store.
+On Apr 6, 2015 10:20 PM, "Siying Dong" notifications@github.com wrote:
+
+> @ekg https://github.com/ekg we do consider add something like
+> SeekPrev() to have it possible. We'll keep you updated on this. Now you are
+> using in a right way. Just to remember this approach doesn't work with
+> prefix-based iterating.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/544#issuecomment-90228945.
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+
+Hi, I have the same problem with @ekg , how's this going now ?
+

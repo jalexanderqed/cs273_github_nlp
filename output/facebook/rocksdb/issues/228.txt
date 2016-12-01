@@ -1,0 +1,21 @@
+- Script for building the unity.cc file via Makefile
+- Unity executable Makefile target for testing builds
+- Source code changes to fix compilation of unity build
+
+There are new targets in the Makefile:
+`make unity`
+Will build rocksdb in a single compilation unit, reporting any errors that result from putting everything in on TU. Typical errors include:
+- Multiple functions at file scope with the same name.
+- Symbols with the same name in different anonymous namespaces.
+- etc...
+
+The unity build should compile orders of magnitude faster than individual .cc files. With some work, the unity build could be made to produce the static library instead of building the static library from individually compiled translation units. This could make building the test executables extremely fast, especially in a continuous integration environment (this is all beyond the scope of this pull request however).
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Is the Travis build failure spurious?
+
+A commit (5E08681) previous to this one fails 'make check'. Seems somewhere between the June pull request and now something broke.
+
+Merged it. I ran unit tests on my local machine.
+

@@ -1,0 +1,8 @@
+There is a typo in your [INSTALL.md](https://github.com/facebook/rocksdb/blob/master/INSTALL.md) file.
+
+`RocskDB` instead of `RocksDB`
+
+Thank you for finding this typo.  We will fix this shortly!
+
+The issue has been resolved by commit https://github.com/facebook/rocksdb/commit/7624f43e0ac3dc6fcd90c20149d5d3e078521854
+

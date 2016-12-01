@@ -1,0 +1,125 @@
+I was reading about the Prefix Seek API and I have some questions/inquiries.
+- Why were `ReadOptions.prefix` & `ReadOptions.prefix_seek` deprecated? The wiki stated that the use case for these two variants is very rare. However, if I have understood the new API correctly, these two variants were the only easy way to achieve a dynamic prefix seek. (could you please confirm if this is the case)
+
+Say you have an inverted search index stored in the database and you want to perform search queries. The old style would allow to create an iterator per search query, where the prefix is the keyword being searched for or a substring of it. For his use case I would have gone with the `ReadOptions.prefix` but it's deprecated, hence the next questions:
+- Is the `prefix_extractor` static/fixed, i.e. can dynamic slice transformation be performed or redefined on iterator creation without rolling my own implementation?
+- How would a `prefix_extractor` look like for the use case above, the inverted search index? One idea I had is to pass the keyword to my `SliceTransform` and do all the checking and transforming myself, which seems a little bit too cumbersome compared to the deprecated variants using the `ReadOptions.prefix` & `ReadOptions.prefix_seek`.
+
+Thanks in advance :)
+
+Once you open a DB with `prefix_extractor`, every seek you perform is a prefix seek. That's why we disabled these options -- because all seeks have this option.
+
+Let's say you set up `prefix_extractor` for first 4 characters and you do Seek("0123abc"). You will only be able to seek to other keys with prefix 0123 -- i.e. the iterator will not provide a total order on all keys in the database. The prefix seek is dynamic, so you can use the same iterator and seek to another prefix if you wish.
+
+Does that answer your question?
+
+Not quite :)
+Here I have a small example, a modified for of the sample code given in the Prefix Seek Api wiki page (https://github.com/facebook/rocksdb/wiki/Prefix-Seek-API-Changes).
+When the `prefix_extractor` is set to the `NewFixedPrefixTransform` with a length of `2`, I would expect to get all the keys, but the iterator starts at `0021` instead.
+- So why does the `prefix_extractor` have no effect? or am I just not using it the way it should be used?
+
+``` c++
+#include <iostream>
+#include <string>
+#include "rocksdb/db.h"
+#include "rocksdb/slice.h"
+#include "rocksdb/options.h"
+#include "rocksdb/slice_transform.h"
+#include "rocksdb/table.h"
+#include "rocksdb/filter_policy.h"
+
+using namespace rocksdb;
+std::string kDBPath = "/tmp/rocksdb_prefix_seek";
+
+int main() {
+    DB* db;
+    Options options;
+
+    options.create_if_missing = true;
+
+    options.prefix_extractor.reset(NewFixedPrefixTransform(2));
+    options.memtable_prefix_bloom_bits = 1000000;
+    options.memtable_prefix_bloom_probes = 6;
+
+    BlockBasedTableOptions table_options;
+    table_options.filter_policy.reset(NewBloomFilterPolicy(10, true));
+    options.table_factory.reset(NewBlockBasedTableFactory(table_options));
+
+    Status s = DB::Open(options, kDBPath, &db);
+
+    s = db->Put(WriteOptions(), "0011", "value");
+    s = db->Put(WriteOptions(), "0012", "value");
+    s = db->Put(WriteOptions(), "0021", "value");
+    s = db->Put(WriteOptions(), "0022", "value");
+    s = db->Put(WriteOptions(), "0031", "value");
+    s = db->Put(WriteOptions(), "0032", "value");
+
+    Slice prefix = "002";
+    auto iter = db->NewIterator(ReadOptions());
+
+    for (iter->Seek(prefix); iter->Valid(); iter->Next()) {
+        std::cout << iter->key().ToString() << std::endl;
+    }
+
+    delete db;
+    return 0;
+}
+```
+
+@BrainCookie I'm not able to reproduction your result. I ran the same codes as you posted, and here is the output:
+
+0021
+0022
+0031
+0032
+db_test: db/column_family.cc:333: rocksdb::ColumnFamilyData::~ColumnFamilyData(): Assertion `is_last_reference' failed.
+
+(The last assert was hit as you didn't delete iter before deleting db).
+
+@siying I am getting the same result as you are, however, I was expecting to get:
+[ 0011, 0012, 0021, 0022, 0031, 0032 ]  instead, because the `prefix_extractor` is set to a fixed length of `2`, i.e. `NewFixedPrefixTransform(2)`. It seems that the extractor has no effect, or am I wrong?
+
+PS: sorry about forgetting to delete the iter, I am running this standalone and have no assertions there.
+
+You Seek()-ed to 002, so you'll only get results after 002. All keys within the prefix are sorted.
+
+Doesn't this contradict what you said earlier?
+"Let's say you set up prefix_extractor for first 4 characters and you do Seek("0123abc"). You will only be able to seek to other keys with prefix 0123"
+
+Not really. You will only be able to seek to other keys with prefix 0123, but not necessarily all of them, only those after 0123abc.
+
+If you seek to "0123" (with prefix_extractor of 4), you will be able to seek to all keys with prefix "0123"
+
+This here "only those after 0123abc." is the eureka moment :)
+
+I've reread the wiki page one more time, I now it clicked.
+
+> "When doing Iterator.Seek(lookup_key), RocksDB will extract the prefix of lookup_key. If there is one or more keys in the database matching prefix of lookup_key, RocksDB will place the iterator to the key **equal or larger than lookup_key of the same prefix**, as for total ordering mode."
+
+I think it would be better to add this as a comment to the existing sample in the wiki:
+
+```
+iter->Seek("foobar"); // Seek inside prefix "foo" starting at key "foobar" (as for total ordering mode)
+```
+
+On another irrelevant matter, I have made an Objective-C wrapper for RocksDB that covers most of the main features. Feedback, criticism, ideas are appreciated!
+You can find it here: https://github.com/BrainCookie/ObjectiveRocks
+
+Thank you for your time :)
+
+I will close this issue now.
+
+Wow, thanks for the ObjectiveRocks, great stuff!
+
+@igorcanadi @siying
+
+In the example shared above by @iabudiab even if we remove the following line:
+
+``` cpp
+options.prefix_extractor.reset(NewFixedPrefixTransform(2));
+```
+
+the output result is same. Am I missing something? Can you please provide me an example where setting prefix_extractor actually makes a difference.
+
+Since you seeked to 002, only keys greater than or equal to 002 will be shown. This behavior has nothing to do with prefix extractor. If you only want keys starting with prefix 002, use the read_options.prefix_same_as_start, which only shows keys with the same prefix as that when you did the seek. Please see the example in db/prefix_test.cc, the test is PrefixValid on line 405
+

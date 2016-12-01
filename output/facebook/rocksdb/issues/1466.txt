@@ -1,0 +1,19 @@
+Now that we use TableCache::NewIterator() for multiple purposes (data
+block iterator and range deletion iterator), it is inconvenient to
+return non-ok status in the data block iterator since the caller might
+not use it. This diff changes TableCache::NewIterator() to update
+value-result arguments and return a status code.
+
+This fixes a valgrind error where NewIterator() returns a non-ok status
+in data block iterator, and the caller fails to check/free it since the
+caller is interested in range deletion block only (https://github.com/facebook/rocksdb/blob/9e7cf3469bc626b092ec48366d12873ecab22b4e/db/version_set.cc#L965-L973).
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4134763).
+
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4134763).
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1466/files/bbacf36c412a1a56d61661ce0c567cf88b4cfd94..47e32c6d8b79a4198a43f93f64e7973727179b2c) - [changes since last import](https://github.com/facebook/rocksdb/pull/1466/files/bbacf36c412a1a56d61661ce0c567cf88b4cfd94..47e32c6d8b79a4198a43f93f64e7973727179b2c)
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1466/files/47e32c6d8b79a4198a43f93f64e7973727179b2c..9da8aded5df9fa5474de64832191b7d85863286f) - [changes since last import](https://github.com/facebook/rocksdb/pull/1466/files/47e32c6d8b79a4198a43f93f64e7973727179b2c..9da8aded5df9fa5474de64832191b7d85863286f)
+
+we changed the approach
+

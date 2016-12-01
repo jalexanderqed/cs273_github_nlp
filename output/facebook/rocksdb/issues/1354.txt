@@ -1,0 +1,18 @@
+Firstly flush all data(8.7G) into level-0, then call CompactRange() to compact data into level-1, I found that the data will increase to more than 16G gradually and the SST file will be more and more during compaction。What can I do to control the expand factor of data and to delete source SST file immediately after compaction?
+
+What do you mean by `delete source SST file immediately after compaction`, That should be what happen, do you see the DB size increase to 16 GB after compaction and take a long time to get dropped ?
+
+@IslamAbdelRahman Yes, but it takes short time to get dropped. Delete source SST file immediately after compaction means that delete some SST files or data to avoid the expand of data during compaction.
+
+How long is this short time ? Maybe the files are held by alive iterators and they are deleted when you delete the Iterator ?
+https://github.com/facebook/rocksdb/wiki/How-we-keep-track-of-live-SST-files
+
+@IslamAbdelRahman I have no statistics about the time, just observe that it spends short time.
+
+It takes five seconds  to delete  44 SST files.
+
+What filesystem do you use?
+What mount options (see /etc/mtab) are used for it?
+
+Mostly curious, I don't have advice.
+

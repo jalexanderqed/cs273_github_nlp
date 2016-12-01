@@ -1,0 +1,12 @@
+It may be possible for a scenario to arise where stale WAL logs are deleted out of order. This has the potential to create a gap in the logs read from on recovery.
+
+consider scenario:
+transaction is prepared in log A.
+transaction is committed in log B.
+current log is C, A and B are release.
+log B is deleted.
+recovery happens.
+
+In this scenario the transaction would be recovered as if is had not been committed because we cannot have reliable knowledge that only log C was needed for recovery. It IS possible to detect that log B was missing and that all logs before must have been released in the previous incarnation. We use this knowledge to clear all recovered transactions when we detect a gap.
+@reidHoruff has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4161648).
+

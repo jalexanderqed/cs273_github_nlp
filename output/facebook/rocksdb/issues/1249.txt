@@ -1,0 +1,25 @@
+Hi @siying 
+
+We want to heavily use https://github.com/facebook/rocksdb/wiki/Creating-and-Ingesting-SST-files to replicate data, but we may using lots of snapshot for read when AddFile. We can use a RWLock, but we really don't want to block other reads when adding huge SST file (> 1GB). 
+
+I think maybe you can ad a configuration to let user ignore snapshot checking, If user can guarantee that we won't access the data in SST range in a snapshot?
+
+Thank you.
+
+Hi @siddontang, The reason we disallow using AddFile() when snapshots are held is that AddFile() is adding data with sequence number zero (This is as if it's adding data to the past).
+
+That mean that if you took a snapshot of the Database and then ingest a file. the data in this file will be visible in this snapshot even though AddFile() was called after the snapshot was taken.
+
+Hi @IslamAbdelRahman 
+
+I know it is dangerous for using snapshot when AddFile, but if we can ensure we can't access the data in SST range in the snapshot, is it safe? 
+
+@siddontang, I think we can have an option to ignore the snapshot restriction as long as the user is aware of the consequences of skipping such restriction.
+
+Are you interested in creating a pull request to add this feature and some unit tests for it ?
+
+Yes, I will try it later. 
+
+Thanks @IslamAbdelRahman  @baotiao 
+I can close this issue now. 
+

@@ -1,0 +1,40 @@
+Hi,
+I am running Debian x64 inside a openVZ container with Proxmox 3.x
+
+When i try to build with "make", it fails:
+db/compaction_picker.cc: In member function 'virtual rocksdb::Compaction\* rocksdb::UniversalCompactionPicker::PickCompaction(rocksdb::Version_)':
+db/compaction_picker.cc:556:41: error: format '%lu' expects argument of type 'long unsigned int', but argument 3 has type 'std::vector<rocksdb::FileMetaData_>::size_type {aka unsigned int}' [-Werror=format]
+cc1plus: all warnings being treated as errors
+make: **\* [db/compaction_picker.o] Error 1
+
+If I disable "all warnings being treated as errors" in the makefile, it fails when I build the shared library:
+
+db/db_bench.cc:1529:76: warning: format '%ld' expects argument of type 'long int', but argument 3 has type 'size_t {aka unsigned int}' [-Wformat]
+db/db_bench.cc:1536:73: warning: format '%ld' expects argument of type 'long int', but argument 3 has type 'size_t {aka unsigned int}' [-Wformat]
+..
+util/options.cc:167:69: warning: format '%ld' expects argument of type 'long int', but argument 3 has type 'size_t {aka unsigned int}' [-Wformat]
+util/options.cc:170:77: warning: format '%ld' expects argument of type 'long int', but argument 3 has type 'size_t {aka unsigned int}' [-Wformat]
+util/options.cc:171:69: warning: format '%ld' expects argument of type 'long int', but argument 3 has type 'size_t {aka unsigned int}' [-Wformat]
+util/options.cc:228:25: warning: format '%ld' expects argument of type 'long int', but argument 3 has type 'size_t {aka unsigned int}' [-Wformat]
+util/options.cc:248:36: warning: format '%ld' expects argument of type 'long int', but argument 3 has type 'size_t {aka unsigned int}' [-Wformat]
+..
+
+Any hints?
+
+Another hint:
+db/memtable.cc:155:3: error: comparison between signed and unsigned integer expressions [-Werror=sign-compare]
+
+My fault - installed a 32 bit version by mistake
+
+Does it not build on 32-bit systems? Maybe we claim it doesn't but it might be nice to support that.
+
+It worked without a problem with Debian x64 - the 32 bit version had problems
+
+Tnx for the report. I fixed some of your issues here: https://github.com/facebook/rocksdb/commit/5c6ef56152f8dc0fe9631332c5e8aa8b20bfbd5e
+
+Can you please post the entire compile error log?
+
+Sure - log is with werror removed from Makefile
+
+https://gist.github.com/paxos/8789697
+

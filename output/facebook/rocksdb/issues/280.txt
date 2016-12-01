@@ -1,0 +1,155 @@
+Hi,
+
+I am seeing an issue in which RocksDB seems to be using more memory than is specified in configuration.
+
+Setup: 20 DBs are opened on a single box by a single JAVA process and DB operations are performed using JNI. Max heap size for JAVA is configured at 60GB. Block cache of each DB is configured to be of size equal to 1GB and each DB has 3 write buffers each of size 64MB. Please see detailed list of options used by the DBs (each DB uses same option configuration) at the end of this post. Combined data size of all DBs is around 120GB and total number of keys (across all DBs) is around 120M.
+
+Issue: Process size (RES memory in top command) is around 102GB which is 42GB higher than the max size configured with JAVA process. It doesn't look like a memory leak as memory of process is not growing constantly but rather process allocates this much memory and doesn't free up memory afterwards. Also, process starts with much lower amount of memory (~65GB) and as read load is ramped process size keeps on increasing till it reaches 102-105GGB. As block cache size is 1GB per DB, total memory used by block cache should be equal to 20GB. Combined size of 3 write buffers of 64MB each for 20DB equal to ~3GB. So, total memory that should be used by RocksDB should be equal to 23-25GB.
+
+Can someone please comment if its normal to see extra memory getting used by RocksDB and whether there are any other options which can be used to control memory usage of RocksDB.
+
+Options:
+2014/09/09-18:40:38.569000 7f8b4e9ab700          Options.error_if_exists: 0
+2014/09/09-18:40:38.569003 7f8b4e9ab700        Options.create_if_missing: 1
+2014/09/09-18:40:38.569005 7f8b4e9ab700          Options.paranoid_checks: 1
+2014/09/09-18:40:38.569006 7f8b4e9ab700                      Options.env: 0x7f8b4f8fc260
+2014/09/09-18:40:38.569011 7f8b4e9ab700                 Options.info_log: 0x7f8b6c0121b0
+2014/09/09-18:40:38.569018 7f8b4e9ab700           Options.max_open_files: 5000
+2014/09/09-18:40:38.569020 7f8b4e9ab700       Options.max_total_wal_size: 0
+2014/09/09-18:40:38.569026 7f8b4e9ab700        Options.disableDataSync: 0
+2014/09/09-18:40:38.569029 7f8b4e9ab700              Options.use_fsync: 0
+2014/09/09-18:40:38.569037 7f8b4e9ab700      Options.max_log_file_size: 0
+2014/09/09-18:40:38.569039 7f8b4e9ab700 Options.max_manifest_file_size: 18446744073709551615
+2014/09/09-18:40:38.569041 7f8b4e9ab700      Options.log_file_time_to_roll: 0
+2014/09/09-18:40:38.569122 7f8b4e9ab700      Options.keep_log_file_num: 1000
+2014/09/09-18:40:38.569139 7f8b4e9ab700        Options.allow_os_buffer: 1
+2014/09/09-18:40:38.569141 7f8b4e9ab700       Options.allow_mmap_reads: 0
+2014/09/09-18:40:38.569260 7f8b4e9ab700      Options.allow_mmap_writes: 0
+2014/09/09-18:40:38.569269 7f8b4e9ab700          Options.create_missing_column_families: 0
+2014/09/09-18:40:38.569286 7f8b4e9ab700                              Options.db_log_dir: 
+2014/09/09-18:40:38.569295 7f8b4e9ab700                                 Options.wal_dir: /mnt/u002/followfeed-storage-benchmark/0
+2014/09/09-18:40:38.569299 7f8b4e9ab700                Options.table_cache_numshardbits: 4
+2014/09/09-18:40:38.569321 7f8b4e9ab700     Options.table_cache_remove_scan_count_limit: 16
+2014/09/09-18:40:38.569324 7f8b4e9ab700     Options.delete_obsolete_files_period_micros: 21600000000
+2014/09/09-18:40:38.569327 7f8b4e9ab700              Options.max_background_compactions: 5
+2014/09/09-18:40:38.569328 7f8b4e9ab700                  Options.max_background_flushes: 1
+2014/09/09-18:40:38.569330 7f8b4e9ab700                         Options.WAL_ttl_seconds: 0
+2014/09/09-18:40:38.569332 7f8b4e9ab700                       Options.WAL_size_limit_MB: 0
+2014/09/09-18:40:38.569333 7f8b4e9ab700             Options.manifest_preallocation_size: 4194304
+2014/09/09-18:40:38.569351 7f8b4e9ab700                          Options.allow_os_buffer: 1
+2014/09/09-18:40:38.569353 7f8b4e9ab700                         Options.allow_mmap_reads: 0
+2014/09/09-18:40:38.569355 7f8b4e9ab700                        Options.allow_mmap_writes: 0
+2014/09/09-18:40:38.569368 7f8b4e9ab700                      Options.is_fd_close_on_exec: 1
+2014/09/09-18:40:38.569386 7f8b4e9ab700               Options.skip_log_error_on_recovery: 0
+2014/09/09-18:40:38.569387 7f8b4e9ab700                    Options.stats_dump_period_sec: 3600
+2014/09/09-18:40:38.569388 7f8b4e9ab700                    Options.advise_random_on_open: 1
+2014/09/09-18:40:38.569389 7f8b4e9ab700          Options.access_hint_on_compaction_start: NORMAL
+2014/09/09-18:40:38.569390 7f8b4e9ab700                       Options.use_adaptive_mutex: 0
+2014/09/09-18:40:38.569405 7f8b4e9ab700                           Options.bytes_per_sync: 0
+2014/09/09-18:40:38.569904 7f8b4e9ab700 Recovering from manifest file: MANIFEST-006258
+2014/09/09-18:40:38.570136 7f8b4e9ab700 Options for column family "default":
+2014/09/09-18:40:38.570152 7f8b4e9ab700               Options.comparator: rocksdb.InternalKeyComparator:leveldb.BytewiseComparator
+2014/09/09-18:40:38.570154 7f8b4e9ab700           Options.merge_operator: None
+2014/09/09-18:40:38.570156 7f8b4e9ab700        Options.compaction_filter_factory: DefaultCompactionFilterFactory
+2014/09/09-18:40:38.570162 7f8b4e9ab700        Options.compaction_filter_factory_v2: DefaultCompactionFilterFactoryV2
+2014/09/09-18:40:38.570164 7f8b4e9ab700         Options.memtable_factory: SkipListFactory
+2014/09/09-18:40:38.570172 7f8b4e9ab700            Options.table_factory: BlockBasedTable
+2014/09/09-18:40:38.570201 7f8b4e9ab700        Options.write_buffer_size: 67108864
+2014/09/09-18:40:38.570203 7f8b4e9ab700  Options.max_write_buffer_number: 3
+2014/09/09-18:40:38.570205 7f8b4e9ab700              Options.block_cache: 0x7f8b6c013a88
+2014/09/09-18:40:38.570207 7f8b4e9ab700   Options.block_cache_compressed: (nil)
+2014/09/09-18:40:38.570217 7f8b4e9ab700         Options.block_cache_size: 1073741824
+2014/09/09-18:40:38.570225 7f8b4e9ab700               Options.block_size: 65536
+2014/09/09-18:40:38.570235 7f8b4e9ab700   Options.block_restart_interval: 16
+2014/09/09-18:40:38.570289 7f8b4e9ab700          Options.compression: 1
+2014/09/09-18:40:38.570291 7f8b4e9ab700          Options.filter_policy: rocksdb.BuiltinBloomFilter
+2014/09/09-18:40:38.570299 7f8b4e9ab700       Options.prefix_extractor: nullptr
+2014/09/09-18:40:38.570301 7f8b4e9ab700    Options.whole_key_filtering: 1
+2014/09/09-18:40:38.570321 7f8b4e9ab700             Options.num_levels: 7
+2014/09/09-18:40:38.570354 7f8b4e9ab700        Options.min_write_buffer_number_to_merge: 1
+2014/09/09-18:40:38.570371 7f8b4e9ab700         Options.purge_redundant_kvs_while_flush: 1
+2014/09/09-18:40:38.570389 7f8b4e9ab700            Options.compression_opts.window_bits: -14
+2014/09/09-18:40:38.570402 7f8b4e9ab700                  Options.compression_opts.level: -1
+2014/09/09-18:40:38.570434 7f8b4e9ab700               Options.compression_opts.strategy: 0
+2014/09/09-18:40:38.570455 7f8b4e9ab700      Options.level0_file_num_compaction_trigger: 4
+2014/09/09-18:40:38.570478 7f8b4e9ab700          Options.level0_slowdown_writes_trigger: 20
+2014/09/09-18:40:38.570516 7f8b4e9ab700              Options.level0_stop_writes_trigger: 24
+2014/09/09-18:40:38.570525 7f8b4e9ab700                Options.max_mem_compaction_level: 2
+2014/09/09-18:40:38.570527 7f8b4e9ab700                   Options.target_file_size_base: 2097152
+2014/09/09-18:40:38.570541 7f8b4e9ab700             Options.target_file_size_multiplier: 1
+2014/09/09-18:40:38.570543 7f8b4e9ab700                Options.max_bytes_for_level_base: 10485760
+2014/09/09-18:40:38.570545 7f8b4e9ab700          Options.max_bytes_for_level_multiplier: 10
+2014/09/09-18:40:38.570596 7f8b4e9ab700 Options.max_bytes_for_level_multiplier_addtl[0]: 1
+2014/09/09-18:40:38.570598 7f8b4e9ab700 Options.max_bytes_for_level_multiplier_addtl[1]: 1
+2014/09/09-18:40:38.570608 7f8b4e9ab700 Options.max_bytes_for_level_multiplier_addtl[2]: 1
+2014/09/09-18:40:38.570610 7f8b4e9ab700 Options.max_bytes_for_level_multiplier_addtl[3]: 1
+2014/09/09-18:40:38.570634 7f8b4e9ab700 Options.max_bytes_for_level_multiplier_addtl[4]: 1
+2014/09/09-18:40:38.570636 7f8b4e9ab700 Options.max_bytes_for_level_multiplier_addtl[5]: 1
+2014/09/09-18:40:38.570681 7f8b4e9ab700 Options.max_bytes_for_level_multiplier_addtl[6]: 1
+2014/09/09-18:40:38.570683 7f8b4e9ab700       Options.max_sequential_skip_in_iterations: 8
+2014/09/09-18:40:38.570685 7f8b4e9ab700              Options.expanded_compaction_factor: 25
+2014/09/09-18:40:38.570686 7f8b4e9ab700                Options.source_compaction_factor: 1
+2014/09/09-18:40:38.570702 7f8b4e9ab700          Options.max_grandparent_overlap_factor: 10
+2014/09/09-18:40:38.570704 7f8b4e9ab700                          Options.no_block_cache: 0
+2014/09/09-18:40:38.570706 7f8b4e9ab700                        Options.arena_block_size: 6710886
+2014/09/09-18:40:38.570730 7f8b4e9ab700                       Options.soft_rate_limit: 0.00
+2014/09/09-18:40:38.570734 7f8b4e9ab700                       Options.hard_rate_limit: 0.00
+2014/09/09-18:40:38.570819 7f8b4e9ab700       Options.rate_limit_delay_max_milliseconds: 1000
+2014/09/09-18:40:38.570821 7f8b4e9ab700                Options.disable_auto_compactions: 0
+2014/09/09-18:40:38.570831 7f8b4e9ab700          Options.purge_redundant_kvs_while_flush: 1
+2014/09/09-18:40:38.570833 7f8b4e9ab700                     Options.block_size_deviation: 10
+2014/09/09-18:40:38.570835 7f8b4e9ab700                           Options.filter_deletes: 0
+2014/09/09-18:40:38.570837 7f8b4e9ab700           Options.verify_checksums_in_compaction: 1
+2014/09/09-18:40:38.570839 7f8b4e9ab700                         Options.compaction_style: 1
+2014/09/09-18:40:38.570841 7f8b4e9ab700  Options.compaction_options_universal.size_ratio: 1
+2014/09/09-18:40:38.570843 7f8b4e9ab700 Options.compaction_options_universal.min_merge_width: 2
+2014/09/09-18:40:38.570863 7f8b4e9ab700 Options.compaction_options_universal.max_merge_width: 4294967295
+2014/09/09-18:40:38.570891 7f8b4e9ab700 Options.compaction_options_universal.max_size_amplification_percent: 200
+2014/09/09-18:40:38.570893 7f8b4e9ab700 Options.compaction_options_universal.compression_size_percent: 4294967295
+2014/09/09-18:40:38.570895 7f8b4e9ab700 Options.compaction_options_fifo.max_table_files_size: 1073741824
+2014/09/09-18:40:38.570899 7f8b4e9ab700                   Options.table_properties_collectors: InternalKeyPropertiesCollectorFactory; 
+2014/09/09-18:40:38.570901 7f8b4e9ab700                   Options.inplace_update_support: 0
+2014/09/09-18:40:38.570917 7f8b4e9ab700                 Options.inplace_update_num_locks: 10000
+2014/09/09-18:40:38.570919 7f8b4e9ab700               Options.min_partial_merge_operands: 2
+2014/09/09-18:40:38.570942 7f8b4e9ab700               Options.memtable_prefix_bloom_bits: 0
+2014/09/09-18:40:38.570967 7f8b4e9ab700             Options.memtable_prefix_bloom_probes: 6
+2014/09/09-18:40:38.570978 7f8b4e9ab700   Options.memtable_prefix_bloom_huge_page_tlb_size: 0
+2014/09/09-18:40:38.571011 7f8b4e9ab700                           Options.bloom_locality: 0
+2014/09/09-18:40:38.571014 7f8b4e9ab700                    Options.max_successive_merges: 0
+
+A major portion of memory usage other than block cache and write buffers are indexes and bloom filters of the files. In the recent release you can retrieve the usage of this portion of memory by querying DB property rocksdb.estimate-table-readers-mem (not sure it is supported in RocksJava). If you want to put this piece of memory to block cache too, you can pass BlockBasedTableOptions.cache_index_and_filter_blocks=true (not sure it is supported in RocksJava). Be aware there is performance costs of doing that even if the indexes all fit block cache. 
+
+There is also a way (via jconsole/jmap) to see where the memory is going. That might give u an idea whether the extra memory is in the RocksDB core c++ engine verses the Java wrapper.
+
+Hi Dhruba,
+
+JVM max heap size is given as 60G and GC logs also show that max heap size is 60G. Will examine jmap output in any case to verify if JVM is not honoring max heap configuration (seems very unlikely!).
+
+Also, can you please comment if there are any other pieces in RocksDB (except block cache and write buffers) whose memory usage can be controlled by options?
+
+Siying's idea to inspect the memory usage of blooms  and block-index is great!
+
+Apologies @siying. I did not see your message before replying.
+
+Thanks a lot for the reply! Sadly, none of these options is available in RocksJava. Will add them in RocksJava and will report my findings.
+
+@ankgup87 are you using iterators? One of our internal use-cases just recently found similarly that RocksDB is using much more memory than specified by block cache. They suspect it's the result of too many iterators pinning their current blocks in memory. Each iterator pins one block for each L0 file and then one block for each level bigger than 0. So total pinned memory by iterators is `block_size * num_iterators * (l0_files + num_levels - 1)`. Does that sound like something that could be happening to you?
+
+Hi Igor,
+
+Thanks for the comment but we are not using iterators. So doesn't look like we are running into this issue.
+
+hi ankit, were u able to get to the bottom of this problem? 
+
+Hi Dhruba,
+
+I got pulled into some other urgent things and did not get a chance to look at this issue. Will work on this in next couple of weeks. Thanks for following up!
+
+@ankgup87 did you figure out the reason of it? Was it solved?
+
+@mdcallag also recently found that block cache can use more memory than given because of memory allocation mis-alignment.
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+
+Hi @ankgup87 . I'm closing this issue due to inactivity. Let us know if you're still seeing issues with memory usage.
+

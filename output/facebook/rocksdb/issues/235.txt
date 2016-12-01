@@ -1,0 +1,24 @@
+Hey guys,
+                  I had earlier asked a question about how to build RocksDB with all the dependencies included as a part of the shared library (https://github.com/facebook/rocksdb/issues/209). This is a patch with the first stab at this.  I have also made changes to load the shared library from the jar without the user not having to load it explicitly. 
+
+Thanks,
+Naveen
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thanks for the contribution.  Made some comments in your diff.
+
+It seems like `make rocksdbjavastatic` will try to re-download all the required libraries.  Should we avoid such re-download stuff?
+
+cc @ankgup87
+
+Agree with @yhchiang to explore an option where it will be great if we don't have to re-download these libraries. Also @naveenatceg, can you please move the diff to phabricator? Its easier to discuss diff over there and then we can move the diff to pull request when its ready to commit.
+
+Please swing by my desk if you are unfamiliar with Phabricator :)
+
+Thanks for the comments. I have addressed the review comments and moved the review to Phabricator: https://reviews.facebook.net/D23121
+
+Opening a new one https://github.com/facebook/rocksdb/pull/309.
+
+@adamretter this is fixed as part of https://github.com/facebook/rocksdb/issues/308
+

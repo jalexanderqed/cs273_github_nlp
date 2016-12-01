@@ -1,0 +1,7 @@
+Fixes #55, and retains the fix for #11
+- I didn't use awk, same goal can be achieved with cat, and it seems easier to read.
+- Checking whether git exists is safer with "command -v"
+- Last check about build_version.cc is changed/missing is effectively the same with overriding it. I directly write the output to util/build_version.cc
+
+New version looks much more clear, thank you!
+

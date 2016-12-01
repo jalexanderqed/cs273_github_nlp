@@ -1,0 +1,82 @@
+rocksdb direct io support
+
+```
+[gzh@dev11575.prn2 ~/rocksdb] ./db_bench -benchmarks=fillseq --num=1000000
+Initializing RocksDB Options from the specified file
+Initializing RocksDB Options from command-line flags
+RocksDB:    version 5.0
+Date:       Wed Nov 23 13:17:43 2016
+CPU:        40 * Intel(R) Xeon(R) CPU E5-2660 v2 @ 2.20GHz
+CPUCache:   25600 KB
+Keys:       16 bytes each
+Values:     100 bytes each (50 bytes after compression)
+Entries:    1000000
+Prefix:    0 bytes
+Keys per prefix:    0
+RawSize:    110.6 MB (estimated)
+FileSize:   62.9 MB (estimated)
+Write rate: 0 bytes/second
+Compression: Snappy
+Memtablerep: skip_list
+Perf Level: 1
+WARNING: Assertions are enabled; benchmarks unnecessarily slow
+------------------------------------------------
+Initializing RocksDB Options from the specified file
+Initializing RocksDB Options from command-line flags
+DB path: [/tmp/rocksdbtest-112628/dbbench]
+fillseq      :       4.393 micros/op 227639 ops/sec;   25.2 MB/s
+
+[gzh@dev11575.prn2 ~/rocksdb] ./db_bench -use_direct_writes -benchmarks=fillseq --num=1000000
+Initializing RocksDB Options from the specified file
+Initializing RocksDB Options from command-line flags
+RocksDB:    version 5.0
+Date:       Wed Nov 23 13:18:10 2016
+CPU:        40 * Intel(R) Xeon(R) CPU E5-2660 v2 @ 2.20GHz
+CPUCache:   25600 KB
+Keys:       16 bytes each
+Values:     100 bytes each (50 bytes after compression)
+Entries:    1000000
+Prefix:    0 bytes
+Keys per prefix:    0
+RawSize:    110.6 MB (estimated)
+FileSize:   62.9 MB (estimated)
+Write rate: 0 bytes/second
+Compression: Snappy
+Memtablerep: skip_list
+Perf Level: 1
+WARNING: Assertions are enabled; benchmarks unnecessarily slow
+------------------------------------------------
+Initializing RocksDB Options from the specified file
+Initializing RocksDB Options from command-line flags
+DB path: [/tmp/rocksdbtest-112628/dbbench]
+fillseq      :       7.621 micros/op 131222 ops/sec;   14.5 MB/s
+Seem that the performance is reduced with direct IO write.
+Yes, because I omitted some optimization options for direct io writes.
+```
+[gzh@dev11575.prn2 ~/rocksdb] ./db_bench -benchmarks=fillseq -use_direct_writes=1 -skip_table_builder_flush=1 -new_table_reader_for_compaction_inputs=1 -compaction_readahead_size=10485760 --writable_file_max_buffer_size=10485760 --num=1000000
+Initializing RocksDB Options from the specified file
+Initializing RocksDB Options from command-line flags
+RocksDB:    version 5.0
+Date:       Mon Nov 28 11:08:13 2016
+CPU:        40 * Intel(R) Xeon(R) CPU E5-2660 v2 @ 2.20GHz
+CPUCache:   25600 KB
+Keys:       16 bytes each
+Values:     100 bytes each (50 bytes after compression)
+Entries:    1000000
+Prefix:    0 bytes
+Keys per prefix:    0
+RawSize:    110.6 MB (estimated)
+FileSize:   62.9 MB (estimated)
+Write rate: 0 bytes/second
+Compression: Snappy
+Memtablerep: skip_list
+Perf Level: 1
+WARNING: Assertions are enabled; benchmarks unnecessarily slow
+------------------------------------------------
+Initializing RocksDB Options from the specified file
+Initializing RocksDB Options from command-line flags
+DB path: [/tmp/rocksdbtest-112628/dbbench]
+fillseq      :       3.942 micros/op 253666 ops/sec;   28.1 MB/s
+```
+@lightmark has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4241093).
+@lightmark updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1564/files/e258d8e07ea892e4ea58d744427fc4352dc5cbed..f93b2beaecc80e0296e46b8ed97bdd139ca09c33) - [changes since last import](https://github.com/facebook/rocksdb/pull/1564/files/e258d8e07ea892e4ea58d744427fc4352dc5cbed..f93b2beaecc80e0296e46b8ed97bdd139ca09c33)

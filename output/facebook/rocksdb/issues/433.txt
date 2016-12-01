@@ -1,0 +1,25 @@
+In my application I need to put a value in the database only if the given key does not already exist, similar with ConcurrentHashMap.putIfAbsent method
+
+Currently to achieve this functionality, the get operation has to be used causing the whole operation not to be atomic.
+
+Hey @xpromache. We are thinking about adding proper transaction support to rocks, where you could transactionally execute get() and put(), thus guaranteeing the two operations to be atomic.
+
+Unfortunately, this is on a long-term roadmap and we don't know when will the feature be ready.
+
+Fortunately, there is a way to implement transactional support as a layer on top of RocksDB today. You can do it in two ways:
+1) lock(key), get(key), put(key), unlock(key), where lock(key) would lock a mutex based on the key (allocate a bunch of mutexes and shard the key to get the correct mutex for key)
+2) do some kind of optimistic concurrency where you detect two conflicting transactions at commit time (transactions writing to the key because get() returned absent, but between the get() and put(), some other transactions wrote to that key).
+
+You can check out https://github.com/mongodb/mongo/blob/master/src/mongo/db/storage/rocks/rocks_transaction.cpp, although the code is not production-ready :)
+
+I'm closing this issue since we have something similar here: https://github.com/facebook/rocksdb/issues/410, but feel free to continue the discussion here or at https://www.facebook.com/groups/rocksdb.dev/
+
+Hello, for my application atomicity is not actually an issue.
+But the only way to determine if a key exists is to do a get and it looks silly to retrieve a value which is a 3-4 KB in my case just to check if it exists or not. I thought it would be faster to have a put operation that does not overwrite the existing value.
+
+For insert if not exists to only insert if the key doesn't exist you have two choices. The first is to use locking as Igor describes and optionally use the KeyMaxExist function to avoid many reads. Atomicity is an issue for this approach. Otherwise concurrent insert attempts can both see that the key doesn't exist and then both insert the same key. The second solution is to implement a merge operator with the policy first-writer-wins. In that case you have to do a read after the write if the client wants to know whether its insert succeeded or lost to an older insert.
+
+- If most of your keys don't exist, Get() should be reasonably low-overhead because it will only check the bloom filter (you need to enable them in options).
+- If lots of the keys you're trying to write already exist, having a merge operator like @mdcallag might be best
+- It might be a good idea to have another column family with only a list of keys (empty values). That way, your Get()s will not have to retrieve big values, and you can guarantee consistency via atomic WriteBatch.
+

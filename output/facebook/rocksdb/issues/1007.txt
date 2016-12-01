@@ -1,0 +1,6 @@
+There is an assertion check in the constructor 
+WinRandomAccessFile():
+ assert(!options.use_mmap_reads);
+
+That's because this file does not memory mapping. The assertion is to prevent this file from being instantiated on accident. NewRandomAccessFile() should instantiate a different class that does memory mapping.
+

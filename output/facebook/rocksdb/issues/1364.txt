@@ -1,0 +1,13 @@
+The libraries produced on linux are now named
+librocksdb.a
+librocksdb.so
+
+Also link with -lrt to avoid linker errors.
+
+Generalize comments at the top to include Linux
+
+Addresses some comments from
+https://github.com/facebook/rocksdb/pull/1358
+
+Addressed @tchaikov comments.
+

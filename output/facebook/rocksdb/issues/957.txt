@@ -1,0 +1,39 @@
+Hi,
+
+I'm interested in storing a map of string to set. What is the recommended way of doing this?
+
+Thanks,
+Gideon.
+
+I would store each item in the set as part of the key.  For example, if you wanted to store the following mapping:
+my_sodas ==> {coke, pepsi, sprite}
+
+You could write 3 keys "my_sodas:coke", "my_sodas:pepsi", "my_sodas:sprite".  Whether you store any extra data with these keys would be up to you.  To fetch all sodas you could iterate through all keys that begin with "my_sodas:".  To check for the existence of a particular soda, you would just fetch that key.
+
+I think it would be great if we add a more generic api in rocksdb to do this, but we do not have this right now.
+
+Interesting. This is a different way of thinking than what I'm used to. I don't have any values associated with `my_sodas:coke`, so I guess I'd just store the empty string, `""`, as the value?
+
+Also, I assume that for scanning one would use some sort of `PrefixSeek`? This seems to be the latest way to do this: https://github.com/facebook/rocksdb/wiki/Prefix-Seek-API-Changes#transition-to-the-new-usage?
+
+I have a situation with many many customers or `my_sodas`, in your example, but relatively few brands that go into the set. How is rocksdb going to handle compression of this data? If I were using a relational database, I would be able to assign an id to the brands and store them together, just once.
+
+> How is rocksdb going to handle compression of this data? 
+
+RocksDB uses prefix compression, which makes compressing keys with large common prefixes very effective. For example, with (`my_sodas:coke`, `my_sodas:pepsi`) we would just store ((`my_sodas:coke`, `{9}pepsi` where {9} means that we share the prefix of length with previous key)
+
+Ahh, very good. That makes sense. Unfortunately, I think that we are in a situation in which suffix compression would be ideal. We are in a situation of `my_sodas:coke`, `my_sodas:pepsi`, `your_sodas:coke`, `your_sodas:pepsi`.
+
+If you care about storage space, maybe you can have my_sodas:1, my_sodas:2 and then a separate "table" with 'id -> name' mapping. You will optimize storage space, but may lose something on read performance (since now you have to do many Gets)
+
+I believe this also depend on your work load, If your reads are heavy and you are not changing the items in your set frequently then maybe
+"my_sodas":"coke,pepsi,sprite" will be a better format to get a better read performance.
+
+@IslamAbdelRahman but then there's the serialization overhead.
+
+@gideonite Aha, what I am trying to say is that using this format will allow you to read the Set using one Get operation instead of creating an Iterator and Iterating. but again this depends on your workload.
+
+I previously used RocksDB for a similar use case but in my use case I inserted every set only once (and never updated it). The read performance was better when I used 1 row for each set.
+
+@IslamAbdelRahman fair enough. It's good to hear about your experience. For now I think that I will take the simplest approach (measured in lines of code). I think that we are in an in between situation - we do make modifications, but clearly not on every read.
+

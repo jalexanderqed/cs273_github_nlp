@@ -1,0 +1,42 @@
+I am using rocksdb on embedded system 
+Linux tegra-ubuntu 3.10.67-g458d45c #1 SMP PREEMPT Mon Feb 8 17:44:18 PST 2016 aarch64 aarch64 aarch64 GNU/Linux
+
+I have received following error, is this compiler related ?
+
+```
+ nvcc --std=c++11 TeraCore.cpp 
+In file included from /usr/include/rocksdb/immutable_options.h:10:0,
+                 from /usr/include/rocksdb/db.h:18,
+                 from TeraCore.cpp:3:
+/usr/include/rocksdb/options.h:69:32: error: enumerator value -1 is too large for underlying type ‘char’
+   kDisableCompressionOption = -1,
+```
+
+I think we can change the rocksdb code (in include/rocksdb/options.h)
+
+kDisableCompressionOption = -1
+
+to
+kDisableCompressionOption = 0xff
+
+Please verity  if this fixes your problem, and if it does, then submit a pull request for your rocksdb change. 
+
+It seems like `0xff` does not work for compilers that define `char` to use the same representation as `signed char` [0]. Maybe also make the type `unsigned char` or `uint8_t`?
+
+[0] http://coliru.stacked-crooked.com/a/d1ef43b27dac1fd3
+
+@4tXJ7f andres: your suggestion makes sense
+
+when i run `make install`
+
+```
+*** Error in `g++': double free or corruption (top): 0x0009e030 ***
+Aborted
+```
+
+leveldb works fine tough 
+
+#1160 
+
+Seen this same issue when try to compile ceph from GIT. Any proposed solution besides @vmorris one?
+

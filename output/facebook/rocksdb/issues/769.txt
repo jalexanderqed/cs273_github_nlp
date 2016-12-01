@@ -1,0 +1,87 @@
+d:\new folder\rocksdb\db\db_test_util.cc(782): error C2039: 'TEST_CompactRange'
+ : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\build\rocksdblib
+.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+  :DBImpl'
+d:\new folder\rocksdb\db\db_test_util.cc(784): error C2039: 'TEST_CompactRange'
+ : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\build\rocksdblib
+.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+  :DBImpl'
+d:\new folder\rocksdb\db\db_test_util.cc(792): error C2039: 'TEST_MaxNextLevelO
+verlappingBytes' : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\
+build\rocksdblib.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+  :DBImpl'
+d:\new folder\rocksdb\db\db_test_util.cc(833): error C2039: 'TEST_WaitForFlushM
+emTable' : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\build\ro
+cksdblib.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+  :DBImpl'
+d:\new folder\rocksdb\db\db_test_util.cc(834): error C2039: 'TEST_WaitForCompac
+t' : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\build\rocksdbl
+ib.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+  :DBImpl'
+d:\new folder\rocksdb\db\db_test_util.cc(845): error C2039: 'TEST_WaitForFlushM
+emTable' : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\build\ro
+cksdblib.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+  :DBImpl'
+d:\new folder\rocksdb\db\db_test_util.cc(846): error C2039: 'TEST_WaitForCompac
+t' : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\build\rocksdbl
+ib.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+  :DBImpl'
+d:\new folder\rocksdb\db\db_test_util.cc(856): error C2039: 'TEST_WaitForFlushM
+emTable' : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\build\ro
+cksdblib.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+  :DBImpl'
+d:\new folder\rocksdb\db\db_test_util.cc(857): error C2039: 'TEST_WaitForCompac
+t' : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\build\rocksdbl
+ib.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+
+Hi @maximecaron , Are you compiling the tests in Release mode ?
+
+yes for debug mode I dont get those error. In debug I only get one error.
+Build FAILED.
+
+"D:\New folder\rocksdb\build2\ALL_BUILD.vcxproj" (default target) (1) ->
+"D:\New folder\rocksdb\build2\arena_test.vcxproj" (default target) (3) ->
+"D:\New folder\rocksdb\build2\rocksdblib.vcxproj" (default target) (5) ->
+(ClCompile target) ->
+  d:\new folder\rocksdb\utilities\document\json_document.cc(592): fatal error C1001: An internal error has occurred in the compiler. [D:\New folder\rocksdb\bui
+ld2\rocksdblib.vcxproj]
+
+```
+0 Warning(s)
+1 Error(s)
+```
+
+for json_documet.cc error it seem changing code to below is fixing it:
+
+``` c++
+  return std::pair<std::string, rocksdb::JSONDocument>(std::string(it_->getKeyStr(), it_->klen()),
+    JSONDocument(it_->value(), false));
+```
+
+Can you please try to do a clean build ? I have tried a windows build without changing any code and did not encounter any errors.
+
+After clean build I now only get JSONDocument error for release build. I sent a pull request for the fix. Feel free to close this issue.
+
+from CMakeLists.txt:
+
+```
+ # Prerequisites:
+ #     You must have Visual Studio 2013 Update 4 installed.
+```
+
+when I build project on Visual Studio without Update 4, I got this build error, after Update 4 installed build successfully.
+
+@Vaisman You will not have a working RocksDB w/o Update 4 installed for Studio 13.
+
+The code without my fix to JSONDocument is valid C++11 code and simply trigger a bug in VC++.
+If C++11 is already required to compile RocksDB please ignore this pull request.
+

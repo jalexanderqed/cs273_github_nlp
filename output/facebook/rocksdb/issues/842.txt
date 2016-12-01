@@ -1,0 +1,51 @@
+Commit f14c3363 introduced the use of GetSystemTimePreciseAsFileTime,
+which is only available on Win8 and above. This breaks backwards runtime
+compatibility with earlier Windows versions.
+
+This commit partially reverts the aforementioned commit, guarded in a
+compile-time macro. By default, this patch has no effect on the code
+base. However, if the _WIN32_WINNT macro is explicitly set to a Windows
+a Windows version older than Win8, then we use the backwards-compatible
+implementation.
+
+@aloukissas Your change will break a lot of features in the product including rate limiting and log rotation. These and some tests rely on the fact that the return value of the API represents system time the QPC value is not a such time which was the reason why I changed the original code (written by me :). If you want to pursue this path be prepared to comment extensively on that and see many unit tests break (which you should have ran by now).
+
+@aloukissas Thus you either want to find a better solution (which I was not able to in the time allotted back then) or try to compile the product with MS Studio 15 where std::chrono::system_time microseconds resolution is presumably fixed. I have not verified that yet but it is on my list.
+
+@aloukissas In addition, IMHO, the `ifdef` would better be made on the compiler version and the behavior change is better made at run-time. Your change makes the product built on Win 7 not functional and makes it dependable on the built system rather on the system of execution. However, as I mentioned, the code path for Win 7 which would make the product functional is not known to me at this time.
+
+Got it - thanks. Another approach could be (although this is a naive suggestion, without knowing the insides of the projects) to have a config-level ifdef to indicate whether the platform supports high-res timers or not. Is there something fundamental that requires microsec-level precision?
+
+@aloukissas The two fundamental features that breaks it rate limiter, log rotation which leads to a loss of logs (believe it or not) because NowMicros() issues duplicate values. Failures in other tests which make extensive use of NowMicros may prevent you to certify your built.
+I am weary to the platform dependent config and I would think FB folks would be to. This would not only make it platform dependent but also selective among Windows versions which is too much IMHO.
+Try to make some research as to the way to compensate for the shortcoming. Based on my findings and some internal conversations using MS Studio 15 may be the best bet but I do not know if it is widely used now.
+
+Both or rate limiter and delayed write are features can be disabled. We can add a comment warning people the behavior for a inaccurate clock. Making it build with less features feels better than not abling to build at all. @yuslepukhin can you elaborate on the losing log case? Maybe we should fix it in codes.
+
+@siying this approach would be preferable. The project should be able to run on a popular and relatively recent OS, such as Win7. Note that this also affects Win Server 2008 R2.
+
+However, it looks like it's better that I abandon this PR and open a tracking issue instead.
+
+@siying it is not only about inaccuracy but also some clock vs system clock. Lots of code relies on the fact that Linux implementation initially made it a system clock.
+
+@aloukissas See issue https://github.com/facebook/rocksdb/issues/726
+
+@siying I do not mind that someone does such an ifdef but it should be clearly documented to the effect that if you want to build/run on Windows this is what might be expected.
+WIth respect to the log rotation. When you run a log rotation unit test logs are overwritten due to duplicate NowMicros() values returned when std::chrono is used. QueryPerformanceCounter has a good resolution but it is not a system clock.
+
+@aloukissas If you choose to pursue this then the `#ifdef` is better be makefile defined to represent an an explicit intention of the user to build that way. 
+
+@yuslepukhin log rolling is also a feature can be turned off (in fact default is off). We can add comments on those options to warn about this issue.
+
+@yuslepukhin this makes sense
+
+There is another pull request (#960) that solves Win7 support in dynamic way. It was reviewed by @yuslepukhin 
+
+@yuslepukhin should I merge it?
+
+I would merge #960 instead.
+
+@siying https://github.com/facebook/rocksdb/pull/960 is a better candidate once all checks succeed. 
+
+I am closing this PR since the fix has been committed https://github.com/facebook/rocksdb/pull/960
+

@@ -1,0 +1,36 @@
+hi,
+I use rocksdb as my KV store. My options are:
+        cache_size: 20000
+        # in KB
+        block_size: 16
+        # in MB
+        write_buffer_size: 64
+        # yes|no
+        compression: yes
+        bloom_filter_num: 10
+        max_write_buffer_number: 10
+        compressiontype: zlib
+        prefix_hash_len: 40
+        ttl_batch_size: 1000
+        ttl_sleep_sec: 3600
+        wal_bytes_per_sync: 1
+        bytes_per_sync: 1
+        rate_limiter: 10
+        sst_del_speed: 5
+
+cache_index_and_filter_blocks = false
+index_type = rocksdb::BlockBasedTableOptions::kHashSearch
+
+I close automatic compaction due to the high write QPS. So I run compacting manually. The situation is that the VIRT is increasing when compacting and never released. How can I get out of it?
+
+PS:If I change the compression function, will I read from old compression format database correctly?
+
+VIRT size is virtual process size. If you're on a 64 bit machine, there's more than enough available to not worry about it.
+
+On the other hand, if the RSS/private memory size is increasing, then it's probably a problem.
+
+BTW, I hope you've good reasons to select the values of wal_bytes_per_sync and bytes_per_sync that you've chosen. If you need sync writes, you should use `write_options.sync = true`, otherwise, they probably should ideally match your block_size.
+
+Thank you. 
+BTW, If I change the compression function, will I read from old compression format database correctly? If change the index type? I do not want to rebuild the whole database.
+

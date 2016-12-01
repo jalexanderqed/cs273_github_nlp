@@ -1,0 +1,26 @@
+Summary:
+1. Add RestoreBackupableDB and RestoreOptions
+2. Add remaining properties to BackupableDBOptions
+3. Add unit-test for restore operation.
+
+make rocksdbjava
+make test
+
+Reviewers: haobo, yhchiang, sdong, dhruba, rsumbaly, zzbennett, swapnilghike
+Reviewed By: haobo
+CC: leveldb
+
+Differential Revision: https://reviews.facebook.net/18717
+
+@ankgup87 would you mind squashing all the commits in one?
+
+Is this ready for commit Ankit?
+
+Hey Ankit,  I have one comment in your diff.  Once you have addressed that I can merge your pull request :)
+
+@yhchiang Apologies for not replying to comments earlier. I got pulled into other things and did not get  time to update this pull request.
+
+I have addressed your comment and made sure java project compiles fine. Please let me know if pull request looks good now.
+
+No worries :) Thanks for the diff!
+

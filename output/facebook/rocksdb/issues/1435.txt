@@ -1,0 +1,11 @@
+Currently, we don't use options.compression_per_level[0] as the compression style for L0 compression type, unless it is None. This behavior
+ doesn't look like on purpose. This diff will make sure L0 compress using the style of options.compression_per_level[0].
+
+Reviewed and accepted in: https://reviews.facebook.net/D65607
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1435/files/2d0034a5254dde6cb51444cb1e16c784b5025639..a61006de4c29f15df0fc8e9b0d3c0dc937053bf4)
+
+@siying has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4099368).
+
+@yiwu-arbug you've already reviewed the commit in Phabricator. Please merge it if you feel it's ready.
+

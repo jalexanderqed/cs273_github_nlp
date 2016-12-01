@@ -1,0 +1,30 @@
+- add validation is git found
+- add validation is .git folder exists in project (project zip archive download without .git folder)
+- get head commit SHA if git found and .git folder exists
+
+Tested:
+- configure project by CMake 3.0.0 successfully (with and without git), with project zip archive (without .git folder) and with project cloned from github
+- configure project by command: cmake -G "Visual Studio 12 Win64"
+- build solution by Visual Studio
+- manually validate that file utils/build_version.cc contains valid head revision value
+
+@Vaisman The build is slow. How does your change take to build on your dev box?
+
+@yuslepukhin 
+Build on dev box
+- my local system:
+  - 07 min 41.08 sec - with my fix
+  - 07 min 41.10 sec - without my fix
+- CI system with my fix:
+  - 22 min 24 sec - https://ci.appveyor.com/project/vaisman/rocksdb/build/1.0.1
+
+@Vaisman I will check how I can merge with my newly acquired rights
+
+Can somebody rebuild in AppVeyor ?
+
+@Vaisman this is supposed to be rebuilt automatically
+
+@yuslepukhin I will merge if you are OK with the commit.
+
+@siying Pls, merge.
+

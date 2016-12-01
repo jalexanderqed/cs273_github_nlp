@@ -1,0 +1,20 @@
+For your review. Thanks.
+
+Umm, seeing failed test on another try on Travis.
+
+https://travis-ci.org/robertabcd/rocksdb/builds/46322324
+db/db_test.cc:9738: Assertion failure Put(Key(count), RandomString(&rnd, 1024), wo).ok()
+
+Not yet reproducible on my machine.
+Not sure if the issue is related to this commit.
+
+Probably unrelated.
+
+Would you also mind producing some performance numbers to demonstrate improved performance?
+
+I do like this patch, though, thanks :)
+
+Hmm. The pull request may be misnamed. The performance gain should be backup engine loading performance.
+
+Thanks for contributing!
+

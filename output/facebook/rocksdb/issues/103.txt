@@ -1,0 +1,24 @@
+Hi,
+
+I tried to implement the prefix seek in my golib, but I got it not working :(
+Test to reproduce my problem (phase "prefix"): https://gist.github.com/tecbot/9833739
+
+Maybe I'm missing something or configured wrong?
+Thx!
+
+I'm not sure that prefix seek will work with vector memtable rep. Use HashSkipList or HashLinkedList
+
+Currently only HashSkipList and HashLinkedList support prefix seek.
+
+Good catch, but wouldn't be better to print a error msg like "prefix seek not supported" in that case? IMHO the msg is currently confusing. 
+
+BTT: I extended the C API to create HashSkipList or HashLinkedList, but now I get a segmentation fault in util/murmurhash.cc:37. You find the code here to reproduce the problem (run `./c_test`): https://github.com/tecbot/rocksdb/tree/c-api-prefix
+
+I figured out that if I call `rocksdb_create_iterator` the prefix is not the same as in `rocksdb_readoptions_set_prefix`. I added a debug output that print the size of the prefix.
+
+Thx for help!
+
+Can you try using ReadOptions::prefix_seek = true instead of setting ReadOptions::prefix? We plan to deprecate ReadOptions::prefix in future versions of RocksDB.
+
+I removed the ReadOptions::prefix and use now Iterator::seek and it works. Thank you!
+

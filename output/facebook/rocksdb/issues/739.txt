@@ -1,0 +1,4 @@
+Running "make -j" seems to work fine until it hits the tests section, then things get sad.
+
+Guessing that I just need to pass in a skip tests flag.
+

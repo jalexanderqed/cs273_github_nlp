@@ -1,0 +1,47 @@
+Write large data into DB with auto compaction , level0_slowdown_writes_trigger=1<<30, level0_stop_writes_trigger<<30, the error occurred in the LOG. 
+I can not check out the reason, Could you tell the possible reason?
+
+It may be a false alert. Did you see any read/write failure?
+
+No, have no much more info.  level0_slowdown_writes_trigger=1<<30, level0_stop_writes_trigger<<30 , will the two options cause data lost?
+
+No these options are fine.
+
+On Thu, Sep 29, 2016 at 8:07 PM -0700, "xh931076284" <notifications@github.com<mailto:notifications@github.com>> wrote:
+
+No, have no much more info. level0_slowdown_writes_trigger=1<<30, level0_stop_writes_trigger<<30 , will the two options cause data lost?
+
+## 
+
+You are receiving this because you commented.
+Reply to this email directly, view it on GitHubhttps://github.com/facebook/rocksdb/issues/1365#issuecomment-250648129, or mute the threadhttps://github.com/notifications/unsubscribe-auth/AFFmJ_BJtW989wyYin3eQ6TYUAnDO6XMks5qvHzfgaJpZM4KJy8a.
+
+@siying , You means these options have no problem?
+Is it possbile that the write rate is too high so that the the number of SST file in the level-0 is too much to compact to level-1, and so some SST file are deleted?
+Note: it works with  multithreading using JAVA API.
+
+"Generated table #1498 : 5336001 keys, 141496205 bytes" is the log info means the data in memtable will be flushed into a SST file named 001498.sst?
+"Delete /hdfsdata/2/dinner/VTVTGraph22compact/001498.sst type=2 #1498 -- ok" : is this log info means that the sst file is deleted in the ending of a compaction related to the 001498.sst? 
+
+"  Tried to delete a non-existing file /hdfsdata/2/dinner/VTVTGraph22compact/001498.sst type=2 #1498 -- IO error: no such file of directory":  is the log info means that it tried to delete a SST file has been already deleted resulating in a IO error?
+
+Detail info is recorded in follower three pictures;
+![img_20160930_133434](https://cloud.githubusercontent.com/assets/19407588/18981772/ca7ed234-8713-11e6-9aef-c32b235e94be.jpg)
+![img_20160930_133509](https://cloud.githubusercontent.com/assets/19407588/18981773/ca81ab12-8713-11e6-9ca6-8502c4f0e26c.jpg)
+![img_20160930_133555](https://cloud.githubusercontent.com/assets/19407588/18981774/cab409ae-8713-11e6-99d5-86def2ed1dfd.jpg)
+
+@siying I find out the reason.   I set options.delete_obsolete_files_period_micros = 300000000,and db->EnableFileDeletions(true).
+
+These teo settings are common. We have never seen any problem.
+
+On Thu, Sep 29, 2016 at 10:14 PM -0700, "xh931076284" <notifications@github.com<mailto:notifications@github.com>> wrote:
+
+@siyinghttps://github.com/siying , You means these options have no problem?
+Is it possbile that the write rate is too high so that the the number of SST file in the level-0 is too much to compact to level-1, and so some SST file are deleted?
+Note: it works with multithreading using JAVA API.
+
+## 
+
+You are receiving this because you were mentioned.
+Reply to this email directly, view it on GitHubhttps://github.com/facebook/rocksdb/issues/1365#issuecomment-250660252, or mute the threadhttps://github.com/notifications/unsubscribe-auth/AFFmJ4Ce5fmj8hF2t_VY3ZCWUeJ2F9GZks5qvJpsgaJpZM4KJy8a.
+

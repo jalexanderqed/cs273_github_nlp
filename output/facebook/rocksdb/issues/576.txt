@@ -1,0 +1,14 @@
+`rocksdb::DB::OpenForReadOnly` will fail if the db has been opened by another process. However, if the db is being opened read-only, what is preventing multiple accessors? These work fine internally within one process, with multiple threads accessing the db.
+
+Could I resolve this by forcing the opening process not to take a lock on the db if it is read-only?
+
+we lock the DB only if it's not read-only: https://github.com/facebook/rocksdb/blob/master/db/db_impl.cc#L809. Are you sure one process is not opening the DB in write mode?
+
+I'm opening it as such: https://github.com/ekg/vg/blob/master/index.cpp#L82 via https://github.com/ekg/vg/blob/master/index.cpp#L93-L97. This is called from here https://github.com/ekg/vg/blob/master/main.cpp#L1960 in the case of the failing process.
+
+So it looks like I'm opening it read-only. Is there an obvious problem with this method? I'm not able to open from a second process.
+
+Options are set here: https://github.com/ekg/vg/blob/master/index.cpp#L24-L72. Perhaps I'm doing something there to cause problems.
+
+I suspect the problem is on my end as I'm not getting the same problem consistently. I'll reply if I find out otherwise.
+

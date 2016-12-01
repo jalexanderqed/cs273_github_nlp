@@ -1,0 +1,4 @@
+added the possibility to create a HashSkipList or HashLinkedList to support prefix seeks. See #103
+
+Thanks!
+

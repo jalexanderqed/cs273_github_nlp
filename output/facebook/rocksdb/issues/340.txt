@@ -1,0 +1,10 @@
+If we're going to go to the trouble of checking then the least we can do is **not** dereference a pointer we just discovered is equal to `nullptr`.
+
+lol :) are you guys using JSON API?
+
+Ha, no.  Over at Ripple we're all about the C++ API.
+
+This just showed up as a result of static analysis; I have a list of "hits" I'm walking through, but weeding false positives out (and there are more than a few) can be tricky business.
+
+Cool, great work!
+

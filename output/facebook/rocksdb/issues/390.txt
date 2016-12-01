@@ -1,0 +1,12 @@
+This pull request depends on: https://github.com/facebook/rocksdb/pull/375
+
+This pull request contains two cleanup commits:
+- Removed code which produced warnings with Java7. Used Java7 diamond operator syntax consequently.
+- JavaDoc adjustments based on Warnings produced by Java8. 
+
+@fyrz: Thanks for improving the comment style in RocksJava.  The diff looks good to me.  However, it seems that I cannot merge this pull request.  Can you rebase and commit again?
+
+@yhchiang merged but beware this here is on top of the ColumnFamilyOptions pull request.
+
+Merged.  Thanks for your contribution!
+

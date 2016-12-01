@@ -1,0 +1,17 @@
+
+Failed :(
+
+@igorcanadi hmm I am pretty sure the make commands are correct. Any idea why this fails?
+
+OOM. Let me forward you one e-mail
+
+@adamretter are you still working on that ?
+
+@fyrz Due to the out of memory error, I decided to try and switch us to containerized builds on Travis which offer more memory. My work in progress on a containerized build is https://github.com/facebook/rocksdb/pull/570, but there are still some open issues with Travis there.
+
+However this build does now seem to pass without an out of memory. @igorcanadi This one now seems to be passing... Shall we merge it?
+
+I am still hopeful to switch to containerized builds in #570, but that needs further discussion yet.
+
+@igorcanadi The Arcanist diff review is here - https://reviews.facebook.net/D43173
+

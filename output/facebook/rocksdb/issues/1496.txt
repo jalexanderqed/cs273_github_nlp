@@ -1,0 +1,26 @@
+
+Test Plan: run all the tests
+@siying has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4168080).
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1496/files/d07708075414cce297c3dda795ff869461e465c9..000f63665b905f07fbcd12be294aa80377cb2c91) - [changes since last import](https://github.com/facebook/rocksdb/pull/1496/files/d07708075414cce297c3dda795ff869461e465c9..000f63665b905f07fbcd12be294aa80377cb2c91)
+
+Fixed unit tests.
+
+Test failures are not related.
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1496/files/000f63665b905f07fbcd12be294aa80377cb2c91..cb513c69060f2eca25b7f2a66a11b08c05fdba63) - [changes since last import](https://github.com/facebook/rocksdb/pull/1496/files/000f63665b905f07fbcd12be294aa80377cb2c91..cb513c69060f2eca25b7f2a66a11b08c05fdba63)
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1496/files/cb513c69060f2eca25b7f2a66a11b08c05fdba63..4a3e219a27a5160a2d85a63ef8d82f0caae98228) - [changes since last import](https://github.com/facebook/rocksdb/pull/1496/files/cb513c69060f2eca25b7f2a66a11b08c05fdba63..4a3e219a27a5160a2d85a63ef8d82f0caae98228)
+
+Fixed the unit tests after the rebase.
+
+Looks like we need to rebase again, I have another minor comment, why do we need to disable it for `PresetCompressionDict`
+
+Since I dont have any more comments, I will approve, Can you please rebase so we can land ?
+
+The test failures seem to be unrelated. I ran them on my host and they all pass. I'll just merge after resolving the conflict.
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1496/files/4a3e219a27a5160a2d85a63ef8d82f0caae98228..4158456d775051bc650bda44675915e06913a031) - [changes since last import](https://github.com/facebook/rocksdb/pull/1496/files/4a3e219a27a5160a2d85a63ef8d82f0caae98228..4158456d775051bc650bda44675915e06913a031)
+
+I simply rebased it. The only conflict is in HISTORY.md. I ran simple unit locally and it passed. I'm going to land it.
+

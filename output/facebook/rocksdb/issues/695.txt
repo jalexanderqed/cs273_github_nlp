@@ -1,0 +1,12 @@
+  Intro SubCompactionState move functionality
+  =delete copy functionality
+  #ifdef SyncPoint in tests for Windows Release builds
+
+I fixed the build before releasing 3.13 in a more ugly way than this: https://reviews.facebook.net/D43647 Maybe we should change to this pattern?
+
+@siying That may cost perf. We want move semantics whenever possible.
+
+@yuslepukhin I mean change the codes I modified to your way:)
+
+@siying We understood each other :)
+

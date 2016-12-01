@@ -1,0 +1,15 @@
+We can add prev_ for skiplist node to run Prev in O(1) instead of O(logN) as it locks when inserting.
+And it does no harm to read without lock.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+Can you introduce your use case of it? Even if skip list's Prev() is made more efficient, I assume there are other components in RocksDB that are inefficient with Prev() call. I wonder how much improvements did you see with the diff.
+
+One problem with this diff is that, this skip list is not the one used in memtable. The one being used is db/inlineskiplist.h, which is much trickier to add the Prev() call. Another concern is the extra 8 bytes overhead for each node while most queries won't benefit from it.
+
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4077767).
+
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4087945).
+

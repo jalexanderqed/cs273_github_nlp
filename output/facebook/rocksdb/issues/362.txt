@@ -1,0 +1,15 @@
+
+This broke the travis, can you fix please 
+
+```
+/usr/bin/ld: db/builder.o: relocation R_X86_64_32 against `.rodata' can not be used when making a shared object; recompile with -fPIC
+```
+
+Hmm I cannot reproduce the problem on Mac OSX and I cannot find much useful via Google. I will try it out on a version of Ubuntu similar to that used on Travis...
+
+@adamretter i just test a version see pull request
+
+Interesting, how is that extra flag processed?
+
+Removed the java test for now, feel free to send PR that passes travis
+

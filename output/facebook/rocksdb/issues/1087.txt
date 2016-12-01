@@ -1,0 +1,4 @@
+Closes https://github.com/facebook/rocksdb/issues/1071
+
+LGTM.  Thanks for adding this suport!
+

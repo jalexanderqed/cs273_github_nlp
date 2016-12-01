@@ -1,0 +1,10 @@
+Missed this when the new call was added.
+
+By the way, I also made a MirrorEnv implementation that takes two Env's and does all operations on both, and compares the return values and read results.  This was hugely helpful in writing my own Env implementation.. any interest upstream?
+
+https://github.com/liewegas/ceph/blob/wip-bluestore/src/os/bluestore/MirrorEnv.h
+
+> By the way, I also made a MirrorEnv implementation that takes two Env's and does all operations on both, and compares the return values and read results. This was hugely helpful in writing my own Env implementation.. any interest upstream?
+
+Sure, we can put it into our `utilities/` directory. Make sure to guard it against compilation with ROCKSDB_LITE, though.
+

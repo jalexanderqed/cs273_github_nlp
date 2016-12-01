@@ -1,0 +1,19 @@
+Hello;
+I dont find interface in rocksdbJava([BackupableDBOptions.java](https://github.com/facebook/rocksdb/blob/bbb52b21f378e6c4099be6cc2694411617cac813/java/src/main/java/org/rocksdb/BackupableDBOptions.java)) to change backupDB's env so that I can't back up my db to hdfs in Java. Is there any way to back up my db to hdfs by using Java?
+Thanks : )
+
+@cycyyy We didn`t implement a HDFS env in RocksJava yet. However you can also do backup using a Fuse HDFS driver.
+
+@fyrz Thanks for your suggestion.It's a good idea to use mountable hdfs.
+But is there another easier way which doesn't need to change the env.
+Thank You,
+Regards.
+
+@cycyyy No currently not. I was looking into the HDFS env implementation lately. But decided to invest no time in porting that approach. The reason for this is that the HDFS env is using the C-library of hdfs. Which is basically only wrapping a JVM within and executing Java code. If the hdfs env would be ported we would have then 3 indirections(RocksJava <-> JNI <-> Java)  which is in my opinion inefficient so to provide a HDFS env we would have to implement something smarter which i didnt have time to think about a the moment.
+
+@fryz If I use the mountable hdfs and RocksJava, is it also a inefficient way?
+
+@cycyyy it's a HDFS problem, than a RocksDB problem. Maybe it's better to consult HDFS experts.
+
+@siying Thanks a lot : )
+

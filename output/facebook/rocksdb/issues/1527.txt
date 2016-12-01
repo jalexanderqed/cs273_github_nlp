@@ -1,0 +1,56 @@
+Summary:
+If the WriteOptions.no_slowdown flag is set AND we need to wait or sleep for
+the write request, then fail immediately with Status::Incomplete().
+
+Test Plan:
+unit test added
+@maysamyabandeh has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4191405).
+
+@maysamyabandeh has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4191405).
+
+@maysamyabandeh updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1527/files/c277b13eb3490eed9622b2e7e90637a16d1c3e23..2c9d5b872703798c6687584d55fbaab54a7a5e71) - [changes since last import](https://github.com/facebook/rocksdb/pull/1527/files/c277b13eb3490eed9622b2e7e90637a16d1c3e23..2c9d5b872703798c6687584d55fbaab54a7a5e71)
+
+@maysamyabandeh updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1527/files/2c9d5b872703798c6687584d55fbaab54a7a5e71..e8227368b9dea5e73498004fac698da80c171379) - [changes since last import](https://github.com/facebook/rocksdb/pull/1527/files/2c9d5b872703798c6687584d55fbaab54a7a5e71..e8227368b9dea5e73498004fac698da80c171379)
+
+Sure, Thanks. Let me also update no_sleep to no_slowdown as per the original suggestion.
+
+Also can you double check the change here: https://github.com/facebook/rocksdb/pull/1527/files#diff-71a34e2e4e097b44064da7d3a2b68bd8R5025 It will also affect the code path for the requests that fail for reasosn other than slowdown.
+
+@maysamyabandeh updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1527/files/e8227368b9dea5e73498004fac698da80c171379..ef554ee20e73f7353e8d9ab0b73dbca87726f7a4) - [changes since last import](https://github.com/facebook/rocksdb/pull/1527/files/2c9d5b872703798c6687584d55fbaab54a7a5e71..ef554ee20e73f7353e8d9ab0b73dbca87726f7a4)
+
+@maysamyabandeh it is true that it may impact failures for other reasons. I can't simply see anything wrong with the diff. If you are not sure, I suggest you add unit tests to verify it.
+
+The change does makes sense to me too, just wanted to make sure it is viewed by another pair of eyes.
+
+Great!
+
+Any news here?
+
+Some sandcastle tasks timeout with no indicative output. I can go ahead landing it if I get a +1.
+
+@maysamyabandeh valgrind is failing in master. If it fails with some NewIterator error, ignore it and just land.
+
+Unfortunately it is more than that:
+
+```
+Running unit_non_shm
+Running unit_481
+Running asan
+Running valgrind
+Running no_compression
+Running tsan
+Running clang_unit
+Running punit
+Running unit
+Running code_cov
+```
+
+I already kicked a re-run but they timed out again.
+
+@maysamyabandeh updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1527/files/ef554ee20e73f7353e8d9ab0b73dbca87726f7a4..99a8d86b1a36ed599450fcd58cde348e4563a04b) - [changes since last import](https://github.com/facebook/rocksdb/pull/1527/files/ef554ee20e73f7353e8d9ab0b73dbca87726f7a4..99a8d86b1a36ed599450fcd58cde348e4563a04b)
+@siying travis fails at  ./db_dynamic_level_test with "Sst file size mismatch" error which is not likely to be caused by this patch. What do you think? 
+https://travis-ci.org/facebook/rocksdb/jobs/177802346#L1379
+
+Also this assert failure at WriteBatchThreadedTest:
+https://travis-ci.org/facebook/rocksdb/jobs/177802351#L1024
+Yes they are unrelated. Just land it!

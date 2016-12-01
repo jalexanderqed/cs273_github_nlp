@@ -1,0 +1,27 @@
+"rocksdb::DB::Open "  cause busy looping and huge memory usage, is there anyone know how to fix it?
+
+If you are using BlockBasedTable, DB::Open will try to load all the table index and filter to memory, which could the reason for your "busy looping and huge memory usage". 
+Try to set option.max_open_files to a small number, say 10. This might solve your issue at the cost of slow read perf. 
+Not sure if Rocksdb has a "Lazy-Open" setting for DB::Open. This should the ideal solution for you. 
+
+@SherlockNoMad   eh,  there are no table index nor filter at all.  I try to run basic Open operation on iOS simulator as below:
+
+#include <assert>
+#include "rocksdb/db.h"
+
+rocksdb::DB\* db;
+rocksdb::Options options;
+options.create_if_missing = true;
+rocksdb::Status status =
+  rocksdb::DB::Open(options, "/tmp/testdb", &db);
+assert(status.ok());
+
+Does your iOS simulator have a way of getting a stack trace of what the process is doing?  Can you attach with a debugger to see what the thread(s) are doing?
+
+stack trace:
+![image](https://cloud.githubusercontent.com/assets/969400/10873700/7070a18a-8153-11e5-8121-0cea0040f881.png)
+
+rocksdb is calling memmove but never return, and memory use of process is 11.61GB,  crazy!!!
+
+is there anyone success to use rocksdb in iOS?
+

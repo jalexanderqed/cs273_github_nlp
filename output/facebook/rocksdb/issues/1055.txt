@@ -1,0 +1,36 @@
+This is part question, part issue, and part request for comment/advice.  I have developed a [.Net (C#) library for RocksDB](https://github.com/warrenfalk/rocksdb-sharp) and am now adding Column Family support to it.
+
+I'm confused by the design of the interface for column families. When I open the db, I must specify every column family it contains and none that it doesn't.  If I miss one the database won't open.  If I have an extra, the database won't open.  I therefore must know the state of the database before I open it (or open it read only, figure out the current state of column families, match that state temporarily in order to open the database again for write, then correct the state).
+
+Furthermore, this makes column families seem somewhat incompatible with the db option `create_if_missing = true`.  I may open a db whether it exists or not and it will be created as required unless I need column families.  Then I must know in advance whether the column families have been added to the database already, and so also whether or not the database exists.
+
+The result is that it is hard to write code which is backward compatible with older versions of a database.
+
+As part of the C# library, I was considering trying to ease this issue, but wonder if there's a good reason why the C++ interface doesn't already do this.
+
+The way I want it to work is that if I specify `create_if_missing = true` on the db and I specify column family descriptors, then I expect it to create any column families I specified which don't already exist (backward compatibility), while it could still if I fail to specify a column that does exist.
+
+So this is either a question or a feature request.  Can't it work that way?  Why doesn't it?  Is it advisable to write this behavior into the C# library?
+
+The reason of the interface is that different column families can have different options. For example, LSM setting, comparators, merge operators, or compaction filters. The Open() function is strict enough to make sure users don't make mistakes.
+
+There are cases where users want to use the same option for multiple column families and don't want to remember column families by themselves. In this case, the way to do it is to call DB::ListColumnFamilies() first to get the list of column family names: https://github.com/facebook/rocksdb/blob/v4.4/include/rocksdb/db.h#L158-L160 . With that information, you can make copy of column family options and open it.
+
+The create_if_missing_column_family feature then can be easily done in user level.
+
+Perhaps I'm still missing something.  I already understand how a call to open with _missing_ CFs can harm the user.  What I don't understand is how a call to open with _extra_ CFs (complete with options) harms the user.
+
+Even if we only deal with the simplest case which is that there is only one version of the database, then the database will be in one of these states: 1) doesn't exist or 2) exists with all CFs defined.  The problem is that I can't see any way through the interface to tell which state it is in unless I allow a call Open() or ListColumnFamilies() to fail and then parse an error message to see why.
+
+Note: [the example code](https://github.com/facebook/rocksdb/blob/master/examples/column_families_example.cc) simply assumes that the database doesn't have any CFs defined when it starts up, it then creates a CF, does some example stuff, then drops the CF.  The problem is that most applications aren't going to drop the CF before exiting.  And yet if you don't do that, the example code won't run a second time.  I know this is just some example code, but the problem is that I don't see how it _should_ be written.
+
+We do have this option! https://github.com/facebook/rocksdb/blob/master/include/rocksdb/options.h#L827
+
+And thanks for developing .net bindings for RocksDB!
+
+Also, I created a file LANGUAGE-BINDINGS.md where I added a link to your bindings, hope you don't mind: #1056 
+
+Ha, there it is.  Thanks Igor.  I don't know how I missed it.  I'm thinking maybe we should add it to the example.
+
+No problem, and I don't mind at all.
+

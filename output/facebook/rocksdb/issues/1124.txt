@@ -1,0 +1,68 @@
+Hey guys!
+
+Working on a Visual Studio C++ project at the moment in Windows 10. I'm not very fimiliar with configuration and setting path environments, so I was wondering if I could get some help with that. 
+
+I looked at the CMakeLists.txt file and wasn't sure about the steps. 
+
+"Step 1: Update paths to third-party libraryes in thirdparty.inc file" Im not sure whether to go into my environment variables , nor what to type, or if I should edit the thirdparty.inc file.
+
+Step 3: run cmake to generate project files. - Not sure what files to start on this, are there dependancies that I should have downloaded?
+
+Any help is aprpeciated!
+Hawley
+
+@HawleyJean 
+3rd party libraries are all optional and you do not need them to build and run RocksDB.
+
+You may want to clone gflags library from github since some tools require it and build it or download   [gflags2.2](https://github.com/gflags/gflags/archive/v2.1.2.zip) which is used on Linux and build it. 
+
+You can use this PowerShell snippet for a script
+
+`(New-Object Net.WebClient).DownloadFile('https://github.com/gflags/gflags/archive/v2.1.2.zip', 'gflags.zip')
+Add-Type -assembly "system.io.compression.filesystem"
+[io.compression.zipfile]::ExtractToDirectory(".\gflags.zip", "c:\dev\oss")`
+
+You can also get a of Jemalloc for a high perf memory allocator but it is also optional
+
+Yes, you can edit thirdparty.inc just as it is written or you can set appropriate env variable. The latter may be preferred.
+
+For gflags you will need to set GFLAGS_INCLUDE, GFLAGS_LIB_DEBUG, GFLAGS_LIB_RELEASE which is include folder and full paths to the built libraries.
+
+For all of that you will need CMake tool. Also you will need [Git](https://github.com/git-for-windows/git/releases/latest) in the path so CMake can fine it.
+
+Open Developer Command Prompt from the Studio installation, that will give you a console window with paths to the toolchain set.
+
+cd to your rocksdb repo, 
+
+`md build && cd build`. You are not mentioning the version of your studio. For VC15 use this from the build folder.
+
+`cmake -G "Visual Studio 14 Win64" -DGFLAGS=1 ..`
+
+That will create a solution for your which you can either build from a command line:
+
+`msbuild /m rocksdb.sln` (recommended)
+
+or open, build, run, debug  from a studio:
+
+`devenv rocksdb.sln`
+
+you can run tests in parallel using
+
+`.\build_tools\run_ci_db_test.ps1 -Run <db_test|db_test2|tests> -WorkFolder f:\db -Concurrency 8`
+
+See the script for the explanation of the arguments. `db_test` and `db_test2` contain multiple tests that the script will run in parallel. Tests will run `*_test.exe` executable. Concurrency will allow you to set the number of concurrent tests to run at the same time to maximize the use of your available cores otherwise it may take a really long time.
+
+-Workfolder may help you redirect the work space of your tests to an alternative location such as SSD or RAM drive to speed things up. By default test cases create databases in TMP/TEMP or TEST_TMPDIR is set. So if your TEST_TMPDIR is already set you do not need that argument.
+2GB of RAM drive will be enough. You can get IMDISK or other solutions of your choice.
+
+@yuslepukhin 
+Thank you for your reply, after a few days of configuration I decided to try the tests. I want to ask if G-flags is nesscary to run RocksDB? 
+
+@yuslepukhin 
+I seem to also be getting linker errors to the rocksdb distribution. Its Visual Studio 12 (2013) I'm using and it uses a Win32 bit machine.  
+I've included 3 files in my C++ solution, which includes  the rocksdb/include and /rocksdb/ files as headers, as well as rocksdb/third-party/gtest-1.7/fused-src/ 
+
+I however seem to be receving some linker errors. 
+
+![image](https://cloud.githubusercontent.com/assets/7003288/15553305/c405284c-2294-11e6-945a-4e929b426d04.png)
+

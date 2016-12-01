@@ -1,0 +1,7 @@
+
+@siying Looks like the forward_iter bench does not compile on Linux either
+
+The Travis failure seems to be caused by an environment problem.
+
+@siying @igorcanadi This is only CMakeFile change
+

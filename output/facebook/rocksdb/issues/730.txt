@@ -1,0 +1,11 @@
+
+@siying What do we do with java failures?
+
+@yuslepukhin it is known that Java build is failing and @yhchiang is working on it. I think the patch is good to go.
+
+The change should have nothing to do with Java build.
+
+@siying It is not a problem with macro max rather with the fact that numeric_limits are not constexpr with the compiler being used.
+
+@yuslepukhin  it looks good. I'll merge after Travis tests pass.
+

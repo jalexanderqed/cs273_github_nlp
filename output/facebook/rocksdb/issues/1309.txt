@@ -1,0 +1,8 @@
+We mixed using `uint64_t` and `size_t` somewhere, which leads to a warning in Mac.
+
+Although Travis itself was not working normally, this PR does not break our Linux build (Windows build seems to break somewhere else).
+
+Thank you for your pull request.  As you may know, we require contributors to sign our Contributor License Agreement, and we don't seem to have you on file and listed as active anymore.  In order for us to review and merge your code, please email cla@fb.com with your details so we can update your status.
+
+Thanks @omegaga, will try to get Travis fixed first before merging
+

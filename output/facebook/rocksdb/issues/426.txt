@@ -1,0 +1,8 @@
+There were still some precision loss problems
+remainging in RocksJava. This pull request resolve
+these.
+
+@igorcanadi adam confirmed this to be working
+
+CC: @adamretter 
+

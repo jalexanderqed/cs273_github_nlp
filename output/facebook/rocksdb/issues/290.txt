@@ -1,0 +1,47 @@
+Added support for the merge operation to RocksJava.
+You can specify a merge function to be used on the current database.
+The merge function can either be one of the functions defined in
+utilities/merge_operators.h, which can be specified through its
+corresponding name, or a user-created function that needs to be
+encapsulated in a JNI object in order to be used. Examples are
+provided for both use cases.
+
+Signed-off-by: Vlad Balan vlad.gm@gmail.com
+
+cc @yhchiang @ankgup87 
+
+This is great! Thanks for your contribution.  Before we start reviewing the detail, would you mind submitting the patch for review using https://reviews.facebook.net using `arc diff` command?  This will make the reviewing process much easier esp. for big pull request.  For example, pull request #232 by @ankgup87  (https://github.com/facebook/rocksdb/pull/232) is reviewed in this diff (https://reviews.facebook.net/D21753).
+
+@vladb38 Can you please upload this diff to reviews.facebook.net as commented by @yhchiang earlier in the comment. Its easier to discuss diffs on reviews.facebook.net
+
+I had some issues with the review software, I will try again today.
+
+https://reviews.facebook.net/D24525
+
+I fixed some of the issues from the initial pull request and produced a new review:
+https://reviews.facebook.net/D24573
+
+@vladb38, thanks for your contribution once again.  It seems like D24573 includes only the update, which makes it harder to do the review.  Can I know which command you used to create the second link?  Typically I run `git commit --amend` then `arc diff`, and this will update its existing diff review. 
+
+I see. My command was a new git commit, followed by an arc diff. I did not realize that a new commit will mean a brand new review. Should I squash the new commit into the old one and then run arc diff?
+
+@vladb38 you can do also a `arc diff --update <rev> origin/master` from the branch
+
+@vladb38 do you still work on this pull request ? If not I would care about getting merge functionality in.
+
+https://reviews.facebook.net/D24525 contains my final code. I am not sure what the status of the review is or whether I need to rebase based on master in order to make that code mergeable. Perhaps the Facebook developers can let me know? I can look at it on Monday if anything else needs to be changed.
+
+@vladb38 I only ask because it is not mergeable at the moment and there are still open points on phabricator.
+
+I fixed the merge conflict. Can you take a look at whether this can be now merged? I tried to address the open points in phabricator.
+
+ping @vladb38.  Have some comments in https://reviews.facebook.net/D24525 previously, once the comments are addressed, this diff should be good to go :)
+
+@yhchiang I put some replies to the three last comments in Phabricator (for the last version). Are you referring to those three comments or some previous ones?
+
+@vladb38: Didn't see the comment you mentioned in https://reviews.facebook.net/D24525.   Did you hit the submit button at the end to submit your replies?  Or did I follow the wrong diff?
+
+@yhchiang I had not clicked submit. I am sorry, the review system is a bit confusing at times, I did not expect the submit step for commenting.
+
+@vladb38 : yep, it's a bit confusing and happened to me previously.  Thanks for your contribution, btw.  Great work!
+

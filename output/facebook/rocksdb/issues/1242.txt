@@ -1,0 +1,18 @@
+If I do SetOptions for some column family handle and immediately do GetOptions for the same handle , I do not get the latest value. However if I do GetDescriptor for the same column family handle - i am able to retrieve the correct updated options value. 
+
+Can you provide more info, like which version of RocksDB are you using?
+
+RocksDB version: 4.6.1
+
+I have 1024 column families. I do the following on an opened DB
+1. Create column family with some default options where disable_auto_compactions is false.
+2. SetOptions on the column family to set disable_auto_compactions=true based on some condition
+3. Soon a function does GetOptions on the column family . It sees the original value of disable_auto_compactions i.e. still  false. 
+However I see the LOG file and Options file shows the option for the column family did get updated. 
+
+GetOptions does not reflect changes in SetOptions so far.
+
+@siying @yhchiang Shall we change the behavior to return latest setting?
+
+Fixed: https://github.com/facebook/rocksdb/commit/17f76fc5647ce1a06055c3eae8e5c8055749566f
+

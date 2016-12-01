@@ -1,0 +1,95 @@
+two issues:
+1) correct command line to build for iOS is: declare -x TARGET_OS=IOS;make static_lib
+2) error occurs in file util/file_util.cc at line:
+      s = srcfile->Read(bytes_to_read, &slice, buffer);
+the error is:
+util/file_util.cc:43:25: error: implicit conversion loses integer precision: 'uint64_t' (aka 'unsigned long long') to 'size_t'
+      (aka 'unsigned long') [-Werror,-Wshorten-64-to-32]
+      s = srcfile->Read(bytes_to_read, &slice, buffer);
+          ~~~~~~~       ^~~~~~~~~~~~~
+
+library was build with latest Xcode version 6.3.1 (6D1002)
+
+Getting the same issue
+
+@aklobanov will pass if you remove -Werror from the WARNING_FLAGS in Makefile 
+
+i've simply added the cast:       s = srcfile->Read((unsigned long)bytes_to_read, &slice, buffer);
+but on my opinion You should check this code behavior because it can potentially brings a problem.
+
+@aklobanov this is a good fix because bytes_to_read will be always smaller than 4K. https://github.com/facebook/rocksdb/blob/master/util/file_util.cc#L40
+
+Can you please send pull request? Also, we use `static_cast<unsigned long>()` instead of C-style casts.
+
+@igorcanadi i've not changed any repository here - i've done the change on my local copy downloaded as zip archive from this site. So i can not send the pull request.
+Also i'm not sure that the cast mentioned above is right for this code:
+
+```
+  while (size > 0) {
+    uint64_t bytes_to_read =
+        std::min(static_cast<uint64_t>(sizeof(buffer)), size);
+    if (s.ok()) {
+      s = srcfile->Read(bytes_to_read, &slice, buffer);
+    }
+    if (s.ok()) {
+      if (slice.size() == 0) {
+        return Status::Corruption("file too small");
+      }
+      s = destfile->Append(slice);
+    }
+    if (!s.ok()) {
+      return s;
+    }
+    size -= slice.size();
+  }
+```
+
+i think that there are two ways to change this code:
+1) the way i've choose to compile without error (using your advise about C++ casting):
+
+```
+"  while (size > 0) {
+    uint64_t bytes_to_read =
+        std::min(static_cast<uint64_t>(sizeof(buffer)), size);
+    if (s.ok()) {
+      s = srcfile->Read(static_cast<unsigned long>(bytes_to_read), &slice, buffer);
+    }
+    if (s.ok()) {
+      if (slice.size() == 0) {
+        return Status::Corruption("file too small");
+      }
+      s = destfile->Append(slice);
+    }
+    if (!s.ok()) {
+      return s;
+    }
+    size -= slice.size();
+  }
+```
+
+2) another possible way is to use unsigned long for bytes_to_read variable:
+
+```
+  while (size > 0) {
+    unsigned long bytes_to_read =
+        std::min(static_cast<unsigned long>(sizeof(buffer)), size);
+    if (s.ok()) {
+      s = srcfile->Read(bytes_to_read, &slice, buffer);
+    }
+    if (s.ok()) {
+      if (slice.size() == 0) {
+        return Status::Corruption("file too small");
+      }
+      s = destfile->Append(slice);
+    }
+    if (!s.ok()) {
+      return s;
+    }
+    size -= slice.size();
+  }
+```
+
+The right way should choose the developer of this code, i think.
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

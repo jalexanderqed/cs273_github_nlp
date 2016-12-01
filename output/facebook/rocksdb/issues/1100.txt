@@ -1,0 +1,69 @@
+For the background story - I am trying to work with `WBWI` (`WriteBatchWithIndex`) and merge operations. I have a need to be able to see the `merged` value of a key in the `WBWI` after I have performed the merge operation, e.g.
+
+``` C++
+db->Put(key, val)
+
+...
+
+wbwi->Merge(key, merge_val);
+
+auto dbIt = db->NewIterator();
+auto it = wbwi->NewIteratorWithBase(dbIt);
+
+for (it.Seek(keyPrefix); it.isValid() && memcmp(iterator.key(), keyPrefix) > 0; it.Next()) {
+  // unable to read the merged value here
+  it.Value();
+}
+```
+
+It seems that `WBWIterator` does not respect the merge semantics, which I really need and would have expected it to do intrinsically.
+
+So... I thought I would try and understand `WBWI::GetFromBatch` and `WBWI::GetFromBatchAndDB` to see if I could use those as an alternative.
+
+However, I am confused around the `rocksdb::Status` meaning of `kMergeInProgress` for those functions.
+
+For example,in  `utilities/write_batch_with_index/write_batch_with_index_test.cc` when looking in  at the test `TestGetFromBatchMerge`, I don't understand why the status for `x` after calling `GetFromBatch` is `OK`:
+
+``` C++
+batch.Put("x", "X");
+...
+batch.Merge("x", ToString(i));
+...
+s = batch.GetFromBatch(column_family, options, "x", &value);
+ASSERT_OK(s);
+```
+
+Yet, when compared to `TestGetFromBatchMerge2`, after calling `Merge` the status is `kMergeInProgress`, e.g.
+
+``` C++
+batch.Put(column_family, "X", "x");
+s = batch.GetFromBatch(column_family, options, "X", &value);
+ASSERT_OK(s);
+ASSERT_EQ("x", value);
+
+batch.Put(column_family, "X", "x2");
+s = batch.GetFromBatch(column_family, options, "X", &value);
+ASSERT_OK(s);
+ASSERT_EQ("x2", value);
+
+batch.Merge(column_family, "X", "aaa");
+s = batch.GetFromBatch(column_family, options, "X", &value);
+ASSERT_TRUE(s.IsMergeInProgress());
+```
+
+The code comments in `write_batch_with_index.h` are a bit vague. I am wondering under what circumstances when calling `GetFromBatch` (and `GetFromBatchAndDB`) will the status be `kMergeInProgress`?
+
+@adamretter We had the same problem in CockroachDB. My solution was to fork `BaseDeltaIterator` and add merge support. You can see the code [here](https://github.com/cockroachdb/cockroach/blob/master/storage/engine/rocksdb/db.cc#L983). I was planning to eventually bundle this into a patch to send upstream but never got around to it. 
+
+For reference @siying described to me that the difference is because `TestGetFromBatchMerge` constructs its `WriteBatchWithIndex` with `overwrite_key = false` i.e.
+
+``` C++
+WriteBatchWithIndex batch;
+```
+
+Whilst `TestGetFromBatchMerge2` constructs its WriteBatchWithIndex with `overwrite_key = true`, i.e.
+
+``` C++
+WriteBatchWithIndex batch(BytewiseComparator(), 0, true);
+```
+

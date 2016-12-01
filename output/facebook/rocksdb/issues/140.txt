@@ -1,0 +1,131 @@
+After I update rocksdb to version 3.0, and run `TARGET_OS=IOS make static_lib`
+Some errors occur
+
+warning: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: archive library: librocksdb.a will be fat and ar(1) will not be able to operate on it
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(c.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(db_filesnapshot.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(db_impl_debug.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(repair.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(tailing_iter.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(transaction_log_impl.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(plain_table_builder.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(plain_table_factory.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(plain_table_reader.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(blob_store.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(hash_cuckoo_rep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(hash_linklist_rep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(hash_skiplist_rep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(ldb_cmd.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(ldb_tool.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(sync_point.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(vectorrep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(backupable_db.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(geodb_impl.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(redis_lists.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: i386 file: librocksdb.a(db_ttl_impl.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(c.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(db_filesnapshot.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(db_impl_debug.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(repair.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(tailing_iter.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(transaction_log_impl.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(plain_table_builder.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(plain_table_factory.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(plain_table_reader.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(blob_store.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(hash_cuckoo_rep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(hash_linklist_rep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(hash_skiplist_rep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(ldb_cmd.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(ldb_tool.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(sync_point.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(vectorrep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(backupable_db.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(geodb_impl.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(redis_lists.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: x86_64 file: librocksdb.a(db_ttl_impl.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(c.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(db_filesnapshot.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(db_impl_debug.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(repair.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(tailing_iter.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(transaction_log_impl.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(plain_table_builder.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(plain_table_factory.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(plain_table_reader.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(blob_store.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(hash_cuckoo_rep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(hash_linklist_rep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(hash_skiplist_rep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(ldb_cmd.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(ldb_tool.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(sync_point.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(vectorrep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(backupable_db.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(geodb_impl.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(redis_lists.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv6 file: librocksdb.a(db_ttl_impl.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(c.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(db_filesnapshot.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(db_impl_debug.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(repair.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(tailing_iter.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(transaction_log_impl.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(plain_table_builder.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(plain_table_factory.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(plain_table_reader.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(blob_store.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(hash_cuckoo_rep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(hash_linklist_rep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(hash_skiplist_rep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(ldb_cmd.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(ldb_tool.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(sync_point.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(vectorrep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(backupable_db.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(geodb_impl.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(redis_lists.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7 file: librocksdb.a(db_ttl_impl.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(c.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(db_filesnapshot.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(db_impl_debug.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(repair.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(tailing_iter.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(transaction_log_impl.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(plain_table_builder.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(plain_table_factory.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(plain_table_reader.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(blob_store.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(hash_cuckoo_rep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(hash_linklist_rep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(hash_skiplist_rep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(ldb_cmd.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(ldb_tool.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(sync_point.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(vectorrep.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(backupable_db.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(geodb_impl.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(redis_lists.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: for architecture: armv7s file: librocksdb.a(db_ttl_impl.o) has no symbols
+
+Are does errors or warnings? I.e. does librocksdb.a exist after make? We deliberately don't include some parts of our codebase in IOS install to keep the size of the produced library small. This is expected.
+
+Thank for your explanation.
+Because I found some errors when I build iOS app, I guest they are not the same thing. 
+
+Undefined symbols for architecture x86_64:
+  "rocksdb::kPlainTableMagicNumber", referenced from:
+      rocksdb::Footer::DecodeFrom(rocksdb::Slice_) in librocksdb.a(format.o)
+  "rocksdb::kLegacyPlainTableMagicNumber", referenced from:
+      rocksdb::Footer::Footer(unsigned long long) in librocksdb.a(format.o)
+      rocksdb::Footer::Footer(unsigned long long) in librocksdb.a(format.o)
+      rocksdb::Footer::DecodeFrom(rocksdb::Slice_) in librocksdb.a(format.o)
+ld: symbol(s) not found for architecture x86_64
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+
+Hey @yuchi518, you're right, this is a bug. I fixed with https://github.com/facebook/rocksdb/commit/a1a1f61fa75e35340ec64624234f9b68520545b4 (3.0 branch) and https://github.com/facebook/rocksdb/commit/b5616dafd18418ac976b70a93f7398b737ec2fb5 (master branch)
+
+OK, thanks very much.
+
+You're welcome :) 
+

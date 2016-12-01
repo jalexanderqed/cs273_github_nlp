@@ -1,0 +1,16 @@
+Hello, when i build solution from sources i see many warnings in most cases [-Wunused-parameter].
+
+![warn](https://cloud.githubusercontent.com/assets/4686379/18209009/8c344458-713a-11e6-95a5-1b426030ccd0.png)
+
+Which RocksDB release are you using?
+
+Forked from this commit: https://github.com/facebook/rocksdb/commit/8fc75de3270bf709bc9525a069107585704a94a8
+
+RocksDB has many instances of this, such as a no-op function that ignores its parameters. Try compiling with `-Wno-unused-parameter` and there should be no warnings.
+
+For example: https://github.com/facebook/rocksdb/blob/522de4f59e6314698286cf29d8a325a284d81778/memtable/hash_cuckoo_rep.cc#L618 **const SliceTransform\* transform, Logger\* logger** how you can see this arguments not used, why in LevelDB implementation for example here: https://github.com/google/leveldb/blob/a7bff697baa062c8f6b8fb760eacf658712b611a/table/format.cc#L40 developers think about it? I want to build with next flags SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic") .
+
+Right. We have -Wno-unused-parameter in our default build script. Can you do it too?
+
+No i can't.
+

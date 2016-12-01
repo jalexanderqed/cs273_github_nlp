@@ -1,0 +1,35 @@
+This only seems to happen when building the rocksdbjava target, and only when building with clang.
+
+```
+# clang++ --version
+Ubuntu clang version 3.4-1ubuntu3 (tags/RELEASE_34/final) (based on LLVM 3.4)
+Target: x86_64-pc-linux-gnu
+Thread model: posix
+
+# make clean
+[...]
+
+# JAVA_HOME=/usr/lib/jvm/java-8-oracle CC=clang CXX=clang++ make -j13 rocksdbjava
+[...]
+clang++ -g -Wall -Werror -I. -I./include -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_ATOMIC_PRESENT -DROCKSDB_FALLOCATE_PRESENT -DSNAPPY -DGFLAGS=google -DZLIB -DBZIP2   -DHAVE_JEMALLOC -fPIC -DNDEBUG -O2 -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c util/auto_roll_logger.cc -o util/auto_roll_logger.o 
+clang++ -g -Wall -Werror -I. -I./include -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_ATOMIC_PRESENT -DROCKSDB_FALLOCATE_PRESENT -DSNAPPY -DGFLAGS=google -DZLIB -DBZIP2   -DHAVE_JEMALLOC -fPIC -DNDEBUG -O2 -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c util/blob_store.cc -o util/blob_store.o 
+db/version_set.cc:219:31: error: private field 'files_' is not used [-Werror,-Wunused-private-field]
+  std::vector<FileMetaData*>* files_;
+                              ^
+1 error generated.
+make[1]: *** [db/version_set.o] Error 1
+make[1]: *** Waiting for unfinished jobs....
+make[1]: Leaving directory `/home/at/rocksdb'
+make: *** [rocksdbjava] Error 2
+```
+
+is it master branch?
+
+Yes, latest master, 296e340753f23f213655ff1d4549c73fa0262038
+
+Ivan, we are fixing this issue.
+
+should be fixed by https://reviews.facebook.net/D20163
+
+Thank you for the fixes, it builds fine with clang now.
+

@@ -1,0 +1,14 @@
+We want to copy a snapshot of the DB, according to the interface of rocksdb, the step lists following:
+1. call DisableFileDeletions to exclude other thread delete obsolete files of the rocksdb
+2. call GetLiveFiles to get the names of all ssts, manifest, and Current 
+3. copy all the ssts, manifest, and current to build another db
+4. call EnableFileDeletions
+
+Everything seems ok!  However, one bug may make the new db can't be opened successfully.
+For example, During step 2 and step 3, some other threads may install the compaction or flush result into 
+the manifest, more data may append the manifest file.  If we set the value of max_manifest_file_size, and the size of current manifest excesses max_manifest_file_size, a new manifest file with new sequence  will be used, and the content of the current file will be changed to the new mainfest-sequence.  Thus, the name of the manifest may mismatch with the content of the current file when we copy the files in step 3, which will make the new db can't be opened successfully.
+
+You are exactly right, we noticed this issue too a few months ago and fixed it here: https://github.com/facebook/rocksdb/commit/72224104d339e19e708296f8a10f2ba7dcea88ee. The idea is, instead of copying the "CURRENT" file, just write a new one that refers to the checkpoint's manifest. I can update the documentation.
+
+@ajkr Thanks for your answer!
+

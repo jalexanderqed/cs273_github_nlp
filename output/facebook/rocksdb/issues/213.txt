@@ -1,0 +1,39 @@
+Hey guys,
+                 I compiled RocksDb without snappy and tried using it from java. When I set the compression type of snappy (I was expecting an error), the put and get options still seem to work without any issues. 
+
+``` java
+val options = new Options();
+   options.setCompressionType(CompressionType.SNAPPY_COMPRESSION).setCreateIfMissing(true);
+var db = RocksDB.open(options, "testdbpath");
+```
+
+Is the compression type silently ignored ? 
+
+I think we ignore it when compile time. In run time it is always appreciated. 
+
+In that case, I think this might be a bug.
+
+``` ruby
+~/Downloads/rocksdb/java(branch:master*) » ldd librocksdbjni.so                                                                                                                                                                                                                                                                                       nsomasun@nsomasun-ld
+    linux-vdso.so.1 =>  (0x00007fffaf5ff000)
+    libpthread.so.0 => /lib64/libpthread.so.0 (0x00007f0f80485000)
+    librt.so.1 => /lib64/librt.so.1 (0x00007f0f8027c000)
+    libz.so.1 => /lib64/libz.so.1 (0x00007f0f80066000)
+    libstdc++.so.6 => /usr/lib64/libstdc++.so.6 (0x00007f0f7fd60000)
+    libm.so.6 => /lib64/libm.so.6 (0x00007f0f7fadb000)
+    libgcc_s.so.1 => /lib64/libgcc_s.so.1 (0x00007f0f7f8c5000)
+    libc.so.6 => /lib64/libc.so.6 (0x00007f0f7f532000)
+    /lib64/ld-linux-x86-64.so.2 (0x00000037b1e00000)
+```
+
+There is no snappy in the shared library depedencies, but the runtime doesn't seem to indicate anything when SNAPPY_COMPRESSION is requested (No exceptions/warnings).
+
+@naveenatceg do you have snappy library when you build? You can take a look at build_tools/build_detect_platform and see how we decide whether to enable Snappy flag. Perhaps the library is just disabled if you don't have it when building.
+
+That's exactly what happens (and what I want), it's not included in the build (I don't have snappy installed). My question is, why am not seeing any errors when I am requesting a compression algorithm that is not supported (with the current build) ? 
+I am trying to test a situation where snappy is not installed in the machine, but the user requests it. Thanks for the prompt response!
+
+@naveenatceg we fall back to no compression if -DSnappy is not specified.
+
+OK, thanks! It would be useful if it can print a warning when the database is opened.
+

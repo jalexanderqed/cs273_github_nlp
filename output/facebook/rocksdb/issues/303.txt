@@ -1,0 +1,9 @@
+``` bash
+table/cuckoo_table_reader_test.cc:526:51: error: format specifies type 'long' but the argument has type 'int64_t' (aka 'long long') [-Werror,-Wformat]
+      time_per_op, 1.0 / time_per_op, batch_size, found_count);
+                                                  ^~~~~~~~~~~
+```
+
+my laptop's information:
+Darwin liuchang-air.local 13.3.0 Darwin Kernel Version 13.3.0: Tue Jun  3 21:27:35 PDT 2014; root:xnu-2422.110.17~1/RELEASE_X86_64 x86_64
+

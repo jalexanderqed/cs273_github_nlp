@@ -1,0 +1,49 @@
+Previously, the prefix extractor was being supplied with the RocksDB
+key instead of a parsed user key. This makes correct interpretation
+by calling application fragile or impossible.
+
+This is a good patch. Prefix extractor is usually given the user key, not the RocksDB internal key.
+
+We just need some time to figure out if it's going to break some use cases.
+
+Can you please update HISTORY.md to reflect this backwards incompatible change?
+
+Also, please run `make valgrind_check`
+
+Thanks for contributing!
+
+Confirmed that this shouldn't break anything internally. Merging.
+
+Cool thanks Igor.
+
+On Monday, August 18, 2014, Igor Canadi notifications@github.com wrote:
+
+> Merged #230 https://github.com/facebook/rocksdb/pull/230.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/pull/230#event-153987871.
+
+It looks like this change broke the valgrind test. I'm looking into this.
+
+Hmm I did run valgrind check. Though I did so on Darwin...
+
+On Monday, August 18, 2014, Igor Canadi notifications@github.com wrote:
+
+> It looks like this change broke the valgrind test. I'm looking into this.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/pull/230#issuecomment-52530836.
+
+This is what I get
+
+09:27:42 ==16880== 56 bytes in 1 blocks are definitely lost in loss record 4 of 4
+09:27:42 ==16880==    at 0x4C2B7D9: operator new(unsigned long) (in /usr/local/fbcode/gcc-4.8.1-glibc-2.17/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+09:27:42 ==16880==    by 0x410AAD: rocksdb_slicetransform_create (c.cc:1912)
+09:27:42 ==16880==    by 0x409374: main (c_test.c:611)
+
+https://github.com/facebook/rocksdb/commit/a6fd14c881fa72a7bfeb1e02ecd454a1e164597b fixes
+
+thanks @igorcanadi 
+

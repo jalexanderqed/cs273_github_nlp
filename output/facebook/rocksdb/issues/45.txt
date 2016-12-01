@@ -1,0 +1,8 @@
+`make install` is a standard way to copy all the library files to the system. rocksdb should have `make install` as well.
+
+That makes sense.
+
+I'll assign this to myself for now. Once I have bandwidth I'll be glad to add this feature. But if some one else is interested, please feel free to send us the feature request.
+
+please reopen if somebody thinks this is important...
+

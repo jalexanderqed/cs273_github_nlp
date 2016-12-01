@@ -1,0 +1,136 @@
+Recently, I use YCSB to test RocksDB, and find RocksDB always compact almost all files of level 0 and level 1, as below. I checked the source code of RocksDB, and find for level 0, RocksDB will choose one file in level0 first, get the key range from it's smallest key to largest key, then choose all files which keys are overlap the key range in level 0 and level 1 and do compaction. 
+
+```
+(Original Log Time 2014/09/16-20:51:21.419761) [default] Compacting 98@0 + 334@1 files, score 10000.00 slots available 6
+(Original Log Time 2014/09/16-20:53:37.263218) [default] Compacting 98@0 + 334@1 files, score 10000.00 slots available 6
+(Original Log Time 2014/09/16-20:55:55.147865) [default] Compacting 99@0 + 334@1 files, score 10000.00 slots available 5
+(Original Log Time 2014/09/16-20:58:11.503693) [default] Compacting 99@0 + 334@1 files, score 10000.00 slots available 5
+```
+
+I get the key range of the files in level 0 from manifest, as below, and find the key range of every file is from user100xxxxxxxxxx to user999xxxxxxxxxx, the key is created by YCSB in random mode. This key range almost overlaps all data in database, so RocksDB will choose all files of level 0 and level 1 when do compaction in level 0.
+
+ 8935:1044501['user10013668312413176' @ 5864263 : 1 .. 'user997127350798602990' @ 5863871 : 1]
+ 8933:1037352['user1024217006872008438' @ 5862212 : 1 .. 'user989795509366005388' @ 5862588 : 1]
+ 8931:1034923['user1000971235424350841' @ 5861806 : 1 .. 'user997252540122266127' @ 5861306 : 1]
+ 8929:1027756['user101390370444497032' @ 5860715 : 1 .. 'user994431273086147254' @ 5860232 : 1]
+
+In this compaction strategy, for example, once I modify the values of smallest key and largest key, RocksDB should compact all files of level 0 and level 1, is it right?
+I think this strategy may be not appropriate, or there is something wrong with my config, can you give me some suggestion to avoid this situation? Thanks
+
+ This is my config:
+ rocksdb:
+    # in GB
+    cache_size: 1
+    # in KB
+    block_size: 4
+    # in MB
+    write_buffer_size: 32
+    # yes|no
+    compression: yes
+    # default 200
+    max_open_files: 500000
+
+```
+#Speed strategy - Level 0
+level0_file_num_compaction_trigger: 16
+level0_slowdown_writes_trigger: 64
+level0_stop_writes_trigger: 256
+
+#Speed strategy - Level N (N > 0)
+# in MB
+target_file_size_base: 32
+target_file_size_multiplier: 1
+# in MB
+max_bytes_for_level_base: 1024
+max_bytes_for_level_multiplier: 10
+
+#just for bulk loading data: yes|no
+disableDataSync:  no
+max_background_compactions: 8
+max_write_buffer_number: 20
+rate_limit_delay_max_milliseconds: 1000
+# in KB, write_buffer_size / 10
+arena_block_size:   3200
+# in second
+delete_obsolete_files_period_micros: 300
+
+#disable_seek_compaction
+disable_seek_compaction: no
+num_levels: 7
+min_write_buffer_number_to_merge: 1
+```
+
+Hello @AaronCsy, since each single L0 file represents a sorted run in RocksDB or in a typical LSM database (unlike in other levels, all files in same level together represent a sorted run,) we expect to see L0 files overlapping in their key-ranges.  As a result, L0 -> L1 compaction will most likely include almost all L0 and L1 files.
+
+In case keys are inserted in some time-based order (such as time-stamp + id as key,) then the key range of each L0 file won't overlap.
+
+Hey @AaronCsy. Thanks for your question. Check out our Tuning guide: https://github.com/facebook/rocksdb/wiki/RocksDB-Tuning-Guide
+
+We recommend making L0->L1 compaction very fast. Once the LSM tree is filled up, the majority of time spent on compaction will happen concurrently at higher levels (L2, L3, etc.), since that's where we'll have the most data.
+
+@AaronCsy as @yhchiang said, the behavior is expected.
+
+Your Level 1 has 300+ files, which is higher than the target (which should be max_bytes_for_level_base/target_file_size_base). It's hard to guess what exactly happened but my gut feeling is that compaction is not able to catch up with the speed you write to the system.
+
+I saw you set max_background_compactions=8, is there any chance you forgot to set Env's thread pool size to be 8 or larger?
+
+alternatively, you can also set hard_rate_limit to avoid this issue.
+
+Hi,@yhchiang. If I use time-stamp + id as key, there will be b1, b2 in level 0 and a1, a2 in level 1. Time b > Time a, how can I compare the key when doing compaction? If I compare the key with time-stamp, the key range won't overlap in every compaction, and the dataset will be bigger and bigger. If I compare the key without time-stamp, then the time-stamp is no use for compaction.
+
+Hi,@igorcanadi. Thanks for your response. 
+RocksDB only allow one thread do compaction in level 0, so when throughput is high, the compaction of L0->L1 cann't be fast, because there are so many files. Is there any method I can make the compaction fast?
+
+Hi,@siying, when I use YCSB to insert record to RocksDB, the throughput is about 60000, the size of each record is 1k, but the compaction speed is slow, because there is only one thread doing compaction in level 0, the score of level 0 is larger than level 1, so L1 has no time to compact files to L2, and the files of L1 is more and more.  
+
+Disable compression for L0, L1 and maybe L2. You don't get much space
+savings from that and it makes compaction slower. L0->L1 and L1->L2
+compaction are usually mutually exclusive, so you want L0->L1 to be fast
+(maybe sizeof(L0) == sizeof(L1)).
+
+Maybe make the write_buffer_size larger and then shrink the l0 triggers for
+compaction, stall and slowdown.
+
+Assuming there is no compression I think you have configured compaction to
+start at 16 X 32MB == 512MB in L0 and L1 (target_file_size_base) is 1G.
+Shrinking L1 to 512MB to match L0 might help.
+
+On Wed, Sep 17, 2014 at 8:39 PM, AaronCsy notifications@github.com wrote:
+
+> Hi,@siying https://github.com/siying, when I use YCSB to insert record
+> to RocksDB, the throughput is about 60000, the size of each record is 1k,
+> but the compaction speed is slow, because there is only one thread doing
+> compaction in level 0, the score of level 0 is larger than level 1, so L1
+> has no time to compact files to L2, and the files of L1 is more and more.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/291#issuecomment-55991466.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Hi,@ljinfb, would the throughput drop down if I set hard_rate_limit? When the throughput is high, I often found the throughput drop down because slowdown is triggered in level 0, then the file number of L0 reduce because of compaction, and throughput goes back to high.  With L0 file number increase, throughput decline again. Is there any method can keep the throughput in stable level?
+
+Hi @AaronCsy did you read our Tuning guide? It should answer some of your questions regarding hard_rate_limit. Also check out level0_slowdown_writes_trigger and level0_stop_writes_trigger to understand how you can smooth out your throughput. Making L0->L1 fast means reducing number of files at L0 and L1.
+
+Hi,@mdcallag,thanks for your response, I will configure RocksDB as you suggest and benchmark again.Thanks.
+
+Hi,@igorcanadi,I am reading the Tuning guide, and I will benchmark again as you suggest, thanks for your response.
+
+@AaronCsy: yes, in that case the db size will keep growing.  I used that as an example where a L0 file will have overlapping key-range with all L1 files and was not saying you should do that in the benchmark :p  Typically such use case will pair with TTL.
+
+@AaronCsy, you are right that the throughput will drop down. However, that is the way to prevent the DB getting into a bad state (compaction cannot keep up). If the DB gets into a state like what you described, the thoughput will become much worse eventually.
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+
+hi @skanskan 
+Sorry for late.
+we use the ssdb-rocks for supporting the Client-Server service for RocksDB, and we simply developed a client of RocksDB by studying from ssdb-rocks and added it to YCSB-master. The added process is shown in ycsb guide actually.
+
+@skanskan I have a basic driver for RocksDB's Java API for YCSB that I created a few months ago, I just pushed it if you want to take a look - https://github.com/adamretter/YCSB/tree/rocks-java. It functions but needs a bit more work around config etc.
+
+I note that it takes a slightly different approach that that of EthanHamilton Tibco with @yosubshin's https://github.com/YosubShin/RocksDB-YCSB work. My approach is using one RocksDB Column-Family per YCSB `table`, which I hoped would give better performance for scans than putting everything in the default column family; However, I haven't benchmarked that comparison yet ;-)
+

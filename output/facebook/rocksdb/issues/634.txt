@@ -1,0 +1,22 @@
+On an Ubuntu 14.04.2 32 bit system with gcc 4.8.2, I get the following build error:
+
+```
+util/crc32c.cc: In function ‘void rocksdb::crc32c::Fast_CRC32(uint64_t*, const uint8_t**)’:
+util/crc32c.cc:318:39: error: ‘_mm_crc32_u64’ was not declared in this scope
+   *l = _mm_crc32_u64(*l, LE_LOAD64(*p));
+```
+
+I don't know if it is supposed to exist on a 32 bit system or not, but `__SSE4_2__` is defined, so the code assumes it exists.
+
+I have the same issue with Ubuntu 14.04 and gcc 4.8.2
+
+Is it 32 or 64 bit?
+
+maybe we should also guard it with `#ifdef __LP64__`
+
+Everything about determine whether it can be used is here: https://github.com/facebook/rocksdb/blob/master/util/crc32c.cc#L369-L384
+
+If you can improve these functions in appropriate way and send a pull request for it, we will greatly appreciate it.
+
+In my case it is 32-bit Ubuntu.
+

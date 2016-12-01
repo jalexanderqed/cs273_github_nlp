@@ -1,0 +1,122 @@
+Hi,
+
+I was doing a long running YCSB test, of which I cannot give a lot of details other than I had two processes: client and server -both java-, with the server running rocksDB.
+
+ I got a crash with the following stack trace on the server,
+
+(gdb) bt
+#0  0x00000034bf8328a5 in raise () from /lib64/libc.so.6
+#1  0x00000034bf834085 in abort () from /lib64/libc.so.6
+#2  0x00000034bf82ba1e in __assert_fail_base () from /lib64/libc.so.6
+#3  0x00000034bf82bae0 in __assert_fail () from /lib64/libc.so.6
+#4  0x00007ff846a838b1 in rocksdb::DBImpl::MarkLogsSynced (this=0x7ff8582692e0, up_to=377959, synced_dir=Unhandled dwarf expression opcode 0xf3
+
+) at db/db_impl.cc:2209
+#5  0x00007ff846a9d09c in rocksdb::DBImpl::WriteImpl (this=0x7ff8582692e0, write_options=Unhandled dwarf expression opcode 0xf3
+
+) at db/db_impl.cc:4494
+#6  0x00007ff846a9dc64 in rocksdb::DBImpl::Write (this=Unhandled dwarf expression opcode 0xf3
+
+) at db/db_impl.cc:4077
+#7  0x00007ff846a9dcfa in rocksdb::DB::Put (this=0x7ff8582692e0, opt=..., column_family=0x7ff8584d7440, key=..., value=...) at db/db_impl.cc:5225
+#8  0x00007ff846a9dd41 in rocksdb::DBImpl::Put (this=Unhandled dwarf expression opcode 0xf3
+
+) at db/db_impl.cc:4052
+#9  0x00007ff846a59e1a in rocksdb::DB::Put (this=0x7ff8582692e0, options=..., key=..., value=...) at ./include/rocksdb/db.h:185
+#10 0x00007ff846a27ffa in rocksdb_put_helper (env=0x7ff8582729d0, db=0x7ff8582692e0, write_options=..., cf_handle=0x0, jkey=0x7ff83eed6638, jkey_len=23, jentry_value=0x7ff83eed6648, jentry_value_len=1081)
+
+```
+at java/rocksjni/rocksjni.cc:300
+```
+
+The workload was,
+
+fieldcount=10
+recordcount=50000000
+operationcount=10000000
+workload=com.yahoo.ycsb.workloads.CoreWorkload
+readallfields=true
+readproportion=0.5
+updateproportion=0.5
+scanproportion=0
+insertproportion=0
+requestdistribution=zipfian
+
+Shortly before crashing, the server process logged the following in the standard error,
+
+java: db/db_impl.cc:2209: void rocksdb::DBImpl::MarkLogsSynced(uint64_t, bool, const rocksdb::Status&): Assertion `log.getting_synced' failed.
+
+Could be the same bug as in #872 
+
+Thanks for the quick answer. Any way to tell? I have a relatively recent checkout (last week). And I am using default settings. The only changes that I have from default are,
+
+For the DB,
+        Options options = new Options();
+        options.setCreateIfMissing(true);
+And for the write operations,
+            writeOptions = new WriteOptions();
+            writeOptions.setSync(true);
+
+I am also using the JNI interface, in case that matters.
+
+Thanks again. 
+
+We will be fixing #872 soon, so once it's fixed we'll be able to see if it repros for you, too. We should have fixed a while ago, sorry about that.
+
+In the meanwhile, if you remove `writeOptions.setSync(true)`, your problem should be gone.
+
+Thanks Igor. I am looking forward to it. Once you have the fix out, I will close this if it fixes our problem. I will be removing the sync option for now, but we will definitely need it to move forward.
+
+Thanks again. 
+
+Out of curiosity, why do you need write option with syncing behavior?
+
+I cannot say much about why, only that we do :-) . The bottom line is that we want to ack only operations that have been written in disk for sure. The scenario here is that of a system of record. Is it unusual for RocksDB to be used in this type of scenario? 
+Or perhaps there is a different way to accomplish this goal without setting writeOptions.setSync(true). If you have ideas on how to accomplish this goal without sync write operations, I would love hear them. thanks again! 
+
+Hi Igor,
+
+You probably didn't get an update on my edits. It would be great if we could have your input for the scenario under consideration. Maybe in most cases people do periodic commits instead of forcing each operation to be sync, but I would be interested in how people use RocksDB in system of record scenarios using async writes. 
+
+Thanks!
+
+Many of us have workloads that require sync-on-commit. We need to improve test coverage for this feature. Please ask if you need tuning advice and good luck with your YCSB runs.
+
+Thanks Mark,
+
+I will definitely need advice at a later time, at this point I am just running standard YCSB workloads on tens of GB datasets to get an idea of what to expect. I will get back to you when when time comes.
+
+https://reviews.facebook.net/D54621 to fix the assert.
+
+Thanks! I will probably do the test towards the end of the week and report results once I have them.
+
+I got a couple of compilation warnings (see below) but the crash is gone. Thanks for your quick response on this and other issues.!I am closing this now.
+
+  CC       jl/utilities/transactions/transaction_base.o
+utilities/transactions/transaction_base.cc: In member function 'virtual void
+rocksdb::TransactionBaseImpl::UndoGetForUpdate(rocksdb::ColumnFamilyHandle*,
+const rocksd  b::Slice&)':
+
+utilities/transactions/transaction_base.cc:505:8: warning: variable
+'can_unlock' set but not used [-Wunused-but-set-variable]
+
+   bool can_unlock = false;
+
+and
+
+java/rocksjni/write_batch_test.cc: In function '_jbyteArray*
+Java_org_rocksdb_WriteBatchTest_getContents(JNIEnv*, jclass, jobject)':
+
+java/rocksjni/write_batch_test.cc:63:10: warning: unused variable 'parsed'
+[-Wunused-variable]
+
+```
+ bool parsed = rocksdb::ParseInternalKey(iter->key(), &ikey);
+```
+
+And as a closing remark, if you want to improve the perf results of the YCSB test, please do let us know (along with the rocksdb params that u r using). RocksDB typically needs some tuning to extract the last bit of perf from it.
+
+Thanks! Will do. I am limited about what I can say now about what we are doing with RocksDB but I will surely ask for advice if I need to. I watched the talk by the Samsung guy at the last RocksDB meetup and I understand that performance can be dramatically increased with the appropriate tuning regardless of the workload. 
+
+At this point we are mostly interested in understanding uses of RocksDB in system of record type of scenarios, which is why having the fix for this crash was critical. Thanks again! 
+

@@ -1,0 +1,19 @@
+- Remove make file defines from public headers and use _WIN32 because it is compiler defined
+- use **GNUC** and **clang** to guard non-portable attributes
+- add #include "port/port.h" to some new .cc files.
+- minor changes in CMakeLists to reflect recent changes
+
+Sorry for loosing the comments in the previous PR. Git would not co-operate.
+
+Great! Please rebase the codes and I think it will be ready to go.
+
+Maybe as a separate diff but incluce/rocksdb/c.h has yet another OS_WIN to remove.
+
+@siying I think this might be the right place to do it.
+
+@yuslepukhin should replace it by _WIN32?
+
+@siying Yes, that is the way to do currently.
+
+Merged. Thank you for your contribution and patient in addressing the comments.
+

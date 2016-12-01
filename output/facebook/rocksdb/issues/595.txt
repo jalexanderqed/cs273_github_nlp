@@ -1,0 +1,210 @@
+Conditions to hang database at Write(batch)  - master branch code
+
+```
+#2  0x00000000004e42aa in rocksdb::InstrumentedCondVar::WaitInternal 
+```
+
+Steps to reproduce (all together):
+1) Use column families.
+2) Use TTL feature. 
+3) Use batch with size > 96mb
+
+Code:
+
+``` c++
+#include "rocksdb/utilities/db_ttl.h"
+#include <stdio.h>
+#include <iostream>
+
+int main(int argc, char *argv[])
+{
+  rocksdb::DBWithTTL* db;
+
+  rocksdb::Options options;
+  options.create_if_missing = true;
+  options.create_missing_column_families = true;
+  std::vector<rocksdb::ColumnFamilyDescriptor> column_families;
+  column_families.push_back(rocksdb::ColumnFamilyDescriptor("column", rocksdb::ColumnFamilyOptions()));
+  column_families.push_back(rocksdb::ColumnFamilyDescriptor(rocksdb::kDefaultColumnFamilyName,
+    rocksdb::ColumnFamilyOptions()));
+  std::vector<rocksdb::ColumnFamilyHandle*>  handles;
+
+  rocksdb::DestroyDB("./testdb", options);
+
+  rocksdb::Status status = rocksdb::DBWithTTL::Open(options, "./testdb",
+                     column_families,
+                     &handles,
+                     &db, { 1000000, 1000000 } );
+
+  if (!status.ok()) {
+   std::cerr << "open:" << status.ToString() << std::endl;
+   return 1;
+  }
+
+  auto to_mb = [](size_t size) { return  std::to_string(size / 1024 / 1024) + "mb"; };
+  auto test = [&]() {
+  long long j=0;
+
+  for (int i=0; i<20; i++) {
+    for(int pass=1; pass<=3; pass++) {
+      rocksdb::WriteBatch batch;
+      size_t write_size = 1024 * 1024 * (95 + i);
+
+      std::cout << "prepare: " << to_mb(write_size) << ", pass:"  << pass << std::endl;
+      for(;;) {
+        std::string data(3000, j++ % 127 + 20);
+        data += std::to_string(j);
+        batch.Put(handles[0], rocksdb::Slice(data), rocksdb::Slice(data));
+        if (batch.GetDataSize() > write_size)
+          break;
+      }
+
+      std::cout << "write: " <<  to_mb(batch.GetDataSize()) << std::endl;
+      status = db->Write(rocksdb::WriteOptions(), &batch);
+      std::cout << "done" << std::endl;
+
+      if (!status.ok()) {
+        std::cerr << "write error:" << status.ToString() << std::endl;
+        return;
+      }
+    }
+   }
+  };
+
+  test();
+  delete db;
+  return 0;
+}
+```
+
+rocksdb compiled on RHEL5, RHEL6, RHEL7, Ubuntu 15.04 with 
+make release (and reprodused problem on all platforms)
+
+program output:
+
+```
+./t
+prepare: 95mb, pass:1
+write: 95mb
+done
+prepare: 95mb, pass:2
+write: 95mb
+done
+prepare: 95mb, pass:3
+write: 95mb
+done
+prepare: 96mb, pass:1
+write: 96mb
+done
+prepare: 96mb, pass:2
+write: 96mb
+done
+prepare: 96mb, pass:3
+write: 96mb
+done
+prepare: 97mb, pass:1
+write: 97mb
+^^^^^^^^^^^^^^^^^^^^^^^^^ <---- infinite hangs at this point
+```
+
+gdb output:
+
+```
+(gdb)  thread apply all bt full
+
+Thread 3 (Thread 0x40e82940 (LWP 31057)):
+#0  0x0000003f0b20aee9 in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+No symbol table info available.
+#1  0x00000000004da137 in rocksdb::(anonymous namespace)::PosixEnv::ThreadPool::BGThread (this=0x23e9810, thread_id=0) at util/env_posix.cc:1647
+        function = 0x41ce08 <rocksdb::DBImpl::BGWorkFlush(void*)>
+        arg = 0x23eea10
+        decrease_io_priority = false
+        low_io_priority = false
+#2  0x00000000004da3d5 in rocksdb::(anonymous namespace)::PosixEnv::ThreadPool::BGThreadWrapper (arg=0x23f6af0) at util/env_posix.cc:1724
+        meta = 0x23f6af0
+        thread_id = 0
+        tp = 0x23e9810
+#3  0x0000003f0b20673d in start_thread () from /lib64/libpthread.so.0
+No symbol table info available.
+#4  0x0000003f0a6d44bd in clone () from /lib64/libc.so.6
+No symbol table info available.
+#5  0x0000000000000000 in ?? ()
+No symbol table info available.
+
+Thread 2 (Thread 0x422fb940 (LWP 31060)):
+#0  0x0000003f0b20aee9 in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+No symbol table info available.
+#1  0x00000000004da137 in rocksdb::(anonymous namespace)::PosixEnv::ThreadPool::BGThread (this=0x23e9730, thread_id=0) at util/env_posix.cc:1647
+        function = 0x41ce3a <rocksdb::DBImpl::BGWorkCompaction(void*)>
+        arg = 0x23eea10
+        decrease_io_priority = false
+        low_io_priority = false
+#2  0x00000000004da3d5 in rocksdb::(anonymous namespace)::PosixEnv::ThreadPool::BGThreadWrapper (arg=0xe4a5f40) at util/env_posix.cc:1724
+        meta = 0xe4a5f40
+        thread_id = 0
+        tp = 0x23e9730
+#3  0x0000003f0b20673d in start_thread () from /lib64/libpthread.so.0
+No symbol table info available.
+#4  0x0000003f0a6d44bd in clone () from /lib64/libc.so.6
+No symbol table info available.
+#5  0x0000000000000000 in ?? ()
+No symbol table info available.
+
+Thread 1 (Thread 0x2b288f8a4ee0 (LWP 31055)):
+#0  0x0000003f0b20aee9 in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+No symbol table info available.
+#1  0x00000000004b79d0 in rocksdb::port::CondVar::Wait (this=0x23eeba0) at port/port_posix.cc:83
+No locals.
+#2  0x00000000004e42aa in rocksdb::InstrumentedCondVar::WaitInternal (this=0x23eeba0) at util/instrumented_mutex.cc:50
+No locals.
+#3  0x00000000004e423d in rocksdb::InstrumentedCondVar::Wait (this=0x23eeba0) at util/instrumented_mutex.cc:42
+        perf_step_timer_db_condition_wait_nanos = {enabled_ = false, env_ = 0x0, start_ = 0, metric_ = 0x2b288f8a4eb0}
+        wait_time_micros = 0
+#4  0x00000000004240f6 in rocksdb::DBImpl::DelayWrite (this=0x23eea10, expiration_time=0) at db/db_impl.cc:3359
+        sw = {env_ = 0x8bb7a0 <rocksdb::Env::Default()::default_env>, statistics_ = 0x0, hist_type_ = 19, elapsed_ = 0x7fff6c8a6768, stats_enabled_ = false, start_time_ = 1430206202357164}
+        has_timeout = false
+        delay = 0
+        time_delayed = 0
+        delayed = true
+        timed_out = false
+#5  0x00000000004232c3 in rocksdb::DBImpl::Write (this=0x23eea10, write_options=..., my_batch=0x7fff6c8a6c18) at db/db_impl.cc:3204
+        perf_step_timer_write_pre_and_post_process_time = {enabled_ = false, env_ = 0x0, start_ = 0, metric_ = 0x2b288f8a4e90}
+        w = {status = {code_ = rocksdb::Status::kOk, state_ = 0x0}, batch = 0x7fff6c8a6c18, sync = false, disableWAL = false, in_batch_group = false, done = false, timeout_hint_us = 18446744073709551615, cv = {cond_ = {cv_ = {__data = {
+                  __lock = 0, __futex = 0, __total_seq = 0, __wakeup_seq = 0, __woken_seq = 0, __mutex = 0x0, __nwaiters = 0, __broadcast_seq = 0}, __size = '\000' <repeats 47 times>, __align = 0}, mu_ = 0x23eeb50}, stats_ = 0x0,
+            env_ = 0x8bb7a0 <rocksdb::Env::Default()::default_env>, stats_code_ = 30}}
+        has_timeout = false
+        __PRETTY_FUNCTION__ = "virtual rocksdb::Status rocksdb::DBImpl::Write(const rocksdb::WriteOptions&, rocksdb::WriteBatch*)"
+---Type <return> to continue, or q <return> to quit---
+        status = {code_ = rocksdb::Status::kOk, state_ = 0x0}
+        max_total_wal_size = 100663296
+        expiration_time = 0
+        context = {superversions_to_free_ = {num_stack_items_ = 3, values_ = {0x2aaac1f34d90, 0x2aaacbfaa850, 0x2aaac1f35e90, 0x7fff6c8a79c0, 0x0, 0x0, 0x3f0a674e2e <malloc+110>, 0xbdb},
+            vect_ = {<std::_Vector_base<rocksdb::SuperVersion*, std::allocator<rocksdb::SuperVersion*> >> = {
+                _M_impl = {<std::allocator<rocksdb::SuperVersion*>> = {<__gnu_cxx::new_allocator<rocksdb::SuperVersion*>> = {<No data fields>}, <No data fields>}, _M_start = 0x0, _M_finish = 0x0,
+                  _M_end_of_storage = 0x0}}, <No data fields>}}, schedule_bg_work_ = true}
+        last_sequence = 47453201424384
+        last_writer = 0x4e74d3 <rocksdb::DBWithTTLImpl::Handler::PutCF(uint32_t, rocksdb::Slice const&, rocksdb::Slice const&)+193>
+#6  0x00000000004e7741 in rocksdb::DBWithTTLImpl::Write (this=0x23f38c0, opts=..., updates=0x7fff6c8a6c90) at utilities/ttl/db_ttl_impl.cc:287
+        handler = warning: RTTI symbol not found for class 'rocksdb::DBWithTTLImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch*)::Handler'
+{<rocksdb::WriteBatch::Handler> = {_vptr.Handler = 0x8b61f0 <vtable for rocksdb::DBWithTTLImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch*)::Handler+16>}, updates_ttl = {<rocksdb::WriteBatchBase> = {
+              _vptr.WriteBatchBase = 0x8b5030 <vtable for rocksdb::WriteBatch+16>}, rep_ = {static npos = <optimized out>,
+              _M_dataplus = {<std::allocator<char>> = {<__gnu_cxx::new_allocator<char>> = {<No data fields>}, <No data fields>}, _M_p = 0x2aaacc000028 ""}}}, batch_rewrite_status = {code_ = rocksdb::Status::kOk, state_ = 0x0},
+          env_ = 0x8bb7a0 <rocksdb::Env::Default()::default_env>}
+#7  0x000000000040c76d in main::{lambda()#2}::operator()() const ()
+No symbol table info available.
+#8  0x000000000040cc66 in main ()
+No symbol table info available.
+
+```
+
+I found that it also reprodused without TTL now.
+
+Thanks for the great bug report! I'm able to reproduce and will investigate.
+
+@malexzx can you verify that this issue is fixed with https://github.com/facebook/rocksdb/commit/d2346c2cf0490de4823fd449c2082cd82a871cc2?
+
+Thanks for fast fix,
+It worked!
+
+Glad to hear!
+

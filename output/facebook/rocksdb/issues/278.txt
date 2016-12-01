@@ -1,0 +1,54 @@
+When running make jtest, I get a failure:
+java -ea -Djava.library.path=.:../ -cp "rocksdbjni.jar:.:./_" org.rocksdb.test.OptionsTest
+Exception in thread "main" java.lang.AssertionError
+        at org.rocksdb.test.OptionsTest.main(OptionsTest.java:94)
+make[1]: *_\* [test] Error 1
+
+I think it's because setMaxLogFileSize takes a long as it's argument but the long is converted to size_t in C++ and that's 32 bits.
+Could be solved by using in the test case
+ long longValue = rand.nextInt(Integer.MAX_VALUE);
+instead of
+ long longValue = rand.nextLong()
+
+Same error is present in other test cases as well.
+
+Thanks for reporting this issue.  I think probably a better way would be convert such overflowed `jlong` into `std::limits<size_t>::max()` and document it properly.   I will provide the fix shortly.
+
+Attached fix: https://reviews.facebook.net/D23511.  Will push to master once it has been reviewed.  Thanks for reporting the issue again :)
+
+@yhchiang the tests still fail on 32-bit linux using an up-to-date upstream master branch.
+
+```
+java -ea -Djava.library.path=.:../ -cp "rocksdbjni.jar:.:./*" org.rocksdb.test.OptionsTest
+Exception in thread "main" java.lang.AssertionError
+        at org.rocksdb.test.OptionsTest.main(OptionsTest.java:88)
+```
+
+@yhchiang https://github.com/facebook/rocksdb/issues/245 relates probably also with this here. I checked it with various attempts here on my local machine. See e.g. Debug Output here:
+
+```
+java -ea -Djava.library.path=.:../ -cp "rocksdbjni.jar:.:./*" org.rocksdb.test.OptionsTest
+-6623342279488472570
+3980622342
+Exception in thread "main" java.lang.AssertionError
+        at org.rocksdb.test.OptionsTest.main(OptionsTest.java:90)
+```
+
+The first number is the long value passed from Java. The second one whats getting back from the native interface.  This would lead to the assumption that RocksJava is currently limited to 32bit unsigned int. Bigger numbers couldnt be verified here.
+
+The test position where this one fails is never on a native pointer but always on settings which describe some sort of size of files or number of files ... 
+
+I think i found the problem. Options.h includes a whole lot of `size_t` declarations which will be on 32bit architecture .. 32bit. However no matter what happens jlong is 64bit. Even without that declaration some jlongs are casted to 32bit by casting them to `size_t`.  So the OptionsTest will fail for identity comparison.
+
+@yhchiang can you have a look into https://github.com/fyrz/rocksdb/commit/7ffab4673df565ba1ba388a376889b689d817959, its a rough draft but that might be a way to solve the problem on a long term perspective:
+
+Whats the proposal:
+1. There is a new org.rocksdb.test.PlatformRandomHelper to assist in getting random values. For 32 Bit the getLong method is overriden by xpromaches code above. For 64 Bit it behaves as is.
+2. The detection should be cross-platform (Windows is supported though it is not ported completely yet).
+3. Every JNI method which sets jlong values must check if the value fits into size_t. If it overflows size_t a InvalidArgument Status object will be returned. If its ok a OK Status will be returned.
+4. Setters which have this check will throw a RocksDBException if its no OK Status.
+
+What do you think ? If you say thats also ok for you i would finish this tomorrow and create another arc diff review.
+
+@yhchiang this one can be closed also. With the merge `make rocksdbjava` builds fine. Tested right now on a 32Bit Ubuntu 14.04 LTS Lenovo X60s notebook.
+

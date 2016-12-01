@@ -1,0 +1,4 @@
+This resolves https://github.com/facebook/rocksdb/issues/809
+
+@siying @IslamAbdelRahman Pls, review.
+

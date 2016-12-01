@@ -1,0 +1,18 @@
+When calling StatisticsImpl::HistogramInfo::getMergedHistogram(), if
+there is a dying thread, which is calling
+ThreadLocalPtr::StaticMeta::OnThreadExit() to merge its thread values to
+HistogramInfo, deadlock will occur. Because the former try to hold
+merge_lock then ThreadMeta::mutex_, but the later try to hold
+ThreadMeta::mutex_ then merge_lock. In short, the locking order isn't
+the same.
+
+This patch addressed this issue by releasing merge_lock before folding
+thread values.
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+**If you are contributing on behalf of someone else (eg your employer)**: the individual CLA is not sufficient - use https://developers.facebook.com/opensource/cla?type=company instead. Contact cla@fb.com if you have any questions.
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4211942).
+good find, thanks :)

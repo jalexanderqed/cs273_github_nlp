@@ -1,0 +1,8 @@
+Currently, the Multiget method [returns a Map<byte[], byte[]>](https://github.com/facebook/rocksdb/blob/master/java/src/main/java/org/rocksdb/RocksDB.java#L860). 
+
+Generally, an API should never return a `Map`/`Set` with `byte[]` as key. This is because `hashCode()` for `byte[]` is reference based. It just happens to work in this case because the reference is never changed. I think we should deprecate the existing multiget method, and have a new one which just returns a `List<byte[]>` with possible nulls, just like the native interface. This also preserves maximum performance. It is generally not a good practice to return `null` in `List`, but since this part of code should be highly performant, I think it is a reasonable trade-off as long as it is documented.
+Bump
+
+If someone familiar with the history of the project can review and attest that this is something we can/should do, I can submit a PR. I might not be able to merge the PR because of some other constraints, but at least someone else can review, apply and merge it.
+It's a good point. Please feel free to contribute the code.
+Thanks! Created PR https://github.com/facebook/rocksdb/pull/1570.

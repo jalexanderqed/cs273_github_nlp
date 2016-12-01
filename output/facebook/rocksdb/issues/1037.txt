@@ -1,0 +1,13 @@
+Fixed the error in 
+https://ci.appveyor.com/project/Facebook/rocksdb/build/1.0.755
+
+Thank you @igorcanadi 
+Since such issue has happened many times, I am suggesting to include these warnings/errors in Travis build. Thoughts? 
+
+error C2220: warning treated as error - no 'object' file generated 
+warning C4267: 'argument' : conversion from 'size_t' to 'uint16_t', possible loss of data 
+
+@SherlockNoMad thank you so much for fixing it.
+
+I agree!
+

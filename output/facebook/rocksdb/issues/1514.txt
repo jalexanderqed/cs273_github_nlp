@@ -1,0 +1,103 @@
+Summary: This patch clarifies the contract of PositionedAppend with some unit
+tests and also implements it for PosixWritableFile. (Tasks: 14524071)
+
+Test Plan: unit tests added
+@IslamAbdelRahman The contract of PositionedAppend is not clear from its description:
+
+```
+523   // Positioned write for unbuffered access default forward
+ 524   // to simple append as most of the tests are buffered by default
+ 525   virtual Status PositionedAppend(const Slice& /* data */, uint64_t /* offset */) {
+ 526     return Status::NotSupported();
+ 527   }
+```
+
+It is not clear where will be the curse after invocation: i) the end of the file, or ii) the position at which PositionedAppend finished writing. The postfix "Append" suggests that the latter should be the case (otherwise it would be a random write versus an append). But on other hand the current impl for windows does not trim the file if the cursor is not reaching the end of file after invocation: https://github.com/facebook/rocksdb/blob/master/port/win/io_win.cc#L891
+
+```
+    uint64_t write_end = offset + data.size();
+    if (write_end >= filesize_) {
+      filesize_ = write_end;
+    }
+```
+
+I suggest that we first clarify the contract by specifying the expected output in this unit test:
+
+```
++  ASSERT_OK(writable_file->Append("0000000"));
+ +  ASSERT_OK(writable_file->PositionedAppend("11", 3U));
+ +  ASSERT_OK(writable_file->Append("11"));
+```
+
+and then adjust the implementation accordingly.
+
+Looks good ! but I think we should have more tests for such critical code path.
+
+In general, the cursor should be at the end of the file but not finished writing if you want mix append and positionedAppend calls. You can issue a lseek() to achieve that. But actually it is not very necessary since we don't expect append will be followed by positionedAppend because they will be called under bufferedIO and DirectIO mode, separately. 
+
+Windows didn't move the cursor to the right position but indeed trim the file with ftruncate.
+Agree with @IslamAbdelRahman , more tests may be needed.
+
+FWIW. PositionedAppend() was implemented for unbuffered access on Windows because it can only be done there in a positioned manner. This means the following:
+- Append() and PositionedAppend() can not be mixed because the file can only be opened in one of the modes at the time. The mode the file was opened is queried via UseOSBuffer(). When false is returned the file is in unbuffered mode.
+- PositionedAppend() can only happen on the page/sector boundaries. For that reason, if the  last write was an incomplete sector we still need to rewind back to the nearest sector/page and rewrite the portion of it with whatever we need to add. We need to keep where we stop writing.
+- PositionedAppend() can only write whole sectors. For that reason we have to pad with zeros for the last write and trim the file when closing according to the position we keep in the previous step.
+- PositionedAppend() requires aligned buffer to be passed in. The alignment required is queried via GetRequiredBufferAlignment()
+
+@yuslepukhin If the current file offset is at the boundary of a multiple of sectors and Append() writes the data with whole sectors size with aligned buffer, it should be valid operation, right? Though it is not the supposed behavior.
+
+@maysamyabandeh updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1514/files/812e35e289fd926dbd38bd36b7d7d481fb4ef185..bea66828dff9b90e6af7a75305232dca42ced7cd)
+
+Thanks @yuslepukhin for the details description. That was very helpful. I tried to incorporate them by the latest patch. A couple of more questions:
+- What is the purpose of this check in the window's impl: 
+
+```
+890     uint64_t write_end = offset + data.size();
+ 891     if (write_end >= filesize_) {
+ 892       filesize_ = write_end;
+ 893     }
+```
+
+ My understanding is that the user should use PositionedAppend as an "Append" and the final offset should always move EOF ahead. Otherwise it would be a random access direct io file.
+- Just to double check, in "we still need to rewind back to the nearest sector/page and rewrite the portion of it with whatever we need to add. ", we refers to the user of PositionedAppend, not its impl, right?
+- In "We need to keep where we stop writing.", we refers to PositionedAppend's implementation, right?
+- In the following: "we have to pad with zeros for the last write and trim the file when closing according to the position we keep in the previous step." Is my understanding correct that there are two steps:
+  -  pad with zeros: done by the user of PositionedAppend
+  - trim the file when closing done by WritableFile::Close
+
+@maysamyabandeh has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4204907).
+
+@IslamAbdelRahman @lightmark The unit test reporting failed is this:
+
+```
+[ RUN      ] UniversalCompactionNumLevels/DBTestUniversalCompaction.UniversalCompactionTrivialMoveTest2/2
+db/db_universal_compaction_test.cc:1068: Failure
+Value of: 0
+Expected: non_trivial_move
+Which is: 1
+terminate called after throwing an instance of 'testing::internal::GoogleTestFailureException'
+  what():  db/db_universal_compaction_test.cc:1068: Failure
+```
+
+which does not seem related and it also passed on my vm. so does testMiscAdminTask that is reported failed by travis.
+
+If that makes sense to you I can go ahead landing the patch.
+
+@maysamyabandeh 
+
+`My understanding is that the user should use PositionedAppend as an "Append" and the final offset should always move EOF ahead. Otherwise it would be a random access direct io file.`
+
+With regards to the file position, while Append() suffix suggests to use it as sequential append, the positional nature of it enables it writing anywhere earlier than EOF.
+
+The truth is that the user is no longer able to use it these classes directly after they have been wrapped into util/file_reader_writer[.cc|h] classes. Thus, everywhere in the code, the environment classes are only used indirectly,  In fact, as far as Windows impl goes it is no longer possible to use them correctly without those wrappers.
+
+It was necessary to move some logic up there to bring two implementations closer together as much as possible though in my opinion those classes are not the best.
+
+For the logic discussed above, although originally located within the PositionedAppend()/Close() of the class, it is now located here:
+
+https://github.com/facebook/rocksdb/blob/master/util/file_reader_writer.cc#L311
+
+Thus even though it was moved up the client of these classes does not have to do it. It is done automatically.
+
+@maysamyabandeh updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1514/files/bea66828dff9b90e6af7a75305232dca42ced7cd..b128a2fa1ac41d52c95a7c92b4de4b4ad4fda961) - [changes since last import](https://github.com/facebook/rocksdb/pull/1514/files/bea66828dff9b90e6af7a75305232dca42ced7cd..b128a2fa1ac41d52c95a7c92b4de4b4ad4fda961)
+

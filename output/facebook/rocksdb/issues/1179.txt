@@ -1,0 +1,169 @@
+I am using 1024 column families. I am trying to write about 18MB data at a time to a column family with wal disabled and then call Flush with sync option on the column family. Sometimes the flush call just gets stuck and not return ever. 
+
+Following is the stack trace of the thread calling the flush 
+
+Stacktrace for pid: 192836
+0x7fc27a93260a  pthread_cond_wait
+0x7fc27bedc3fd  rocksdb::port::CondVar::Wait()
+0x7fc27bf2d975  rocksdb::InstrumentedCondVar::Wait()
+0x7fc27be41deb  rocksdb::DBImpl::WaitForFlushMemTable(rocksdb::ColumnFamilyData_)
+0x7fc27be55fa2  rocksdb::DBImpl::FlushMemTable(rocksdb::ColumnFamilyData_, rocksdb::FlushOptions const&)
+0x7fc27be56880  rocksdb::DBImpl::Flush(rocksdb::FlushOptions const&, rocksdb::ColumnFamilyHandle*)
+
+The rocksdb background threads are idle and the LOG showed some flush had happened around the time the Flush call was made. So it seems there is some condition in which this condition variable does not get a signal even though the background flush finished? Is there any known similar issue ? Maybe some db or column family options lead to this. 
+
+I have following db option 
+ Options.error_if_exists: 0
+2016/06/21-16:49:43.510505 2a33700        Options.create_if_missing: 1
+2016/06/21-16:49:43.510506 2a33700          Options.paranoid_checks: 1
+2016/06/21-16:49:43.510508 2a33700                      Options.env: 0x7fc27c076540
+2016/06/21-16:49:43.510509 2a33700                 Options.info_log: 0x2beb0e0
+2016/06/21-16:49:43.510510 2a33700           Options.max_open_files: 5000
+2016/06/21-16:49:43.510512 2a33700 Options.max_file_opening_threads: 1
+2016/06/21-16:49:43.510513 2a33700       Options.max_total_wal_size: 0
+2016/06/21-16:49:43.510514 2a33700        Options.disableDataSync: 0
+2016/06/21-16:49:43.510515 2a33700              Options.use_fsync: 0
+2016/06/21-16:49:43.510516 2a33700      Options.max_log_file_size: 0
+2016/06/21-16:49:43.510517 2a33700 Options.max_manifest_file_size: 18446744073709551615
+2016/06/21-16:49:43.510518 2a33700      Options.log_file_time_to_roll: 0
+2016/06/21-16:49:43.510519 2a33700      Options.keep_log_file_num: 1000
+2016/06/21-16:49:43.510520 2a33700   Options.recycle_log_file_num: 0
+2016/06/21-16:49:43.510522 2a33700        Options.allow_os_buffer: 1
+2016/06/21-16:49:43.510523 2a33700       Options.allow_mmap_reads: 0
+2016/06/21-16:49:43.510524 2a33700       Options.allow_fallocate: 1
+2016/06/21-16:49:43.510525 2a33700      Options.allow_mmap_writes: 0
+2016/06/21-16:49:43.510526 2a33700          Options.create_missing_column_families: 0
+2016/06/21-16:49:43.510527 2a33700                              Options.db_log_dir: 
+2016/06/21-16:49:43.510529 2a33700                Options.table_cache_numshardbits: 4
+2016/06/21-16:49:43.510530 2a33700     Options.delete_obsolete_files_period_micros: 21600000000
+2016/06/21-16:49:43.510532 2a33700              Options.base_background_compactions: 4
+2016/06/21-16:49:43.510533 2a33700              Options.max_background_compactions: 4
+2016/06/21-16:49:43.510534 2a33700                      Options.max_subcompactions: 1
+2016/06/21-16:49:43.510535 2a33700                  Options.max_background_flushes: 4
+2016/06/21-16:49:43.510536 2a33700                         Options.WAL_ttl_seconds: 0
+2016/06/21-16:49:43.510537 2a33700                       Options.WAL_size_limit_MB: 0
+2016/06/21-16:49:43.510538 2a33700             Options.manifest_preallocation_size: 4194304
+2016/06/21-16:49:43.510539 2a33700                          Options.allow_os_buffer: 1
+2016/06/21-16:49:43.510540 2a33700                         Options.allow_mmap_reads: 0
+2016/06/21-16:49:43.510541 2a33700                        Options.allow_mmap_writes: 0
+2016/06/21-16:49:43.510542 2a33700                      Options.is_fd_close_on_exec: 1
+2016/06/21-16:49:43.510543 2a33700                    Options.stats_dump_period_sec: 10
+2016/06/21-16:49:43.510544 2a33700                    Options.advise_random_on_open: 1
+2016/06/21-16:49:43.510545 2a33700                     Options.db_write_buffer_size: 268435456d
+2016/06/21-16:49:43.510546 2a33700          Options.access_hint_on_compaction_start: NORMAL
+2016/06/21-16:49:43.510576 2a33700   Options.new_table_reader_for_compaction_inputs: 0
+2016/06/21-16:49:43.510578 2a33700                Options.compaction_readahead_size: 0d
+2016/06/21-16:49:43.510580 2a33700                Options.random_access_max_buffer_size: 1048576d
+2016/06/21-16:49:43.510581 2a33700               Options.writable_file_max_buffer_size: 1048576d
+2016/06/21-16:49:43.510582 2a33700                       Options.use_adaptive_mutex: 0
+2016/06/21-16:49:43.510583 2a33700                             Options.rate_limiter: (nil)
+2016/06/21-16:49:43.510585 2a33700      Options.sst_file_manager.rate_bytes_per_sec: 0
+2016/06/21-16:49:43.510586 2a33700                           Options.bytes_per_sync: 0
+2016/06/21-16:49:43.510587 2a33700                       Options.wal_bytes_per_sync: 0
+2016/06/21-16:49:43.510588 2a33700                        Options.wal_recovery_mode: 0
+2016/06/21-16:49:43.510589 2a33700                   Options.enable_thread_tracking: 0
+2016/06/21-16:49:43.510590 2a33700          Options.allow_concurrent_memtable_write: 0
+2016/06/21-16:49:43.510591 2a33700       Options.enable_write_thread_adaptive_yield: 0
+2016/06/21-16:49:43.510592 2a33700              Options.write_thread_max_yield_usec: 100
+2016/06/21-16:49:43.510593 2a33700             Options.write_thread_slow_yield_usec: 3
+2016/06/21-16:49:43.510594 2a33700                                Options.row_cache: None
+2016/06/21-16:49:43.510596 2a33700        Options.wal_filter: None
+## I have following column family options
+
+```
+            write_buffer_size: 4194304
+```
+
+2016/06/21-16:49:46.100029 2a33700                   max_write_buffer_number: 8
+2016/06/21-16:49:46.100030 2a33700                          arena_block_size: 524288
+2016/06/21-16:49:46.100031 2a33700                memtable_prefix_bloom_bits: 0
+2016/06/21-16:49:46.100032 2a33700              memtable_prefix_bloom_probes: 6
+2016/06/21-16:49:46.100034 2a33700  memtable_prefix_bloom_huge_page_tlb_size: 0
+2016/06/21-16:49:46.100035 2a33700                     max_successive_merges: 0
+2016/06/21-16:49:46.100036 2a33700                            filter_deletes: 0
+2016/06/21-16:49:46.100037 2a33700                  disable_auto_compactions: 1
+2016/06/21-16:49:46.100038 2a33700       soft_pending_compaction_bytes_limit: 0
+2016/06/21-16:49:46.100039 2a33700       hard_pending_compaction_bytes_limit: 0
+2016/06/21-16:49:46.100040 2a33700        level0_file_num_compaction_trigger: 10000
+2016/06/21-16:49:46.100041 2a33700            level0_slowdown_writes_trigger: 10000
+2016/06/21-16:49:46.100042 2a33700                level0_stop_writes_trigger: 10000
+2016/06/21-16:49:46.100043 2a33700            max_grandparent_overlap_factor: 10
+2016/06/21-16:49:46.100045 2a33700                expanded_compaction_factor: 25
+2016/06/21-16:49:46.100046 2a33700                  source_compaction_factor: 1
+2016/06/21-16:49:46.100047 2a33700                     target_file_size_base: 262144
+2016/06/21-16:49:46.100048 2a33700               target_file_size_multiplier: 10
+2016/06/21-16:49:46.100049 2a33700                  max_bytes_for_level_base: 2097152
+2016/06/21-16:49:46.100050 2a33700            max_bytes_for_level_multiplier: 8
+2016/06/21-16:49:46.100054 2a33700 max_bytes_for_level_multiplier_additional: 1, 1, 1, 1, 1, 1, 1
+2016/06/21-16:49:46.100055 2a33700            verify_checksums_in_compaction: 1
+2016/06/21-16:49:46.100056 2a33700         max_sequential_skip_in_iterations: 8
+## The other background threads
+
+Stacktrace for pid: 192846
+0x7fc27a93260a  pthread_cond_wait
+0x7fc27bf278c1  rocksdb::ThreadPool::BGThread(unsigned long)
+0x7fc27bf27aa3  
+0x7fc27a92e2df  
+0x7fc279e1ec1d  clone
+0   [(nil)]
+
+Stacktrace for pid: 192847
+0x7fc27a93260a  pthread_cond_wait
+0x7fc27bf278c1  rocksdb::ThreadPool::BGThread(unsigned long)
+0x7fc27bf27aa3  
+0x7fc27a92e2df  
+0x7fc279e1ec1d  clone
+0   [(nil)]
+
+Stacktrace for pid: 192848
+0x7fc27a93260a  pthread_cond_wait
+0x7fc27bf278c1  rocksdb::ThreadPool::BGThread(unsigned long)
+0x7fc27bf27aa3  
+0x7fc27a92e2df  
+0x7fc279e1ec1d  clone
+0   [(nil)]
+
+Stacktrace for pid: 192849
+0x7fc27a93260a  pthread_cond_wait
+0x7fc27bf278c1  rocksdb::ThreadPool::BGThread(unsigned long)
+0x7fc27bf27aa3  
+0x7fc27a92e2df  
+0x7fc279e1ec1d  clone
+0   [(nil)]
+
+Stacktrace for pid: 192850
+0x7fc27a93260a  pthread_cond_wait
+0x7fc27bf278c1  rocksdb::ThreadPool::BGThread(unsigned long)
+0x7fc27bf27aa3  
+0x7fc27a92e2df  
+0x7fc279e1ec1d  clone
+0   [(nil)]
+
+Stacktrace for pid: 192851
+0x7fc27a93260a  pthread_cond_wait
+0x7fc27bf278c1  rocksdb::ThreadPool::BGThread(unsigned long)
+0x7fc27bf27aa3  
+0x7fc27a92e2df  
+0x7fc279e1ec1d  clone
+0   [(nil)]
+
+Stacktrace for pid: 192852
+0x7fc27a93260a  pthread_cond_wait
+0x7fc27bf278c1  rocksdb::ThreadPool::BGThread(unsigned long)
+0x7fc27bf27aa3  
+0x7fc27a92e2df  
+0x7fc279e1ec1d  clone
+0   [(nil)]
+
+Stacktrace for pid: 192853
+0x7fc27a93260a  pthread_cond_wait
+0x7fc27bf278c1  rocksdb::ThreadPool::BGThread(unsigned long)
+0x7fc27bf27aa3  
+0x7fc27a92e2df  
+0x7fc279e1ec1d  clone
+0   [(nil)]
+
+Is min_write_buffer_number_to_merge=1?
+
+min_write_buffer_number_to_merge was 3. Changing that to 1 fixed my issue. Thanks!
+

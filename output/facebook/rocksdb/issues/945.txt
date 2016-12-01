@@ -1,0 +1,37 @@
+The code currently makes use of **attribute**((**aligned**)) which expands to nothing on Windows.
+Does the current GCC in use supports `aligneas` ?
+
+@siying 
+
+I can find two places. Arena and statistics. I assume what we care about is the arena one?
+
+It was added in https://reviews.facebook.net/D50589 by @nbronson . I can give it a try. If gc 4.8 supports it, we can use aligneas if it is after 4.8 and use attribute if it is lower.
+
+I rethink about it. Only do it in higher gcc version feels more complicated than just change the way to align it in Windows. Are you OK with it?
+
+@siying MSVC supports it starting with version 15. So we can create a macro that would expand to either aligneas OR **declspec** on windows. Problem with **attribute** it is tailing and aligneas and **declspec** are leading.
+
+Then we need to replace the whole line:(
+
+@siying let me know about the current support and then we decide.
+
+@yuslepukhin it seems to be introduced in GCC 4.8 according to their release note: https://gcc.gnu.org/gcc-4.8/changes.html
+
+I don't remember we say what GCC version we need to support. Let me ask in the RocksDB public development group. But the safer way to do is to only use the new keyword in Windows.
+
+In INSTALL.md we still are saying we require GCC 4.7 or up: https://github.com/facebook/rocksdb/blob/master/INSTALL.md
+
+It's a good question whether we can raise the requirement to GCC 4.8.
+
+@siying ic. Well, I will intro a macro that would expand to nothing on POSIX since attr is currently nothing on Windows.
+
+The alignment directive in arena.h is not actually necessary; alignment happens to be correct even without the attribute. An intermediate version of the diff required it and I left it in to document and enforce the alignment assumed by the code. If it is not honored on some platforms we can just remove it or replace it with something like
+
+  static_assert((offsetof(Arena, inline_block_) % sizeof(void*)) == 0...
+
+For void\* it work. Will use in the patch.
+
+@siying I assume that statistics would better be aligned though.
+
+@yuslepukhin right.
+

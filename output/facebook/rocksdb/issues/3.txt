@@ -1,0 +1,3 @@
+
+That was the original License from open source leveldb and we did not want to change the original license. So, the original licenses is retained lines-for-line.
+

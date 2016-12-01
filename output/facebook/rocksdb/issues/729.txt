@@ -1,0 +1,45 @@
+error is:
+(builder.o), building for iOS simulator, but linking in object file built for OSX, for architecture x86_64
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+
+Did you `make clean` before trying to compile again?
+
+@igorcanadi  I got the same error today on master. I did make clean.
+
+I also had to update `compaction_job.cc` on line 604 etc where build was failing to `prev_write_nanos = IOSTATS(write_nanos);`
+
+@igorcanadi @siying  thoughts?
+
+With the latest commit https://github.com/facebook/rocksdb/commit/4e07c99a9a1d3dd83ae781adc1a3b5266ba76dd7 I fixed the iOS build. I tried to compile with `TARGET_OS=IOS make static_lib` and it works on my mac. Can you try again?
+
+@igorcanadi I just took the latest master. I was able to get the build working before this change as well(changed some code). build works as usual.
+
+Problem is when i add `librocksdb.a` to xcode 7:
+Here is the log:
+
+```
+ld: in /Users/chirag/Desktop/lrn/lrn/ios/librocksdb.a(builder.o), building for iOS simulator, but linking in object file built for OSX, for architecture x86_64
+```
+
+Ah, interesting. I'm not sure how to fix that one :(
+
+@igorcanadi I got it work by commenting out the x86_64 arch.
+
+```
+.cc.o:
+    # mkdir -p ios-x86/$(dir $@)
+    # $(CXX) $(CXXFLAGS) -isysroot $(SIMULATORROOT)/SDKs/iPhoneSimulator$(IOSVERSION).sdk -arch i686 -arch x86_64 -c $< -o ios-x86/$@
+    mkdir -p ios-arm/$(dir $@)
+    export IPHONEOS_DEPLOYMENT_TARGET=7.0
+    xcrun -sdk iphoneos $(CXX) $(CXXFLAGS) -isysroot $(DEVICEROOT)/SDKs/iPhoneOS$(IOSVERSION).sdk -arch armv6 -arch armv7 -arch armv7s -arch arm64 -c $< -o ios-arm/$@
+    lipo ios-arm/$@ -create -output $@
+
+.c.o:
+    # mkdir -p ios-x86/$(dir $@)
+    # $(CC) $(CFLAGS) -isysroot $(SIMULATORROOT)/SDKs/iPhoneSimulator$(IOSVERSION).sdk -arch i686 -arch x86_64 -c $< -o ios-x86/$@
+    mkdir -p ios-arm/$(dir $@)
+    export IPHONEOS_DEPLOYMENT_TARGET=7.0
+    xcrun -sdk iphoneos $(CC) $(CFLAGS) -isysroot $(DEVICEROOT)/SDKs/iPhoneOS$(IOSVERSION).sdk -arch armv6 -arch armv7 -arch armv7s -arch arm64 -c $< -o ios-arm/$@
+    lipo ios-arm/$@ -create -output $@
+```
+

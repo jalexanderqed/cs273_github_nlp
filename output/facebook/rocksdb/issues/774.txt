@@ -1,0 +1,9 @@
+https://github.com/facebook/rocksdb/wiki/Time-to-Live is not accessible from Java.
+Any plan to add the binding?
+
+We would like the Java API to be feature complete with the C++ API, but at the moment it is a matter or resources. If this is something you would like to contribute feel free to sign the CLA and send a PR.
+
+I thought TTL is already supported in rocksJava?https://github.com/facebook/rocksdb/blob/master/java/src/main/java/org/rocksdb/TtlDB.java
+
+@b00lean I am closing this because as @feng-tao point's out the Java API has TTLDB.
+

@@ -1,0 +1,26 @@
+See https://github.com/facebook/rocksdb/pull/1247#issuecomment-237323012 for further information on the requirement.
+
+The only potential concern here is perhaps that previously we used `JNIEnv::GetByteArrayElements` which _may_ or _may not_ have made a copy of the entire array, whereas we now use `JNIEnv::GetByteArrayRegion` which explicitly makes a copy of part of the array (or the entire array) that we are interested in.
+
+From what I have read, it is likely that the JVM would have made a copy when calling `GetByteArrayElements`, but this is not certain and would have varied from platform to platform. For those who want to avoid the transient memory increase of copying data, we can look at adding support for `DirectSlice` to these operations in future.
+
+Hi Adam,
+
+We have done the impact analysis today and this is to say the least, quite a big change. 
+The C++ engineer helping me with thisis thinking that the DirectSlice implementation is probably the way to go here. We are also going to want to do a bit of testing before we submit back.
+
+Unfortunately he is off on leave for a couple of weeks, so please bear with us till we can get the change done and ensure correctness.
+
+Kind regards,
+Philip
+
+https://reviews.facebook.net/D61971
+
+LGTM.  Can you also add some description to the diff about why we need this feature? Possibly by forwarding some of the discussion conclusion from  #1247 
+
+LGTM.  The status shows that this diff has some conflict.  Would you mind rebasing, addressing conflict, and committing again?
+
+@yhchiang Done.
+
+Thanks!!
+

@@ -1,0 +1,33 @@
+can i use one rocksdb instance in multithreads?
+
+void\* read(void\* arg)
+{
+db=arg;
+db->Get();
+}
+
+void\* write(void\* arg)
+{
+db=arg;
+db->Put();
+}
+
+int main() {
+pthread_create(tid, read..)
+pthread_create(tid, write..)
+pthread_join();
+}
+
+if use like this, rocksdb will core dump~~~
+
+Does anybody want to use like this?
+or i have to create multi rocksdb instances?
+
+Yes, you can.  Get and Put() are thread-safe.  Some other structures (like a WriteBatch instance) cannot be shared between thread unless you handle the concurrent access yourself.  
+
+https://github.com/facebook/rocksdb/wiki/Basic-Operations
+
+Are you getting a core dump?  If so, can you paste the stack trace?
+
+tks~~~got it~~
+

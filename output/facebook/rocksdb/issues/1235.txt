@@ -1,0 +1,263 @@
+I have a setup with ~1000 column families. I hit a deadlock where a write is stalled forever and now all the operations are waiting on condition_variable. The Logs suggest the write is stalled waiting for some background flush/compaction but they are not getting scheduled. 
+
+Following is the stack trace for the various threads and some of the db and column family options
+
+2016/07/22-13:36:41.410949 7fc6cbf07700 [WARN] [1008_1] Stopping writes because we have 148 level-0 files
+2016/07/22-13:36:41.605307 7fc6cd70a700 [WARN] [1008_1] Stopping writes because we have 147 level-0 files
+
+Stacktrace for pid: 157756
+0x7fc6d2bc760a  pthread_cond_wait
+0x7fc6d293da5c  std::condition_variable::wait(std::unique_lockstd::mutex&amp;)
+0x7fc6d419a58b  rocksdb::WriteThread::BlockingAwaitState(rocksdb::WriteThread::Writer_, unsigned char)
+0x7fc6d419a65d  rocksdb::WriteThread::AwaitState(rocksdb::WriteThread::Writer_, unsigned char, rocksdb::WriteThread::AdaptationContext_)
+0x7fc6d419ae23  rocksdb::WriteThread::EnterUnbatched(rocksdb::WriteThread::Writer_, rocksdb::InstrumentedMutex_)
+0x7fc6d4116599  rocksdb::DBImpl::CreateColumnFamily(rocksdb::ColumnFamilyOptions const&amp;, std::string const&amp;, rocksdb::ColumnFamilyHandle_*)
+
+Stacktrace for pid: 157762
+0x7fc6d2bc760a  pthread_cond_wait
+0x7fc6d293da5c  std::condition_variable::wait(std::unique_lockstd::mutex&amp;)
+0x7fc6d419a58b  rocksdb::WriteThread::BlockingAwaitState(rocksdb::WriteThread::Writer_, unsigned char)
+0x7fc6d419a65d  rocksdb::WriteThread::AwaitState(rocksdb::WriteThread::Writer_, unsigned char, rocksdb::WriteThread::AdaptationContext_)
+0x7fc6d419ae23  rocksdb::WriteThread::EnterUnbatched(rocksdb::WriteThread::Writer_, rocksdb::InstrumentedMutex_)
+0x7fc6d411bd3e  rocksdb::DBImpl::FlushMemTable(rocksdb::ColumnFamilyData_, rocksdb::FlushOptions const&amp;)
+0x7fc6d411c880  rocksdb::DBImpl::Flush(rocksdb::FlushOptions const&amp;, rocksdb::ColumnFamilyHandle*)
+
+Stacktrace for pid: 157763
+0x7fc6d2bc760a  pthread_cond_wait
+0x7fc6d41a23fd  rocksdb::port::CondVar::Wait()
+0x7fc6d41f3975  rocksdb::InstrumentedCondVar::Wait()
+0x7fc6d4108cf8  rocksdb::DBImpl::DelayWrite(unsigned long)
+0x7fc6d412ae67  rocksdb::DBImpl::WriteImpl(rocksdb::WriteOptions const&amp;, rocksdb::WriteBatch_, rocksdb::WriteCallback_)
+0x7fc6d412bd04  rocksdb::DBImpl::Write(rocksdb::WriteOptions const&amp;, rocksdb::WriteBatch*)
+
+Stacktrace for pid: 157777
+0x7fc6d2bc760a  pthread_cond_wait
+0x7fc6d41ed8c1  rocksdb::ThreadPool::BGThread(unsigned long)
+0x7fc6d41edaa3  
+
+Stacktrace for pid: 157778
+0x7fc6d2bc760a  pthread_cond_wait
+0x7fc6d41ed8c1  rocksdb::ThreadPool::BGThread(unsigned long)
+0x7fc6d41edaa3  
+0x7fc6d2bc32df  
+
+Stacktrace for pid: 157780
+0x7fc6d2bc760a  pthread_cond_wait
+0x7fc6d41ed8c1  rocksdb::ThreadPool::BGThread(unsigned long)
+0x7fc6d41edaa3  
+
+Stacktrace for pid: 157781
+0x7fc6d2bc760a  pthread_cond_wait
+0x7fc6d41ed8c1  rocksdb::ThreadPool::BGThread(unsigned long)
+0x7fc6d41edaa3  
+0x7fc6d2bc32df  
+0x7fc6d20b3c1d  clone
+0   [(nil)]
+
+Stacktrace for pid: 157782
+0x7fc6d2bc760a  pthread_cond_wait
+0x7fc6d41ed8c1  rocksdb::ThreadPool::BGThread(unsigned long)
+0x7fc6d41edaa3  
+0x7fc6d2bc32df  
+0x7fc6d20b3c1d  clone
+
+Stacktrace for pid: 157783
+0x7fc6d2bc760a  pthread_cond_wait
+0x7fc6d41ed8c1  rocksdb::ThreadPool::BGThread(unsigned long)
+0x7fc6d41edaa3  
+0x7fc6d2bc32df  
+0x7fc6d20b3c1d  clone
+0   [(nil)]
+
+Stacktrace for pid: 157784
+0x7fc6d2bc760a  pthread_cond_wait
+0x7fc6d41ed8c1  rocksdb::ThreadPool::BGThread(unsigned long)
+0x7fc6d41edaa3  
+0x7fc6d2bc32df  
+
+Stacktrace for pid: 157785
+0x7fc6d2bc760a  pthread_cond_wait
+0x7fc6d41ed8c1  rocksdb::ThreadPool::BGThread(unsigned long)
+0x7fc6d41edaa3  
+0x7fc6d2bc32df  
+0x7fc6d20b3c1d  clone
+0   [(nil)]
+
+Stacktrace for pid: 157786
+0x7fc6d2bc760a  pthread_cond_wait
+0x7fc6d41ed8c1  rocksdb::ThreadPool::BGThread(unsigned long)
+0x7fc6d41edaa3  
+0x7fc6d2bc32df  
+
+Stacktrace for pid: 160939
+0x7fc6d2bc760a  pthread_cond_wait
+0x7fc6d293da5c  std::condition_variable::wait(std::unique_lockstd::mutex&amp;)
+0x7fc6d419a58b  rocksdb::WriteThread::BlockingAwaitState(rocksdb::WriteThread::Writer_, unsigned char)
+0x7fc6d419a65d  rocksdb::WriteThread::AwaitState(rocksdb::WriteThread::Writer_, unsigned char, rocksdb::WriteThread::AdaptationContext_)
+0x7fc6d419a956  rocksdb::WriteThread::JoinBatchGroup(rocksdb::WriteThread::Writer_)
+0x7fc6d4129fba  rocksdb::DBImpl::WriteImpl(rocksdb::WriteOptions const&amp;, rocksdb::WriteBatch_, rocksdb::WriteCallback_)
+0x7fc6d412bd04  rocksdb::DBImpl::Write(rocksdb::WriteOptions const&amp;, rocksdb::WriteBatch*)
+
+Stacktrace for pid: 160940
+0x7fc6d2bc760a  pthread_cond_wait
+0x7fc6d293da5c  std::condition_variable::wait(std::unique_lockstd::mutex&amp;)
+0x7fc6d419a58b  rocksdb::WriteThread::BlockingAwaitState(rocksdb::WriteThread::Writer_, unsigned char)
+0x7fc6d419a65d  rocksdb::WriteThread::AwaitState(rocksdb::WriteThread::Writer_, unsigned char, rocksdb::WriteThread::AdaptationContext_)
+0x7fc6d419a956  rocksdb::WriteThread::JoinBatchGroup(rocksdb::WriteThread::Writer_)
+0x7fc6d4129fba  rocksdb::DBImpl::WriteImpl(rocksdb::WriteOptions const&amp;, rocksdb::WriteBatch_, rocksdb::WriteCallback_)
+0x7fc6d412bd04  rocksdb::DBImpl::Write(rocksdb::WriteOptions const&amp;, rocksdb::WriteBatch*)
+
+Options.max_total_wal_size: 2147483648
+write_buffer_size: 262144
+2016/07/22-13:31:32.837502 3118700                   max_write_buffer_number: 4
+2016/07/22-13:31:32.837504 3118700                          arena_block_size: 33554432
+2016/07/22-13:31:32.837505 3118700                memtable_prefix_bloom_bits: 0
+2016/07/22-13:31:32.837507 3118700              memtable_prefix_bloom_probes: 6
+2016/07/22-13:31:32.837508 3118700  memtable_prefix_bloom_huge_page_tlb_size: 0
+2016/07/22-13:31:32.837509 3118700                     max_successive_merges: 0
+2016/07/22-13:31:32.837511 3118700                            filter_deletes: 0
+2016/07/22-13:31:32.837512 3118700                  disable_auto_compactions: 0
+2016/07/22-13:31:32.837513 3118700       soft_pending_compaction_bytes_limit: 0
+2016/07/22-13:31:32.837514 3118700       hard_pending_compaction_bytes_limit: 0
+2016/07/22-13:31:32.837516 3118700        level0_file_num_compaction_trigger: 8
+2016/07/22-13:31:32.837517 3118700            level0_slowdown_writes_trigger: 25
+2016/07/22-13:31:32.837518 3118700                level0_stop_writes_trigger: 40
+2016/07/22-13:31:32.837519 3118700            max_grandparent_overlap_factor: 10
+2016/07/22-13:31:32.837520 3118700                expanded_compaction_factor: 25
+2016/07/22-13:31:32.837521 3118700                  source_compaction_factor: 1
+2016/07/22-13:31:32.837523 3118700                     target_file_size_base: 4194304
+2016/07/22-13:31:32.837524 3118700               target_file_size_multiplier: 10
+2016/07/22-13:31:32.837525 3118700                  max_bytes_for_level_base: 33554432
+
+Second this, I have a bit different stack trace with batched writes.
+There are 2 types of load in this trace: periodic sync which uses plain `Put()` and several parallel rather big batch writes.
+
+```
+Thread 25 (Thread 0x7fd09e3ff700 (LWP 3336)):
+#0  0x00007fd0a26c9b20 in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+#1  0x00007fd0a23eeacc in std::condition_variable::wait(std::unique_lock<std::mutex>&) () from /lib64/libstdc++.so.6
+#2  0x00007fd0a30b2473 in std::condition_variable::wait<rocksdb::WriteThread::BlockingAwaitState(rocksdb::WriteThread::Writer*, uint8_t)::<lambda()> > (__p=..., __lock=..., this=0x7fd09e3fe650) at /usr/include/c++/5.3.1/condition_variable:98
+#3  rocksdb::WriteThread::BlockingAwaitState (this=this@entry=0x2415860, w=w@entry=0x7fd09e3fe5b0, goal_mask=goal_mask@entry=14 '\016')
+    at db/write_thread.cc:37
+#4  0x00007fd0a30b2560 in rocksdb::WriteThread::AwaitState (this=this@entry=0x2415860, w=w@entry=0x7fd09e3fe5b0, 
+    goal_mask=goal_mask@entry=14 '\016', 
+    ctx=ctx@entry=0x7fd0a3482380 <rocksdb::WriteThread::JoinBatchGroup(rocksdb::WriteThread::Writer*)::ctx>) at db/write_thread.cc:157
+#5  0x00007fd0a30b2846 in rocksdb::WriteThread::JoinBatchGroup (this=this@entry=0x2415860, w=w@entry=0x7fd09e3fe5b0)
+    at db/write_thread.cc:227
+#6  0x00007fd0a302bcb8 in rocksdb::DBImpl::WriteImpl (this=0x24152f0, write_options=..., my_batch=0x7fd09e3fe710, 
+    callback=callback@entry=0x0, log_used=log_used@entry=0x0, log_ref=0, disable_memtable=false) at db/db_impl.cc:4441
+#7  0x00007fd0a302da7b in rocksdb::DBImpl::Write (this=<optimized out>, write_options=..., my_batch=<optimized out>) at db/db_impl.cc:4391
+#8  0x00007fd0a302db2a in rocksdb::DB::Put (this=0x24152f0, opt=..., column_family=0x5322fe0, key=..., value=...) at db/db_impl.cc:5596
+#9  0x00007fd0a302db71 in rocksdb::DBImpl::Put (this=<optimized out>, o=..., column_family=<optimized out>, key=..., val=...)
+    at db/db_impl.cc:4366
+#10 0x00007fd0a2fd926d in rocksdb::DB::Put (this=0x24152f0, options=..., key=..., value=...) at ./include/rocksdb/db.h:193
+#11 0x0000000000542d02 in ioremap::greylock::database::sync_metadata (this=0x7fffe3b97d90, batch=0x0)
+
+
+Thread 24 (Thread 0x7fd09dbfe700 (LWP 3337)):
+#0  0x00007fd0a1b294cd in nanosleep () from /lib64/libc.so.6
+#1  0x00007fd0a1b5a064 in usleep () from /lib64/libc.so.6
+#2  0x00007fd0a300c3b5 in rocksdb::DBImpl::DelayWrite (this=this@entry=0x24152f0, num_bytes=<optimized out>) at db/db_impl.cc:4852
+#3  0x00007fd0a302d55e in rocksdb::DBImpl::WriteImpl (this=0x24152f0, write_options=..., my_batch=<optimized out>, 
+    callback=callback@entry=0x0, log_used=log_used@entry=0x0, log_ref=0, disable_memtable=false) at db/db_impl.cc:4584
+#4  0x00007fd0a302da7b in rocksdb::DBImpl::Write (this=<optimized out>, write_options=..., my_batch=<optimized out>) at db/db_impl.cc:4391
+#5  0x000000000054381b in ioremap::greylock::database::write (this=0x7fffe3b97d90, batch=0x7fd09dbfd490)
+
+
+Thread 23 (Thread 0x7fd09d3fd700 (LWP 3338)):
+#0  0x00007fd0a26c9b20 in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+#1  0x00007fd0a23eeacc in std::condition_variable::wait(std::unique_lock<std::mutex>&) () from /lib64/libstdc++.so.6
+---Type <return> to continue, or q <return> to quit---
+#2  0x00007fd0a30b2473 in std::condition_variable::wait<rocksdb::WriteThread::BlockingAwaitState(rocksdb::WriteThread::Writer*, uint8_t)::<lambda()> > (__p=..., __lock=..., this=0x7fd09d3fc190) at /usr/include/c++/5.3.1/condition_variable:98
+#3  rocksdb::WriteThread::BlockingAwaitState (this=this@entry=0x2415860, w=w@entry=0x7fd09d3fc0f0, goal_mask=goal_mask@entry=14 '\016')
+    at db/write_thread.cc:37
+#4  0x00007fd0a30b2560 in rocksdb::WriteThread::AwaitState (this=this@entry=0x2415860, w=w@entry=0x7fd09d3fc0f0, 
+    goal_mask=goal_mask@entry=14 '\016', 
+    ctx=ctx@entry=0x7fd0a3482380 <rocksdb::WriteThread::JoinBatchGroup(rocksdb::WriteThread::Writer*)::ctx>) at db/write_thread.cc:157
+#5  0x00007fd0a30b2846 in rocksdb::WriteThread::JoinBatchGroup (this=this@entry=0x2415860, w=w@entry=0x7fd09d3fc0f0)
+    at db/write_thread.cc:227
+#6  0x00007fd0a302bcb8 in rocksdb::DBImpl::WriteImpl (this=0x24152f0, write_options=..., my_batch=0x7fd09d3fc490, 
+    callback=callback@entry=0x0, log_used=log_used@entry=0x0, log_ref=0, disable_memtable=false) at db/db_impl.cc:4441
+#7  0x00007fd0a302da7b in rocksdb::DBImpl::Write (this=<optimized out>, write_options=..., my_batch=<optimized out>) at db/db_impl.cc:4391
+#8  0x000000000054381b in ioremap::greylock::database::write (this=0x7fffe3b97d90, batch=0x7fd09d3fc490)
+
+
+Thread 22 (Thread 0x7fd09cbfc700 (LWP 3339)):
+#0  0x00007fd0a26c9b20 in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+#1  0x00007fd0a23eeacc in std::condition_variable::wait(std::unique_lock<std::mutex>&) () from /lib64/libstdc++.so.6
+#2  0x00007fd0a30b2473 in std::condition_variable::wait<rocksdb::WriteThread::BlockingAwaitState(rocksdb::WriteThread::Writer*, uint8_t)::<lambda()> > (__p=..., __lock=..., this=0x7fd09cbfb190) at /usr/include/c++/5.3.1/condition_variable:98
+#3  rocksdb::WriteThread::BlockingAwaitState (this=this@entry=0x2415860, w=w@entry=0x7fd09cbfb0f0, goal_mask=goal_mask@entry=14 '\016')
+---Type <return> to continue, or q <return> to quit---
+    at db/write_thread.cc:37
+#4  0x00007fd0a30b2560 in rocksdb::WriteThread::AwaitState (this=this@entry=0x2415860, w=w@entry=0x7fd09cbfb0f0, 
+    goal_mask=goal_mask@entry=14 '\016', 
+    ctx=ctx@entry=0x7fd0a3482380 <rocksdb::WriteThread::JoinBatchGroup(rocksdb::WriteThread::Writer*)::ctx>) at db/write_thread.cc:157
+#5  0x00007fd0a30b2846 in rocksdb::WriteThread::JoinBatchGroup (this=this@entry=0x2415860, w=w@entry=0x7fd09cbfb0f0)
+    at db/write_thread.cc:227
+#6  0x00007fd0a302bcb8 in rocksdb::DBImpl::WriteImpl (this=0x24152f0, write_options=..., my_batch=0x7fd09cbfb490, 
+    callback=callback@entry=0x0, log_used=log_used@entry=0x0, log_ref=0, disable_memtable=false) at db/db_impl.cc:4441
+#7  0x00007fd0a302da7b in rocksdb::DBImpl::Write (this=<optimized out>, write_options=..., my_batch=<optimized out>) at db/db_impl.cc:4391
+#8  0x000000000054381b in ioremap::greylock::database::write (this=0x7fffe3b97d90, batch=0x7fd09cbfb490)
+    at /home/zbr/awork/greylock/include/greylock/database.hpp:521
+
+
+Thread 21 (Thread 0x7fd09c3fb700 (LWP 3340)):
+#0  0x00007fd0a26c9b20 in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+#1  0x00007fd0a23eeacc in std::condition_variable::wait(std::unique_lock<std::mutex>&) () from /lib64/libstdc++.so.6
+#2  0x00007fd0a30b2473 in std::condition_variable::wait<rocksdb::WriteThread::BlockingAwaitState(rocksdb::WriteThread::Writer*, uint8_t)::<lambda()> > (__p=..., __lock=..., this=0x7fd09c3fa190) at /usr/include/c++/5.3.1/condition_variable:98
+#3  rocksdb::WriteThread::BlockingAwaitState (this=this@entry=0x2415860, w=w@entry=0x7fd09c3fa0f0, goal_mask=goal_mask@entry=14 '\016')
+    at db/write_thread.cc:37
+#4  0x00007fd0a30b2560 in rocksdb::WriteThread::AwaitState (this=this@entry=0x2415860, w=w@entry=0x7fd09c3fa0f0, 
+    goal_mask=goal_mask@entry=14 '\016', 
+---Type <return> to continue, or q <return> to quit---
+    ctx=ctx@entry=0x7fd0a3482380 <rocksdb::WriteThread::JoinBatchGroup(rocksdb::WriteThread::Writer*)::ctx>) at db/write_thread.cc:157
+#5  0x00007fd0a30b2846 in rocksdb::WriteThread::JoinBatchGroup (this=this@entry=0x2415860, w=w@entry=0x7fd09c3fa0f0)
+    at db/write_thread.cc:227
+#6  0x00007fd0a302bcb8 in rocksdb::DBImpl::WriteImpl (this=0x24152f0, write_options=..., my_batch=0x7fd09c3fa490, 
+    callback=callback@entry=0x0, log_used=log_used@entry=0x0, log_ref=0, disable_memtable=false) at db/db_impl.cc:4441
+#7  0x00007fd0a302da7b in rocksdb::DBImpl::Write (this=<optimized out>, write_options=..., my_batch=<optimized out>) at db/db_impl.cc:4391
+#8  0x000000000054381b in ioremap::greylock::database::write (this=0x7fffe3b97d90, batch=0x7fd09c3fa490)
+
+
+Thread 20 (Thread 0x7fd09bbfa700 (LWP 3341)):
+#0  0x00007fd0a26c9b20 in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+#1  0x00007fd0a23eeacc in std::condition_variable::wait(std::unique_lock<std::mutex>&) () from /lib64/libstdc++.so.6
+#2  0x00007fd0a30b2473 in std::condition_variable::wait<rocksdb::WriteThread::BlockingAwaitState(rocksdb::WriteThread::Writer*, uint8_t)::<lambda()> > (__p=..., __lock=..., this=0x7fd09bbf9190) at /usr/include/c++/5.3.1/condition_variable:98
+#3  rocksdb::WriteThread::BlockingAwaitState (this=this@entry=0x2415860, w=w@entry=0x7fd09bbf90f0, goal_mask=goal_mask@entry=14 '\016')
+    at db/write_thread.cc:37
+#4  0x00007fd0a30b2560 in rocksdb::WriteThread::AwaitState (this=this@entry=0x2415860, w=w@entry=0x7fd09bbf90f0, 
+    goal_mask=goal_mask@entry=14 '\016', 
+    ctx=ctx@entry=0x7fd0a3482380 <rocksdb::WriteThread::JoinBatchGroup(rocksdb::WriteThread::Writer*)::ctx>) at db/write_thread.cc:157
+#5  0x00007fd0a30b2846 in rocksdb::WriteThread::JoinBatchGroup (this=this@entry=0x2415860, w=w@entry=0x7fd09bbf90f0)
+---Type <return> to continue, or q <return> to quit---
+    at db/write_thread.cc:227
+#6  0x00007fd0a302bcb8 in rocksdb::DBImpl::WriteImpl (this=0x24152f0, write_options=..., my_batch=0x7fd09bbf9490, 
+    callback=callback@entry=0x0, log_used=log_used@entry=0x0, log_ref=0, disable_memtable=false) at db/db_impl.cc:4441
+#7  0x00007fd0a302da7b in rocksdb::DBImpl::Write (this=<optimized out>, write_options=..., my_batch=<optimized out>) at db/db_impl.cc:4391
+#8  0x000000000054381b in ioremap::greylock::database::write (this=0x7fffe3b97d90, batch=0x7fd09bbf9490)
+
+Thread 19 (Thread 0x7fd09b3f9700 (LWP 3342)):
+#0  0x00007fd0a26c9b20 in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+#1  0x00007fd0a23eeacc in std::condition_variable::wait(std::unique_lock<std::mutex>&) () from /lib64/libstdc++.so.6
+#2  0x00007fd0a30b2473 in std::condition_variable::wait<rocksdb::WriteThread::BlockingAwaitState(rocksdb::WriteThread::Writer*, uint8_t)::<lambda()> > (__p=..., __lock=..., this=0x7fd09b3f8190) at /usr/include/c++/5.3.1/condition_variable:98
+#3  rocksdb::WriteThread::BlockingAwaitState (this=this@entry=0x2415860, w=w@entry=0x7fd09b3f80f0, goal_mask=goal_mask@entry=14 '\016')
+    at db/write_thread.cc:37
+#4  0x00007fd0a30b2560 in rocksdb::WriteThread::AwaitState (this=this@entry=0x2415860, w=w@entry=0x7fd09b3f80f0, 
+    goal_mask=goal_mask@entry=14 '\016', 
+    ctx=ctx@entry=0x7fd0a3482380 <rocksdb::WriteThread::JoinBatchGroup(rocksdb::WriteThread::Writer*)::ctx>) at db/write_thread.cc:157
+#5  0x00007fd0a30b2846 in rocksdb::WriteThread::JoinBatchGroup (this=this@entry=0x2415860, w=w@entry=0x7fd09b3f80f0)
+    at db/write_thread.cc:227
+#6  0x00007fd0a302bcb8 in rocksdb::DBImpl::WriteImpl (this=0x24152f0, write_options=..., my_batch=0x7fd09b3f8490, 
+    callback=callback@entry=0x0, log_used=log_used@entry=0x0, log_ref=0, disable_memtable=false) at db/db_impl.cc:4441
+---Type <return> to continue, or q <return> to quit---
+#7  0x00007fd0a302da7b in rocksdb::DBImpl::Write (this=<optimized out>, write_options=..., my_batch=<optimized out>) at db/db_impl.cc:4391
+#8  0x000000000054381b in ioremap::greylock::database::write (this=0x7fffe3b97d90, batch=0x7fd09b3f8490)
+
+```
+
+I built rocksdb tree against commit 6920cde8936d4f7096a0e30815493dc59965f8db
+
+Nice thing to note, that after gdb has been attouched/detouched, threads recovered.
+
+Nope, it blocked again after several minutes and gdb trick doesn't help
+

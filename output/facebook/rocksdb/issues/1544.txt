@@ -1,0 +1,5 @@
+By "mid" concurrency I mean when the number of clients is less than the number of HW threads. By "high" concurrency I mean when the number of clients is much larger than the number of HW threads. And this assumes clients don't stall on storage reads. In my tests, results are not public yet, I see RocksDB (or MyRocks) with the concurrent memtable helping QPS at mid concurrency and hurting at high concurrency.
+
+It would be nice to explain why it hurts at high concurrency.
+I think when we have much more threads than CPU cores, we get less benefits from parallelizing the workload, and the scheduling overhead might just be too big. Especially, we use spin lock for concurrent arena, which is good when we have more threads than CPUs because each thread can spin its own CPU core and not interfere others. When multiple threads run on the same CPU, a spin lock can lead to inferior performance by spinning and wasting CPU resource.
+

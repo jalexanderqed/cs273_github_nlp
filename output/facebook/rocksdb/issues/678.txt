@@ -1,0 +1,78 @@
+I tried to cross compile rocksdb, with gcc-linaro-arm-linux-gnueabihf-g++, but an error.
+arm.sh content is:
+# !/bin/sh
+
+export HOST=arm-linux-gnueabihf
+export CC="${HOST}-gcc"
+export CXX="${HOST}-g++"
+export LD="${HOST}-ld"
+export AR="${HOST}-ar"
+export NM="${HOST}-nm"
+export AS="${HOST}-as"
+export RANLIB="${HOST}-ranlib"
+export STRIP="${HOST}-strip"
+export OBJCOPY="${HOST}-objcopy"
+export OBJDUMP="${HOST}-objdump"
+
+make
+
+make install
+
+Error message is:
+not supported 'march=native'
+
+How to cross compile for ARM platform?
+My dev host OS is Ubuntu 14.04,target ARM is armv7-a
+
+Hi @leenux . Can you please try to compile with `PORTABLE=1 make release`
+
+We don't really support ARM, but it might just work :)
+
+Hi @igorcanadi, what about https://github.com/facebook/rocksdb/wiki#features ("so that it works well on ARM processors")?
+
+Good catch, I edited the wiki, thanks.
+
+@igorcanadi @leenux
+
+Cross-compiling tag v4.1 in yocto for the gumstix (dm3730), but I hit a few road blocks. I eventually got past them.
+
+> Hi @leenux . Can you please try to compile with PORTABLE=1 make release
+
+build_tools/build_detect_platform processes the PORTABLE=1 environment variable and decides whether to append '-march=native' as a CFLAG. Setting this variable was insufficient (easy enough to check by looking at the PLATFORM_CCFLAGS entry in make_config.mk). I got past this problem by adding a nested conditional check against MACHINE, which is set in the Makefile (or set from the environment).
+
+``` bash
+elif test -z "$PORTABLE"; then
+# -march=native is a gcc option for intel processors (only checking for 64-bit below)
+  if [ $MACHINE == 'x86_64' ]; then                                                                                                                                                      
+      COMMON_FLAGS="$COMMON_FLAGS -march=native"
+  fi
+fi
+```
+
+Additionally, I needed to patch the Makefile to address #810 
+
+``` Makefile
+# compile with -O2 if debug level is not 2
+ifneq ($(DEBUG_LEVEL), 2)
+OPT += -O2 -fno-omit-frame-pointer
+ifneq ($(MACHINE),ppc64) # ppc64 doesn't support -momit-leaf-frame-pointer
+ifneq ($(MACHINE),overo) # well, neither does arm ('overo' is a yocto meta-gumstix def)                                                                                                                                                                                    
+OPT += -momit-leaf-frame-pointer
+endif
+endif
+endif
+```
+
+If you're using yocto, the relevant portion of my recipe file to invoke the Makefile is as follows
+
+```
+EXTRA_OEMAKE = "'PORTABLE=1' 'MACHINE=${MACHINE}' static_lib"
+```
+
+To convince you that it compiled,
+
+```
+~/yocto/build ❯❯❯ ls -1 tmp/work/cortexa8hf-vfp-neon-poky-linux-gnueabi/rocksdb/4.1-r0/rocksdb-4.1/*.a
+tmp/work/cortexa8hf-vfp-neon-poky-linux-gnueabi/rocksdb/4.1-r0/rocksdb-4.1/librocksdb.a
+```
+

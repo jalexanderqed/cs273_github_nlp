@@ -1,0 +1,11 @@
+This is a previous fix that has a typo
+@lightmark has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4157381).
+
+Please work with Islam to make sure it fixes the bug.
+
+LGTM, I checked the tests and they pass with this change
+
+@lightmark, can you please check valgrind failure and verify it's unrelated ?
+
+The valgrind failure looks unrelated to me. I'm merging it.
+

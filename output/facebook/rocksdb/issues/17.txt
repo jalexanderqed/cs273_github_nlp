@@ -1,0 +1,11 @@
+I've tested this on both OSX 10.9 and an Ubuntu 13.10 server VM. Both appear to build without errors, but _make check_ fails with the following:
+
+==== Test TableTest.ApproximateOffsetOfCompressed
+Value 10029 is not in range [2000, 3000]
+table/table_test.cc:1154: Assertion failure Between(c.ApproximateOffsetOf("k03"), 2000, 3000)
+make: **\* [check] Error 1
+
+Well this is weird. A git pull/make clean seems to have cleared this up.
+
+Looks like we accidentally fixed your problem! :)
+

@@ -1,0 +1,10 @@
+using reinterpret_cast instead of static_cast where it's not application due to contract
+
+Please check the issue comment for more details
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+Thanks @clumsy, I will close this pull request since it was already included in this pull request https://github.com/facebook/rocksdb/commit/9430333f84635ffb2586f6b5e4debc6051258943
+

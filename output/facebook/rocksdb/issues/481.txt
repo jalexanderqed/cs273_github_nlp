@@ -1,0 +1,31 @@
+Added simple wrappings allowing backing up RocksDB in C.
+I don't have a lot of experience in C++, so comments are welcome.
+
+Any updates?
+
+Thanks for contributing! Can you also please add a unit test for the new feature? Also, please run `make format` to fix the styling.
+
+- Added unit tests
+- Added some more wrappers
+- Made an ENV configurable
+
+I have tried `make format`, but it make a code look nothing like a code around. Are you sure it works as it should?
+
+Looks great! Don't worry about `make format`, I'll just run it on your commit once we merge it.
+
+Just couple of nits:
+- Can we also add restore procedure to c_test? Since we're backing up, we might as well show how to restore :)
+- Can you please add comment on c_simple_example? I know code is mostly self-explanatory, but I think it would help some people.
+
+Tnx!
+
+I have already added restoration check/procedure to c_test. Have you missed it? Or maybe you are talking about adding it to c_simple_example?
+
+Yeah, I was thinking about adding it to c_simple_example. The test looks good!
+
+Done.
+
+Great stuff!
+
+Thank you.
+

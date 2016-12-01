@@ -1,0 +1,303 @@
+I have compiled rocksdb with Visual Studio 2015 x64 using cmake as static library with --DSNAPPY=1 option according to tutorial for Windows in CMakeLists.txt and tried to use the c_simple_example (because only C API works, c++ example gets unresolved externals). All compiles well,but when i am calling
+`db = rocksdb_open(options, &nodesFileName[0], &err);`
+i get error 
+Invalid argument: Compression type Snappy is not linked with the binary.
+It doesn´t even work if i specify exactly not to use compression.
+`rocksdb_options_set_compression(options, 0);`
+
+I linked rocksdb with this version of snappy https://bitbucket.org/robertvazan/snappy-visual-cpp. Linking rocksdblib into project results in unresolved external snappy::RawCompress, so it can´t be compiled that way.
+
+How do you compile this on Windows without the Snappy error? I am pretty sure i have tried all combinations of
+Configuration type -> Static lib / Dynamic library
+and
+Code generation -> Multithreaded / Multithreaded DLL.
+Only  Static lib/Multithreaded compiles it correctly, but maybe because of bugged C API it still throws the snappy error?
+
+@brano543  You need a version of Snappy that provides all of the API required. You do not need to try any of the combinations. The CMake produced build should work as it is.
+
+@yuslepukhin Still same problem: Compression type Snappy is not linked with the binary.
+I compiled Snappy as static library and i can run those functions:
+
+```
+string buffer = "0=EURCHF";
+    string output;
+    size_t compressedSize = snappy::Compress(buffer.data(), buffer.size(), &output);
+    printf("%s", output.c_str());
+    string uncompressedBuffer;
+    bool result = snappy::Uncompress(output.data(), output.size(), &uncompressedBuffer);
+    printf("%s\n", uncompressedBuffer.c_str());
+```
+
+I get the error "Compression type Snappy is not linked with the binary" when linking to rocksdb.lib and trying to open the DB.
+
+```
+//initialize Rocksdb    
+        options = rocksdb_options_create();
+
+        // Optimize RocksDB. This is the easiest way to get RocksDB to perform well
+        long cpus = std::max<int>(std::thread::hardware_concurrency(), 1);
+        rocksdb_options_increase_parallelism(options, (int)(cpus));
+        rocksdb_options_optimize_level_style_compaction(options, 0);
+
+        // create the DB if it's not already present
+        rocksdb_options_set_create_if_missing(options, 1);
+
+        // open DB
+        char *err = NULL;
+        db = rocksdb_open(options, &nodesFileName[0], &err);
+        assert(!err);
+```
+
+When i link to rocksdblib.lib, i cannot even compile. It ends with:
+
+```
+1>rocksdblib.lib(env_win.obj) : error LNK2019: unresolved external symbol __imp_RpcStringFreeA referenced in function "public: virtual class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl rocksdb::Env::GenerateUniqueId(void)" (?GenerateUniqueId@Env@rocksdb@@UEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ)
+1>rocksdblib.lib(env_win.obj) : error LNK2019: unresolved external symbol __imp_UuidCreateSequential referenced in function "public: virtual class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl rocksdb::Env::GenerateUniqueId(void)" (?GenerateUniqueId@Env@rocksdb@@UEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ)
+1>rocksdblib.lib(env_win.obj) : error LNK2019: unresolved external symbol __imp_UuidToStringA referenced in function "public: virtual class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl rocksdb::Env::GenerateUniqueId(void)" (?GenerateUniqueId@Env@rocksdb@@UEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ)
+```
+
+@brano543 You can compile, you can not link for some reason.
+
+The linking errors that you are encountering do not appear to have anything to do with Snappy and should be independent of it. The above calls are Win API calls that are satisfied from Rpcrt4.lib which appears among the dependancies in the CMake file 
+`set(SYSTEM_LIBS ${SYSTEM_LIBS} Shlwapi.lib Rpcrt4.lib)
+
+However, the requirement is that minimally it has at least or later:
+
+Windows 2000 Professional or
+Windows 2000 Server 
+
+`
+
+@yuslepukhin Are you running Windows and are you getting the Compression type snappy is not linked with the binary? 
+Still after calling
+`db = rocksdb_open(options, &nodesFileName[0], &err);`
+getting it.
+
+UPDATE
+This call is making the error
+`rocksdb_options_optimize_level_style_compaction(options, 0);`
+If i don´t call it i have no snappy error,but it´s really weird why it can´t find snappy when its linked.
+
+@brano543 I am running Windows and link Snappy all the time since it is a default engine and many of the tests rely on it. 
+
+Error `Compression type Snappy is not linked with the binary.` looks like indeed it is not linked but the linkage errors point to another direction.
+
+Are you running off the GitHub master and what commit?
+
+@brano543 Check that your system has rpcrt4.dll
+
+@yuslepukhin  I am running Windows 7 and yes, i have rpcrt4.dll.  I cloned from master directly. Commit f4d986364e0366c07a78fc87f27ddd3a205649f2
+Where did you downloaded Snappy from? I used this https://bitbucket.org/robertvazan/snappy-visual-cpp
+
+@yuslepukhin I was building with Visual studio 2016 x64 setting in cmake. I have compiled snappy as static library,because when it was dynamic rocksdb couldn´t compile. Here are my compiled binaries for rocksdb. Can you check them if you encounter same error with linking snappy? https://www.dropbox.com/s/k8cwznml8qj5z5d/rocksdb_snappy.7z?dl=0
+
+What i also wonder, are you using the C++ API or the C api? I wasn´t able to compile it so that i could use the c++ example.
+
+@brano543 I will take a look. To compile Snappy as DLL you will need to make sure that the entry points are marked as either exported (when building Snappy) or exported when linking to it. I just recently changed the internal version of Snappy and we are consuming it as a DLL.
+
+@brano543 Dropbox requires a sign in.
+
+@yuslepukhin Where do i check that? Sign in is not required to download the file,just close that pop up. by selecting No thanks,continue to download.
+
+@brano543  Here is what you should see from your Snappy.
+
+`d:>dumpbin /EXPORTS SnappyDll.dll
+Microsoft (R) COFF/PE Dumper Version 14.00.23506.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+Dump of file SnappyDll.dll
+
+File Type: DLL
+
+  Section contains the following exports for Snappydll.dll
+
+```
+00000000 characteristics
+57A8C322 time date stamp Mon Aug  8 10:36:34 2016
+    0.00 version
+       1 ordinal base
+       8 number of functions
+       8 number of names
+
+ordinal hint RVA      name
+
+      1    0 00003C90 ?Compress@snappy@@YA_KPEBD_KPEAV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z = ?Compress@snappy@@YA_KPEBD_KPEAV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z (unsigned __int64 __cdecl snappy::Compress(char const *,unsigned __int64,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > *))
+      2    1 00004900 ?GetUncompressedLength@snappy@@YA_NPEBD_KPEA_K@Z = ?GetUncompressedLength@snappy@@YA_NPEBD_KPEA_K@Z (bool __cdecl snappy::GetUncompressedLength(char const *,unsigned __int64,unsigned __int64 *))
+      3    2 000049B0 ?IsValidCompressedBuffer@snappy@@YA_NPEBD_K@Z = ?IsValidCompressedBuffer@snappy@@YA_NPEBD_K@Z (bool __cdecl snappy::IsValidCompressedBuffer(char const *,unsigned __int64))
+      4    3 00004AE0 ?MaxCompressedLength@snappy@@YA_K_K@Z = ?MaxCompressedLength@snappy@@YA_K_K@Z (unsigned __int64 __cdecl snappy::MaxCompressedLength(unsigned __int64))
+      5    4 00004B10 ?RawCompress@snappy@@YAXPEBD_KPEADPEA_K@Z = ?RawCompress@snappy@@YAXPEBD_KPEADPEA_K@Z (void __cdecl snappy::RawCompress(char const *,unsigned __int64,char *,unsigned __int64 *))
+      6    5 00004B90 ?RawUncompress@snappy@@YA_NPEAVSource@1@PEAD@Z = ?RawUncompress@snappy@@YA_NPEAVSource@1@PEAD@Z (bool __cdecl snappy::RawUncompress(class snappy::Source *,char *))
+      7    6 00004BC0 ?RawUncompress@snappy@@YA_NPEBD_KPEAD@Z = ?RawUncompress@snappy@@YA_NPEBD_KPEAD@Z (bool __cdecl snappy::RawUncompress(char const *,unsigned __int64,char *))
+      8    7 00004EE0 ?Uncompress@snappy@@YA_NPEBD_KPEAV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z = ?Uncompress@snappy@@YA_NPEBD_KPEAV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z (bool __cdecl snappy::Uncompress(char const *,unsigned __int64,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > *))
+```
+
+  Summary
+
+```
+    1000 .data
+    1000 .gfids
+    1000 .idata
+    1000 .pdata
+    1000 .reloc
+    8000 .text
+    1000 .tls`
+```
+
+@brano543 We are using an internally packaged version of Snappy which is somewhat customized. However, it does not affect the API since it is dictated by the Rocksdb. We make use of standard snappy namespace standalone functions exposed via snappy.h. However, they need to be exported. The maintainers of the version you use thought the exports are useless so they dropped it in this commit.
+
+https://bitbucket.org/robertvazan/snappy-visual-cpp/src/e0bf00f8b634e32dc9b59db9c7afc57dcb6c797d/snappy.h?fileviewer=file-view-default
+
+@yuslepukhin I wanted to use original repo https://github.com/google/snappy, but i couldn´t figure out how to make snappy-stubs-public.h from snappy-stubs-public.h.in.
+
+@brano543 You can still use the version that you are using and link to it as a static library. The main repo build requires autoconf much like Jemalloc. I have written a CMake file for Jemalloc and much of it can be reused for creating a CMake build for Snappy but I am short on time right now.
+
+@yuslepukhin 
+
+> You can still use the version that you are using and link to it as a static library.
+
+How do i do that? I have build Snappy as static library, but rocksdb could only be build as dynamic library, because rocksdblib.lib had unresolved external problems.
+
+BTW couldn´t be the solution put these definitions again in snappy.h?
+
+```
+#ifndef SNAPPY_STATIC
+#ifdef SNAPPY_EXPORTS
+#define SNAPPY_API __declspec(dllexport)
+#else
+#define SNAPPY_API __declspec(dllimport)
+#endif
+#else
+#define SNAPPY_API
+#endif
+```
+
+@brano543 The presense of the unresolved symbols does not depend on whether you build Rockdb as static or dynamic library and certainly does not depend on snappy. Those are two different issues and I just want to emphasize that.
+
+You can put those definitions back but they are only needed if you want to create a snappy DLL and use it which IMHO would not make much difference except for the fact you would have one more deliverables. You will have to copy snappy dll everywhere you use Rocksdb and with a static version you would not.
+
+@brano543 FWIW, I just pulled the latest master and built it w/o no problems. on Windows 2012R Server
+
+@yuslepukhin I am going to kill myself. I have forgot to replace the DLL after i newly build it. So i was 2 days rebuilding with no change because there was the old DLL without linked snappy.
+
+I am still unable to build rocksdblib. How do you compile rocksdblib(static library of rocksdb) on your OS? Because for me Cmake somehow generates gtest,rocksdb and rocksdblib to depend on each other. The rocksdblib.lib is like 400 MB file, but still i get those _imp unresolved externals. I have read on stackoveflow,that this is so because somehow rocksdblib.lib expects to be part of DLL,not a static library even when i see it in Visual studio with static library option.
+
+@brano543 Follow the instructions in the CMake file.
+
+Update paths to third-party libraries in thirdparty.inc file or use env vars to override
+ mkdir build && cd build
+ cmake -G "Visual Studio 14 Win64"  -DSNAPPY=1  ..
+ msbuild rocksdb.sln /m
+
+@yuslepukhin I am doing that, but there is no option to make static like discribed here https://github.com/facebook/rocksdb/blob/master/INSTALL.md. I am only able to build rocksdb as dynamic library. If i build it as static from the project generated by cmake, i get those _imp external errors when i link rocksdblib.lib in my project.
+
+@brano543 You are certainly doing something wrong because the Cmake generated projects build both versions of the rocksdb (static and dynamic) automatically and you do not have any control over that unless you are changing the make file.
+
+@yuslepukhin You were right, i was missing include Rpcrt4.lib. I also didn´t know that i have to include snappy64.lib again when it was build as static. Now the static build of rocksdb works for me. Now i can use the c++ interface. Unfortunately there are some memory leaks in the simple_example.cc
+
+```
+rocksdb::DB* db;
+rocksdb::Options options;
+// Optimize RocksDB. This is the easiest way to get RocksDB to perform well
+options.IncreaseParallelism();
+options.OptimizeLevelStyleCompaction();
+// create the DB if it's not already present
+options.create_if_missing = true;
+
+// open DB
+rocksdb::Status s = rocksdb::DB::Open(options, nodesFileName, &db);
+assert(s.ok());
+
+delete db;
+```
+
+but it may be false positives since i am using visual leak detector.
+  Thank you for your help.
+
+UPDATE
+It has something to do with the options.Env. I donˇt know how these guys https://github.com/facebook/rocksdb/issues/1051 safely deallocate that pointer,because when i detele options.env i get mutex break exception.
+
+@brano543 Env on Windows is not deallocated and lives through the lifetime of the process
+
+@yuslepukhin Is there a way to free it just before the program exits so i don´t get false positives in leak detector?
+
+@yuslepukhin Btw i was trying to run db_benchmark, i wanted to see how they achieved so fast inserts,because for me around 1 million nodes takes like 90 seconds. Are you able to compile db_benchmark on Windows?
+
+@brano543 You may want to build and link with Jemalloc and run against an SSD drive. Also it takes some tuning to approach Linux numbers on Windows
+
+@yuslepukhin I will try to build it with jemalloc. How do i turn it on once its compiled? 
+
+@yuslepukhin I am unable to use autoconf for jemalloc. I have tried the tutorial. I have cygwin installed, i have all those dependencies,i also have cygwin bin folder in path,but when i run 
+`sh -c "./autogen.sh CC=cl --enable-lazy-lock=no"`
+it cannot find the autoconf
+
+```
+autoconf
+/f/cygwin64/bin/autoconf: /f/cygwin64/bin/autoconf: cannot execute binary file
+Error 0 in autoconf
+```
+
+How did you run the autoconf command? When i run through cygwin terminal it also fails.
+
+Maybe my performance is not connected with jemalloc? How do you bulkload data? My example
+
+```
+tbb::parallel_for(
+            tbb::blocked_range<std::size_t>(0, osm_elements.size()),
+            [&](const tbb::blocked_range<std::size_t> &range) 
+        {
+
+for (auto x = range.begin(), end = range.end(); x != end; ++x)
+            {
+                const auto entity = osm_elements[x];
+
+                switch (entity->type())
+                {
+                case osmium::item_type::node:
+                {
+                    Node n;
+                    int64_t id = static_cast<const osmium::Node &>(*entity).id();
+                    n.lat = static_cast<const osmium::Node &>(*entity).location().lat();
+                    n.lon = static_cast<const osmium::Node &>(*entity).location().lon();
+
+                    //inserts node to index map
+    rocksdb::WriteOptions write_options;
+        write_options.disableWAL = true;
+
+        const char * key = (char *) &id;
+        const char * value = (char *) &node;
+        s = db->Put(write_options, key, value);
+        assert(s.ok());
+                    NodeCount++;
+                    break;
+                }
+
+                default:
+                    break;
+                }
+            }
+});
+```
+
+I have compiled it with jemalloc, seems like i am not doing the bulk load correctly,because its still slow. Maybe i need to create sorted vectors and create sst files from those like described here. https://github.com/facebook/rocksdb/wiki/Creating-and-Ingesting-SST-files
+
+@brano543 I recommend a CMake based jemalloc-cmake project on GH which is currently 4.2.1, very close to the latest.
+
+I just started using the Java .jar file in version 4.9, and can confirm that the embedded librocksdbjni-win64.dll does not have Snappy support. The LOG file says:
+
+2016/08/18-14:55:41.322341 b60 Compression algorithms supported:
+2016/08/18-14:55:41.322352 b60  Snappy supported: 0
+2016/08/18-14:55:41.322358 b60  Zlib supported: 0
+2016/08/18-14:55:41.322362 b60  Bzip supported: 0
+2016/08/18-14:55:41.322367 b60  LZ4 supported: 0
+
+and for my test data set, the total size of the .sst files increased from 300 mb in Linux to 400 mb in Windows.
+
+When I call columnFamilyOptions.setCompressionType(CompressionType.SNAPPY_COMPRESSION); I get:
+org.rocksdb.RocksDBException: Invalid argument: Compression type Snappy is not linked with the binary.
+
+@ccleve I intentionally did not link the RocksJava 4.9.0 released DLL with any of the 3rd party libraries until there is a clear understanding on how to do that.
+
+@adamretter Thanks for doing the .dll, by the way. I did some testing and it works great. Has made my life _way_ easier.
+
+@adamretter One way out for compression on Windows is to enable XPRESS which does not require 3rd parties (links to windows libs). The compression ratio is about the same as Snappy but I did not test the CPU.
+

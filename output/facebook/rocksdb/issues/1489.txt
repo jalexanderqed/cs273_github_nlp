@@ -1,0 +1,8 @@
+Summary:
+Add a parameter to allow users to continue using the iterator even after committing a transaction.
+
+Test Plan: Add a unit test
+@siying has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4157914).
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1489/files/950517e41389e6d8d1b2cf7eb4ca17a86bcb4fcd..ee39cf8b21c6fd0a0c49ced4bf61ef23186531fd) - [changes since last import](https://github.com/facebook/rocksdb/pull/1489/files/950517e41389e6d8d1b2cf7eb4ca17a86bcb4fcd..ee39cf8b21c6fd0a0c49ced4bf61ef23186531fd)
+

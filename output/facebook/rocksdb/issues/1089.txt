@@ -1,0 +1,2 @@
+WARN level logging is now correctly logged at WARN level via the Java API, previously it was mistakenly logged at FATAL level.
+

@@ -1,0 +1,23 @@
+In the project in which we're hoping to integrate RocksDB, we use a number of maps cut up into rectangle objects. 
+
+Each rectangle object consists of the following attributes
+MinX, MaxX, MinY, MaxY, and Rectangle Name (each rectangle Name being a unique string).
+
+I've used the following methods to store the rectangles into the SpatialDB
+(please correct me if I'm wrong here)
+
+for(MapSet->FirstRectangle(); MapSet->HasNextRectangle(); MapSet->Next()) 
+{
+features.Set("MapResolution", MapSet->Resolution)
+
+db->Insert(WriteOptions(), BoundingBox<double>(MinX, MinY, MaxX, MaxY), RectName, features, {"zoom10"})
+}
+
+it took over the course of a few days to write 3500 of these objects into the rocksdb database. 
+
+Where my problem is now, is that I want to recreate my rectangles from the Spatial Database in which I've stored these attributes. 
+
+How do I go about retrieving these Point values from RocksDB::spatialDB
+
+@HawleyJean : curious to know if you are able to share any of your experiences about this experiment. Thanks.
+

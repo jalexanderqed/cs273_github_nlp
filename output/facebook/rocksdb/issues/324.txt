@@ -1,0 +1,19 @@
+Various SCA fixes from cppcheck incl.:
+- pass const parameter by reference
+- use empty() over size() 
+- perform init in initialization list
+- prefer prefix ++operator for non-primitive types
+- remove check for >=0 for unsigned variables
+- reduce scope of variables
+- remove unused variables
+- correct format specifier
+- suppress some cppcheck warnings
+
+This is great, thanks @dalgaaf ! I'm merging after you fix the style (see previous comment)
+
+fixed style
+
+@dalgaaf there are some more places in the code where you attach & to the name instead of the type. Would you mind fixing those, too?
+
+fix style also in other places as requested
+

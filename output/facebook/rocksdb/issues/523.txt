@@ -1,0 +1,291 @@
+When I run make jtest (after make rocksdbjni) I get the assertion error. 
+
+Vladimirs-MacBook-Pro:rocksdb-rocksdb-3.9.1 vrodionov$ make jtest
+cd java;/Library/Developer/CommandLineTools/usr/bin/make sample;/Library/Developer/CommandLineTools/usr/bin/make test;
+mkdir -p "./test-libs/"
+test -s "./test-libs/junit-4.12-beta-2.jar" || curl -k -L -o ./test-libs/junit-4.12-beta-2.jar http://search.maven.org/remotecontent?filepath=junit/junit/4.12-beta-2/junit-4.12-beta-2.jar
+test -s "./test-libs/hamcrest-core-1.3.jar" || curl -k -L -o ./test-libs/hamcrest-core-1.3.jar http://search.maven.org/remotecontent?filepath=org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar
+test -s "./test-libs/mockito-all-1.9.5.jar" || curl -k -L -o "./test-libs/mockito-all-1.9.5.jar" http://search.maven.org/remotecontent?filepath=org/mockito/mockito-all/1.9.5/mockito-all-1.9.5.jar
+test -s "./test-libs/cglib-2.2.2.jar" || curl -k -L -o "./test-libs/cglib-2.2.2.jar" http://search.maven.org/remotecontent?filepath=cglib/cglib/2.2.2/cglib-2.2.2.jar
+test -s "./test-libs/assertj-core-1.7.0.jar" || curl -k -L -o "./test-libs/assertj-core-1.7.0.jar" http://central.maven.org/maven2/org/assertj/assertj-core/1.7.0/assertj-core-1.7.0.jar
+javac org/rocksdb/util/_.java org/rocksdb/_.java
+javac -cp rocksdbjni-3.9.1-osx.jar:./test-libs/junit-4.12-beta-2.jar:./test-libs/hamcrest-core-1.3.jar:./test-libs/mockito-all-1.9.5.jar:./test-libs/cglib-2.2.2.jar:./test-libs/assertj-core-1.7.0.jar:.:./\* org/rocksdb/test/_.java
+javah -d ./include -jni org.rocksdb.AbstractComparator org.rocksdb.AbstractSlice org.rocksdb.BackupableDB org.rocksdb.BackupableDBOptions org.rocksdb.BlockBasedTableConfig org.rocksdb.BloomFilter org.rocksdb.Checkpoint org.rocksdb.ColumnFamilyHandle org.rocksdb.ColumnFamilyOptions org.rocksdb.Comparator org.rocksdb.ComparatorOptions org.rocksdb.DBOptions org.rocksdb.DirectComparator org.rocksdb.DirectSlice org.rocksdb.FlushOptions org.rocksdb.Filter org.rocksdb.GenericRateLimiterConfig org.rocksdb.HashLinkedListMemTableConfig org.rocksdb.HashSkipListMemTableConfig org.rocksdb.MergeOperator org.rocksdb.Options org.rocksdb.PlainTableConfig org.rocksdb.ReadOptions org.rocksdb.RestoreBackupableDB org.rocksdb.RestoreOptions org.rocksdb.RocksDB org.rocksdb.RocksEnv org.rocksdb.RocksIterator org.rocksdb.SkipListMemTableConfig org.rocksdb.Slice org.rocksdb.Statistics org.rocksdb.VectorMemTableConfig org.rocksdb.StringAppendOperator org.rocksdb.WriteBatch org.rocksdb.WriteBatch.Handler org.rocksdb.test.WriteBatchInternal org.rocksdb.test.WriteBatchTest org.rocksdb.WriteOptions 
+javac -cp rocksdbjni-3.9.1-osx.jar RocksDBSample.java
+java -ea -Djava.library.path=.:../ -cp ".:./_" -Xcheck:jni RocksDBSample /tmp/rocksdbjni
+RocksDBSample
+caught the expceted exception -- org.rocksdb.RocksDBException: Invalid argument: /tmp/rocksdbjni_not_found: does not exist (create_if_missing is false)
+Get('hello') = world
+1 2 3 4 5 6 7 8 9 
+2 4 6 8 10 12 14 16 18 
+3 6 9 12 15 18 21 24 27 
+4 8 12 16 20 24 28 32 36 
+5 10 15 20 25 30 35 40 45 
+6 12 18 24 30 36 42 48 54 
+7 14 21 28 35 42 49 56 63 
+8 16 24 32 40 48 56 64 72 
+9 18 27 36 45 54 63 72 81 
+100 110 120 130 140 150 160 170 180 190 
+110 121 132 143 154 165 176 187 198 209 
+120 132 144 156 168 180 192 204 216 228 
+130 143 156 169 182 195 208 221 234 247 
+140 154 168 182 196 210 224 238 252 266 
+150 165 180 195 210 225 240 255 270 285 
+160 176 192 208 224 240 256 272 288 304 
+170 187 204 221 238 255 272 289 306 323 
+180 198 216 234 252 270 288 306 324 342 
+190 209 228 247 266 285 304 323 342 361 
+getTickerCount() passed.
+geHistogramData() passed.
+iterator seekToFirst tests passed.
+iterator seekToLastPassed tests passed.
+iterator seek test passed.
+iterator tests passed.
+mkdir -p "./test-libs/"
+test -s "./test-libs/junit-4.12-beta-2.jar" || curl -k -L -o ./test-libs/junit-4.12-beta-2.jar http://search.maven.org/remotecontent?filepath=junit/junit/4.12-beta-2/junit-4.12-beta-2.jar
+test -s "./test-libs/hamcrest-core-1.3.jar" || curl -k -L -o ./test-libs/hamcrest-core-1.3.jar http://search.maven.org/remotecontent?filepath=org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar
+test -s "./test-libs/mockito-all-1.9.5.jar" || curl -k -L -o "./test-libs/mockito-all-1.9.5.jar" http://search.maven.org/remotecontent?filepath=org/mockito/mockito-all/1.9.5/mockito-all-1.9.5.jar
+test -s "./test-libs/cglib-2.2.2.jar" || curl -k -L -o "./test-libs/cglib-2.2.2.jar" http://search.maven.org/remotecontent?filepath=cglib/cglib/2.2.2/cglib-2.2.2.jar
+test -s "./test-libs/assertj-core-1.7.0.jar" || curl -k -L -o "./test-libs/assertj-core-1.7.0.jar" http://central.maven.org/maven2/org/assertj/assertj-core/1.7.0/assertj-core-1.7.0.jar
+javac org/rocksdb/util/_.java org/rocksdb/_.java
+javac -cp rocksdbjni-3.9.1-osx.jar:./test-libs/junit-4.12-beta-2.jar:./test-libs/hamcrest-core-1.3.jar:./test-libs/mockito-all-1.9.5.jar:./test-libs/cglib-2.2.2.jar:./test-libs/assertj-core-1.7.0.jar:.:./\* org/rocksdb/test/_.java
+javah -d ./include -jni org.rocksdb.AbstractComparator org.rocksdb.AbstractSlice org.rocksdb.BackupableDB org.rocksdb.BackupableDBOptions org.rocksdb.BlockBasedTableConfig org.rocksdb.BloomFilter org.rocksdb.Checkpoint org.rocksdb.ColumnFamilyHandle org.rocksdb.ColumnFamilyOptions org.rocksdb.Comparator org.rocksdb.ComparatorOptions org.rocksdb.DBOptions org.rocksdb.DirectComparator org.rocksdb.DirectSlice org.rocksdb.FlushOptions org.rocksdb.Filter org.rocksdb.GenericRateLimiterConfig org.rocksdb.HashLinkedListMemTableConfig org.rocksdb.HashSkipListMemTableConfig org.rocksdb.MergeOperator org.rocksdb.Options org.rocksdb.PlainTableConfig org.rocksdb.ReadOptions org.rocksdb.RestoreBackupableDB org.rocksdb.RestoreOptions org.rocksdb.RocksDB org.rocksdb.RocksEnv org.rocksdb.RocksIterator org.rocksdb.SkipListMemTableConfig org.rocksdb.Slice org.rocksdb.Statistics org.rocksdb.VectorMemTableConfig org.rocksdb.StringAppendOperator org.rocksdb.WriteBatch org.rocksdb.WriteBatch.Handler org.rocksdb.test.WriteBatchInternal org.rocksdb.test.WriteBatchTest org.rocksdb.WriteOptions 
+java -ea -Xcheck:jni -Djava.library.path=.:../ -cp "rocksdbjni-3.9.1-osx.jar:./test-libs/junit-4.12-beta-2.jar:./test-libs/hamcrest-core-1.3.jar:./test-libs/mockito-all-1.9.5.jar:./test-libs/cglib-2.2.2.jar:./test-libs/assertj-core-1.7.0.jar:.:./_" org.rocksdb.test.RocksJunitRunner org.rocksdb.test.BackupableDBOptionsTest org.rocksdb.test.BackupableDBTest org.rocksdb.test.BlockBasedTableConfigTest org.rocksdb.test.CheckPointTest org.rocksdb.test.ColumnFamilyOptionsTest org.rocksdb.test.ColumnFamilyTest org.rocksdb.test.ComparatorOptionsTest org.rocksdb.test.ComparatorTest org.rocksdb.test.DBOptionsTest org.rocksdb.test.DirectComparatorTest org.rocksdb.test.EnvironmentTest org.rocksdb.test.FilterTest org.rocksdb.test.FlushTest org.rocksdb.test.InfoLogLevelTest org.rocksdb.test.KeyMayExistTest org.rocksdb.test.MemTableTest org.rocksdb.test.MergeTest org.rocksdb.test.MixedOptionsTest org.rocksdb.test.OptionsTest org.rocksdb.test.PlainTableConfigTest org.rocksdb.test.ReadOnlyTest org.rocksdb.test.ReadOptionsTest org.rocksdb.test.RocksDBTest org.rocksdb.test.RocksEnvTest org.rocksdb.test.RocksIteratorTest org.rocksdb.test.SizeUnitTest org.rocksdb.test.SnapshotTest org.rocksdb.test.StatisticsCollectorTest org.rocksdb.test.WriteBatchHandlerTest org.rocksdb.test.WriteBatchTest org.rocksdb.test.WriteOptionsTest 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> failSetSyncIfDisposed 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> shareTableFiles 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> failBackupRateLimitIfDisposed 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> failBackupDirIsNull 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> backupRateLimit 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> failBackupDirIfDisposed 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> restoreRateLimit 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> failSyncIfDisposed 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> failRestoreRateLimitIfDisposed 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> failShareTableFilesIfDisposed 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> sync 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> failDestroyOldDataIfDisposed 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> backupLogFiles 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> failBackupLogFilesIfDisposed 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> failSetRestoreRateLimitIfDisposed 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> failSetDestroyOldDataIfDisposed 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> shareFilesWithChecksum 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> failSetBackupLogFilesIfDisposed 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> failSetBackupRateLimitIfDisposed 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> backupDir 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> failShareFilesWithChecksumIfDisposed 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> failSetShareTableFilesIfDisposed 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> failSetShareFilesWithChecksumIfDisposed 
+Run: org.rocksdb.test.BackupableDBOptionsTest testing now -> destroyOldData 
+Run: org.rocksdb.test.BackupableDBTest testing now -> deleteBackup 
+Run: org.rocksdb.test.BackupableDBTest testing now -> purgeOldBackupsWithRestoreBackupableDb 
+Run: org.rocksdb.test.BackupableDBTest testing now -> restoreFromBackup 
+Run: org.rocksdb.test.BackupableDBTest testing now -> deleteBackupWithRestoreBackupableDB 
+Run: org.rocksdb.test.BackupableDBTest testing now -> restoreLatestBackup 
+Run: org.rocksdb.test.BackupableDBTest testing now -> purgeOldBackups 
+Run: org.rocksdb.test.BackupableDBTest testing now -> backupDb 
+Run: org.rocksdb.test.BlockBasedTableConfigTest testing now -> blockBasedTableWithFilter 
+Run: org.rocksdb.test.BlockBasedTableConfigTest testing now -> blockSizeDeviation 
+Run: org.rocksdb.test.BlockBasedTableConfigTest testing now -> noBlockCache 
+Run: org.rocksdb.test.BlockBasedTableConfigTest testing now -> blockBasedTableWithoutFilter 
+Run: org.rocksdb.test.BlockBasedTableConfigTest testing now -> blockCacheCompressedSize 
+Run: org.rocksdb.test.BlockBasedTableConfigTest testing now -> cacheNumShardBits 
+Run: org.rocksdb.test.BlockBasedTableConfigTest testing now -> indexType 
+Run: org.rocksdb.test.BlockBasedTableConfigTest testing now -> hashIndexAllowCollision 
+Run: org.rocksdb.test.BlockBasedTableConfigTest testing now -> cacheIndexAndFilterBlocks 
+Run: org.rocksdb.test.BlockBasedTableConfigTest testing now -> checksumType 
+Run: org.rocksdb.test.BlockBasedTableConfigTest testing now -> blockRestartInterval 
+Run: org.rocksdb.test.BlockBasedTableConfigTest testing now -> blockSize 
+Run: org.rocksdb.test.BlockBasedTableConfigTest testing now -> wholeKeyFiltering 
+Run: org.rocksdb.test.BlockBasedTableConfigTest testing now -> blockCacheSize 
+Run: org.rocksdb.test.BlockBasedTableConfigTest testing now -> blockCacheCompressedNumShardBits 
+Run: org.rocksdb.test.CheckPointTest testing now -> checkPoint 
+Run: org.rocksdb.test.CheckPointTest testing now -> failIfDbNotInitialized 
+Run: org.rocksdb.test.CheckPointTest testing now -> failWithIllegalPath 
+Run: org.rocksdb.test.CheckPointTest testing now -> failIfDbIsNull 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> compressionTypes 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> linkageOfPrepMethods 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> targetFileSizeMultiplier 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> expandedCompactionFactor 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> purgeRedundantKvsWhileFlush 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> maxBytesForLevelBase 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> bloomLocality 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> disableAutoCompactions 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> failColumnFamilyOptionsFromPropsWithIllegalValue 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> rateLimitDelayMaxMilliseconds 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> maxBytesForLevelMultiplier 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> minWriteBufferNumberToMerge 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> comparator 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> shouldSetTestPrefixExtractor 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> maxSequentialSkipInIterations 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> memTable 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> getColumnFamilyOptionsFromProps 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> failColumnFamilyOptionsFromPropsWithEmptyProps 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> verifyChecksumsInCompaction 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> sourceCompactionFactor 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> levelZeroFileNumCompactionTrigger 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> softRateLimit 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> arenaBlockSize 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> hardRateLimit 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> compactionStyles 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> inplaceUpdateSupport 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> minPartialMergeOperands 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> filterDeletes 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> numLevels 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> maxMemCompactionLevel 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> levelZeroSlowdownWritesTrigger 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> writeBufferSize 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> memtablePrefixBloomBits 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> targetFileSizeBase 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> failColumnFamilyOptionsFromPropsWithNullValue 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> inplaceUpdateNumLocks 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> maxWriteBufferNumber 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> maxSuccessiveMerges 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> memtablePrefixBloomProbes 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> maxGrandparentOverlapFactor 
+Run: org.rocksdb.test.ColumnFamilyOptionsTest testing now -> levelZeroStopWritesTrigger 
+Run: org.rocksdb.test.ColumnFamilyTest testing now -> iterators 
+Assertion failed: (refs_ == 0), function ~ColumnFamilyData, file db/column_family.cc, line 299.
+make[1]: **\* [test] Abort trap: 6
+make: **\* [jtest] Error 2
+
+I see many assertions errors when I try to jdb_bench with different options as well.
+
+@igorcanadi can you look into this, it seems to hit a c++ assertion.
+
+This assertion means that ColumnFamily was not properly cleaned up before db destructor was called.
+
+i.e. you call `delete db` before `delete cfh`
+
+Another assertion error:
+
+Fill data:
+
+```
+./db_bench --db=/tmp/ramdisk/rocksdb --num_levels=6 --key_size=20 --prefix_size=20 --keys_per_prefix=0 --value_size=100 --block_size=4096 --cache_numshardbits=6 --compression_type=none --compression_ratio=1 --min_level_to_compress=-1 --disable_seek_compaction=1 --hard_rate_limit=2 --write_buffer_size=134217728 --max_write_buffer_number=2 --level0_file_num_compaction_trigger=8 --target_file_size_base=134217728 --max_bytes_for_level_base=1073741824 --disable_wal=1  --sync=0 --disable_data_sync=1 --verify_checksum=1 --delete_obsolete_files_period_micros=314572800 --max_grandparent_overlap_factor=10 --max_background_compactions=4 --max_background_flushes=4 --level0_slowdown_writes_trigger=16 --level0_stop_writes_trigger=24 --statistics=0 --stats_per_interval=0 --stats_interval=1048576 --histogram=0 --use_plain_table=0 --open_files=-1 --mmap_read=0 --mmap_write=0 --memtablerep=skip_list --bloom_bits=10 --bloom_locality=1 --perf_level=0 --benchmarks=filluniquerandom --use_existing_db=0 --num=10000000
+```
+
+Read data using Java API:
+
+```
+PLATFORM=64
+if [ `getconf LONG_BIT` != "64" ]
+then
+  PLATFORM=32
+fi
+echo "Running benchmark in $PLATFORM-Bit mode."
+java -server -d$PLATFORM -XX:NewSize=4m -XX:+AggressiveOpts -Djava.library.path=.:../:/usr/local/lib/ -cp "rocksdbjni.jar:.:./*" org.rocksdb.benchmark.DbBenchmark --num_levels=6 --key_size=20 --prefix_size=20 --keys_per_prefix=0 --value_size=100 --block_size=4096 --cache_numshardbits=6 --compression_type=none --compression_ratio=1 --min_level_to_compress=-1 --hard_rate_limit=2 --write_buffer_size=134217728 --max_write_buffer_number=2 --level0_file_num_compaction_trigger=8 --target_file_size_base=134217728 --max_bytes_for_level_base=1073741824 --disable_wal=1  --sync=0 --disable_data_sync=1 --verify_checksum=1 --delete_obsolete_files_period_micros=314572800 --max_grandparent_overlap_factor=10 --max_background_compactions=4 --max_background_flushes=4 --level0_slowdown_writes_trigger=16 --level0_stop_writes_trigger=24 --statistics=0 --stats_per_interval=0 --stats_interval=1048576 --histogram=0 --use_plain_table=0 --open_files=-1 --mmap_read=0 --mmap_write=0 --memtablerep=skip_list --bloom_bits=10 --bloom_locality=1 --perf_level=0 --num=10000000 --duration=7200 --benchmarks=readseq --use_existing_db=1 --threads=8 --db=/tmp/ramdisk/rocksdb/
+```
+
+Result:
+
+```
+Running benchmark in 64-Bit mode.
+Keys:     16 bytes each
+Values:   100 bytes each (100 bytes after compression)
+Entries:  10000000
+RawSize:  1106.3 MB (estimated)
+FileSize:   1106.3 MB (estimated)
+Memtable Factory: SkipListFactory
+Prefix:   20 bytes
+Compression: none
+------------------------------------------------
+readseq          :     0.20090 micros/op;  569.7 MB/s; 10000000 / 10000000 found;  8 / 8 task(s) finished.
+Assertion failed: (is_last_reference), function ~ColumnFamilyData, file db/column_family.cc, line 325.
+./jdb_read.sh: line 7: 50043 Abort trap: 6           java -server -d$PLATFORM -XX:NewSize=4m -XX:+AggressiveOpts -Djava.library.path=.:../:/usr/local/lib/ -cp "rocksdbjni.jar:.:./*" org.rocksdb.benchmark.DbBenchmark --num_levels=6 --key_size=20 --prefix_size=20 --keys_per_prefix=0 --value_size=100 --block_size=4096 --cache_numshardbits=6 --compression_type=none --compression_ratio=1 --min_level_to_compress=-1 --hard_rate_limit=2 --write_buffer_size=134217728 --max_write_buffer_number=2 --level0_file_num_compaction_trigger=8 --target_file_size_base=134217728 --max_bytes_for_level_base=1073741824 --disable_wal=1 --sync=0 --disable_data_sync=1 --verify_checksum=1 --delete_obsolete_files_period_micros=314572800 --max_grandparent_overlap_factor=10 --max_background_compactions=4 --max_background_flushes=4 --level0_slowdown_writes_trigger=16 --level0_stop_writes_trigger=24 --statistics=0 --stats_per_interval=0 --stats_interval=1048576 --histogram=0 --use_plain_table=0 --open_files=-1 --mmap_read=0 --mmap_write=0 --memtablerep=skip_list --bloom_bits=10 --bloom_locality=1 --perf_level=0 --num=10000000 --duration=7200 --benchmarks=readseq --use_existing_db=1 --threads=8 --db=/tmp/ramdisk/rocksdb/
+```
+
+The same read test (with the exact same options set) runs OK with c++ `db_bench`.
+
+This is the same issue. The client code didn't delete ColumnFamilyHandle before deleting DB. Probably a bug in jdb_bench.
+
+The assertion error is thrown probably at the end of the test when db instance is closed, but test itself does not access column family directly and it seems that the issue is inside RocksDB.close() 
+
+@VladRodionov i look into this now
+
+@VladRodionov jtest issues are fixed here: https://github.com/facebook/rocksdb/pull/524
+
+@igorcanadi the `jdb_bench` code includes no `Java` code which interacts with `ColumnFamilyHandle`, i think the problem must be somewhere else.
+
+> > jtest issues are fixed here: #524 
+
+Tried master.
+
+```
+Run: org.rocksdb.ColumnFamilyOptionsTest testing now -> failColumnFamilyOptionsFromPropsWithNullValue 
+Run: org.rocksdb.ColumnFamilyOptionsTest testing now -> inplaceUpdateNumLocks 
+Run: org.rocksdb.ColumnFamilyOptionsTest testing now -> maxWriteBufferNumber 
+Run: org.rocksdb.ColumnFamilyOptionsTest testing now -> maxSuccessiveMerges 
+Run: org.rocksdb.ColumnFamilyOptionsTest testing now -> memtablePrefixBloomProbes 
+Run: org.rocksdb.ColumnFamilyOptionsTest testing now -> maxGrandparentOverlapFactor 
+Run: org.rocksdb.ColumnFamilyOptionsTest testing now -> levelZeroStopWritesTrigger 
+Run: org.rocksdb.ColumnFamilyTest testing now -> iterators 
+Assertion failed: (refs_.load(std::memory_order_relaxed) == 0), function ~ColumnFamilyData, file db/column_family.cc, line 337.
+make[1]: *** [test] Abort trap: 6
+make: *** [jtest] Error 2
+```
+
+When will #524 fix be merged into the master branch?
+
+If assertions are enabled in a  native code - too many unit tests in Java fail because native handles are not released properly or released in a wrong order. If order of deallocating of handles matters ( iterator > column family > DB ) then relying on Java finalization for native resource deallocation  is a wrong approach. In any case, Java unit tests must be fixed to make sure that all native handles are released explicitly and in a right order. The issue has nothing to do with Mac OSX I suppose.
+
+@VladRodionov that`s exactly what was done in the pull request. Also it is MacOSX related there is no single test failing on any of my linux machines.
+
+its a build issue, I suppose. On Mac OSX default build (make all, than make rocksdjava) enables assertions somehow. You should try building on Linux in DEBUG mode. 
+
+I have pulled your changes but they did not fix all the issues with Java unit tests - there are more tests failing besides those you had fixed. 
+
+@VladRodionov good hint to point at the disabled assertions. I enabled them and fixed all remaining tests and did also a fix in `jdb_bench`. Can you please verify the fixes ?
+
+@fyrz I have not been able to reproduce the issues that @VladRodionov is seeing on my Mac here (OS X 10.10.2). I am running `make clean jclean rocksdbjava jtest` on `master`. Is there anything else I need to do to reproduce this?
+
+However I am having problems elsewhere with SIGSEGV VM crashes when `dispose` is called on `ColumnFamilyHandle` from the `finalize`. I will try your patches and see if that helps my other issues.
+
+Make sure to enable assertions in native code.
+On Mar 5, 2015 4:35 AM, "Adam Retter" notifications@github.com wrote:
+
+> I have not been able to reproduce the issues that @VladRodionov
+> https://github.com/VladRodionov is seeing on my Mac here (OS X
+> 10.10.2). I am running make clean jclean rocksdbjava jtest on master. Is
+> there anything else I need to do to reproduce this?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/523#issuecomment-77356417.
+
+@adamretter the most easiest way is to remove the disable debug option in the rocksdbjava target.
+
+I personally think that disposing native handles in finalize is a bad idea. It is not that hard to follow alloc-release pattern even in Java.
+
+Another issue with auto-release: the order (if it matters of course). What will happen if we close DB first than release iterators? 
+
+@VladRodionov we still have improvements on this topic on our list. See also Wiki. Improvements in that API are continously provided but one step at a time.
+
+Could you verify your issues with the latest pull-request code ?
+
+will try it tonight, thanks for looking into it, @fyrz.
+
+@VladRodionov @fyrz I can confirm that by modifying the `rocksdbjava` target in `Makefile` from:
+
+```
+OPT="-fPIC -DNDEBUG -O2" $(MAKE) $(LIBRARY) -j32
+```
+
+to:
+
+```
+OPT="-fPIC -O2" $(MAKE) $(LIBRARY) -j32
+```
+
+then I can reproduce the issues on `master`. The issues do seem to be solved for me when I do the same thing on the pull request https://github.com/facebook/rocksdb/pull/524 from @fyrz 
+
+@VladRodionov regarding auto-release and finalize, we could consider switching to implementing `java.io.closeable` or `java.lang.AutoCloseable` and using either `try-with-resources` or lambdas to do ARM (Automatic Resource Management).
+
+@adamretter does order of release operations matter? for example, can we release db handle first then, say iterator's handle? assertion code in c++ checks these cases and throws errors. The question is fundamental: if order of release operations matters then having auto-release in Java finalize is stupid and dangerous, if it does not matter, then assertions must be fixed in c++.
+
+Is anybody going to merge pull request #524 into the master?  
+
+@VladRodionov order matters. We remove the finalizer part with the introduction of ARM. But we cant do that without breaking public API. Therefore we planned this changes with version 4.x. 
+
+Thats the reason why we do only minimal changes in here.
+
+@VladRodionov I believe your initial question is solved by https://github.com/facebook/rocksdb/pull/524 and the remaining will be solved by switching from finalization to ARM
+

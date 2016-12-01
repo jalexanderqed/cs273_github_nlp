@@ -1,0 +1,10 @@
+Received a request for Java support for RocksDB Transactions.  Filing this issue to track.  Anyone interested in working on this?
+
+By transactions, I am referring to the `transaction.h`, `transaction_db.h`, `optimistic_transaction_db.h` APIs in `include/rocksdb/utilities/`.
+
+@agiardullo I would be interested to pick this up, but I cannot say when at the moment as I am pretty busy.
+
+@agiardullo This is being implemented and in fact is almost complete, see https://github.com/facebook/rocksdb/issues/1151.
+
+I am closing this issue as there is a larger audience in the other duplicate issue.
+

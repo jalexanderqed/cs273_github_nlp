@@ -1,0 +1,13 @@
+one thing just to throw out is I'm not sure I'm a fan myself of the `func_name_cf()` naming convention for this patch. It just seems like the action is on the column family with that name, which I suppose it is. Be glad to hear other ideas there. 
+
+This is a backward incompatible change, is it not?
+
+Didn't break API but it does require ColumnFamilyOptions and other >= 3.0 things, so yes. Don't see a way around that. 
+
+suppose version checking macros could work. just let me know what I need to do. 
+
+I am ok with this one, but will defer to the opinions of other people in the team.
+Going forward, it will be great if we can devise a system so that we can continue to evolve the C++ api elegantly.... version checking macros could be one way to go.
+
+It didn't break any current API so it's good. Thanks for the contributtion @rdallman !
+

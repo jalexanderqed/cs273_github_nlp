@@ -1,0 +1,7 @@
+Hi,
+
+How to delete the complete data from Rocksdb without flushing out onto the disk.
+I was trying to close the db connection but that is flushing out the data on disk.
+
+Thanks
+

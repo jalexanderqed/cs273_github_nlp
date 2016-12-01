@@ -1,0 +1,51 @@
+I am doing manual space management using DeleteFile because I need to do some stuff to track what gets deleted and do various things when deletion happens.
+
+I'm testing with a 2 GB tmpfs to simulate ENOSPC situations.
+
+When I get close to ENOSPC, I delete some files. Last few log entries:
+
+```
+2014/02/24-12:13:12.791124 7fbf69d88700 Delete type=2 #160
+2014/02/24-12:13:12.792487 7fbf69d88700 Delete type=2 #162
+2014/02/24-12:13:12.793822 7fbf69d88700 Delete type=2 #164
+```
+
+There's some space on the file system:
+
+```
+# stat -f .
+  File: "."
+    ID: 0        Namelen: 255     Type: tmpfs
+Block size: 4096       Fundamental block size: 4096
+Blocks: Total: 262144     Free: 26432      Available: 26432
+Inodes: Total: 2039926    Free: 2039097
+```
+
+My writing thread gets stuck here:
+
+```
+#0  pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+#1  0x00000000006ca8ed in rocksdb::port::CondVar::Wait (this=this@entry=0x144ac88) at rocksdb/port/port_posix.cc:60
+#2  0x0000000000681a09 in rocksdb::DBImpl::MakeRoomForWrite (this=this@entry=0x144a970, force=false, superversion_to_free=superversion_to_free@entry=0x7fff3f707200) at db/db_impl.cc:3374
+#3  0x000000000068317d in rocksdb::DBImpl::Write (this=0x144a970, options=..., my_batch=0x7f1a400008c0) at db/db_impl.cc:3129
+#4  0x0000000000670eb2 in rocksdb_write (db=<optimized out>, options=<optimized out>, batch=<optimized out>, errptr=0xc20803de60) at db/c.cc:209
+```
+
+All the background threads are at:
+
+```
+#0  pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+#1  0x00000000006bf6ab in BGThread (this=0x1444230) at util/env_posix.cc:1387
+#2  rocksdb::(anonymous namespace)::PosixEnv::ThreadPool::BGThreadWrapper (arg=0x1444230) at util/env_posix.cc:1403
+#3  0x000000395d407f33 in start_thread (arg=0x7f1a49ffb700) at pthread_create.c:309
+#4  0x000000395ccf4ded in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:111
+```
+
+I'm pretty sure DeleteFile should be signalling these threads and/or putting something in the queue.
+
+Help appreciated.
+
+Here's a quick fix: https://github.com/facebook/rocksdb/commit/6ed450a58cd0bf9f299b0e279ce762125b79deea
+
+However, this highlights a bigger issue where we deadlock on ENOSPC. We have an internal task for this and hope to clean it up soon.
+

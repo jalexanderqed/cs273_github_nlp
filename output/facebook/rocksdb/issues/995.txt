@@ -1,0 +1,15 @@
+ can sst_dump  dump   data from  a runtime db?
+
+sst_dump can be used to read the properties of an SST file or dump a key range from that file.
+
+for example 
+`./sst_dump --show_properties --file=/path/to/file/00001.sst`
+This command will show you the properties of the sst file
+
+`./sst_dump --command=scan --file=/path/to/file/00001.sst --read_num=10 --output_hex`
+This command will show you the first 10 keys/values in the file
+
+Hi Islam, do you think we can add some preliminary info about sst_dump to https://github.com/facebook/rocksdb/wiki/Ldb-Tool?
+
+@dhruba, Sure I will do that
+

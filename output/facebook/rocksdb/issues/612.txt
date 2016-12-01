@@ -1,0 +1,28 @@
+This pull request adds a compression field to sst_dump's show-properties report.
+
+The reason is that there is no real way to figure out how compression is actually being used by RocksDB. The LOG specifies what compression is requested, but there are some reasons why the actual data may be compressed differently. For example, compression libraries may not be linked properly (our motivation for this patch), or compression is changed.
+
+This patch allows a user to inspect the sst files directly and verify what compression scheme is actually used.
+
+Signed-off-by: Adam Lugowski alugowski@gmail.com
+
+> compression libraries may not be linked properly (our motivation for this patch),
+
+We recently actually added logging around this: https://github.com/facebook/rocksdb/blob/master/db/column_family.cc#L170
+
+But I still think this is an useful patch.
+
+Hi Igor,
+
+Good points. I added a human readable output and the guard you suggested. I like the idea of reporting the block count for each compression used, but I'm having trouble figuring out where in the code that would go. The existing code path acts as if there was one block per file. Do you know where the `for blocks in file` loop would be?
+
+Wait you're currently only reporting compression type of the property block. We need to find a better approach to get all the block's compression types.
+
+Can you point me at where in the code data blocks are read? Maybe I can come up with something.
+
+So this class is reading the data blocks: https://github.com/facebook/rocksdb/blob/master/table/block_based_table_reader.cc
+
+You can start your journey here: https://github.com/facebook/rocksdb/blob/master/table/block_based_table_reader.cc#L65
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

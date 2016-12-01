@@ -1,0 +1,73 @@
+"make check" only has problem with bloom_test:
+
+****\* Running bloom_test
+==== Test BloomTest.EmptyFilter
+==== Test BloomTest.Small
+==== Test BloomTest.VaryingLengths
+False positives:  0.00% @ length =      1 ; bytes =      9
+False positives:  0.00% @ length =      2 ; bytes =      9
+False positives:  0.00% @ length =      3 ; bytes =      9
+False positives:  0.00% @ length =      4 ; bytes =      9
+False positives:  0.00% @ length =      5 ; bytes =      9
+False positives:  0.00% @ length =      6 ; bytes =      9
+False positives:  1.50% @ length =      7 ; bytes =     10
+False positives:  0.00% @ length =      8 ; bytes =     11
+False positives:  2.56% @ length =      9 ; bytes =     13
+util/bloom_test.cc:161: failed: 0.0256 <= 0.02
+#0   ./bloom_test() [0x1002e9e8] ~BloomTest     /tmp/rocksdb/rocksdb-rocksdb-3.2
+
+/util/bloom_test.cc:49
+#1   ./bloom_test() [0x10163590] rocksdb::test::RunAllTests()   /tmp/rocksdb/roc
+
+ksdb-rocksdb-3.2/util/testharness.cc:59
+#2   ./bloom_test() [0x1000c844] main   /tmp/rocksdb/rocksdb-rocksdb-3.2/util/bl
+
+oom_test.cc:179
+#3   /opt/at7.0/lib64/power7/libc.so.6(+0x44a8c) [0xfff9fbf4a8c] ??     ??:0
+#4   /opt/at7.0/lib64/power7/libc.so.6(__libc_start_main-0x188964) [0xfff9fbf4cb
+
+4] ??   ??:0
+make: **\* [check] Error 1
+
+I forgot to mention that my system is rhel6.5 ppc64.
+
+Could it be related to https://code.google.com/p/leveldb/issues/detail?id=237?
+
+good finding @igorcanadi.
+
+Igor: Issue 237 only occurs if you copy files from ARM to x86, is it possible that it can affect unit tests too?  But we should still evaluate the contributed patch and see if we should pull it in....
+
+On my x86_64 systems "make check" has no problem with BloomTest. But it failed EnvPosixTest.AllocateTest:
+
+==== Test EnvPosixTest.AllocateTest
+util/env_test.cc:508: failed: 204800 > 204800
+#0   ./env_test() [0x4298b6] std::string::_M_data() const       /opt/rh/devtools
+et-2/root/usr/include/c++/4.8.2/bits/basic_string.h:293
+#1   ./env_test() [0x43248e] std::string::_M_data() const       /opt/rh/devtools
+et-2/root/usr/include/c++/4.8.2/bits/basic_string.h:293
+#2   ./env_test() [0x5177ae] rocksdb::test::RunAllTests()       /tmp/rocksdb/roc
+ksdb-rocksdb-3.2/util/testharness.cc:48
+#3   /lib64/libc.so.6(__libc_start_main+0xfd) [0x372fc1ed1d] ?? ??:0
+#4   ./env_test() [0x4220a1] _start     ??:?
+
+On my ppc64le Ubuntu systems "make check" has no problem if it is run with LD_LIBRARY_PATH set correctly:
+
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/powerpc64le-linux-gnu make check
+
+"Make check" failed bloom_test on my rhel7 ppc64 system the same way it failed on rhel6u5 ppc64 systems:
+
+util/bloom_test.cc:161: failed: 0.0256 <= 0.02
+#0   ./bloom_test() [0x1002e7e8] ~BloomTest     /tmp/rocksdb/rocksdb-rocksdb-3.2
+/util/bloom_test.cc:49
+#1   ./bloom_test() [0x101634e0] rocksdb::test::RunAllTests()   /tmp/rocksdb/roc
+ksdb-rocksdb-3.2/util/testharness.cc:59
+#2   ./bloom_test() [0x1000c624] main   /tmp/rocksdb/rocksdb-rocksdb-3.2/util/bl
+oom_test.cc:179
+#3   /opt/at7.0/lib64/power8/libc.so.6(+0x44acc) [0x3fff9b914acc] ??    ??:0
+#4   /opt/at7.0/lib64/power8/libc.so.6(__libc_start_main-0x189924) [0x3fff9b914c
+f4] ??  ??:0
+
+@zhibaodhu the EnvPosixTest.AllocateTest issues was fixed a while ago. Did you have a chance to retry it?
+
+Closing this issue since it's likely fixed. Please reopen if you see any other issues.
+

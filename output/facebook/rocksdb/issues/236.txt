@@ -1,0 +1,93 @@
+
+@allenlz , can you provide more detail about this issue?
+
+@ljinfb I'm sorry I typed the wrong key when I wrote the first post. I'm still collecting logs.
+
+I use a standalone WAL dir named main_wal, while db is in dir named main_db. After the disk of server was full, db can not be opened. Then I try to repair the db. I backuped the whole corrupted db and every test is start from corrupted files.
+
+```
+[open failed]
+2014/08/19-07:51:26.573321 7fadf6fd0840 ./current/rocksdb/main_wal/001901.log: dropping 22208 bytes; Corruption: checksum mismatch
+```
+
+Problem 1: It seems RepairDB cannot recognize WAL dir.
+
+```
+[repair ok]
+2014/08/19-07:58:51.873523 7f3bc7987840 **** Repaired rocksdb ./current/rocksdb/main_db; recovered 1158 files; 21422734269bytes. Some data may have been lost. ****
+
+[open still failed]
+2014/08/19-07:58:59.348029 7f3bc7987840 ./current/rocksdb/main_wal/001901.log: dropping 22208 bytes; Corruption: checksum mismatch
+```
+
+Problem 2: then I move those wal into db dir mannually, and try again. Repair is ok, but the db seems cannot recognize the column family, and all sstables are pushed into default column family.
+
+```
+[in repair]
+2014/08/19-07:51:26.586297 7fadf6fd0840 Log #1847: ignoring Invalid argument: Invalid column family specified in write batch
+....
+2014/08/19-07:51:26.590626 7fadf6fd0840 Log #1847: 0 ops saved to Table #1408405886585406 OK
+2014/08/19-07:51:26.590684 7fadf6fd0840 Archiving ./current/rocksdb/main_db/001847.log: OK
+2014/08/19-07:51:26.590708 7fadf6fd0840 Log #1857: ignoring Invalid argument: Invalid column family specified in write batch
+...
+2014/08/19-07:52:06.154014 7fadf6fd0840 **** Repaired rocksdb ./current/rocksdb/main_db; recovered 1158 files; 21422734269bytes. Some data may have been lost. ****
+
+[reopen]
+2014/08/19-07:52:06.194522 7fadf6fd0840 Recovered from manifest file:./current/rocksdb/main_db/MANIFEST-000001 succeeded,manifest_file_number is 1, next_file_number is 1408405886585424, last_sequence is 43737260, log_number is 0,prev_log_number is 0,max_column_family is 0
+[It seems wired to find MANIFEST-000001]
+...
+2014/08/19-07:52:07.779495 7fadf6fd0840 Created column family [data1] (ID 3)
+...
+** Compaction Stats [default] **
+  L0  1158/0      20430  36.2      0.0     0.0      0.0       0.0      0.0    0.0   0.0      0.0      0.0        0         0         0         0          0         0    0.000       0.00          0    0.00
+ Sum  1158/0      20430   0.0      0.0     0.0      0.0       0.0      0.0    0.0   0.0      0.0      0.0        0         0         0         0          0         0    0.000       0.00          0    0.00
+```
+
+My solution：
+I start from the base and delete the last log file which is corrupted. Then it works fine with some data lost.
+
+Would you help to solve problem 1 and 2? May be "moving logs from WAL dir to db dir" is wrong.
+
+Thanks.
+
+@allenlz RepairDB can't reconstruct DB with more than one column family. We don't recommend using RepairDB. It's not used in Facebook production and most of the code is inherited from LevelDB.
+
+Why do you need RepairDB?
+
+I got it.
+
+Then, what's your advice if some files on disk is lost or corrupted, like Disk Full(write to WAL or MANIFEST or CURRENT failed).
+Here's solution what I can think up:
+case 1: WAL file corrupted. Solution: in most cases, only the last one is bad, right? So we just need to delete the last WAL log file.
+case 2: MANIFEST or CURRENT file corrupted. Since CURRENT file is only changed after MANIFEST flush successfully, this case seems rarely or never happen.
+case 3: sstable corrupted. Just delete the bad sstable?
+
+Thanks.
+
+@allenlz there are three things that can happen (excluding software bug):
+1. process crash, OS fine
+2. machine crash
+3. storage corruption (or FS bug)
+
+When (1) or (2) happens, RocksDB will automatically take care of everything. Partial tailing writes will be ignored in both WAL and MANIFEST. No need to delete any WAL files or do anything manually. Any compactions that are not committed will be cleaned up.
+
+If (3) happens, then we might have issues. If WAL is corrupted, you can set skip_log_error_on_recovery to true. If sst is corrupted, you might get Status::Corrupted() when Get()-ing the data in the corrupted block. If MANIFEST is corrupted, you're doomed. RepairDB is good in the scenario when you have storage corruption in MANIFEST file, but you should probably have DB backup in that case and not use RepairDB.
+
+Thanks @igorcanadi .
+
+We do have a replication, which can be used to recover other replica in the worst case.
+
+Rocksdb released to 3.11. Great work. And I found a new wiki page about the Repairer: https://github.com/facebook/rocksdb/wiki/RocksDB-Repairer
+Does rocksdb support to reconstruct DB with more than one column family right now?
+Thanks.
+
+Unfortunately we still don't support repairing DB with more than one column family :(
+
+@igorcanadi Is this a planned feature, can it be added?
+
+@adamretter not at this point. the problem is that sst files don't have information about which column family they belong to -- the only information about that is in the MANIFEST. So if the MANIFEST is gone, we have no idea where to put those files.
+
+Do you have a legitimate use-case for DB::Repair()? There are two reasons why we're not very exicted about supporting this:
+- Last time we encountered problems with MANIFEST corruption in FB was over a year ago and it was very isolated (I think on one host). It was due to not fsyncing the directory after creating MANIFEST, which is now fixed.
+- If your MANIFEST is gone, there is no way to guarantee consistency of any sort. We will pick up any sst files in the directory, but there might be some obsolete files which shouldn't be part of the database.
+

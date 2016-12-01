@@ -1,0 +1,38 @@
+
+Tnx for the contribution! Our max character per line limit is 80. Please shorten the long line. I believe you can do that by just calling `make format`.
+
+Hi, unfortunately there's no easy way that I know of to install clang-format itself on OS X Mavericks. Do you have any tips? If not, can you run the formatting on my behalf :-)
+
+Cheers,
+Donovan.
+
+I believe you get clang-format if you install Xcode command-line tools.
+
+I can do it now, sure :)
+
+Strange, it doesn't come up in may path and I have Xcode command line tools installed:
+
+``` bash
+$which clang
+/usr/bin/clang
+$clang --version
+Apple LLVM version 5.1 (clang-503.0.40) (based on LLVM 3.4svn)
+Target: x86_64-apple-darwin13.1.0
+Thread model: posix
+$ git diff -U0 HEAD^ | clang-format-diff.py
+Traceback (most recent call last):
+  File "/Users/donovanhide/bin/clang-format-diff.py", line 115, in <module>
+    main()
+  File "/Users/donovanhide/bin/clang-format-diff.py", line 98, in main
+    stderr=None, stdin=subprocess.PIPE)
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/subprocess.py", line 711, in __init__
+    errread, errwrite)
+  File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/subprocess.py", line 1308, in _execute_child
+    raise child_exception
+OSError: [Errno 2] No such file or directory
+```
+
+The error due to it not finding clang-format
+
+Anyway, thanks for merging :-)
+

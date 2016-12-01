@@ -1,0 +1,6 @@
+Arcanist diff for review is here: https://reviews.facebook.net/D42873
+
+LGTM.  Am rebasing and addressing the conflict now.
+
+Merged!  Thank you for adding this support!!
+

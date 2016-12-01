@@ -1,0 +1,10 @@
+This is a extension to the last commit which made the BloomFilter available again. Now it is possible to choose between block based and full bloom filter.
+
+@ankgup87 Updated JavaDoc
+
+@ankgup87 anything open here ?
+
+Apologies for not responding quickly and thanks again for the contribution :)
+
+@ankgup87 didnt want to hurry just wanted to make sure that i didnt miss anything. Thank you.
+

@@ -1,0 +1,18 @@
+Currently, setting the stats level to `kExceptTimeForMutex` will also turn off "detailed timers" (compression timing), while setting it to `kExceptDetailedTimers` will cause mutex timers to run. This is because `InstrumentedMutex` checks if stats should be reported with:
+`stats->stats_level_ != kExceptTimeForMutex`
+
+And compression stats are controlled by:
+`stats->stats_level_ > kExceptDetailedTimers` (the value of kExceptTimeForMutex is less than kExceptDetailedTimers)
+
+This pull request corrects this behavior so that `kExceptDetailedTimers` turns off both compression and mutex statistics while `kExceptTimeForMutex` leaves compression stats on. To keep compression stats off by default, the default stats level is also changed to `kExceptDetailedTimers`.
+
+Hi @IslamAbdelRahman, @siying 
+Could you please review this change ? 
+
+Thanks @jalexanderqed, added an inline comment
+
+@IslamAbdelRahman Changed the enum and logic per your recommendation. I agree this way is better.
+
+Thanks!
+LGTM, will merge after Travis finish
+

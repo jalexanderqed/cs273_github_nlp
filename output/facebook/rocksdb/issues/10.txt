@@ -1,0 +1,19 @@
+```
+util/env_test.cc:214: Assertion failure id_size > 0
+```
+
+id_size value is returned 0. 
+
+Can you pl provide more "detailed" info on how to reproduce this problem. wt platform? wt compiler?
+
+platform  - 3.10.9-200.fc19.x86_64
+compiler - gcc version 4.8.1
+
+running `make check` on the latest master caused this error. was able to successfully compile the package.
+
+@deepak1556, a quick question, can you successfully run `/proc/sys/kernel/random/uuid` in your platform?
+
+Try `cat /proc/sys/kernel/random/uuid`
+
+@liukai yup able to run it successfully. generates random uuid
+

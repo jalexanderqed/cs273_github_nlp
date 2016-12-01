@@ -1,0 +1,14 @@
+From the Linux manual:
+  MAP_ANONYMOUS
+     The  mapping  is  not  backed  by any file; its contents
+     are initialized to zero.  The fd and offset arguments are
+     ignored; however, some implementations require fd to be -1
+     if MAP_ANONYMOUS (or MAP_ANON) is specified, and portable
+     applications  should  ensure  this.
+
+FreeBSD is such a case, it wil just return an error.
+
+Signed-off-by: Willem jan Withagen wjw@digiware.nl
+
+Thanks @wjwithagen for your contribution
+

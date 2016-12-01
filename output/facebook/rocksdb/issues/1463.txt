@@ -1,0 +1,66 @@
+Hi,
+
+I find a strange behavior that if I ingest external file with move_files set to false, the snapshot can't read the ingest value; but if I set move_files to true, it always see it. Following is a simple example:
+
+```
+#include <vector>
+#include <unistd.h>
+#include <iostream>
+#include "rocksdb/db.h"
+
+using namespace rocksdb;
+
+void assert_ok(const Status& s) {
+    if (!s.ok()) {
+        std::cout << s.ToString() << std::endl;
+        exit(1);
+    }
+}
+
+int main() {
+    Options options;
+    ReadOptions read_opt;
+    WriteOptions write_opt;
+    std::string db_path = "/tmp/testingest_db";
+    std::string sst_file_path = "/tmp/testingest.sst";
+    std::string origin_val, new_val;
+
+    DestroyDB(db_path, options);
+    options.create_if_missing = true;
+    DB* db;
+    assert_ok(DB::Open(options, db_path, &db));
+
+    assert_ok(db->Put(write_opt, Slice("key1"), Slice("origin val")));
+    const Snapshot* snap = db->GetSnapshot();
+    read_opt.snapshot = snap;
+    assert_ok(db->Get(read_opt, Slice("key1"), &origin_val));
+
+    unlink(sst_file_path.c_str());
+    SstFileWriter sst_file_writer(EnvOptions(), options, options.comparator);
+    assert_ok(sst_file_writer.Open(sst_file_path));
+    assert_ok(sst_file_writer.Add(Slice("key1"), Slice("new val")));
+    assert_ok(sst_file_writer.Finish());
+
+    IngestExternalFileOptions ifo;
+    ifo.move_files = true;
+    assert_ok(db->IngestExternalFile({sst_file_path}, ifo));
+
+    assert_ok(db->Get(read_opt, Slice("key1"), &new_val));
+    std::cout << origin_val << std::endl << new_val << std::endl;
+    assert(origin_val == new_val);
+    db->ReleaseSnapshot(snap);
+    delete db;
+    return 0;
+}
+```
+
+@BusyJay, you are saying that in this example if you set `move_files` to false the behaviour will change? Will origin_val and new_val be different ?
+Did you change the value of `ifo.snapshot_consistency` ?
+
+Actually this example will abort, because `origin_val != new_val`. When set `move_files` to false, this example will finish successfully. I don't set `ifo.snapshot_consistency` explicitly, so it should be true by default.
+
+I was able to reproduce the issue, Thanks @BusyJay for reporting it.
+I will take a look soon
+
+Hi, any update to this?
+

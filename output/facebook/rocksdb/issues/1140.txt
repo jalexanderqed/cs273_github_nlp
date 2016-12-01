@@ -1,0 +1,14 @@
+Hello folks!
+
+I have a question regarding the efficiency of RocksDB Checkpoint: http://rocksdb.org/blog/2609/use-checkpoints-for-efficient-snapshots/
+
+As for implementation does that involve copying all the SST files of all levels to the specified directory? What if I have a more than 100GB instance that I need frequent checkpoints?
+
+cc @junrao
+
+SST files are copied only if the checkpoint directory is on another filesystem; otherwise, the checkpoint directory contains hard links to SST files in the database directory. Using hard links causes data to be shared between database directory and checkpoint directory, and has refcounting so SST data won't be deleted when compaction removes files from the database directory.
+
+@ajkr Ah, that makes sense, and hard link works perfectly since all files are immutable.
+
+Closing this ticket now.
+

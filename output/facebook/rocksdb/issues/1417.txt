@@ -1,0 +1,5 @@
+i see thhat we can create a new rocksdb threadpool. But how to use it ? Can it be used by qnogher program that embed rocksdb?
+
+@benoitc, We exposed RocksDB ThreadPool but it does not have any usage yet.
+We plan to change that in the future
+

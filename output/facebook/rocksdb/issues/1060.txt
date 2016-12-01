@@ -1,0 +1,10 @@
+For the current version of RocksDb, do we have a way to backup and restore to / from S3?
+
+You can write your own Env which operates on S3 files. You are also welcome to contribute back:)
+
+haha @siying , i see. Thanks for the info :)
+
+rocks-strata is a tool that can backup RocksDB and it already has an S3 implementation: https://github.com/facebookgo/rocks-strata.
+
+@igorcanadi wow, i will definitely take a look! Thanks !
+

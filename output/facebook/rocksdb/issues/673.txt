@@ -1,0 +1,30 @@
+I've packaged RocksDB v3.11.2 for Debian/Sid. It seems to be working, but the self test fails with the following.
+[ RUN      ] ColumnFamilyTest.SanitizeOptions
+[       OK ] ColumnFamilyTest.SanitizeOptions (0 ms)
+[ RUN      ] ColumnFamilyTest.ReadDroppedColumnFamily
+db/column_family_test.cc:1101: Failure
+Value of: kKeysNum \* ((i == 2) ? 1 : 2)
+  Actual: 10000
+Expected: count
+Which is: 9231
+terminate called after throwing an instance of 'testing::internal::GoogleTestFailureException'
+  what():  db/column_family_test.cc:1101: Failure
+Value of: kKeysNum \* ((i == 2) ? 1 : 2)
+  Actual: 10000
+Expected: count
+Which is: 9231
+Aborted
+Makefile:503: recipe for target 'check' failed
+
+My system is an amd64 but I can give you more information if requested.
+
+That's interesting. Seems like we weren't able to read the data from the dropped column family. 
+
+I tried running this test 100 times on my system (centos something) and it didn't fail. Does it fail deterministically in your case?
+
+Can you please try the test on master? 
+
+Yes, it's failed all the time. Some days ago I've tried it again with the latest stable (3.13.1) release. It doesn't fail. This issue can be closed.
+
+Cool. Let us know if you see some other test failures!
+

@@ -1,0 +1,6 @@
+The changes applied in "make compation related options changeable" break the Java build because there are dependencies to the file write_batch.cc in rocksjni.
+
+Verify with: `make rocksdbjava` on `master`
+
+Fixed by merging the resolution into master.
+

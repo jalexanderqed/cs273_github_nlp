@@ -1,0 +1,93 @@
+I am trying to atomically write 5,305,512 key/value pairs into RocksDB. The performance of this feels slow to me, at about 60 seconds. 
+
+I am writing to a single WriteBatchWithIndex through calling `org.rocksdb.WriteBatchWithIndex#put(byte[], int, byte[], int, long)`, this takes some ~50 seconds. Whereas subsequently writing that batch into Rocks using `org.rocksdb.RocksDB#write(org.rocksdb.WriteOptions, org.rocksdb.WriteBatchWithIndex)` takes just ~8 seconds.
+
+Is WriteBatchWithIndex known to be slow? I was under the impression that it was all in-memory in a skip-list and so would be quite quick.
+
+cc @igorcanadi, @siying, and @agiardullo who know more about WriteBatchWithIndex().
+
+@adamretter WriteBatchWithIndex is slower than WriteBatch since it needs to insert into the index too, which is a binary search. If you are build a super large batch in WriteBatchWithIndex, it can be even slower than inserting to DB as what you see, since it needs to build a binary index on the fly.
+
+For your case, it is possible that your slowness is caused by resizing the underlying buffer in WriteBatchWithIndex, which is implemented using std::string. You can try to preallocate a sufficiently large buffer for WriteBatchWithIndex when constructing it. WriteBatchWithIndex 's C++ constructor has a parameter `reserved_bytes`. Not sure about RocksJava.
+
+@siying It is very hard for me to know how much to preallocate in advance as I use the WriteBatchWithIndex for every update operation on the database. It might contain anywhere between 5 key/value pairs and tens of millions. Apart from pre-allocating, what other options are available for speeding this up?
+
+@adamretter  do you have to put 5 million keys in one write batch? Can you write to smaller batches? 
+
+@siying Afraid not. I need to write objects into Rocks atomically. To do that I shred them into key/value pairs. Depending on the size of the object and how many objects the end-user elects to store will determine how many key/value pairs go into the write batch. This is actually not a big one - just about 75MB of object data.
+
+@adamretter I can't think of a way to solve the problem for you now. std::string's resizing is not exponential. If we implement a WriteBatchWithIndex::ReserveBuffer() for you to call while the size grows, so that you can get size of the buffer by yourself and call ReserveBuffer() in an exponential way. Will that help you?
+
+@siying I am not sure I can estimate the size up-front before storing a complex object so manually resizing the buffer is probably not useful. However, I wonder if it would be more efficient to have a master WriteBatch and then sub-WriteBatches that could be merged to the master, each complex object I am storing could be written to its own sub-WriteBatch and then merged with the master WriteBatch before the final commit. Any idea if that might speed up the Index operations? i.e. would a bulk index update be faster than lots of incremental index updates?
+
+@adamretter if my previous guess that the bottleneck is string resizing is correct, then your approach will help you have a better estimation of final write buffer size, which you can pass through its constructor. The total time can be faster. You can give it a try and see whether you see a speed-up.
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+
+@siying (cc @igorcanadi @agiardullo) My latest idea is to put each big group of updates into their own `WriteBatch` and then append each of those to my `WriteBatchWithIndex`.
+
+I am hopeful that because the size of a `WriteBatch` is known when we come to append it to a `WriteBatchWithIndex` this could help us correctly reallocate memory for the `WriteBatchWithIndex` and that as all of the items in the `WriteBatch` are already sorted by the comparator, then updating the index could be done just once as all keys in the `WriteBatch` are already in order and it looks to me like this path is already optimised at "[// fast path for sequential insertion](https://github.com/facebook/rocksdb/blob/master/db/skiplist.h#L416)".
+
+To do this, I am trying to add the following method to `WriteBatchWithIndex`:
+
+``` c++
+void WriteBatch::Append(WriteBatch* other_batch)
+```
+
+However I am struggling a bit. My implementation looks something like this so far:
+
+``` c++
+void WriteBatchWithIndex::Append(WriteBatch* other_batch) {
+  AppendHandler appendHandler(rep);
+  rep->write_batch.Append(other_batch);
+  other_batch->Iterate(&appendHandler);
+}
+```
+
+``` c++
+class AppendHandler : public WriteBatch::Handler {
+ private:
+  WriteBatchWithIndex::Rep* rep;
+  size_t last_entry_offset;
+
+ public:
+  AppendHandler(WriteBatchWithIndex::Rep* wbwi_rep) {
+    rep = wbwi_rep;
+    last_entry_offset = rep->write_batch.GetDataSize();
+  }
+
+  virtual Status PutCF(uint32_t column_family_id, const Slice& key,
+                         const Slice& value) override {
+      rep->SetLastEntryOffset(last_entry_offset);
+
+      if (column_family_id == 0) {
+        rep->AddOrUpdateIndex(key);
+      } else {
+        rep->AddOrUpdateIndex(column_family_id, key);
+      }
+
+      //last_entry_offset = //TODO(AR) we need to calculate what this will be, something like last_entry_offset += sizeof(this_put_cf)
+
+      return Status::OK();
+  }
+
+   ...
+```
+
+I am not sure if I am on the right track? Any comments would be appreciated. My main concrete problem at the moment, is I cannot see how to go from a `column_family_id` to a `ColumnFamilyHandle` within my `AppendHandler`, any ideas?
+
+Take a look at WriteBatchWithIndex::Rep::ReBuildIndex(). I added this function a couple months ago in order to support RollbackToSavePoint().  While this function isn't exactly what you need, it demonstrates one way of taking records from a WriteBatch and updating the index of a WBWI.  It could probably be extended and reused as part of your solution.
+
+@siying I wrote a small benchmark for testing the three methods of insertion into the database:
+1. Direct puts, i.e. `RocksDB#put(cf, key, value)`
+2. WriteBatch
+3. WriteBatchWithIndex
+
+The results were gathered using the latest version of RocksDB as of today, i.e. with the micro-optimization for `WriteBatchWithIndex` https://reviews.facebook.net/D55539.
+
+Unfortunately it seems that WBWI is still about 60% slower for `puts` than `WriteBatch`. Note I believe I am inserting my keys in an already ordered manner, so I would hope it could take the fast path of WriteBatchWithIndex which is optimized for inserting sequential keys (although I do use a custom comparator).
+
+https://github.com/adamretter/rocksjava-write-methods-benchmark#results
+
+Just wondering where to start digging in improving this, is it perhaps still a good idea to attempt: https://github.com/facebook/rocksdb/issues/608#issuecomment-151913688
+

@@ -1,0 +1,16 @@
+Hello,
+
+I need the capability to find the smallest key in the DB. Since SSTable is sorted, I expect that performing this operation should be fast. 
+
+Is there an API for this? I am using RocksDB-JNI 4.9.0
+
+This information is available by using DB::GetLiveFilesMetaData()
+It looks to me that this API is not available in Java, but you are welcome to expose it
+
+Open the DB, create an iterator and call SeekToFirst(). Would that work to you?
+
+Oh, I don't know why I thought you are asking about finding the smallest key in every sst file.
+@siying answer is the correct answer, please ignore mine
+
+Thank you for the quick response! Seek to first should solve my problem, closing ticket will reopen if I see an issue.
+

@@ -1,0 +1,10 @@
+The slice concept is extremely powerful and significant performance boost - to the point the c++ standard libraries will include soon std::string_view http://en.cppreference.com/w/cpp/experimental/basic_string_view. Most of the compilers already offer an experimental version of it and more and more projects commit to it.
+
+What about adding support for stl string_view, as part of the current interfaces or even migrate Slice to match the standard and use the stl version directly when available.
+
+Your proposal to migrate Slice to use std::basic_string_view sounds interesting. Do you see any advantages of doing this now versus waiting for it to become part of the standard?
+
+I cannot say for the time frame. Obviously there are many factors that need to be considered - that most of them I do not know. In general though interface changes that seem that are good and inevitable to make at some point makes sense to be made sooner than later - less adopters less pain.
+
+For me personally will be better, because I already use string_view and I need to use rocksdb with a wrapper.
+

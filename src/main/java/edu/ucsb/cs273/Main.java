@@ -23,13 +23,13 @@ public class Main {
         File modelSaveFile = null;
         File instancesSaveFile = null;
 
-        if(args[0].equals("run") || args[0].equals("load")) {
+        if(args[0].equals("run") || args[0].equals("load") || args[0].equals("score") || args[0].equals("prompt")) {
             if(args.length < 2){
                 out.println("Please provide a model data identifier as the second argument.");
                 return;
             }
-            modelSaveFile = new File(args[1] + "model.ser");
-            instancesSaveFile = new File(args[1] + "instances.ser");
+            modelSaveFile = new File("output/" + args[1] + "model.dat");
+            instancesSaveFile = new File("output/" + args[1] + "instances.dat");
         }
 
         if(args[0].equals("get")) {
@@ -37,12 +37,26 @@ public class Main {
             rockDbIssues.read();
         }
         else if(args[0].equals("run")) {
-            TopicModel topicModel = new TopicModel("output/" + repository, modelSaveFile, instancesSaveFile);
+            TopicModel topicModel = new TopicModel(Util.getIssuesDir(repository), modelSaveFile, instancesSaveFile);
             topicModel.run();
         }
         else if(args[0].equals("load")){
             TopicModel topicModel = new TopicModel(modelSaveFile, instancesSaveFile);
+            topicModel.testLoad();
+        }
+        else if(args[0].equals("score")){
+            TopicModel topicModel = new TopicModel(modelSaveFile, instancesSaveFile);
             topicModel.load();
+            UserScores scores = new UserScores(repository, topicModel);
+            scores.run();
+        }
+        else if(args[0].equals("prompt")){
+            TopicModel topicModel = new TopicModel(modelSaveFile, instancesSaveFile);
+            topicModel.load();
+            UserScores scores = new UserScores(repository, topicModel);
+            scores.run();
+            CommandLinePrompt prompt = new CommandLinePrompt(scores);
+            prompt.run();
         }
     }
 }

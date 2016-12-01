@@ -1,0 +1,18 @@
+This fixes the compile error on 32-bit mentioned in issue #634.  This allows successful compilation of 32 bit library on Linux.
+
+Debug compilation on OSX still fails because it declares -Wshorten-64-to-32, so you have to turn off warnings as errors to compile.  It does compile after that.
+
+Note that it doesn't appear that the test cases were operational in 32 bit, so I can't evaluate whether any test cases fail as a result of this change.
+
+Note: there was also an unused function warning in 32-bit mode for `LE_LOAD64` no longer being used so I added a follow-up commit in which I wrapped its declaration in an extra `#ifdef``.
+
+Makes sense, thanks. I'm happy to land this, but I'd like to get couple of more eyeballs on this. Crc32s are persisted data, and it's important for them to be matching on all combinations of (32, 64) bit and (little, big) endian. Once we land this there's no rollback, so we have to be extra certain this is correct.
+
+I don't know who is the expert that can help review this PR. Maybe ask it our public group?
+
+We got confirmation that this is the correct implementation, so I'm merging this. Thanks @warrenfalk !
+
+BTW you should note that we still don't fully support 32-bit version and you're on your own. If we decide to support it, we'll first need to setup a 32-bit continuous build to make sure it keeps working.
+
+Cool.  Disclaimer noted and in fact, I'm pretty sure 32 bit doesn't currently work; it fails dbtest pretty immediately.  But now at least it builds, so maybe someone who cares enough will have more time to look at it.  Perhaps I will look at it some day.  As far as I can tell, even if 32-bit does work, I suspect it may not handle databases over certain size thresholds because of a pervasive use of uint64_t variables for offsets in in-memory structures.
+

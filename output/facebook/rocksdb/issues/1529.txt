@@ -1,0 +1,18 @@
+Summary:
+This has been unused since D42069 but kept around for backward
+compatibility. I think it is unlikely anyone will use a much older version of
+RocksDB for restore than they use for backup, so I propose removing it. It is
+also causing recurring confusion, e.g., https://www.facebook.com/groups/rocksdb.dev/permalink/980454015386446/
+
+Ported from https://reviews.facebook.net/D60735
+
+Test Plan:
+unit tests, also verified compatibility of this change by backing
+up with an older version (that includes LATEST_BACKUP) and restoring with this
+version.
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1529/files/ac8040530c558f17c5c4423ba65bc81a550b535b..139a95c0da059b70a102196189c361652fbc7898)
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1529/files/139a95c0da059b70a102196189c361652fbc7898..ec0accb6f607ab57457112b772077cc60c5257ad)
+
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4194199).
+

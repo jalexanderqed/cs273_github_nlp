@@ -1,0 +1,22 @@
+If rocksdb is opened in read only mode, is read performance strictly linear with the number of reading threads? I'm not observing this in practice. I think that the problem in my case is IO latency and bounding, but I wanted to check that there are not any locks which might limit the overall throughput of a single instance of rocksdb.
+
+I'd like to open only one and use many threads for concurrent reads so as to avoid duplicating cached metadata about the db.
+
+What is the optimal way to achieve truly parallel read performance using read only mode?
+
+Reads should scale with cpu cores as long as you have enough IO throughput. Maybe you can run the same test with the data in ramfs (to minimize storage throughput contention) to verify that you can observe the scaling in a real experiment.
+
+OK I'll try this on a smaller dataset.
+
+Based on our experiment, if all data in memory, number of threads is smaller than number of cores per CPU socket, performance is close to linear to number of threads. So the performance is pretty good for multiple readers.
+
+Is the issue good to close?
+
+I'm not seeing this behavior when running in-memory with cache sharding. See #619.
+
+Even in memory there are possible sources of contention:
+1) block cache mutexes -- workaround is to use more shards for the block cache LRU
+2) files -- make sure max_open_files is large enough to cache open files
+
+Please reopen this issue if you are still seeing any performance problems
+

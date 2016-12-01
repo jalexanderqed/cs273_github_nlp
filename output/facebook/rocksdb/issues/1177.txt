@@ -1,0 +1,71 @@
+It would be very helpful if you could include the dll for windows support in the maven package , we are having trouble building it 
+
+Related to - https://github.com/facebook/rocksdb/issues/703#issuecomment-206027819
+
+after reading the related comment and building the dll from the source we get the following error with stack trace @adamretter 
+
+```
+Exception in thread "StreamThread-1" java.lang.UnsatisfiedLinkError: org.rocksdb.Options.newOptions()V
+       at org.rocksdb.Options.newOptions(Native Method)
+       at org.rocksdb.Options.<init>(Options.java:31)
+       at org.apache.kafka.streams.state.internals.RocksDBStore.<init>(RocksDBStore.java:127)
+       at org.apache.kafka.streams.state.internals.RocksDBStore.<init>(RocksDBStore.java:113)
+       at org.apache.kafka.streams.state.internals.RocksDBKeyValueStoreSupplier.get(RocksDBKeyValueStoreSupplier.java:56)
+       at org.apache.kafka.streams.processor.internals.AbstractTask.initializeStateStores(AbstractTask.java:80)
+       at org.apache.kafka.streams.processor.internals.StreamTask.<init>(StreamTask.java:115)
+       at org.apache.kafka.streams.processor.internals.StreamThread.createStreamTask(StreamThread.java:550)
+       at org.apache.kafka.streams.processor.internals.StreamThread.addStreamTasks(StreamThread.java:577)
+       at org.apache.kafka.streams.processor.internals.StreamThread.access$000(StreamThread.java:68)
+       at org.apache.kafka.streams.processor.internals.StreamThread$1.onPartitionsAssigned(StreamThread.java:123)
+       at org.apache.kafka.clients.consumer.internals.ConsumerCoordinator.onJoinComplete(ConsumerCoordinator.java:222)
+       at org.apache.kafka.clients.consumer.internals.AbstractCoordinator$1.onSuccess(AbstractCoordinator.java:232)
+       at org.apache.kafka.clients.consumer.internals.AbstractCoordinator$1.onSuccess(AbstractCoordinator.java:227)
+       at org.apache.kafka.clients.consumer.internals.RequestFuture.fireSuccess(RequestFuture.java:133)
+       at org.apache.kafka.clients.consumer.internals.RequestFuture.complete(RequestFuture.java:107)
+       at org.apache.kafka.clients.consumer.internals.RequestFuture$2.onSuccess(RequestFuture.java:182)
+       at org.apache.kafka.clients.consumer.internals.RequestFuture.fireSuccess(RequestFuture.java:133)
+       at org.apache.kafka.clients.consumer.internals.RequestFuture.complete(RequestFuture.java:107)
+       at org.apache.kafka.clients.consumer.internals.AbstractCoordinator$SyncGroupResponseHandler.handle(AbstractCoordinator.java:436)
+       at org.apache.kafka.clients.consumer.internals.AbstractCoordinator$SyncGroupResponseHandler.handle(AbstractCoordinator.java:422)
+       at org.apache.kafka.clients.consumer.internals.AbstractCoordinator$CoordinatorResponseHandler.onSuccess(AbstractCoordinator.java:679)
+       at org.apache.kafka.clients.consumer.internals.AbstractCoordinator$CoordinatorResponseHandler.onSuccess(AbstractCoordinator.java:658)
+       at org.apache.kafka.clients.consumer.internals.RequestFuture$1.onSuccess(RequestFuture.java:167)
+       at org.apache.kafka.clients.consumer.internals.RequestFuture.fireSuccess(RequestFuture.java:133)
+       at org.apache.kafka.clients.consumer.internals.RequestFuture.complete(RequestFuture.java:107)
+       at org.apache.kafka.clients.consumer.internals.ConsumerNetworkClient$RequestFutureCompletionHandler.onComplete(ConsumerNetworkClient.java:426)
+       at org.apache.kafka.clients.NetworkClient.poll(NetworkClient.java:278)
+       at org.apache.kafka.clients.consumer.internals.ConsumerNetworkClient.clientPoll(ConsumerNetworkClient.java:360)
+       at org.apache.kafka.clients.consumer.internals.ConsumerNetworkClient.poll(ConsumerNetworkClient.java:224)
+       at org.apache.kafka.clients.consumer.internals.ConsumerNetworkClient.poll(ConsumerNetworkClient.java:192)
+       at org.apache.kafka.clients.consumer.internals.ConsumerNetworkClient.poll(ConsumerNetworkClient.java:163)
+       at org.apache.kafka.clients.consumer.internals.AbstractCoordinator.ensureActiveGroup(AbstractCoordinator.java:243)
+       at org.apache.kafka.clients.consumer.internals.ConsumerCoordinator.ensurePartitionAssignment(ConsumerCoordinator.java:345)
+       at org.apache.kafka.clients.consumer.KafkaConsumer.pollOnce(KafkaConsumer.java:977)
+       at org.apache.kafka.clients.consumer.KafkaConsumer.poll(KafkaConsumer.java:937)
+       at org.apache.kafka.streams.processor.internals.StreamThread.runLoop(StreamThread.java:295)
+       at org.apache.kafka.streams.processor.internals.StreamThread.run(StreamThread.java:218)
+```
+
+Workaround here, but it is quite horrible -- appears that RocksDB only looks inside its own jar for native libraries, and inserting the .dll into the jar breaks Maven.  Any progress on this?
+
+https://mail-archives.apache.org/mod_mbox/kafka-users/201608.mbox/%3CCAJikTEXmn2UxkoKc0P4JsXqqwcNeP3pFfm2j5=eZH9pdgQaOvA@mail.gmail.com%3E
+
+@davispw If you want to patch it, you can take a RocksDB Jar from Maven Central, modify the Jar by inserting the .dll or whatever else you need in there and then creating your own Maven artifact from that; There is nothing about that process that "_breaks Maven_".
+
+However, I am hoping to release RocksJava 4.9 this evening. This should contain a DLL for Windows in the Jar file and appear on Maven Central shortly after.
+
+Great news about 4.9 release!  Will look forward to it. 
+
+By "breaks maven" I meant at my organization (I don't think I'm alone) it is quite difficult to inject a customized jar that doesn't follow the normal process, aside from the pain of putting together a Windows build at a Java shop. A bureaucratic issue, not a technical one.  Sorry for inflammatory characterization!
+
+@davispw I just published 4.9.0 to Maven Central, it should be available within the next two hours (according to Sonatype's synchronisation rules).
+
+**NOTE:** I gave it a quick test from Java 7 in Windows 10 and it appeared to work, but I have not thoroughly tested it in any sense on Windows platforms. Also it is not linked with any of the 3rd-party libraries, so don't expect compression support just yet (on Windows).
+
+You rock @adamretter!  Working now with 4.9.0.
+
+I'm getting the same error, also using Kafka but running on a ppc64 architecture. I've configured Kafka to use rocksdbhni 4.9.0 and pass the location of my native build using `-Djava.library.path=.`..
+Still I'm facing this problem. Andy ideas? 
+
+@twiechert Let's move that conversation to https://github.com/facebook/rocksdb/issues/1317
+

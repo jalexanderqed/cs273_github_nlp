@@ -1,0 +1,6 @@
+Would switching from the leveldb style makefile to autotools be a welcome contribution?  If so I would be happy to contribute this.   If not please feel free to close this issue.
+
+i think autotools would be nice when there is a plethora of platfoms to support.... maybe at a later stage.
+
+ok, fair enough!  thanks
+

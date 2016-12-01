@@ -1,0 +1,14 @@
+If I understand correctly the Java BloomFilter class (https://github.com/facebook/rocksdb/blob/master/java/org/rocksdb/BloomFilter.java) is no longer needed and the configuration information that it used to hold has been re-purposed inside BlockBasedTableConfig class. This should probably be deleted. Also can someone please update the Java Wiki page which is now severely lacking...
+
+`BloomFilter` also seems obsolete for me. At least from my point of view there is even no way to set any instance dervied from `Filter`
+
+@yhchiang can you look into this ?
+
+Hey @adamretter, sorry for the late reply.  As we've re-factored options on the c++ side, now filter_policy belong to BlockTableTableOptions, on the Java side we should add `SetFilterPolicy()` to `BlockBasedTableConfig`.
+
+So Filter and BloomFilter are not obsolete, but they are currently lack of full support.
+
+@yhchiang I`ll try to port it today
+
+@ankgup87 @yhchiang : i think this one can be closed.
+

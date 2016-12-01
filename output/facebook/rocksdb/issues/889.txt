@@ -1,0 +1,14 @@
+Hi, I have some problem about `GetUpdatesSince()`.
+
+The size of my Write Ahead Log file is about 512M, with a lot of small integer values.
+
+I run a server based on rocksdb, and I have a slave server using `GetUpdatesSince()` to do incremental backups.
+The slave server will keep trying to sync the latest changes from the master, so the master need to call `GetUpdatesSince()` very often.
+The problem is, the implementation of `GetUpdatesSince()` will collect all Write Ahead Logs (archived and alive), read the first record of each WAL to get the start sequence, then use binary search to find the target WAL, and scan it from the beginning. With a large WAL (512M) with very small values, it will be very slow.
+
+Actually, I just want to get the latest changes from the tail of the lastest WAL at most time, no reason to scan the WAL from the beginning every time.
+
+That's it, forgive my broken english, any solution to this problem ?
+
+Finally, I solve this by reusing the `TransactionLogIterator` instead of creating a new one every time.
+

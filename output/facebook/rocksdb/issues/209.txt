@@ -1,0 +1,20 @@
+Hey guys,
+                 I am playing around with the Rocksdb JNI version. One of the requirements we have is, being able to have a single monolithic shared library that contains all the dependencies (snappy, bzip) - for portability aspect. I played around with snappy, compiled it as an archive file (.a) and included it as as static dependency while compiling the rocksdbjava JNI shared library. Do you recommend this approach ? I was thinking of adding a new target to the MakeFile (which will download snappy and link it statically with rocksdb JNI) and contribute back. Also, how do you control the compression algorithm being using the java API? I don't see an option to do this.
+
+Thanks in advance,
+Naveen
+
+Also, how do you control the compression algorithm being using the java API? I don't see an option to do this.
+
+> Naveen, please use setCompressionType() in Options.java to choose compression algorithm for DB.
+
+Hey Naveen,
+
+Including all dependent files in the jar file is something great to have but we've not yet done. For that, probably using .so files might be easier as I remember I encountered some problem when linking the .a file of rocksdb c++ to rocksdb java.  Feel free to contribute back once you find a solution :)
+
+And thanks ankit for answering the second question.  `setCompressionType()` is the right function :)
+
+@naveenatceg I'm guessing this was fixed by your contribution, right?
+
+@igorcanadi correct, this can be closed. Thanks for following up!
+

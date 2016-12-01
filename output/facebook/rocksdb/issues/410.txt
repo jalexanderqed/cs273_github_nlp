@@ -1,0 +1,299 @@
+I am storing complex objects into Rocks which are de-composed into thousands of key value pairs. Each transaction in my system has it's own WriteBatch so that new objects are committed atomically. As well as replacing objects with new objects, it is also possible to update individual parts of an object and many updates may happen in a single transaction. A WriteBatch may contain of updates to many different objects, however it should be committed atomically or fail.
+
+I am interested in detecting the issue of Write-Write conflicts in RocksDB. For example if I have two threads A and B and they each take a snapshot of the database. Let's say they both want to update the value of key1 dependent on knowing not just it's current value but also the current value of other keys in the database. The problem I have at the moment is that the first thread that does the write is fine, and succeeds, however the second thread will perform a write of a value determined by an old view of the database. Which leads to it updating the value of key1 to something invalid.
+
+What I would like is a mechanism whereby when the second thread attempts to write it's WriteBatch, it realises the value of the key has changed since it took it's snapshot, and so no updates in the WriteBatch are committed. In many ways it is better explained in the first paragraph here - https://en.wikipedia.org/wiki/Snapshot_isolation#Definition
+
+I may be mistaken, but I do not think Rocks offers anything to guard against Write-Write Conflicts?
+
+I am not sure of the best way to achieve this, but one approach that I might suggest would be to create a new write function, called `WriteConditional` which takes a WriteBatch and a `Condition`. The Condition has to evaluate to `true` for the batch to be written atomically, if the condition returns false then no updates from the batch are written. Initially we would have a single Condition object perhaps called, `StableCondition` which takes a Snapshot. The purpose of StableCondition would be to make sure that the keys in the WriteBatch have not been changed in the database since the Snapshot was taken.
+I am not sure how this would be achieved in Rocks, but perhaps it is as simple as checking the sequence number in the snapshot is greater-than-or-equal to the sequence number of each key in the WriteBatch?
+
+I would also be interested to know how others are managing locking and transactions for updating complex objects in Rocks.
+
+This is exactly a problem we're trying to solve right now with MongoDB :)
+
+We should have a solution soon, stay tuned.
+
+cc @siying 
+
+Let the batch be started at sequence number snapshot_start.
+Let the batch be written at sequence number snapshot_end.
+Create a snapshot for sequence number snapshot_end –1
+For each row in the write batch, read the row using the snapshot : snapshot_end –1
+If the sequence number was greater than snapshot_start, abort the batch.
+If all rows are ok, commit the batch. This can be done lazily or synchronously
+
+From: Adam Retter <notifications@github.com<mailto:notifications@github.com>>
+Reply-To: facebook/rocksdb <reply@reply.github.com<mailto:reply@reply.github.com>>
+Date: Thursday, November 20, 2014 at 8:20 AM
+To: facebook/rocksdb <rocksdb@noreply.github.com<mailto:rocksdb@noreply.github.com>>
+Subject: [rocksdb] Write-Write Conflict Avoidance (#410)
+
+I am storing complex objects into Rocks which are de-composed into thousands of key value pairs. Each transaction in my system has it's own WriteBatch so that new objects are committed atomically. As well as replacing objects with new objects, it is also possible to update individual parts of an object and many updates may happen in a single transaction. A WriteBatch may contain of updates to many different objects, however it should be committed atomically or fail.
+
+I am interested in detecting the issue of Write-Write conflicts in RocksDB. For example if I have two threads A and B and they each take a snapshot of the database. Let's say they both want to update the value of key1 dependent on knowing not just it's current value but also the current value of other keys in the database. The problem I have at the moment is that the first thread that does the write is fine, and succeeds, however the second thread will perform a write of a value determined by an old view of the database. Which leads to it updating the value of key1 to something invalid.
+
+What I would like is a mechanism whereby when the second thread attempts to write it's WriteBatch, it realises the value of the key has changed since it took it's snapshot, and so no updates in the WriteBatch are committed. In many ways it is better explained in the first paragraph here - https://en.wikipedia.org/wiki/Snapshot_isolation#Definitionhttps://urldefense.proofpoint.com/v1/url?u=https://en.wikipedia.org/wiki/Snapshot_isolation%23Definition&k=ZVNjlDMF0FElm4dQtryO4A%3D%3D%0A&r=WRKargMUBaS98NXOUihCOg%3D%3D%0A&m=ZIowCQmcCqNNxjiK1rUNqPGkvQ4z3afMe4j3APU4Nrg%3D%0A&s=b01f94f997ee194cf4c9ccd71adb2364873aba59a0ea591ded0918f5ee1a12cd
+
+I may be mistaken, but I do not think Rocks offers anything to guard against Write-Write Conflicts?
+
+I am not sure of the best way to achieve this, but one approach that I might suggest would be to create a new write function, called WriteConditional which takes a WriteBatch and a Condition. The Condition has to evaluate to true for the batch to be written atomically, if the condition returns false then no updates from the batch are written. Initially we would have a single Condition object perhaps called, StableCondition which takes a Snapshot. The purpose of StableCondition would be to make sure that the keys in the WriteBatch have not been changed in the database since the Snapshot was taken.
+I am not sure how this would be achieved in Rocks, but perhaps it is as simple as checking the sequence number in the snapshot is greater-than-or-equal to the sequence number of each key in the WriteBatch?
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/410.
+
+Igor -- will the work for Mongo+Rocks generate code that can be used for
+pure-Rocks clients? I assume that merge operator can be used to do this
+(make the second write-conditional) but then writers must do a current read
+after their write to learn the outcome (whether their change was applied).
+
+On Thu, Nov 20, 2014 at 10:29 AM, rven1 notifications@github.com wrote:
+
+> Let the batch be started at sequence number snapshot_start.
+> Let the batch be written at sequence number snapshot_end.
+> Create a snapshot for sequence number snapshot_end –1
+> For each row in the write batch, read the row using the snapshot :
+> snapshot_end –1
+> If the sequence number was greater than snapshot_start, abort the batch.
+> If all rows are ok, commit the batch. This can be done lazily or
+> synchronously
+> 
+> From: Adam Retter <notifications@github.com<mailto:
+> notifications@github.com>>
+> Reply-To: facebook/rocksdb <reply@reply.github.com<mailto:
+> reply@reply.github.com>>
+> Date: Thursday, November 20, 2014 at 8:20 AM
+> To: facebook/rocksdb <rocksdb@noreply.github.com<mailto:
+> rocksdb@noreply.github.com>>
+> Subject: [rocksdb] Write-Write Conflict Avoidance (#410)
+> 
+> I am storing complex objects into Rocks which are de-composed into
+> thousands of key value pairs. Each transaction in my system has it's own
+> WriteBatch so that new objects are committed atomically. As well as
+> replacing objects with new objects, it is also possible to update
+> individual parts of an object and many updates may happen in a single
+> transaction. A WriteBatch may contain of updates to many different objects,
+> however it should be committed atomically or fail.
+> 
+> I am interested in detecting the issue of Write-Write conflicts in
+> RocksDB. For example if I have two threads A and B and they each take a
+> snapshot of the database. Let's say they both want to update the value of
+> key1 dependent on knowing not just it's current value but also the current
+> value of other keys in the database. The problem I have at the moment is
+> that the first thread that does the write is fine, and succeeds, however
+> the second thread will perform a write of a value determined by an old view
+> of the database. Which leads to it updating the value of key1 to something
+> invalid.
+> 
+> What I would like is a mechanism whereby when the second thread attempts
+> to write it's WriteBatch, it realises the value of the key has changed
+> since it took it's snapshot, and so no updates in the WriteBatch are
+> committed. In many ways it is better explained in the first paragraph here
+> - https://en.wikipedia.org/wiki/Snapshot_isolation#Definition<
+>   https://urldefense.proofpoint.com/v1/url?u=https://en.wikipedia.org/wiki/Snapshot_isolation%23Definition&k=ZVNjlDMF0FElm4dQtryO4A%3D%3D%0A&r=WRKargMUBaS98NXOUihCOg%3D%3D%0A&m=ZIowCQmcCqNNxjiK1rUNqPGkvQ4z3afMe4j3APU4Nrg%3D%0A&s=b01f94f997ee194cf4c9ccd71adb2364873aba59a0ea591ded0918f5ee1a12cd>
+> 
+> I may be mistaken, but I do not think Rocks offers anything to guard
+> against Write-Write Conflicts?
+> 
+> I am not sure of the best way to achieve this, but one approach that I
+> might suggest would be to create a new write function, called
+> WriteConditional which takes a WriteBatch and a Condition. The Condition
+> has to evaluate to true for the batch to be written atomically, if the
+> condition returns false then no updates from the batch are written.
+> Initially we would have a single Condition object perhaps called,
+> StableCondition which takes a Snapshot. The purpose of StableCondition
+> would be to make sure that the keys in the WriteBatch have not been changed
+> in the database since the Snapshot was taken.
+> I am not sure how this would be achieved in Rocks, but perhaps it is as
+> simple as checking the sequence number in the snapshot is
+> greater-than-or-equal to the sequence number of each key in the WriteBatch?
+> 
+> —
+> Reply to this email directly or view it on GitHub<
+> https://github.com/facebook/rocksdb/issues/410>.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/410#issuecomment-63855467.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+What @rven1 mentioned is a reasonable way of working around in application for now. Please notice that the final reconcile + commit phase needs to be done sequentially.
+
+In longer term, we are also discussing a possible way to support optimistic concurrency control inside RocksDB. My proposal like is:
+
+Tx = db.BeginTransaction()
+Tx.Get(key1)
+Tx.Get(key2)
+Tx.Put(key3)
+Tx.Get(...)
+Tx.Put(...)
+bool success = Tx.Commit()
+
+To implement it, the transaction object records all the keys read/write with their seqID, as well as the latest seqID when beginning the transaction. When committing, it analyzes all the outstanding mem tables and write requests before it in the write queue to see whether there is any key in its read/write set get modified after beginning the transaction. If there is conflict, abort the transaction. If the transaction keeps so long that some mem table with updates since beginning the transaction is already deprecated, we abort the transaction too.
+
+Users can implement an advisory pessimistic concurrency control on top of it to deal with specific cases.
+
+The discussion is still on-going. 
+
+Good to hear that there are efforts to bring optimistic locking in. I think that`s one thing whats really missing within the current feature set.
+
+Hi @igorcanadi and @siying, is this something that we can discuss in more detail. This is something that I need in the very near future, and I am happy to work on this. It would be good if we could work together to ensure that we have the most efficient solution that suits both our use-cases
+
+It would be great to have support for read-modify-write-style transactions (like the one suggested in siting) into RocksDB.
+
+PostgreSQL has the best documentation for cursor isolation. PostgreSQL,
+InnoDB and Oracle all do snapshot isolation with different semantics for
+what is visible to the WHERE clause for UPDATE and what is considered a
+conflict. What Siying described is similar to repeatable read in PostgreSQL.
+
+http://www.postgresql.org/docs/9.3/interactive/transaction-iso.html
+
+On Thu, Nov 20, 2014 at 2:12 PM, dhruba borthakur notifications@github.com
+wrote:
+
+> It would be great to have support for read-modify-write-style transactions
+> (like the one suggested in siting) into RocksDB.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/410#issuecomment-63889699.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+One difference between what PG does and Siying proposed is that the check
+for PG is only for rows read for insert/update/delete. The Siying proposal
+is expanded to include all reads. PG is able to distinguish between those
+types of reads. Since there is no read-modify-write operation in RocksDB,
+RocksDB cannot distinguish. So RocksDB will have more rollback-on-conflicts
+detected.
+
+On Thu, Nov 20, 2014 at 4:00 PM, MARK CALLAGHAN mdcallag@gmail.com wrote:
+
+> PostgreSQL has the best documentation for cursor isolation. PostgreSQL,
+> InnoDB and Oracle all do snapshot isolation with different semantics for
+> what is visible to the WHERE clause for UPDATE and what is considered a
+> conflict. What Siying described is similar to repeatable read in PostgreSQL.
+> 
+> http://www.postgresql.org/docs/9.3/interactive/transaction-iso.html
+> 
+> On Thu, Nov 20, 2014 at 2:12 PM, dhruba borthakur <
+> notifications@github.com> wrote:
+> 
+> > It would be great to have support for read-modify-write-style
+> > transactions (like the one suggested in siting) into RocksDB.
+> > 
+> > —
+> > Reply to this email directly or view it on GitHub
+> > https://github.com/facebook/rocksdb/issues/410#issuecomment-63889699.
+> 
+> ## 
+> 
+> Mark Callaghan
+> mdcallag@gmail.com
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@mdcallag calling Transaction.Get(key) is optional. They can still use DB.Get(key) so that it is not tracked as a part of the read set.
+
+Excellent
+
+On Thu, Nov 20, 2014 at 5:38 PM, Siying Dong notifications@github.com
+wrote:
+
+> @mdcallag https://github.com/mdcallag calling Transaction.Get(key) is
+> optional. They can still use DB.Get(key) so that it is not tracked as a
+> part of the read set.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/410#issuecomment-63912002.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+And we will consider using this down the road for RocksDB+MySQL. RIght now
+we have support for read committed via pessimistic concurrency control. Row
+locks are obtained for transaction duration on insert/update/delete and
+that is done via a lock-free hash table. So there is some overhead, but the
+benefit is that we need pessimistic concurrency control for some workloads
+with high conflict rates.
+
+On Thu, Nov 20, 2014 at 5:38 PM, Siying Dong notifications@github.com
+wrote:
+
+> @mdcallag https://github.com/mdcallag calling Transaction.Get(key) is
+> optional. They can still use DB.Get(key) so that it is not tracked as a
+> part of the read set.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/410#issuecomment-63912002.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Here's our approach for building some sort of transaction support in Mongo+RocksDB: https://github.com/mongodb/mongo/blob/master/src/mongo/db/storage/rocks/rocks_transaction.cpp
+
+@igorcanadi any chance to get something like this also in here ? Maybe as utility ?
+
+We are trying get someone started on this within FB. I think it will be
+useful and interesting to implement.
+
+On Sat, Jan 24, 2015 at 3:30 PM, Jörg Maier notifications@github.com
+wrote:
+
+> @igorcanadi https://github.com/igorcanadi any chance to get something
+> like this also in here ? Maybe as utility ?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/410#issuecomment-71342841.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@igorcanadi I am going to need some time to study that code as I am not really a C++ guy. Any chance of you adding a high-level description of your approach to the class as a comment? I looked in the header file and can kinda grasp it, but I am not there yet.
+
+Each transaction gets a snapshot ID (they are monotonically increasing on every commit). For each key, we remember what was the last snapshot ID that it was committed. We also keep a set of keys that have uncommitted writes.
+
+Every time a transaction wants to write to a key, we do:
+1) check if the time that key was committed was earlier than transaction's snapshot ID. If that's not the case, that means the key was committed after our snapshot, so we can't write. abort the transaction.
+2) check if key has outstanding writes (in the uncommitted set). If it does, some other transaction wants to write to it. abort the transaction
+3) if all is good (means we can freely write to the key), we add the key to the uncommitted keys set.
+
+On commit:
+1) Every key that transaction has written, we update its snapshot ID, to reflect last time it was committed and to abort any transaction that might have read old version of the key.
+
+This is specific to mongo because for mongo read_set == write_set. If you have arbitrary reads and writes, you might need to also record all the keys you have read.
+
+On commit, continued:
+2) We remove the key from the uncommitted set.
+
+What I described above is very simple code. Most of the code in rocks_transaction.cpp deals with phasing out keys that have been written before the oldest transaction. Otherwise we'd need to keep all keys in memory forever. Here's the code without phasing out old keys: https://github.com/mongodb/mongo/blob/c902b92a9685d5be5490c701858378850ccb499f/src/mongo/db/storage/rocks/rocks_transaction.cpp
+
+We have a patch under review: https://reviews.facebook.net/D33435 Please feel free to take a look at it and tell you whether it helps with your use case!
+
+Any more updates to this issue? I saw some code got committed
+
+Optimistic Transaction support is now in the RocksDB master branch.  Please take a look and let us know if this works for you.  
+
+https://github.com/facebook/rocksdb/wiki/Optimistic-Transactions
+

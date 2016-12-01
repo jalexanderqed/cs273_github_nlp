@@ -1,0 +1,38 @@
+This avoids excessive iteration in tombstone fields.
+
+No new tests leaves me a little uncomfortable, but this is a performance change, not a correctness one. I'm not familiar with any of the RocksDB benchmarking infrastructure. I'd be happy to write a benchmark for this if someone provided guidance.
+
+Nice find!
+
+Couple of comments:
+1. It would be great to add a test. I just checked db_iter_test.cc and it has a nice mocking framework for testing db_iter. You could create an artificial test that will trigger the new code-path (where you stop the iteration early) and count the number of keys that were read from the underlying iterator. You can then assert that the number of keys read is as expected.
+2. db_iter is not very well documented, especially given how important and complicated is the code. Can you please add one comment describing the prefix_check parameter in FindNextUserEntry\* functions?
+3. [optional] Would be interesting to quote any performance benefits you get in your benchmark in the commit message.
+
+BTW, have you checked out SingleDelete() operation? It's a trick we use in MyRocks and MongoRocks to optimize thombstone removal for secondary indexes. Unfortunately we don't have a good blog post on it (yet), but you can check out the commit message: https://reviews.facebook.net/D43179
+
+Ok, I'll take a look at `db_iter_test.cc` and add a bit of comment documentation to `db_iter.cc`. 
+
+One of our benchmarks test doing `seek(key), put(key), delete(key)` with random keys. Previously, we were using `ReadOptions.iterate_upper_bound` to avoid pathological performance in `FindNextUserEntryInternal`, but we want to switch to `ReadOptions.prefix_same_as_start` so that we can reuse the same iterator across different keys. The "old" numbers below are when we switch to using `ReadOptions.prefix_same_as_start` without this change to RocksDB.
+
+```
+name                     old time/op  new time/op  delta
+MVCCPutDelete_RocksDB-8   149µs ± 1%    10µs ± 2%  -93.42%  (p=0.000 n=10+9)
+```
+
+PS I don't see how the travis failure is related to this change and don't see what the appveyor failure is. 
+
+And yes, I have looked at `SingleDelete`, though I'm not sure how we could use it safely yet. 
+
+It doesn't look like travis failure is related. Appveyor is broken in the master as well (it's the windows build)
+
+@igorcanadi This is ready for another look. I made a small addition to `PrefixTest.PrefixValid` which fails before the `db_iter.cc` change and succeeds afterward. And I've added some documentation about the `prefix_check` parameter.
+
+Thanks, this looks great! I'll let @siying take another look and merge.
+
+Now @IslamAbdelRahman is the expert on it. He can decide.
+
+LGTM, Thanks @petermattis !
+
+That was quick. Pleasure doing business with you folks again.
+

@@ -1,0 +1,20 @@
+Passing std::atomic<uint64_t> variables to ASSERT_EQ()
+results in compile error
+C2718 'const T1': actual parameter with requested alignment of 8 won't be aligned.
+
+VS2015 defines std::atomic as specially aligned type ( with 'alignas'),
+however the compiler does not like declspec(align)ed  function
+arguments.
+
+Worked around by casting std::atomic<uint64_t> types to uint64_t
+in ASSERT_EQ.
+Thank you for your pull request. We require contributors to sign our Contributor License Agreement, and yours has expired.
+
+Before we can review or merge your code, **we need you to email cla@fb.com** with your details so we can update your status.
+
+@yiwu-arbug has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4106788).
+
+Thank you for contribution! Will merge after build passes.
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+

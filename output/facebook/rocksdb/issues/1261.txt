@@ -1,0 +1,22 @@
+This PR contain the changes that to add check_snapshot in DB's AddFile function
+
+issue: #1249 
+
+Thanks @baotiao, Let's also add a unit test that uses this new option and make sure that when we use it, snapshots see the data that is added in the new file
+
+Just curious to understand the requirement of skipping the snapshot check, is it because the ,snapshot, check is very heavyweight in performance? 
+
+@dhruba, Actually the snapshot check is very lightweight. This feature is for people who want to use the AddFile API while holding snapshots (#1249) and don't mind the implications of doing that.
+
+The implication of ingesting a file while holding a snapshot is that if you took a snapshot of the DB and then ingest a file, the data in this file will be visible in this snapshot even though AddFile() was called after the snapshot was taken (because data seqno in the file is 0).
+
+Thanks for the description @IslamAbdelRahman 
+
+@IslamAbdelRahman  I have rename the variable, change the comment and add the corresponding unit test
+
+Thanks @baotiao, Looks great .. the test failures look unrelated
+I have one final minor comment
+
+Thanks @IslamAbdelRahman. the failures test show that if we holding snapshot, the Addfile will failed when we use the default skip_snapshot_check.
+I have changed the comment.
+

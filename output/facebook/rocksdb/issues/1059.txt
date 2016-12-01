@@ -1,0 +1,46 @@
+Hello,
+
+I was wondering if I'm running into memory leak situation here or not? Any input is appreciated. Thank you!
+
+Applicaton overview:
+- java app, uses rocksdb 4.2.0 published in maven repo, running on ubunut linux in aws.
+- writes 3mil small records a minute, uses put, no batches, no queries. 
+- record: 8byte key / 8 byte value 
+- database is configured with 24h TTL. Uses bloom filter.  
+- db size after 24hrs is about 50GB. Approximate number of records in the database is around 4.5B.
+
+After about 25hrs application crashed with OOM. After restart memory usage remained flat for 12hrs.  Attached image shows memory usage. The interesting thing is that after restart application started to use less memory than it needed before crash. Load is constant and fairly uniform - application receives and inserts 3mil of new records per minute.  
+
+![rockdb-mem](https://cloud.githubusercontent.com/assets/7889489/14265648/be2d5a10-fa90-11e5-89e5-0acb7b2815bf.png)
+
+@dbabenko For any short lived objects that you use in the Java API like `RocksIterator` or `WriteOptions` etc, are you making sure to close them as soon as you are finished with them by either manually calling `.close()` or using a `try-with-resources` expression?
+
+Also when you have a running Java application which you believe is growing and holding memory, you could use `jmc` or `jconsole` to connect to it and see which object classes are holding all the memory.
+
+@adamretter Thank you for your suggestions! 
+
+RocksIterator - `RocksIterator` is not used (or at least java code doesn't create it explicitly). There are no `get` calls either. 
+
+WriteOptions - there is only one instance created and then reused for all put calls. Same instance of WriteOptions is used by 16 threads executing put operation.
+
+I've checked jvm heap usage - no obvious issues.  btw java heap is capped at  `-Xmx4g`.  But then again after restart memory usage by application remained unchanged for a couple of days now so the issue might not be present anymore.
+
+Other rocksdb configuration parameters that might affect memory usage:
+
+rocksdb.estimate-table-readers-mem=5474305559  after 24hr and remained in this range for a couple of days now.  
+Total size of sst files: 43G.
+block_cache_size: 33554432
+block_size: 32768
+write_buffer_size: 67108864
+max_write_buffer_number: 3
+compression: Snappy
+
+After restart memory usage is stable. During 0-24hrs while the database and index were growing value reported by `estimate-table-readers-mem` grew from 0 to 5G which is expected since db is configured with ttl=24hrs. If the leak was somewhere in java code or in the way rocksdb api are called then i think the issue would not be isolated to the first 24 hours (value of ttl).  Can 1.5GB difference in memory usage before/after restart be explained by fragmentation within native memory allocator?  
+
+Hey, guy 
+how do u fix the problem at last?
+
+@dylanxyt I don't believe this is related to the Java API. Also the Java API was changed so that you should explicitly close resources from now on.
+
+@dylanxyt I think switching off bloom filters took care of the issue for me. But I've never verified it. There were a bunch of other configuration changes in the final configuration that turned out to be stable. 
+

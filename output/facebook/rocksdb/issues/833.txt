@@ -1,0 +1,7 @@
+
+Should we remove them from win_logger.cc since we are adding them to win_logger.h ?
+
+@IslamAbdelRahman OK
+
+@IslamAbdelRahman Looks like a CLANG issue is not related to my change.
+

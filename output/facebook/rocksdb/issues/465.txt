@@ -1,0 +1,10 @@
+- Added  support for format version in BlockBasedTableFormatConfig
+
+This depends on: https://github.com/facebook/rocksdb/pull/464
+
+As the dependency was merged i rebased onto master.
+
+@yhchiang comments adressed. I removed also the reference to the format changes file as igor said its obsolete.
+
+Looks good to me.  Thanks for adding this support!
+

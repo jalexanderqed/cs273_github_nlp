@@ -1,0 +1,19 @@
+Snapshots integration into RocksJava. Added support for the following functionalities:
+- getSnapshot
+- releaseSnapshot
+- ReadOptions support to set a Snapshot
+- ReadOptions support to retrieve Snapshot
+- SnapshotTest
+
+Added differential: https://reviews.facebook.net/D24801
+
+@yhchiang  anything new here ?
+
+@fryz:  Sorry for the delay.  Not yet have time to take a look.  Will review it sometimes this week.
+
+Ah, @yhchiang, got the wrong guy :D
+I think you were looking fry @fyrz 
+
+@fryz: Oops. Sorry :p
+@fyrz: Sorry for the delay. Not yet have time to take a look. Will review it sometimes this week.
+

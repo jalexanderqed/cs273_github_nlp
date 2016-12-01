@@ -1,0 +1,58 @@
+As clear from the question: is rocksDB just as easy on RAM as LevelDB? 
+
+This is an interesting question. Would you mind elaborating a bit more?
+
+RocksDB primarily uses memory for memtable and for block cache. Both of those are configurable. However, if you reduce memtable size, you might increase write amplification (how much bytes written to storage for every byte written to DB). If you reduce block cache, you might increase read amplification (how much page reads for every query).
+
+@gebrits what kind of "on RAM" setting do you want? We have production use cases that place data on ramfs/tmpfs and they are configured pretty much the same way as on persistent drives.
+
+@igorcanadi: I could have been a lot less cryptic I guess :). I was specifically referring to LevelDB not needing it's keys indexed in RAM. The 64B/ key (or something like that) needed for other solutions like Aerospike / couchbase is prohibitive for my usecase. Instead, LevelDB doesn't index every key in RAM (due to the block cache if I'm not mistaken) Is this the same with RocksDB?
+
+RocksDB creates an index for every block of keys. A block can be as small as a few kilobytes or as large as a few megabytes (depends on your configuration). This part is similar to LevelDB.
+
+It is also possible to not have to cache the entire index in RAM. The index can be configured to be part of the block cache, so parts of it will be paged-in or paged-out from RAM depending on its usage. This feature is not present in LevelDB (to the best of my knowledge).
+
+RocksDB with leveled compaction can be efficient as Geert-Jan explains.
+Assume we want to do about 1 disk read per point lookup. Then it needs
+block indexes and bloom filters in memory. The block index requires one key
+per page of data. The potential problem is the impact from caching bloom
+filters for the max level of the LSM. That is 10 bits per key in the
+database. The benefit is no disk reads for keys that don't exist (some
+workloads benefit from that).
+
+By comparison, a covering b-tree index needs a key per page of data. I have
+yet to read of one with support for bloom filters, so it doesn't need
+memory in cache for them, but it also doesn't avoid disk reads for keys
+that don't exist. So the b-tree needs less RAM in cache. However a b-tree
+uses a bit more space on disk then leveled compaction -- b-tree fragments
+and LSM compresses better. So the b-tree has more data pages for which keys
+must be in cache.
+
+Russel Sears has a paper in SIGMOD on bLSM that covers some of this too,
+described as "read fanout" there.
+
+On Fri, Oct 31, 2014 at 6:08 AM, dhruba borthakur notifications@github.com
+wrote:
+
+> RocksDB creates an index for every block of keys. A block can be as small
+> as a few kilobytes or as large as a few megabytes (depends on your
+> configuration). This part is similar to LevelDB.
+> 
+> It is also possible to not have to cache the entire index in RAM. The
+> index can be configured to be part of the block cache, so parts of it will
+> be paged-in or paged-out from RAM depending on its usage. This feature is
+> not present in LevelDB (to the best of my knowledge).
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/373#issuecomment-61257261.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@gebrits did we answer your question? Closing this for now, feel free to reopen.
+
+@igorcanadi: yes you guys did. Cheers.
+

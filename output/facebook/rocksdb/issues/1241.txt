@@ -1,0 +1,8 @@
+This PR also includes some cleanup, bugfixes and refactoring of the Java API. However these are really pre-cursors on the road to CompactionFilterFactory support. 
+
+https://reviews.facebook.net/D61965
+
+@ajkr Any progress on reviewing this please?
+
+@adamretter updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1241/files/2409c48775df8105ffa9b64b6b4bf06e906d719b..af5e3d04fe534bb3f270f9a105a7927eaa133e2f)
+

@@ -1,0 +1,28 @@
+I compiled rocksdb with O_DIRECT by modifiying in include/rocksdb/env.h
+use_os_buffer = false;
+use_direct_reads = true;
+use_direct_writes = true;
+
+When I run db_bench I get an "open error: Not implemented"
+1. How do I fix this?
+2. What is "use_os_buffer" exactly, how does it interact with use_direct_reads?
+3. Can I pass these options to db_bench over the command line, somehow?
+
+It seems as if rocksdb was trying to open /proc/sys/ files with O_DIRECT which fails.
+
+How do I only open the main db with O_DIRECT?
+
+Why do include/rocksdb/options.h do not support the direct flags?
+
+@kradhakrishnan, Do you know the reason for getting such error ?
+
+Basically you are opening a file on a filesystem that does not support direct IO like memory FS. Usually you get invalid argument.
+
+We are in the process of exposing the direct IO capability via RocksDB options.
+
+At this point, we have direct IO implemented at the Env level. It has been tested. I have tested the read code path for RocksDB (but not the write code path). I am working on enabling direct IO for RocksDB. If you are not in a rush, I would recommend waiting for RocksDB to expose the options.
+
+Thanks @kradhakrishnan ! Is there an ETA for this feature? Feel free to close 
+
+Sorry! There is no ETA as such. 
+

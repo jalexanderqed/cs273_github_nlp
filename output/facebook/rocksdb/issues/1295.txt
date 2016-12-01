@@ -1,0 +1,14 @@
+Hi,
+what is the fastest way to delete all keys from column family? Is sequence of `DropColumnFamily(); CreateColumnFamily();` enough fast (preferable constant time) and does it guarantee that no keys from the given column family would exist after column family with the same name is reopened?
+
+I need to do this once a day - clear about 30 column families from about 30 threads, in the same time with minimal delay.
+
+Yes, DropColumnFamily()/CreateColumnFamily() are constant time. I'm also 99% sure that you can create the column family with the same name as the previously dropped one. Internally we use IDs instead of names and the new column family would get the new ID, so there's no risk of mixing the old and new column family data.
+
+If you don't want anything stored in that column family, then DropColumnFamily() is the best way.
+
+Couple more questions:
+- dropped cf will no longer be accessible, does db drops memtables for this cf as well?
+- Is continuous dropping/creating CFs normal scenario for a live db? 
+- can db support 100s of CF? 
+

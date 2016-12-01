@@ -1,0 +1,18 @@
+Running: gcc version 4.8.1 on Ubuntu 12.04.3 LTS
+
+Error "cc1plus: error: unrecognized command line option ‘-std=gnu++11’"
+
+Hey @Andymic, I tried compiling rocksdb with gcc version 4.8 on Ubuntu 12.04 and it works:
+
+```
+g++-4.8 -g -Wall -Werror -I. -I./include -std=gnu++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_ATOMIC_PRESENT -DSNAPPY -DGFLAGS -DZLIB -DBZIP2   -DHAVE_JEMALLOC -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c db/db_impl.cc -o db/db_impl.o
+```
+
+This command for example works, and it has `-std=gnu++11` in command line options.
+
+Also, 4.8 release notes don't mention removal of the option: http://gcc.gnu.org/gcc-4.8/changes.html
+
+Are you sure your g++ is 4.8. version?
+
+Hey @igorcanadi, installed gcc 4.8 just needed to upgrade and update my repository. No worries-Thanks!
+

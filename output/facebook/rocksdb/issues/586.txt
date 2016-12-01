@@ -1,0 +1,19 @@
+The WriteBatchWithIndex when operating on the default column family does not correctly use the comparator specified in Options when the DB is created/opened. It will always use ByteWiseComparator unless a comparator is explicitly specified in the construction of the WriteBatchWithIndex.
+
+Is this a bug or an issue with documentation? I thought it's the expected behavior. WriteBatchWithIndex doesn't have access to default column family's comparator. @siying will know more.
+
+Ah ok, if this is expected behaviour then that is fine, but perhaps we could make it clearer in the comments in the code and on the wiki
+
+@adamretter WriteBatchWithIndex doesn't figure out default comparator by itself because it doesn't have a pointer to DB so it doesn't know. You can tell us by not using functions like:
+
+  void Put(ColumnFamilyHandle\* column_family, const Slice& key,
+           const Slice& value) override;
+
+Just pass a default column family handle. While if you use interface like this:
+
+  void Put(const Slice& key, const Slice& value) override;
+
+Then you'll be responsible to pass in a default comparator. I'll update the comments to make it clear.
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

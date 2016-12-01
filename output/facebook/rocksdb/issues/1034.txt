@@ -1,0 +1,41 @@
+both #seekToFirst() and #seek(byte[] key) work just fine, however when I use #seekToLast() instead the iterator is always invalid.  
+
+Also, this might be expected/desired behavior, but if I continue to iterate forward on a valid iterator with #next() until #isValid() returns false I am then unable to use #prev() to go back to a valid state.  The iterator will remain invalid once it has completed its forward traversal.
+
+@jamespedwards42 So you have two questions here really:
+
+1)
+
+> both #seekToFirst() and #seek(byte[] key) work just fine, however when I use #seekToLast() instead the iterator is always invalid.
+
+I can't reproduce this here. If you look in the RocksJava test suite you will see there are also tests for this in `org.rocksdb.RocksIteratorTest` which has checks such as:
+
+``` java
+iterator.seekToLast();
+assertThat(iterator.isValid()).isTrue();
+```
+
+Can you help us to reproduce that issue you are seeing?
+
+2)
+
+> Also, this might be expected/desired behavior, but if I continue to iterate forward on a valid iterator with #next() until #isValid() returns false I am then unable to use #prev() to go back to a valid state. The iterator will remain invalid once it has completed its forward traversal.
+
+I can indeed reproduce that behaviour with the following code:
+
+```
+iterator.seekToFirst();
+while(iterator.isValid()) {
+  iterator.next();
+}
+assertThat(iterator.isValid()).isFalse();
+iterator.prev();
+assertThat(iterator.isValid()).isTrue();
+```
+
+The last assertion in the above block fails, i.e. `assertThat(iterator.isValid()).isTrue();`. Perhaps @yhchiang can comment on whether that is the same in the C++ API?
+
+@adamretter Adding the tailing read option is what breaks it.  My goal was to reuse the same iterator and call seekToLast each time to see the latest sorted entry.
+
+`db.newIterator(new ReadOptions().setTailing(true));`
+

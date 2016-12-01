@@ -1,0 +1,2 @@
+c:\projects\rocksdb\utilities\backupable\backupable_db.cc(1619): warning C4101: 'e' : unreferenced local variable [C:\projects\rocksdb\build\rocksdblib.vcxproj]
+

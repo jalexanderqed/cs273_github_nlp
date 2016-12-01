@@ -1,0 +1,5 @@
+
+Thank for your contribution! Can you add a unit test just like this: https://github.com/facebook/rocksdb/blob/master/db/c_test.c#L457-L474 ?
+
+Done! Added some tests.
+

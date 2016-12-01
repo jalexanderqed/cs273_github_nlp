@@ -1,0 +1,6 @@
+Added TTL DB support to RocksJava. It is now possible to use the RocksDB time to live feature in Java.
+
+Differential: https://reviews.facebook.net/D31449
+
+Thanks for adding this important support!
+

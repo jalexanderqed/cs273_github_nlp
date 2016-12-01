@@ -1,0 +1,18 @@
+Summary: We didn't recompute compaction score on SetOptions, and end up not having compaction if no flush happens afterward. The PR fixing it.
+
+Test Plan: See unit test.
+
+Differential Revision: https://reviews.facebook.net/D64167
+
+PR updated.
+
+Test updated to address comment. Don't know why it compact all 3 L0 files now.. Let's see how the sandcastle/travis tests goes.
+
+PR updated: avoid trivial move in unit test. correct typo.
+
+@IslamAbdelRahman @siying any more comments?
+
+Added a test to verify DB can be reopen after SetOptions().
+
+@siying Ping.
+

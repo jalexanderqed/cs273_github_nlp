@@ -1,0 +1,2 @@
+otherwise Visual Studio will have trouble compiling this file
+

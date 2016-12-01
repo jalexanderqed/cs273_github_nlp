@@ -1,0 +1,8 @@
+Hi @satnam6502, appveyor CI build start to failed after this change: 
+https://ci.appveyor.com/project/Facebook/rocksdb/build/1.0.75 
+I believe it's related to the "Add RocksDb/GeoDb Iterator interface" commit. 
+This commit fix the problem. 
+Could you please merge this commit? Thanks. 
+
+Thanks @SherlockNoMad 
+

@@ -1,0 +1,6 @@
+[ERROR] waiting after background compaction, error, IO error: /rocks_data/001920.sst: No space left on device.Accumulated background error counts:5. This is the error message written in LOG file with kCompactionStyleUniversal, max_subcompaction=16,and num_levels=6.  Is it means that the size of 001920.sst is too big to compacted failed
+
+@xh931076284, This error means that the device ran out of space while the compaction was running (no space to write the output files of the compaction)
+
+It' okey,thank you.
+

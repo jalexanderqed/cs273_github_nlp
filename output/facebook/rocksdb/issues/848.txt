@@ -1,0 +1,38 @@
+In benchmarks that mix multiple types of operations, such as readrandomwriterandom and seekrandomwhilemerging, we wish to have separate histogram measurements for latency.
+
+This change split the histogram to per OperationType: 
+ std::unordered_map<OperationType, HistogramImpl> hist_
+
+Can you measure the performance costs of the change?
+
+Hi @siying 
+I have run the db_bench readrandomwriterandom test for perf check with other conditions remained the same.
+No perf regression is observed. 
+
+Perf for non-Split Histogram
+readrandomwriterandom :      23.753 micros/op 42100 ops/sec; ( reads:398500 writes:398499 total:10000000 found:398500)
+Microseconds per op:
+Count: 25434968  Average: 757.6793  StdDev: 2310.26
+Min: 2.0000  Median: 201.3294  Max: 209800.0000
+Percentiles: P50: 201.33 P75: 485.69 P99: 11281.20 P99.9: 26566.04 P99.99: 49917.08
+
+Perf for Split-Histogram
+readrandomwriterandom :      23.812 micros/op 41994 ops/sec; ( reads:390500 writes:390499 total:10000000 found:390500)
+Microseconds per read:
+Count: 12716000  Average: 1459.4941  StdDev: 3070.41
+Min: 2.0000  Median: 484.0505  Max: 207537.0000
+Percentiles: P50: 484.05 P75: 833.45 P99: 14604.29 P99.9: 33704.21 P99.99: 56149.59
+
+Microseconds per write:
+Count: 12715968  Average: 58.0160  StdDev: 81.95
+Min: 7.0000  Median: 48.9816  Max: 47334.0000
+Percentiles: P50: 48.98 P75: 87.44 P99: 201.57 P99.9: 334.42 P99.99: 679.67
+
+@SherlockNoMad cool. I'll merge it after we unfreeze the branch.
+
+Can you please merge all the commits into one?
+
+@igorcanadi 
+As requested, merged to one commit. 
+Thank you for reviewing this. 
+

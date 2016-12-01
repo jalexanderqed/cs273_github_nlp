@@ -1,0 +1,18 @@
+Summary: Added LevelCompactionDynamicLevelBytes to Options.
+
+Test Plan:
+make clean jclean rocksdbjava jtest
+mvn -f rocksjni.pom package
+
+Reviewers: adamretter, ankgup87, yhchiang
+
+Subscribers: dhruba
+
+Differential Revision: https://reviews.facebook.net/D34857
+
+Review completed and tests run fine here.
+
+[![Coverage Status](https://coveralls.io/builds/8429624/badge)](https://coveralls.io/builds/8429624)
+
+Changes Unknown when pulling **c345d1ee88d23c63290e3a7dbfcd6f440a159436 on fyrz:RocksJava-LevelCompactionDynamicLevelBytes** into *\* on facebook:master**.
+

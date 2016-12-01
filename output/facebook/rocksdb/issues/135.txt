@@ -1,0 +1,28 @@
+Hi,
+
+Was starting to read C++ impl of rocksDB and not sure if this is a bug in the code. Haven't read rest of the code so can't say whether it actually is correct. Can you please confirm whether the following is correct:
+
+// kValueTypeForSeek defines the ValueType that should be passed when
+// constructing a ParsedInternalKey object for seeking to a particular
+// sequence number (since we sort sequence numbers in decreasing order
+// and the value type is embedded as the low 8 bits in the sequence
+// number in internal keys, we need to use the highest-numbered
+// ValueType, not the lowest).
+static const ValueType kValueTypeForSeek = kTypeMerge;
+
+Thus, kValueTypeForSeek should be the max type in ValueType. Max value in ValueType is kTypeColumnFamilyMerge. Should we set kValueTypeForSeek to kTypeColumnFamilyMerge?
+
+Hey @ankgup87, thanks for reporting, this is a valid concern. However, I believe the value of kValueTypeForSeek is correct, even though it's confusing. kTypeColumnFamily\* enums are used only in WAL disk format, not in memtables or sst files. In write_batch.cpp, you'll see that we actually convert kTypeColumnFamilyPut to kTypePut when we insert it into a memtable.
+
+Once we release 3.0 I plan to write good documentation on implementation of column families, so this should hopefully be easier to understand.
+
+Hi igor: can we add some comments to dbformat.h to say that the _ColumnFamily_Types are needed only for manifest?
+
+Sure https://github.com/facebook/rocksdb/commit/15c3991933391023cb4a0545c86998a002a59fc5
+
+Does it make sense to use one bit to indicate it is not a key type?
+
+siying's proposal would be a disk format change, any benefits of doing that?
+
+Closing the issue since the discussion died down and the value kValueTypeForSeek is not incorrect.
+

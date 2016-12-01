@@ -1,0 +1,25 @@
+Initial support for building JNI library for Windows. Also some modification in Java unit tests to make it pass.
+
+@yuslepukhin I was modifying CMakeLists.txt to add support for Windows JNI build. Can you check if changes are OK?
+#703
+
+@yuslepukhin @adamretter I pushed changes that should address code review issues.
+
+@koldat Looks good to me. @yhchiang are we still using Phabricator for merging changes?
+
+@adamretter I changed a way of how to reference int_backup_ids. When vector is empty it cannot be dereferenced.
+
+@koldat Okay cool, I can't really comment though as my C++ is not strong enough to know what the implications of that change are.
+
+@yuslepukhin I changed JNI to subproject (like gtest) and rebased branch so it should pass the build.
+
+@siying I changed int_backup_ids back to vector. The problem was dereferencing empty vector. I used data() method that was added in C++11, that should work even for empty vectors. I also squashed changesets to one, rebased to latest and fixed one test that was not passing with release DLLs.
+
+>  @yhchiang are we still using Phabricator for merging changes?
+
+For bigger change, yes it is suggested to use Phabricator as it's easier to review and discuss.
+
+@adamretter @yuslepukhin is it good to merge?
+
+@siying All good from me
+

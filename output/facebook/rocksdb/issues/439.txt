@@ -1,0 +1,33 @@
+
+It's still 22 commits. :/ Can you try making this only one commit? Maybe try something like:
+`git diff master > ~/a; git checkout master; git checkout -b pull_request; git apply ~/a; git commit -a -m "Pull Request"`
+
+I am assuming I should run this command from the "3.9.b" branch and change the "-b pull_request" to "-b 3.9.fb"
+
+Done.
+
+Here it is.
+
+https://github.com/facebook/rocksdb/pull/440
+
+On Thu, Dec 18, 2014 at 1:11 PM, Igor Canadi notifications@github.com
+wrote:
+
+> It's still 22 commits. :/ Can you try making this only one commit? Maybe
+> try something like:
+> git diff master > ~/a; git checkout master; git checkout -b pull_request;
+> git apply ~/a; git commit -a -m "Pull Request"
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/pull/439#issuecomment-67477703.
+
+## 
+
+---
+
+I dare do all that may become a man; Who dares do more, is none - Macbeth,
+twelfh night!
+Regards
+       Krishna
+

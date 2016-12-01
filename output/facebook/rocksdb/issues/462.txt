@@ -1,0 +1,15 @@
+Previous to this commit there was a problem with unterminated
+String usage as jByteArrays are not zero terminated.
+
+Differential: https://reviews.facebook.net/D31809
+
+@yhchiang can you look into this ?
+
+I want to review it more carefully, can you create a diff review for this?
+
+@yhchiang i added the differential to the pull request description and integrated your comments.
+
+Sorry for the delay, I will review it sometime later today.
+
+Hey @fryz.  I left a comment under the diff.  Once the issue has been fixed it's ready to go :)
+

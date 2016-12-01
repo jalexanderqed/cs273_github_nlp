@@ -1,0 +1,82 @@
+I installed Visual C++ runtime for Visual Studio 2015 from https://www.microsoft.com/en-us/download/details.aspx?id=48145 but still getting **Can't find dependent libraries**
+
+Dependency Walker show me these missing dependencies:
+API-MS-WIN-CRT-CONVERT-L1-1-0.DLL
+API-MS-WIN-CRT-ENVIRONMENT-L1-1-0.DLL
+API-MS-WIN-CRT-FILESYSTEM-L1-1-0.DLL
+API-MS-WIN-CRT-HEAP-L1-1-0.DLL
+API-MS-WIN-CRT-LOCALE-L1-1-0.DLL
+API-MS-WIN-CRT-MATH-L1-1-0.DLL
+API-MS-WIN-CRT-MULTIBYTE-L1-1-0.DLL
+API-MS-WIN-CRT-RUNTIME-L1-1-0.DLL
+API-MS-WIN-CRT-STDIO-L1-1-0.DLL
+API-MS-WIN-CRT-STRING-L1-1-0.DLL
+API-MS-WIN-CRT-TIME-L1-1-0.DLL
+API-MS-WIN-CRT-UTILITY-L1-1-0.DLL
+API-MS-WIN-SERVICE-PRIVATE-L1-1-1.DLL
+API-MS-WIN-CORE-KERNEL32-PRIVATE-L1-1-1.DLL
+API-MS-WIN-CORE-PRIVATEPROFILE-L1-1-1.DLL
+
+RocksDB is running well on Win7
+
+@yuslepukhin any idea what dependency we are missing here?
+
+Dependency Walker often does not correctly show those thunks. It does not mean they are missing. 
+I am running 2012R2 and it works.
+Try running a tool or a test executable. for better diagnostics.
+
+@yuslepukhin are you running RocksDB Java(4.9.0) on Win 2012R2?
+What tool are you referring to?
+
+I am not running Java. And I just realized that you possibly talking about a distribution that Adam has been working on. I am not using that either.
+
+However, the libraries you are referring to has nothing to do with Java.
+
+I was under impression that you used Dependency Walker tool that is available to check for DLL dependencies on an arbitrary executable.
+
+How do you get the above errors? Can you, say run db_bench in some perf scnario or any other tools that link to rocksdb to see if any of the dependencies are missing?
+
+@kobikis dumpbin can be used to find the dependency.
+
+D:\Temp\rocksdbjni> dumpbin /dependents librocksdbjni-win64.dll
+Microsoft (R) COFF/PE Dumper Version 12.00.40629.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+Dump of file librocksdbjni-win64.dll
+
+File Type: DLL
+
+  Image has the following dependencies:
+
+```
+RPCRT4.dll
+MSVCP140.dll
+VCRUNTIME140.dll
+api-ms-win-crt-runtime-l1-1-0.dll
+api-ms-win-crt-stdio-l1-1-0.dll
+api-ms-win-crt-string-l1-1-0.dll
+api-ms-win-crt-convert-l1-1-0.dll
+api-ms-win-crt-time-l1-1-0.dll
+api-ms-win-crt-environment-l1-1-0.dll
+api-ms-win-crt-filesystem-l1-1-0.dll
+api-ms-win-crt-math-l1-1-0.dll
+api-ms-win-crt-heap-l1-1-0.dll
+KERNEL32.dll
+```
+
+  Summary
+
+```
+    F000 .data
+    1000 .gfids
+   19000 .pdata
+   B0000 .rdata
+    2000 .reloc
+    1000 .rsrc
+  22D000 .text
+    1000 .tls
+```
+
+D:\Temp\rocksdbjni> whereis dumpbin
+D:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\amd64\dumpbin.exe
+

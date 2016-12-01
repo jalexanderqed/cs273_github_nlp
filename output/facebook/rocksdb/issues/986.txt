@@ -1,0 +1,10 @@
+Hi everyone, 
+
+I was trying to do some benchmark testing on centos system which has 2 SSD of 800 GB.  How do I configure my SSD's so that the rockdb DB is on SSD so that I can do puts and gets from rocksdb which is on SSD.  I didn't see any SSD configuration document on rocksdb.org. Any help is appreciated.
+
+Regards
+
+Please post future questions on the FB group or mailing list. github issues are for bugs.
+
+If possible enable TRIM  -- mount the filesystem with the "discard" option.
+

@@ -1,0 +1,8 @@
+disable UBSAN for functions with intentional left shift on -ve number / overflow
+
+These functions are
+rocksdb:: Hash
+FixedLengthColBufEncoder::Append
+FaultInjectionTest:: Key
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4240801).
+@IslamAbdelRahman updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1577/files/41a3f588800dda84198e1e67dc18006203fc5734..1acde47b6937b532f560f6f3cb8d9338178d6d79) - [changes since last import](https://github.com/facebook/rocksdb/pull/1577/files/41a3f588800dda84198e1e67dc18006203fc5734..1acde47b6937b532f560f6f3cb8d9338178d6d79)

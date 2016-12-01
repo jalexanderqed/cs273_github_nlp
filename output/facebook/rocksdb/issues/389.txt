@@ -1,0 +1,4 @@
+util/sst_dump_tool.cc:421:65: error: format ‘%zd’ expects argument of type ‘signed size_t’, but argument 3 has type ‘uint64_t {aka long long unsigned int}’ [-Werror=format=]
+                     table_properties->user_collected_properties));
+                                                                 ^
+

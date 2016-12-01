@@ -1,0 +1,13 @@
+these functions were too complicated to change with exit points everywhere, so refactored them.
+
+btw, please review urgently, this is a prereq to fix the 5.0 perf regression
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4198972).
+
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4198972).
+
+use internal phabricator to review, it's 1000x cleaner
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1534/files/f6b546594b8fb521fa3af35ba29c8c4048de5ac8..86c69cef77ddbe285782a1084ff25b5e8e1e5ff1) - [changes since last import](https://github.com/facebook/rocksdb/pull/1534/files/f6b546594b8fb521fa3af35ba29c8c4048de5ac8..86c69cef77ddbe285782a1084ff25b5e8e1e5ff1)
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1534/files/86c69cef77ddbe285782a1084ff25b5e8e1e5ff1..d5d79d624d337ba2d95ab20fbc4485d874d0d393) - [changes since last import](https://github.com/facebook/rocksdb/pull/1534/files/86c69cef77ddbe285782a1084ff25b5e8e1e5ff1..d5d79d624d337ba2d95ab20fbc4485d874d0d393)
+

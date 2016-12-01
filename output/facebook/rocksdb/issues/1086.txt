@@ -1,0 +1,61 @@
+I ran db_bench --benchmarks=fillseq and WAL sync disabled. iostat was running during the test and bytes written by iostat are about half the rate of bytes written by rocksdb.flush.write.bytes. This is true whether I use snappy or no compression.
+
+For this example, iostat reports ~1gb of writes when compression is disabled because there are 1M keys and each value is 1024 bytes. But rocksdb.flush.write.bytes reports 2gb.
+
+This is incremented in two places:
+db/db_impl.cc:  RecordTick(stats_, FLUSH_WRITE_BYTES, IOSTATS(bytes_written));  
+db/flush_job.cc:  RecordTick(stats_, FLUSH_WRITE_BYTES, meta->fd.GetFileSize());
+
+Repro script
+
+```
+iostat -kx 5 >& o.io1 &
+ipid=$!
+./db_bench --benchmarks=fillseq --compression_type=none --db=/s/bld/ldb --value_size=1024 --num=1000000 --write_buffer_size=$(( 4 * 1024 * 1024 )) --max_bytes_for_level_base=$(( 32 * 1024 * 1024 )) --statistics=1 --stats_per_interval=1 --stats_interval_seconds=10 >& o.db1
+kill $ipid
+```
+
+Then summarize iostat where $dname is storage device name from iostat
+
+```
+grep $dname o.io1| awk '{ if (NR>1) { wkb += $7 } } END { printf "%.2f\n", (wkb*5)/(1024*1024) }'
+```
+
+I then repeated the test with printfs in the two callers to RecordTick(..., FLUSH_WRITE_BYTES, ...) and it was called from flush_job.cc 262 times during the test with each reporting ~4M bytes for a total of ~1G. It was called from db_impl.cc 524 times and half of those calls are for ~4M bytes, while the other half are for 0 bytes. 
+
+So each of the callers reports 1gb of writes. There is double counting. My build has the fix for https://github.com/facebook/rocksdb/commit/ae21d71e94ebe82689aea39359c1661776871d52 and while the bytes reported by that fix are for flush (so it is correct to not report them as compaction bytes) that fix might not have considered the other caller.
+
+I also don't know why the other caller from db_impl.cc is called twice as frequently and half the time reports 0 bytes
+
+Seems RecordTick is called three times after flush (two RecordFlushIOStats() in db_impl.cc and one in flush_job.cc). Will send a fix.
+
+@mdcallag in you awk command why you multiply wkb by 5? I ask because I'm not able to repro the same number. I run it locally and the awk command outputs 1.8.
+
+From the reproduction scripts...
+
+I run "iostat -kx 5" so I get one sample per 5 seconds and the unit is KB.
+To convert to total bytes written I sum the column from iostat, multiply by
+5, then divide by (1024 \* 1024). And divide by (1024_1024) is in place of
+multiply by 1024 then divide by (1024_1024*1024).
+
+On Fri, Apr 22, 2016 at 3:01 PM, yiwu-arbug notifications@github.com
+wrote:
+
+> @mdcallag https://github.com/mdcallag in you awk command why you
+> multiply wkb by 5? I ask because I'm not able to repro the same number. I
+> run it locally and the awk command outputs 1.8.
+> 
+> —
+> You are receiving this because you were mentioned.
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1086#issuecomment-213603076
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Thanks for reporting this.  https://reviews.facebook.net/D57111 should fix this issue.
+
+@yhchiang @mdcallag  can you close the issue if it has been fixed?
+

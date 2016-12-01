@@ -1,0 +1,22 @@
+Is there any way to stop writing LOG entries for every db access? I have a situation in which I'll have many concurrent threads reading from the same db opened in read-only mode, and the additional log entries for every concurrent thread don't help and simply add files to the database directory.
+
+@ekg you can set https://github.com/facebook/rocksdb/blob/master/include/rocksdb/options.h#L676 `info_log_level` to error level which basically disables nearly every log output.
+
+You can consider to implement your own Logger and pass it to options, so that you can deal with the logs whatever way you want. If you don't care about info-level logging, you can tune off info level logging as what @fyrz suggested.
+
+@fyrz Thank you! That's exactly what I was looking for.
+
+@siying Also very interesting. For the moment I'll keep things simpler by just changing the logging level, but it's good to know that this, like most things in rocksdb, is plugable.
+
+Actually I think I will have to turn off the logging completely by specifying a custom logger. Or a patch for a "NONE" log level. I am still seeing log entries for the db open with error level logging.
+
+Just send the LOG output to /dev/null :)
+
+@igorcanadi even when sending logs to `/dev/null` data structures are allocated which account to efforts not really necessary if somebody doesn`t want to log anything.
+
+@ekg you can also switch to `FATAL`. I don`t think that it makes sense to supress these messages.
+
+@ekg are the answers good enough? Can we close the issue?
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

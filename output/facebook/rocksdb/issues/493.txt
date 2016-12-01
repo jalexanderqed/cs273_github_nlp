@@ -1,0 +1,14 @@
+I'm working with data of around a terabyte. I can now efficiently load this into rocksdb using configuration as described in #490. The happy result is that the process is now bottlenecked at compaction.
+
+The data load can run at nearly 100M/s, but I notice that compaction runs at only 10M/s. I have a lot of free cores, and at least 200M/s of available write, so I was wondering if there is a way to improve throughput.
+
+In principle the db could be compacted in chunks in parallel, to reduce the number of input SSTs to the final merge-sort at the cost of a lot more compute and IO (I wouldn't mind either as I'm stuck waiting on iterations of this process). However, it's not clear that this gets at the underlying problem.
+
+How can I improve compaction performance? Are there any settings in options which could be used, or is this a deeper limitation? What are the dominant factors in compaction runtime?
+
+@igorcanadi [responded to this in another thread](https://github.com/facebook/rocksdb/issues/490#issuecomment-72908614). Following his suggestions, I'm seeing much higher write utilization, consistently upwards of 200M/s. Obviously this means that a bit of write amplification is happening, but on balance the process completes much more quickly due to the continuous compaction/sorting of the data.
+
+My configuration is available here: https://github.com/ekg/vg/blob/master/index.cpp#L24-L112. The really crucial thing was [setting up the right number of background threads](https://github.com/ekg/vg/blob/master/index.cpp#L28-L33) for flush, as IncreaseParallelism doesn't do that.
+
+Awesome stuff @ekg. It would be great if you could also publish a blog post about your experiences with bulk-loading RocksDB. We could also feature you on our blog: rocksdb.org/blog
+

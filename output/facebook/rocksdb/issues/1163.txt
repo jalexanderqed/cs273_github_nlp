@@ -1,0 +1,24 @@
+Hey guys,
+
+I seem to be running into some issues with the Visual Studio 12 2013. I don't exactly know which libraries to link, 
+I am currently attempting to create a test database and close it in C++. 
+![image](https://cloud.githubusercontent.com/assets/7003288/16020651/659b41ec-3185-11e6-9b70-9dcb8c904d7d.png)
+
+The linker errors I seem to be receiving seem to be a library-linker problem. However, I do not know if I should explicitly link it to 
+
+rocksdblib.lib 
+rocksdb.lib or testutillib.lib
+
+Any help is appreciated!
+Hawley
+
+@HawleyJean i believe this is because you are not strictly following the steps in the [CMakeList.txt](https://github.com/facebook/rocksdb/blob/master/CMakeLists.txt#L16) when compiling rocksdblib,which should be like, in your case:
+
+```
+cmake -G "Visual Studio 12 Win64" ..
+```
+
+you can find the reason [here](https://github.com/facebook/rocksdb/issues/1152)
+
+Thank you! So I have the number of tests compiling and working. However, I am interested in building my own tests in Visual Studio C++. If I want to start a new cpp class with the code indicated above what sort of steps would I need to take in order for it to run smoothly?
+

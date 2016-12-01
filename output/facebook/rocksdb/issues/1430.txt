@@ -1,0 +1,40 @@
+32 bit build is broken due to use of pedantic /WX flag in compile options.
+There is a couple(not too many)warnings about casts from int64 to int or std::size_t. Naturally, GCC never warns about conversion errors, you can cast long longs to  chars, so this only pops up on Windows.
+
+The easiest way to fix broken build seems to be to provide way to compile with less pedantic settings. Ideally, CMakeLists.txt could provide a way not to force own compiler flags, except the absolutely necessary ones (for gcc, this seems to be --std=c++11)
+
+Alternatively, one could fix the warnings and use appropriate data types instead of int64 everywhere.
+
+@yuslepukhin who's more familiar with windows build and CMake.
+
+Alternatively you are welcome to send a pull request to fix the typings :)
+
+@vaintroub A few ad-hoc thoughts. If you choose less pedantic settings then might want to provide a way to override it. Secondly, the build as it is now is for 64-bit and it says so in the comments so you might want to provide for 32-bit all the way starting with comments. I would favor the third way. Since there is not much warnings, make an inline SafeCast function that would have a simple static_cast for release build and something more elaborate for DEBUG such as checking for negative value.
+
+The comments also say the CMakeLists.txt is only for Windows x64, which is obviously not the case :)
+
+as for pedantic build, this can be relatively easy done, e.g
+
+option (ROCKSDB_TREAT_WARNING_AS_ERROR "Treat warning as error" ON)
+if(ROCKSDB_TREAT_WARNING_AS_ERROR)
+if(MSVC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /WX")
+else() # assume GCC
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Werror")
+endif()
+endif()
+
+The casts might not  always be necessary. Maybe -Wconversion would do well in GCC to avoid inappropriate types, just a though.
+
+> The comments also say the CMakeLists.txt is only for Windows x64, which is 
+> obviously
+
+ not the case :)
+It depends how you look at it. When we ported rocksdb to windows and created the very first version of CMakeLists.txt it was only targeting 64-bit and was never tested on 32-bit. We do not have 32-bit systems in house. Hence, the comment. The fact that it it can be used for 32-bit at the moment is pure accident and can be more attributed to CMake properties rather than a focused effort to support 32-bit.
+
+Sure go ahead and submit a PR. Though the option name, perhaps, should be more suitable in length for the command line and still retain its meaning. The names are hard.
+
+https://github.com/facebook/rocksdb/pull/1446
+
+https://github.com/facebook/rocksdb/pull/1450 Fixes failing compilation in a test
+

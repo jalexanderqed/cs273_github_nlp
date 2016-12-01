@@ -1,0 +1,5 @@
+app is using rocksdb /tmp/rocksdb and created a backup to /tmp/rocksdb/backup
+can we run another application to restore the db from /tmp/rocksdb/backup?
+
+or can the first app spawn a thread to restore from /tmp/rocksdb/backup when main thread using db?
+

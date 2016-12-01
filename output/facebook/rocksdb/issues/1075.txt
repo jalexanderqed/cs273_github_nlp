@@ -1,0 +1,48 @@
+We are currently using 4.1.0 in our streaming library as a state storage, and we saw transient segfaults in our integration tests; we tested with 4.2.0 and the segfaults seems even more frequent than 4.1.0. cc @ijuma
+
+With 4.2.0, the hs_err file written by HotSpot tends to have either of the following as the problematic frame:
+
+``` text
+# C  [librocksdbjni6069837711857232813..jnilib+0x2fe8f]  std::__1::__murmur2_or_cityhash<unsigned long, 64ul>::operator()(void const*, unsigned long)+0x7f
+```
+
+https://gist.github.com/ijuma/1ad3f45a0c7cc38fb83e1198e53640c1
+
+```
+# C  [librocksdbjni3312338553940145331..jnilib+0x2fe8f]  _ZNSt3__121__murmur2_or_cityhashImLm64EEclEPKvm+0x7f
+```
+
+https://gist.github.com/ijuma/87d53e9406859a659ec28bcb6350239b
+
+Also, we would be happy to try a newer version (eg 4.6.0), but they don't seem to be published to Maven for some reason.
+
+@ijuma Okay so you are going via the Java API...
+
+I will publish a `4.3.1` later today, and then `4.4.1` that you can use for testing a newer version if you like.
+
+If you want the latest changes to the Java API for using `try-with-resources` to close your objects you will need to create your own build from source.
+
+**NOTE** that the latest public version of RocksDB is `4.4.1` which was released yesterday (12th April 2016).
+
+@adamretter yes, we are using it via the Java API indeed (eg https://github.com/apache/kafka/blob/trunk/streams/src/main/java/org/apache/kafka/streams/state/internals/RocksDBStore.java).
+
+Thanks for publishing the newer versions, that's awesome and we'll test them ASAP. With regards to the latest version, I saw `4.6.0` here:
+
+https://github.com/facebook/rocksdb/blob/master/HISTORY.md
+
+But then I noticed that `4.4.1` was the latest version with a tag. Are the versions in `HISTORY.md` internal Facebook versions?
+
+@ijuma So version `4.4.1` is the latest public stable release - https://www.facebook.com/groups/rocksdb.dev/permalink/925995520832296/
+
+The other versions in `HISTORY.md` are for upcoming releases that are still being tested to make sure they are stable before they are publicly released.
+
+I just pushed `4.3.1` of RocksJava to Maven Central. It should show up in a few hours.
+
+Thanks for the explanation @adamretter and for publishing 4.3.1.
+
+@ijuma Okay I just sent 4.4.1 toward Maven Central too. So maybe test with that and let us know how it goes...
+
+I ran our tests with 4.4.1 a number of times and they passed every time so far (unlike 4.2.0). It's probably OK to close this issue. If we run into issues again, we'll file a new one with the details.
+
+Thank you @adamretter!
+

@@ -1,0 +1,6 @@
+Hi,
+
+Is there a rocksdb java api support for HDFS avaliable in 4.5.1 ?
+
+@jainshasha There is currently no explicit support for HDFS in the RocksJava API. Feel free to discuss and send a PR.
+

@@ -1,0 +1,66 @@
+I'm frequently seeing the JVM crash when using RocksDB Java (latest from master as of yesterday). 
+
+Here is a portion of the hs_err file. Let me know what other info I can provide to help track this down.
+
+At the time this happens I also see an error going to stdout or stderr such as "pthread lock: Invalid argument". I don't for sure if this is related though.
+
+This is happening on Ubuntu 14.04 LTS (64 bit) with Java 1.7.0_67-b01.
+# 
+# A fatal error has been detected by the Java Runtime Environment:
+# 
+# SIGSEGV (0xb) at pc=0x00007ffd5204fc14, pid=3573, tid=140726010631936
+# 
+# JRE version: Java(TM) SE Runtime Environment (7.0_67-b01) (build 1.7.0_67-b01)
+# Java VM: Java HotSpot(TM) 64-Bit Server VM (24.65-b04 mixed mode linux-amd64 compressed oops)
+# Problematic frame:
+# C  [librocksdbjni8276001450818785548..so+0x121c14]  rocksdb::MemTableListVersion::Unref(rocksdb::autovector<rocksdb::MemTable*, 8ul>*)+0x14
+# 
+
+...
+
+Stack: [0x00007ffd53cfd000,0x00007ffd53dfe000],  sp=0x00007ffd53dfc410,  free space=1021k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  [librocksdbjni8276001450818785548..so+0x121c14]  rocksdb::MemTableListVersion::Unref(rocksdb::autovector<rocksdb::MemTable*, 8ul>_)+0x14
+C  [librocksdbjni8276001450818785548..so+0xd926c]  rocksdb::SuperVersion::Cleanup()+0x1c
+C  [librocksdbjni8276001450818785548..so+0xff4f8]  rocksdb::(anonymous namespace)::CleanupIteratorState(void_, void_)+0x138
+C  [librocksdbjni8276001450818785548..so+0x15fddb]  rocksdb::Iterator::~Iterator()+0x2b
+C  [librocksdbjni8276001450818785548..so+0x114d55]  rocksdb::DBIter::~DBIter()+0xc5
+C  [librocksdbjni8276001450818785548..so+0x111333]  rocksdb::ArenaWrappedDBIter::~ArenaWrappedDBIter()+0x23
+C  [librocksdbjni8276001450818785548..so+0x111361]  rocksdb::ArenaWrappedDBIter::~ArenaWrappedDBIter()+0x11
+j  org.rocksdb.RocksIterator.disposeInternal(J)V+0
+j  org.rocksdb.RocksIterator.disposeInternal()V+51
+j  org.rocksdb.RocksObject.dispose()V+33
+j  org.rocksdb.RocksObject.finalize()V+5
+j  java.lang.System$2.invokeFinalize(Ljava/lang/Object;)V+1
+j  java.lang.ref.Finalizer.runFinalizer(Lsun/misc/JavaLangAccess;)V+46
+j  java.lang.ref.Finalizer.access$100(Ljava/lang/ref/Finalizer;Lsun/misc/JavaLangAccess;)V+2
+j  java.lang.ref.Finalizer$FinalizerThread.run()V+45
+v  ~StubRoutines::call_stub
+V  [libjvm.so+0x5ffb65]  JavaCalls::call_helper(JavaValue_, methodHandle_, JavaCallArguments_, Thread_)+0x365
+V  [libjvm.so+0x5fe5c8]  JavaCalls::call(JavaValue_, methodHandle, JavaCallArguments_, Thread_)+0x28
+V  [libjvm.so+0x5fe897]  JavaCalls::call_virtual(JavaValue_, KlassHandle, Symbol_, Symbol_, JavaCallArguments_, Thread_)+0x197
+V  [libjvm.so+0x5fe9b7]  JavaCalls::call_virtual(JavaValue_, Handle, KlassHandle, Symbol_, Symbol_, Thread_)+0x47
+V  [libjvm.so+0x67b445]  thread_entry(JavaThread_, Thread_)+0xe5
+V  [libjvm.so+0x958d9f]  JavaThread::thread_main_inner()+0xdf
+V  [libjvm.so+0x958ea5]  JavaThread::run()+0xf5
+V  [libjvm.so+0x81f988]  java_start(Thread_)+0x108
+
+Java frames: (J=compiled Java code, j=interpreted, Vv=VM code)
+j  org.rocksdb.RocksIterator.disposeInternal(J)V+0
+j  org.rocksdb.RocksIterator.disposeInternal()V+51
+j  org.rocksdb.RocksObject.dispose()V+33
+j  org.rocksdb.RocksObject.finalize()V+5
+j  java.lang.System$2.invokeFinalize(Ljava/lang/Object;)V+1
+j  java.lang.ref.Finalizer.runFinalizer(Lsun/misc/JavaLangAccess;)V+46
+j  java.lang.ref.Finalizer.access$100(Ljava/lang/ref/Finalizer;Lsun/misc/JavaLangAccess;)V+2
+j  java.lang.ref.Finalizer$FinalizerThread.run()V+45
+v  ~StubRoutines::call_stub
+
+@andygrovecodefutures can you retest with latest HEAD ? 
+
+At least with a version later than commit: 75d7e2c3744d065e36529826ad6576d700d51e3e
+
+Thanks for the fast response! I tried with the latest and it does indeed seem to have fixed the issue. I saw the comments in the git log and it does appear to be lucky timing on my part that this issue just got resolved. Thanks again.
+
+@andygrovecodefutures np :-)
+

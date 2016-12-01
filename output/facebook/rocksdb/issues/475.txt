@@ -1,0 +1,9 @@
+If support difference process?
+
+I am not able to understand your question. Can you pl elaborate on your question?
+
+A android application can include many process, only define on `AndroidManifest.xml` `android:process=":heloo"`, i want to know if the rocksdb support multi process. 
+like https://github.com/nhachicha/SnappyDB/issues/36
+
+No, sorry, RocksDB doesn't support access from two different processes. 
+

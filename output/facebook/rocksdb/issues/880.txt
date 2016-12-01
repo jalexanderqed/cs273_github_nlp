@@ -1,0 +1,5 @@
+We aren't correctly handling the case where the header has a bad length
+or checksum.  Add a test and fix it!
+
+Hrm, this isn't ready yet.. the behavior is really dependent on whether we are using a recycled log file and I haven't sorted out the best (least disruptive) way to handle that.
+

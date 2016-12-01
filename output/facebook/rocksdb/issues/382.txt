@@ -1,0 +1,22 @@
+Hi,
+
+I am consistently able to reproduce SIGSEGV when filter object is finalized by JAVA. Code to reproduce this issue: [1]. Interesting part is if options = null statement in this code is removed then segmentation fault doesn't happen.
+
+Can someone please look into this issue? Thanks!
+
+[1] -https://gist.github.com/ankgup87/93ae1630bc7c8fddf326
+
+Looks like the reference dependency issue.  I remember @fyrz has addressed this with a diff.  Are you using the latest java build?
+
+Cc @fyrz
+
+@ankgup87 @yhchiang  
+
+On master, given the source in the gist, the problem cannot be reprocuded on my machine. As yhchiang mentioned there was a change lately (see: https://github.com/fyrz/rocksdb/commit/bafbc23baa6a1bd2aac6575d66a89379278b815a).
+
+Would be good to know which version you are using.
+
+Thanks a lot @fyrz and @yhchiang. I was using 3.6.1 build and problem went away when I moved to the latest code.
+
+@fyrz: Looks like your commit resolved the issue. Thanks again for your contribution :)
+

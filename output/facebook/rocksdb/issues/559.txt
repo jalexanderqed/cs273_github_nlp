@@ -1,0 +1,6 @@
+I   knew the wal is supported。 But the wal is too big to saved for longtime。 why not and when operatelog  is supported?
+
+Can you explain what operatelog is and what's the difference from WAL?
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

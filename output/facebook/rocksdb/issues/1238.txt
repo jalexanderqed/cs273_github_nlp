@@ -1,0 +1,19 @@
+The tests run by `make check` require Bash. On Debian you'd need to run
+the test as `make SHELL=/bin/bash check`. This commit makes it work on
+all POSIX compatible shells (tested on Debian with `dash`).
+
+This is a follow-up on #1225 which was reverted as it didn't create the
+logs files correctly.
+
+There's no need to review this for now as I currently have the tests failing locally (also without this change).
+
+I've 3 tests failing locally (MergeHelperTest.MergeAtBottomSuccess, CompactionJobTest.SimpleMerge, WriteBatchWithIndexTest.TestGetFromBatchMerge), but they fail with and without the patch. I can confirm that the log output is now the same with and without the patch. Please review.
+
+@vmx Can you rebase this to fix the merge conflicts, and then I will test it and hopefully merge it
+
+@vmx Are you still interested in this?
+
+@adamretter Yes I am.
+
+@vmx Excellent! If you could please rebase your PR on master, then I will review it...
+

@@ -1,0 +1,24 @@
+We are using rocksdb inside dataswft as  a caching layer. The indexed files stay in HDFS/S3 and based on hotness it moves to  ssd/ram (rocksdb). 
+
+1) In java how we define the TTL?
+2) For keeping cells/values of 1-10MB size, what kind of settings we should look for?
+3) Is there a way to define storage cap on rocksdb? Based on LRU rows will be deleted.
+
+Hello abinashkaran,
+
+It feels to me that FIFO compaction might be suitable in your case, which basically (but currently blindly) removes the oldest file when db size reaches the user-specified storage cap.  To pick this compaction style, simply call Options.setCompactionStyle(CompactionStyle.FIFO);.  But for other compaction styles, we currently don't have such storage cap support.
+
+https://github.com/facebook/rocksdb/wiki/FIFO-compaction-style
+
+As for TTL, RocksDB currently don't have such support in Java.  It would be great if someone could contribute on this part, and we will do our best on helping / reviewing external contributions.
+
+FIFO compaction doesn't work on LRU policy. It rather removes the data in the order it was inserted. It's basically a queue.
+
+RocksDB doesn't have any optimizations for big values (more than 1k) at this point. You can definitely use it for that purpose, but the performance might be suboptimal. RocksDB could be used to store the LRU metadata, while you can use something else for storing the actual values. Even a filesystem would do -- you can create one file for each value :)
+
+TTL option is also not LRU-based unfortunately. :( You can achieve LRU by implementing your own compaction filter (is there support for compaction filter in Java?).
+
+There's no support in Java for compaction filter either :(.  We don't have resource for that, would be great if someone could fill this missing part.
+
+@abinashkaran Did we answer your questions? Closing this issue for now, let us know if you have any more questions.
+

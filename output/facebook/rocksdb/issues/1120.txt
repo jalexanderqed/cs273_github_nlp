@@ -1,0 +1,41 @@
+  Conditionally retrofit thread_posix for use with std::thread
+  and reuse the same logic. Posix users continue using Posix interfaces.
+
+@siying @igorcanadi There has been a couple of checkins that keep breaking the build:
+:\projects\rocksdb\utilities\backupable\backupable_db_test.cc(438): error C3861: 'NewChrootEnv': identifier not found [C:\projects\rocksdb\build\backupable_db_test.vcxproj]
+c:\projects\rocksdb\utilities\backupable\backupable_db_test.cc(439): error C3861: 'NewChrootEnv': identifier not found [C:\projects\rocksdb\build\backupable_db_test.vcxproj]
+
+@ajkr @siying e61ba052b3687de8b02e921232254e21ac2241dd refactors backupable test in a platform specific way essentially disabling this test on non-Posix platforms.
+
+This is also broken on Windows, seems like a generic problem
+
+ DBTestXactLogIterator.TransactionLogIterator
+
+db/db_log_iter_test.cc:57: Failure
+
+Value of: expected_no_records
+
+  Actual: 6
+
+Expected: num_records
+
+Which is: 3
+
+terminate called after throwing an instance of 'testing::internal::GoogleTestFailureException'
+
+  what():  db/db_log_iter_test.cc:57: Failure
+
+Value of: expected_no_records
+
+  Actual: 6
+
+Expected: num_records
+
+Which is: 3
+
+Travis failures are related to the same test. Not related to this PR.
+
+It looks good to me. Since it is an environment related change, @ajkr can you help with applying the PR to our dev servers and run our test suites? I'm in China and don't have access to our internal hosts.
+
+Looks great! I ran it under asan/tsan/valgrind in our environment and couldn't find any issues.
+

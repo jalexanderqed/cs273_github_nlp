@@ -1,0 +1,70 @@
+ If log recycling is enabled with the rocksdb (recycle_log_file_num=16)
+ db->Writebatch is erroring out with keynotfound after ~5-6 hours of run
+ (1M seq but can happen to any workload I guess).See my detailed bug
+ report here (https://github.com/facebook/rocksdb/issues/1303).
+ This commit is the fix for this, a check is been added not to delete
+ the log file if it is already there in the recycle list.
+
+Test Plan:
+ Unit tested it and ran the similar profile. Not reproducing anymore.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+:+1: Thanks, Somnath!
+
+Agree with siying that keeping PurgeObsoleteFiles free of any mutex would be great. @somnathr : is this possible?
+
+@dhruba, @siying  should be possible , the approach I was thinking is the following.
+
+Will move the if (!alive_log_files_.empty()) {} before if (doing_the_full_scan) {} and add the earlier check in the following place:
+
+```
+//Add log files in wal_dir
+if (db_options_.wal_dir != dbname_) {
+  std::vector<std::string> log_files;
+  env_->GetChildren(db_options_.wal_dir, &log_files);  // Ignore errors
+  for (std::string log_file : log_files) {
+    uint64_t number;
+    FileType type;
+    // Ignore file if we cannot recognize it.
+    if (!ParseFileName(to_delete, &number, info_log_prefix.prefix, &type)) {
+      continue;
+    }
+    if (std::find(log_recycle_files.begin(),
+        log_recycle_files.end(),number) != log_recycle_files.end())) {
+
+      Log(InfoLogLevel::INFO_LEVEL, db_options_.info_log,
+        "Log %" PRIu64 " added in the recycle list,keeping the file",number);
+      continue;
+    }
+
+    Log(InfoLogLevel::INFO_LEVEL, db_options_.info_log,
+        "adding log file %s to full_scan_candidate_files list                     \n",log_file.c_str() );
+
+    job_context->full_scan_candidate_files.emplace_back(log_file, 0);
+  }
+}
+```
+
+The reason, I pasted the snippet here for your verification as it will be good if we can catch any error before I start my testing as it will take ~8 hours to reproduce :-)
+Thanks for your help..
+
+@dhruba @siying Updated the pull request with the check moved into FindObsoleteFiles(). Please review.
+I did UT it for a 8 hour run without any problem..
+
+lgtm after the formatting is addressed. personally I'd prefer copying log_recycle_files into JobContext during FindObsoleteFiles and checking against it during PurgeObsoleteFiles. That way, all the parsing/filtering of full_scan_candidate_files would be kept together in PurgeObsoleteFiles. I'm ok with either approach, though - I guess with yours we avoid the copy :).
+
+@ajkr Thanks for the comments. Initially, I didn't do that as it was introducing long lines with the code.
+I have addressed your comments on the portion I have changed (under if (db_options_.wal_dir != dbname_) { ). I saw it is not followed in the other part which I didn't change.
+Please take a look.
+
+Sorry, my earlier comment was ambiguous -- the style guideline is actually _vertical_ alignment with the first argument in the function call, such that line length won't be exceeded. The second example in this section (https://google.github.io/styleguide/cppguide.html#Function_Calls) is what you want to follow.
+
+@ajkr Updated , please have a look..
+
+Great, thanks for your contribution!
+
+New fix: https://reviews.facebook.net/D64053
+

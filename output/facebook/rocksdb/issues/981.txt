@@ -1,0 +1,29 @@
+Hi 
+
+I try to migrate some leveldb code to rocksdb. It works with rocksdb static lib of the windows build. But it doesn't work with shared dll windows build. I missed some symbols like:
+
+``` c++
+rocksdb::ColumnFamilyOptions::ColumnFamilyOptions(void)
+rocksdb::DBOptions::DBOptions(void)
+rocksdb::ReadOptions::ReadOptions(void)
+rocksdb::DB::Open(struct rocksdb::Options const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class rocksdb::DB * *)
+rocksdb::RepairDB(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,struct rocksdb::Options const &)
+rocksdb::Slice::ToString(bool)const
+rocksdb::WriteBatch::WriteBatch(unsigned __int64)
+
+```
+
+@remoe When using a DLL you can only use exported interfaces. In RocksDB those are currently defined in c.h.
+
+@yuslepukhin , ok, but why they are not uniform with the static library?
+
+@remoe It is consistent in a sense that you can use C interfaces with both static and shared libraries. Always been that way even before Windows port. While I do not exactly know all the reasons behind it I assume it is because C bindings are universal across platforms and languages to ease any integration necessary.
+
+This brings us to Windows. If you want to export classes from the DLL then all of its members must be exported classes including the private ones. Since those classes use STL you need to export them because their members are in turn should also be exported. Pretty soon you need to export the whole STL which brings a number of challenges including source code changes and versioning.
+
+For that reason, people who want to export classes from a DLL create special interface classes that avoid those issues but that would create a large enough body of Windows specific code and make interfacing on Window different from the rest of the world.
+
+But, hey, it is an open source. Feel free to propose a solution.
+
+Thanks ;)
+

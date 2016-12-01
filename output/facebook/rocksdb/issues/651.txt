@@ -1,0 +1,42 @@
+I'm trying to understand the allocation semantics of the iterator API in C. When are the keys & values that I inspect via the iterator freed? Are they pinned in memory via MMAP, and the files locked from being GCed? Or are they malloced, and a bulk free occurs when I destroy the iterator? Or are they freed every time I move the iterator, so they're only valid for a brief inspection?
+
+@dgrnbrg keys and values you iterate can be freed, not necessarily being mmaped. The block cache entry, or reusable temp buffer can be freed after the iterator moves away from the current key. 
+
+You might want to keep in mind Jemalloc if you are running with it. If you have a different allocator on the client side then you might want to use rocskdb_free C API.
+
+Thanks,
+Dmitri
+
+From: Siying Dong [mailto:notifications@github.com]
+Sent: Monday, July 13, 2015 10:37 AM
+To: facebook/rocksdb
+Subject: Re: [rocksdb] Question about C iterator API allocation (#651)
+
+@dgrnbrghttps://github.com/dgrnbrg keys and values you iterate can be freed, not necessarily being mmaped. The block cache entry, or reusable temp buffer can be freed after the iterator moves away from the current key.
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/651#issuecomment-121001333.
+
+I think my previous comment is confusing. Iterator's semantic only guarantees you can read Iterator.key() and value() before iterator's position moves or it is destroyed. For example, if you keep the pointer pointed by key() and value() and you call Next(), or Seek(), the accessing your old pointer is an undefined behavior and you can get whatever corrupted data. This can happen because multiple reasons. Are you curious about all the possibilities?
+
+So, to make sure I understand: the key & value are both only valid until I change the iterator, once the iterator has been moved, I cannot rely on the key & value (and as a result, I should copy the key and value to my own buffers if I need to use them after traversing). Is that correct?
+
+@yuslepukhin What should I be calling `rocksdb_free` on? It seemed that @siying said that the key & value are just views that are only valid while the iterator is pointing at them.
+
+You should call it if something returns you a memory that you are responsible to free such as error messages. For issue at hand this point is mute.
+
+From: David Greenberg [mailto:notifications@github.com]
+Sent: Monday, July 13, 2015 11:22 AM
+To: facebook/rocksdb
+Cc: Dmitri Smirnov
+Subject: Re: [rocksdb] Question about C iterator API allocation (#651)
+
+@yuslepukhinhttps://github.com/yuslepukhin What should I be calling rocksdb_free on? It seemed that @siyinghttps://github.com/siying said that the key & value are just views that are only valid while the iterator is pointing at them.
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/651#issuecomment-121013026.
+
+@dgrnbrg the iterator itself, not the data. You should not free the pointer pointed to rocksdb_iter_key(), as it might point to a shared memory in some internal block cache, etc. You can check our unit test to see how iterators are used: https://github.com/facebook/rocksdb/blob/76d3cd328659809584e50bd195a3f03d2aa659c8/db/c_test.c#L530-L547
+
+Thank you for your explanations! With this, I've been able to encode their semantics into the Rust type system.
+

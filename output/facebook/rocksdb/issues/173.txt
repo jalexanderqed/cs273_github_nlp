@@ -1,0 +1,93 @@
+Hi,
+
+Can someone please comment if there are any plans to publish JNI library to Maven? That will make it easier for open-source applications to consume the same. I am willing to help with the same if there are any such plans for the future.
+- Ankit
+
+Thanks for your feedback.  Publishing JNI library to Maven is the right way to go, but unfortunately we currently don't have resource on that :(  However, we will accept diffs on that :)
+
+@yhchiang Thanks for the reply. Will check how it can be uploaded to Maven and will submit a patch for the same.
+
+Great!  I am looking forward to your patch!  Feel free to let me know if you encounter any problem.
+
+Looks like this will simplify it a lot: http://blog.bintray.com/2014/02/11/bintray-as-pain-free-gateway-to-maven-central/
+
+I think we might still need Makefile during the development as RocksJava involves in JNI stuff, which AFAIK maven does not natively support such building workflow: 1. compile Java code and generate c++ header 2. compile rocksdb c++; 3. building RocksJava using the output of step 1 and 2.  So as Bintray takes the pom.xml file directly from maven, I think it is able to do some help in step 3 but probably not step 1 and 2.
+
+Hi,
+
+In addition to maven publishing, I feel following enhancements will improve usability of JNI:
+- Adding wrappers on top of JNI JAVA classes so that user of the library doesn't have to remember to call close functions to dispose native handles. One simple example is to define these classes:
+  - DatabaseConfig: Contains same configurations as Options.java class but is a simple JAVA class.
+  - BackupableDBWrapper: Accepts DatabaseConfig, creates Options.java reference using DatabaseConfig, opens BackupableDB using options reference. When BackupableDBWrapper is closed, it closes options as well.
+- Adding a stats collector thread which periodically collects DB statistics and calls a callback function which is provided by the user. This way user can collect statistics easily by just providing a callback function.
+- In JNI .jar file, add .so file and last commit message of rocksDB. This will make .jar a single, self-contained package. This jar can then be published to maven (maybe via bintray).
+
+Thoughts?
+
+Thanks for your suggestions, here are my thoughts:
+- All native handles will be disposed automatically in the GC process if the user forget to call dispose.  However, Java may wrongly assume those objects are small in that they seems to only hold a `long` variable.  As a result, they might have low priority in the GC process --- this is the reason why we suggest to call dispose().
+- Having a general way to report stats is important.  Such stats call-back mechanism is also lacking in the RocksDB C++ side.
+- I think making .jar a single, self-contained package is the right way to go.  As for the commit message, currently we manually maintain a HISTORY.md file for RocksDB C++ which records important changes.  So at the very least, we could have a HISTORY.md under rocksdb/java for RocksJava.
+
+More about DB statistics.  Currently we have Statistics class, which maintains DB stats automatically updated by RocksDB.  This allows client side to have a thread periodically calls Statistics functions to get the desired DB statistics.
+
+_Currently we have Statistics class, which maintains DB stats automatically updated by RocksDB. This allows client side to have a thread periodically calls Statistics functions to get the desired DB statistics._
+
+> I had same implementation in mind. Will startup a thread which will periodically call statistics class to retrieve stats data.
+
+_All native handles will be disposed automatically in the GC process if the user forget to call dispose. However, Java may wrongly assume those objects are small in that they seems to only hold a long variable. As a result, they might have low priority in the GC process --- this is the reason why we suggest to call dispose()._
+
+> Gave this more thought and creating one more wrapper for this looks like an overkill. Will punt on this for now.
+
+Great! I will update RocksObject document to make the dispose behavior more clear.
+
+Hi YH,
+
+AFAIK, close/dispose methods of different native objects need to be called in specific sequence. For example, DB needs to be closed before options can be disposed. Also, options needs to be disposed before StatisticsCollector can be closed.
+
+If above statement is correct, then I guess we should create a DB wrapper which can encapsulate this information.
+
+Hello Ankit,
+
+Native objects do have dependency.  However, the burden of disposing things in correct orders can be avoided by using the ownership transfer method provided in RocksObject.  For example, inside RocksDB.open(options), we should do the followings:
+1. create a new Options based on the input options.
+2. create a RocksDB instance using the input options.
+3. the newly created RocksDB instance holds a reference to Options created in step 1. 
+
+RocksDB.open is not currently developed in this way, but it's not hard to change to this way.  I can develop a patch later on.
+
+We have to take care while creating options inside rocksdb instance as we
+obtain statistics from options. If user provided options is not used then
+statistics pointer obtained via options might be incorrect. Also, there are
+other native objects like filters which need to be handled as well.
+On Jun 30, 2014 7:38 PM, "Yueh-Hsuan Chiang" notifications@github.com
+wrote:
+
+> Hello Ankit,
+> 
+> Native objects do have dependency. However, the burden of disposing things
+> in correct orders can be avoided by using the ownership transfer method
+> provided in RocksObject. For example, inside RocksDB.open(options), we
+> should do the followings:
+> 1. create a new Options based on the input options.
+> 2. create a RocksDB instance using the input options.
+> 3. the newly created RocksDB instance holds a reference to Options
+>    created in step 1.
+> 
+> RocksDB.open is not currently developed in this way, but it's not hard to
+> change to this way. I can develop a patch later on.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/173#issuecomment-47611073.
+
+We could either provide a getStatistics() method to RocksDB, or we could transfer the ownership of Options inside RocksDB.open() instead of making defensive copy, or we could do both.
+
+I think the ownership of Filter is handled inside RocksDB, correct me if it is not.  It is done by ownership transfer, although the code could be updated using the new API introduced by RocksObject.
+
+After some thought and trying out some local hacks, I think its best to just put in documentation to say that filter and options should not be disposed before DB close. This way if a user wants he can re-use same options class to open multiple DB instances. If we feel over time that its becoming problematic for users then we can investigate how to solve this better.
+
+Will submit a patch with improved documentation.
+
+I believe we have JNI in Maven now?
+

@@ -1,0 +1,5 @@
+- NativeLibraryLoader Test
+- EnvironmentTest Bugfix
+
+All tested and working here, so merging. Thanks @fyrz 
+

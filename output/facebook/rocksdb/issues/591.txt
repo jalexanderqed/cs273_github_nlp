@@ -1,0 +1,4 @@
+https://github.com/facebook/rocksdb/blob/master/examples/c_simple_example.c has no Facebook copyright header.
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

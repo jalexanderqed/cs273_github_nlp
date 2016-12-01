@@ -1,0 +1,6 @@
+We want a Put/Write returns fail  on writing rate limit is triggered, instead of sleep and block the calling thread. This may be implemented by adding an option in `WriteOption`.
+
+Thanks!
+
+@siying @ashishenoyp Could you take a look?
+

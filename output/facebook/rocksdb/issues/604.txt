@@ -1,0 +1,10 @@
+This I think is a feature request. Today TTLDB lacks MultiGet api support. It would be good to have for all those who want to switch from normal DB to TTLDB.
+
++1 to this!
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+
+Looks like this already exists: https://github.com/facebook/rocksdb/commit/ade4034a9d4d42caed8d9e635a905fdf1152b361
+
+@ovjh @dgrnbrg let me know if i'm missing something :)
+

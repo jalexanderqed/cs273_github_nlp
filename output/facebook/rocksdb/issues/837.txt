@@ -1,0 +1,15 @@
+
+Somehow we hit the limit of 40 minutes again on the CI build
+
+@yuslepukhin we use premiere account now so there shouldn't be a limit of 40 minutes. Can you point me which run was killed after 40 minutes?
+
+@siying This PR build looks like was killed https://ci.appveyor.com/project/Facebook/rocksdb/build/1.0.171
+
+@yuslepukhin let me figure it out.
+
+@yuslepukhin sorry I misunderstood it. Based on http://www.appveyor.com/pricing all plans have a limit of 40 minutes:( So if parallel testing doesn't work, we'll need to reduce more tests to make the 40 minutes budget.
+
+@siying Travis failure is unrelated. I have not changed any code.
+
+@siying But I do need to re-work the script
+

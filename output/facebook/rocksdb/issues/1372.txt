@@ -1,0 +1,107 @@
+I thought this is a duplicate of #928 but after debugging I think it is a  isolated problem related to Seek so I open a new Issue.
+
+I have a database for which a tailingIterator->Seek(target) skips records. 
+
+I think the bug is in the SeekInternal starting at lines 387:
+// search_left_bound > search_right_bound
+// There are only 2 cases this can happen:
+// (1) target key is smaller than left most file
+// (2) target key is larger than right most file
+
+I think the comment is wrong, what seems to happen in reality is that at the higher level there is a big gap such that the file in the lower level fits completely in the gap and then 
+indexer->GetNextLevelIndex returns  search_left_bound > search_right_bound I think pointing on the files after and before the gap.
+
+I'm not 100% how to fix it but I did replace the whole thing in the else on line 386 with:
+else {
+  search_left_bound = 0;
+  search_right_bound = FileIndexer::kLevelMaxIndex;
+  continue;
+} 
+
+and that seems to work (except that the optimization with the file indexer is gone of course).
+
+Hi, I read the code of file_indexer.cc:GetNextLevelIndex(). But I failed to come up with an example of your case. Could you share an example? As far as I know, your case may result from `mp_smallest > 0 && cmp_largest < 0`. But it seems impossible `index.smallest_lb > index.largest_rb` could happen.
+
+My case happens when cmp_smallest <0.
+
+I made a drawing of what I think it happens: 
+https://docs.google.com/drawings/d/1slATYodiCk9q9MyUqr--DLUly-eeFeXJZVTQRCqgDDU/edit?usp=sharing
+
+The 10, 20, 30 etc are keys and my seek is on key 35. The iterator should start from file5 but instead it starts from file2.
+
+Hi, according to your figure.
+`tailingIterator->Seek(35)`;
+1. On level 1, indexer uses binary search to choose File2.
+2. indexer.GetNextLevelIndex() on level 1 to get the lb and rb for level 2 based on cmp_smallest < 0 since 35 < 40.
+3. according to [file_index.cc:49-52](https://github.com/facebook/rocksdb/blob/master/db/file_indexer.cc#L49-L52), 
+
+```
+left_bound = index_units[file_index - 1].largest_lb;
+right_bound = index_units[file_index].smallest_rb;
+```
+
+Where file_index = 1 (File2 on level 1)
+left_bound = file0's largest_lb = the first file whose largest_key > file0's largest_key, which is file4 (70 > 30)
+right_bound = file1's smallest_rb = the first file whose smallest_key > file1's smallest_key, which is also file4 (60 > 40)
+So in your case, **search_left_bound = search_right_bound**
+The blue arrow in your figure is not right, I think.
+Correct me if I was wrong.
+
+Sorry for the confusion with the file name versus file index. I changed now the FileX to uppercase and I refer to them like that below (so lets forget about the file_index).
+
+According to the definition of smallest_rb from [here](https://github.com/facebook/rocksdb/blob/master/db/file_indexer.h):
+// Point to a right most file in a lower level that may contain a key,
+ // which compares smaller than smallest of a FileMetaData (upper level)
+
+So I think smallest_rb for File2 in my picture is File3 not File4 because File4 does not contain any key that compares smaller than smallest of File2(because 60>40)
+
+(I wrote here a stupid thing which I removed).
+
+Hi, the definition in header file seems not consistent with the implementation. Since this is also the first time I read this file, let me explain that AFAIK,
+in [file_indexer.cc](https://github.com/facebook/rocksdb/blob/master/db/file_indexer.cc#L120-L125):
+
+```
+    CalculateRB(
+        upper_files, lower_files, &index_level,
+        [this](const FileMetaData * a, const FileMetaData * b)->int {
+          return ucmp_->Compare(a->smallest.user_key(), b->smallest.user_key());
+        },
+        [](IndexUnit* index, int32_t f_idx) { index->smallest_rb = f_idx; });
+
+```
+
+the smallest_rb index is defined as the first file whose smallest_key > file2's smallest_key,
+so it is File4.
+
+Sorry, but to me the definition does look consistent with the implementation in [file_idexer.cc](https://github.com/facebook/rocksdb/blob/master/db/file_indexer.cc#L183-L204):
+
+It looks like:
+L183: upper_idx = File2
+L184: lower_idx = File4
+
+L188: cmp =  (40<60)? = -20
+L197: lower_idx = File3
+
+L188: cmp = (40<10)? = 30
+L201: upper_idx -> smallest_rb = lower_idx
+   => File4->smallest_rb = File3
+
+Sorry, I mixed implementation of CalculateLB and CalculateRB. I will fix that.
+
+https://reviews.facebook.net/D65325
+
+Thanks for your time fixing this.
+
+Just a side comment since I spend some time reading that code: the GetNextLevelIndex function seems to be used to prune files where the key obviously is not and this is useful for point lookups. In the iterator Seek we need to find the first key which is greater or equal than the one sought so in case the key sought is not in a file, we don't want to prune the file to the right.
+Therefore it would seem logical to me to increase the search_right_bound by one upon return from the GetNextLevelIndex function.
+
+In my example if there where a a Level 2 fileX covering [30-32], the search_left_bound and search_right_bound would have ended up on this file. If you increase the search_right_bound by one then the binary search will end up on the File4.
+
+But, ok, I don't know if this kind of small optimisation will make much difference.
+
+I reviewed the code carefully and run some tests. Actually there is a bug about seek in tailing_iterator. You are right, for seek, getnextlevelindex function should behave a little different.
+I fix the problem in https://reviews.facebook.net/D65397. And it will also solve the bug you reported here because now, if lb > rb, the only case possible is target key is larger than right most file
+
+Try to make the code simple, so just disable fractional cascading.
+https://reviews.facebook.net/D65559
+

@@ -1,0 +1,60 @@
+This replaces a mishmash of pointers in the Block and BlockContents classes with std::unique_ptr. It also changes the semantics of BlockContents to be limited to use as a constructor parameter for Block objects, as it owns any block buffers handed to it
+
+Furthermore, it has a lot of refactoring. This was needed mostly within ReadBlockContents, which did some tricky abuse of function calls and booleans to switch between using a heap pointer or stack pointer. This drops that boolean by replacing it with a simple pointer while at the same time allowing a unique_ptr to handle any cleanup that might escape the previous version of ReadBlockContents.
+
+In many places, the placement of BlockContents and Status have been swapped to take advantage of return value optimizations, automatically generated move constructors, and to reduce the number of times a Status object is moved around for an otherwise OK result.
+
+Finally, perf timers have been refactored to automatically stop (exactly the same as calling `PERF_TIMER_STOP(metric))` by way of handling this in their destructors. Zero significant change in performance metrics has been observed. This eliminates the burden of developers remembering to call `PERF_TIMER_STOP(metric)` immediately before any return statement which brings more correctness and predictability into their use.
+
+Zero leaks have been detected since these changes, all unit tests pass, and complexity is greatly reduced.
+
+Thanks @tdfischer, this looks awesome. As a starting point, can we move PERF_TIMER stuff into a separate pull request? I had some comments on https://github.com/facebook/rocksdb/pull/242 that weren't addressed.
+
+@igorcanadi certainly!
+
+Could you also squish the commits together if possible? Thanks a lot!
+
+Before this gets merged I'd like to review the commits after squashing.
+
+Sure @vinniefalco , I'll wait for your review before reviewing myself.
+
+Waiting on 581c310 to get figured out in #242 so I can rebase this sequence of commits to not include it and avoid any significant git headaches before squashing and to also make it a lot easier for review.
+
+I will rebase this commit on top of master to make sure it is properly built on top of #242
+
+I like this patch! It makes ownership clear! We are heavily using C++11 features anyway. Left some comments.
+
+Argh, github's PRs are very unintuitive. @siying, most of your comments were already discussed at https://github.com/tdfischer/rocksdb/commit/3ed84b2b58a4bdcc30edafce57e01341f9d44848
+
+I've re-rebased and squashed on top of master without the accidental removal. Additionally, i've pushed a few more commits on top of it that address a number of issues, but it seems some other things are less straightforward.
+
+@tdfischer is this still work in progress or ready for review?
+
+@igorcanadi Its good for review as-is, but I'm looking at why I can't just remove those constructors without getting a bunch of other interesting segfaults. Seems more odd ownership assumptions are happening somewhere.
+
+| We can’t automatically merge this pull request.
+
+Can you please rebase?
+
+I'm going to merge this and then figure out a way to get rid of Block's lvalue constructor
+
+There might be some rebase conflicts with https://github.com/facebook/rocksdb/commit/0af157f9bfef20b01e32f18db4a9ac03df0ba0d0, sorry about that :(
+
+BTW if you're changing any header files, do `make clean` before `make check`. Without `make clean`, you might see some segmentation faults.
+
+Pushed some commits that address curly braces and using *contents when it isn't needed.
+
+I'm continuing to work out a change to the BlockContents/Block constructors to eliminate inconsistencies, though I believe I've addressed all the other concerns.
+
+@tdfischer can you also please rebase?
+
+Rebase please
+
+@igorcanadi Rebased and squashed.
+
+This is amazing! Please keep contributing :)
+
+There are some formatting and style issues, but I'll take care of them :)
+
+Congrats, this is great! 
+

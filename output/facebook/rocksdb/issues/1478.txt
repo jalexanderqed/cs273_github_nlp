@@ -1,0 +1,46 @@
+Summary:
+This diff includes an implementation of CompactionFilter that allows
+users to write CompactionFilter in Lua.  With this ability, users can
+dynamically change compaction filter logic without requiring building
+the rocksdb binary and restarting the database.
+
+To compile, WITH_LUA_PATH must be specified to the base directory
+of lua.
+
+Test Plan:
+WITH_LUA_PATH=/path/to/lua make lua_test
+./lua_test
+make clean
+make lua_test
+./lua_test
+
+@yhchiang has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4150138).
+
+@yhchiang updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1478/files/e0afa2c1b1e8d250c5a737185a95477954eb40d6..1be615926903388ac5f79f17f2b9425c189a6590) - [changes since last import](https://github.com/facebook/rocksdb/pull/1478/files/e0afa2c1b1e8d250c5a737185a95477954eb40d6..1be615926903388ac5f79f17f2b9425c189a6590)
+
+@yhchiang updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1478/files/1be615926903388ac5f79f17f2b9425c189a6590..031d2d0b1f2ac5d903b90b795f2ccf5e459a370e) - [changes since last import](https://github.com/facebook/rocksdb/pull/1478/files/e0afa2c1b1e8d250c5a737185a95477954eb40d6..031d2d0b1f2ac5d903b90b795f2ccf5e459a370e)
+
+@yhchiang updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1478/files/031d2d0b1f2ac5d903b90b795f2ccf5e459a370e..ee230f42d152cca77e6d59531e41ca6261740535) - [changes since last import](https://github.com/facebook/rocksdb/pull/1478/files/031d2d0b1f2ac5d903b90b795f2ccf5e459a370e..ee230f42d152cca77e6d59531e41ca6261740535)
+
+@yhchiang updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1478/files/ee230f42d152cca77e6d59531e41ca6261740535..e539957ecbab30bd5c1d3a406e8efa28a529fc1f) - [changes since last import](https://github.com/facebook/rocksdb/pull/1478/files/ee230f42d152cca77e6d59531e41ca6261740535..e539957ecbab30bd5c1d3a406e8efa28a529fc1f)
+
+The test failure of DBIteratorTest.PinnedDataIteratorRandomized on travis is not related to this PR:
+https://travis-ci.org/facebook/rocksdb/jobs/174380511.
+
+And the debian one seems not related to this PR:
+https://travis-ci.org/facebook/rocksdb/jobs/174380507 
+
+@yhchiang, looks like you need to rebase this PR
+
+@yhchiang, can you also re-import your diff after rebasing ?
+
+Sure!
+
+@yhchiang updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1478/files/e539957ecbab30bd5c1d3a406e8efa28a529fc1f..9857f1e5ec5adad5493a6840c85b756c1dba67dd) - [changes since last import](https://github.com/facebook/rocksdb/pull/1478/files/e539957ecbab30bd5c1d3a406e8efa28a529fc1f..9857f1e5ec5adad5493a6840c85b756c1dba67dd)
+
+Rebased, and also address issues on Makefile and Lua library loading in certain Lua versions.
+
+@yhchiang updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1478/files/9857f1e5ec5adad5493a6840c85b756c1dba67dd..6bdca83771d3b3387bb2f5716ef098007793d16f) - [changes since last import](https://github.com/facebook/rocksdb/pull/1478/files/9857f1e5ec5adad5493a6840c85b756c1dba67dd..6bdca83771d3b3387bb2f5716ef098007793d16f)
+
+@yhchiang updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1478/files/6bdca83771d3b3387bb2f5716ef098007793d16f..4d9a036fdce57b4907824df68e30619a7f584b17) - [changes since last import](https://github.com/facebook/rocksdb/pull/1478/files/6bdca83771d3b3387bb2f5716ef098007793d16f..4d9a036fdce57b4907824df68e30619a7f584b17)
+

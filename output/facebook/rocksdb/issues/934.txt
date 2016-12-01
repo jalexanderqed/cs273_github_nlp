@@ -1,0 +1,22 @@
+I tried to build master branch of rocksdb on Windows 7.
+I found that "tools/ldb_cmd.cc" denpends on "tools/sst_dump_tool_imp.h", 
+and "tools/sst_dump_tool_imp.h" depends on "util/testharness.h", 
+and "util/testharness.h" depends on 'gtest/gtest.h'.
+
+I just tried to build a release version.
+I think it should not denpend on 'gtest/gtest.h'.
+I just comment out #include "util/testharness.h" in "tools/sst_dump_tool_imp.h", and found the compilation is OK.
+Am I do it right?
+
+CC @yuslepukhin 
+
+@siying I don't think it is a WIndows problem. For some reason tools that are rightly build in release include test related headers.
+
+@yuslepukhin ahh, sorry I misunderstood that. If that is the case, we should fix it.
+
+https://reviews.facebook.net/D52791
+
+Looks good to me. Perhaps, after this is checked in, I can address another issue by @strrchr 
+
+@yuslepukhin I checked it in.
+

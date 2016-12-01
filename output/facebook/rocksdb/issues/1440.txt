@@ -1,0 +1,17 @@
+FreeBSD 11.0 with cmake clang 3.8.0
+
+```
+/home/anan/projects/rocksdb/util/env_test.cc:1067:22: error: use of undeclared identifier 'O_DIRECT'
+```
+
+Did you mean `cmake`? Have you tried `gmake`? Can you tell me the full command line you are running?
+
+%cmake ../../rocksdb/
+%make
+
+gmake has the same error.
+
+maybe should use O_SYNC on Freebsd?
+
+This is a compile time error
+

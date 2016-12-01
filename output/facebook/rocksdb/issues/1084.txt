@@ -1,0 +1,54 @@
+When there are too many deleted keys, we are seeing that Seek/Next are taking too long to return. That is resulting in our threads to lock up for a potentially unbounded amount of time. There are techniques to mitigate this problem as documented in https://github.com/facebook/rocksdb/wiki/Delete-A-Range-Of-Keys, but we wanted a predictable upper bound on the time an iteration can take before returning.
+
+I am proposing a change where rocksdb will expose deleted keys through iteration. In this case, it is up to the user code to continuously call Next() until they find a non-deleted valid key. This will give our code the opportunity to periodically check the time and yield the thread if needed.
+
+Before implementing, I also considered an alternative approach of passing a timeout to Seek/Next calls but that would have made the interface/implementation much more complicated.
+
+PTAL. If this change looks acceptable, I will look into implementing some tests in the next round.
+
+I can see your pain-point, the fact that a seek/next might not return quickly enough (because it has to iterate through a large number of deletes). 
+
+You proposed two solutions:
+1. expose an indication to the caller that seek/next is progressing (you do it by exposting deleted kets via the iterator)
+2. implement a timeout 
+
+Does anybody else have any other proposals of solving this problem?
+
+Thanks @joinwinds 
+@dhruba, another solution could be having an option that enforce a limit on the maximum number of deletes (or internal keys in general) that a Next() can do, if we exceeded this limit we stop and set the status to Status::Incomplete()
+
+@joinwinds, I don't think we need a dedicated function like key_is_deleted(), can we reuse GetProperty() or status() to expose that the iterator is exposing a deleted key. 
+
+> another solution could be having an option that enforce a limit on the maximum number of deletes (or internal keys in general) that a Next() can do
+
+this definitely sounds reasonable to me. what will your application d when it encounters Status::Incomplete()?
+
+@IslamAbdelRahman Good point about the virtual function. My change had to touch many unrelated test files just for the interface change. It would be a good option to expose the deletion status through status(). 
+
+Regarding the Status::Incomplete() proposal, the burden on the application to handle this situation seems equivalent to exposing the deletion status for every key. In the example code snippet below, I think the code may look the same with both Status::Deleted() and Status::Incomplete() (Unless there are other situations where Incomplete() is more appropriate? Incomplete() is definitely a more generic name than deleted())
+
+```
+auto shared_ptr<iter>(db_->MakeIterator()); 
+
+auto start_time = GetTimeNow();
+for (iter->Seek(start_pos); iter->Valid(); iter->Next()) {
+   auto elapsed_time = GetTimeNow() - start_time;
+       if (elapsed_time > time_threshold) {
+           string saved_position = iter->key().ToString();
+           // Return the saved position so that we get a chance to yield the thread and resume at a later time. 
+           // A server can send a retry error with a cookie to the client, and the client will retry without timing out.
+           return saved_position;
+      }
+
+   if (iter->status() == Status::Deleted()) {
+      // Ignore the key.
+      continue;      
+   }
+  // Handling for valid keys.
+}
+```
+
+> Incomplete() is definitely a more generic name than deleted())
+
+Agreed
+

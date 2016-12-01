@@ -1,0 +1,63 @@
+Step1: install `gflags`, it is OK.
+Step2: `make static_lib`, the last info:
+
+```
+  AR       librocksdb.a
+ar: creating archive librocksdb.a
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: file: librocksdb.a(db_impl_debug.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: file: librocksdb.a(thread_status_util_debug.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: file: librocksdb.a(xfunc.o) has no symbols
+```
+
+Step3: `cd example; make all`,  the follow info:
+
+```
+cd .. && /Applications/Xcode.app/Contents/Developer/usr/bin/make static_lib
+  GEN      util/build_version.cc
+make[1]: Nothing to be done for `static_lib'.
+g++  simple_example.cc -osimple_example ../librocksdb.a -I../include -O2 -std=c++11 -lgflags -lz -lbz2 -std=c++11  -DROCKSDB_PLATFORM_POSIX -DROCKSDB_LIB_IO_POSIX  -DOS_MACOSX -DGFLAGS=gflags -DZLIB -DBZIP2 -DROCKSDB_BACKTRACE -Wshorten-64-to-32 -march=native     -lpthread
+g++  column_families_example.cc -ocolumn_families_example ../librocksdb.a -I../include -O2 -std=c++11 -lgflags -lz -lbz2 -std=c++11  -DROCKSDB_PLATFORM_POSIX -DROCKSDB_LIB_IO_POSIX  -DOS_MACOSX -DGFLAGS=gflags -DZLIB -DBZIP2 -DROCKSDB_BACKTRACE -Wshorten-64-to-32 -march=native     -lpthread
+g++  compact_files_example.cc -ocompact_files_example ../librocksdb.a -I../include -O2 -std=c++11 -lgflags -lz -lbz2 -std=c++11  -DROCKSDB_PLATFORM_POSIX -DROCKSDB_LIB_IO_POSIX  -DOS_MACOSX -DGFLAGS=gflags -DZLIB -DBZIP2 -DROCKSDB_BACKTRACE -Wshorten-64-to-32 -march=native     -lpthread
+cc  -c c_simple_example.c -o c_simple_example.o -I../include
+g++ c_simple_example.o -oc_simple_example ../librocksdb.a -lgflags -lz -lbz2   -lpthread
+g++  optimistic_transaction_example.cc -ooptimistic_transaction_example ../librocksdb.a -I../include -O2 -std=c++11 -lgflags -lz -lbz2 -std=c++11  -DROCKSDB_PLATFORM_POSIX -DROCKSDB_LIB_IO_POSIX  -DOS_MACOSX -DGFLAGS=gflags -DZLIB -DBZIP2 -DROCKSDB_BACKTRACE -Wshorten-64-to-32 -march=native     -lpthread
+g++  transaction_example.cc -otransaction_example ../librocksdb.a -I../include -O2 -std=c++11 -lgflags -lz -lbz2 -std=c++11  -DROCKSDB_PLATFORM_POSIX -DROCKSDB_LIB_IO_POSIX  -DOS_MACOSX -DGFLAGS=gflags -DZLIB -DBZIP2 -DROCKSDB_BACKTRACE -Wshorten-64-to-32 -march=native     -lpthread
+```
+
+Step4: run the example
+
+```
+➜  examples git:(master) ✗ ./c_simple_example
+Assertion failed: (!err), function main, file c_simple_example.c, line 28.
+[1]    22678 abort      ./c_simple_example
+```
+
+Hi @thinkerou 
+I tried the ./c_simple_example on my Mac and it worked properly. It's possible that the issue is that there is an error opening a DB in the hard-coded path "/tmp/rocksdb_simple_example"
+
+you can printf the error returned in line 27 to see what is the problem with opening the DB
+
+```
+if (err) {
+  printf("%s\n", err);
+}
+```
+
+Because `err` is `NULL`, your print is invalid.
+I think that the follow info leads to the issue:
+
+```
+  AR       librocksdb.a
+ar: creating archive librocksdb.a
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: file: librocksdb.a(db_impl_debug.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: file: librocksdb.a(thread_status_util_debug.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: file: librocksdb.a(xfunc.o) has no symbols
+```
+
+@thinkerou, In `Step 4` in your post, c_simple_example binary hit an assertion because `err` is not nullptr.
+That mean that there was an error that happened during opening the DB, that's why I suggested to printf `err` to figure out why opening the DB failed
+
+Thanks @IslamAbdelRahman , I use `brew install zlib` `brew install bzip2` `brew install snappy` to install them, but the example is OK, but I not find the reason.
+
+it's OK.
+

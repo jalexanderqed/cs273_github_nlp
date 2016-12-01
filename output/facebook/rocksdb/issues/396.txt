@@ -1,0 +1,5 @@
+It's now possible to set a LogLevel in Options and
+DBOptions to control LOG verbosity.
+
+Differential: https://reviews.facebook.net/D28947
+

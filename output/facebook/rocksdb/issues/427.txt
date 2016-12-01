@@ -1,0 +1,44 @@
+I thought an example in C might be slightly helpful for those who solely use C.
+
+Two things though:
+1. `err` keeps giving values that are nonzero even when AFAICT there are no errors - so I had to disable the asserts and checks for that.
+2. For the CLA, where can I obtain the PDF to print and sign, and where should I send it to?
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Tnx @haneefmubarak . Did you figure out how to sign the CLA?
+
+The `CONTRIBUTORS.md` file had this line:
+
+> If you prefer to sign a paper copy, we can send you a PDF. Send us an e-mail or create a new github issue to request the CLA in PDF format.
+
+@igorcanadi I'd prefer to sign a piece of paper and scan or mail it back to you guys, but that option is no longer available, I don't mind signing the CLA online.
+
+@haneefmubarak can you e-mail cla@fb.com please?
+
+@igorcanadi should i have received a reply from `cla@fb.com` yet?
+
+Any news from cla?
+
+Surprisingly, still no reply.
+
+Sent from: `haneef503 <at> gmail <dot> com`
+
+Sent you pdf version via e-mail
+
+Apparently `<opensource at fb dot com>` is misconfigured, because the mailserver @ fb.com is refusing the email. I cc'd you when sending the PDF, so you should have a copy too.
+
+Yup, I got it and forwarded to our Open Source team.
+
+@igorcanadi ran valgrind and fixed up all errors - looks like we're good to go!
+
+Looks great! I just have simple style comments. Would you mind making sure that:
+- there is no space between function name and parenthesis `call(a, b)` instead of `call (a, b)`
+- max characters in column is 80?
+
+I believe `make format` will do that, but not sure 
+
+@igorcanadi fixed! I had to break a function call into two lines to fit within 80 chars per line, so I hope that's okay.
+
+Thanks!
+

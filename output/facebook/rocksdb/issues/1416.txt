@@ -1,0 +1,20 @@
+To me this is as important as the configuration options, which are logged even when the log level is INFO. I want to see this:
+
+2016/10/21-22:05:35.303041 7efc49ea3940 Compression algorithms supported:
+2016/10/21-22:05:35.303042 7efc49ea3940     Snappy supported: 0
+2016/10/21-22:05:35.303043 7efc49ea3940     Zlib supported: 1
+2016/10/21-22:05:35.303043 7efc49ea3940     Bzip supported: 0
+2016/10/21-22:05:35.303044 7efc49ea3940     LZ4 supported: 0
+
+What's the problem of the printing now? The log level is incorrect?
+
+The problem is that it doesn't get printed at startup unless INFO level is enabled. I don't want to run mysqld with INFO level enabled, that gets me too much log spam. I consider the information about which compression levels are enabled to be as important as other configuration information that should be printed at startup.
+
+Recent issues for which I really need to know this, and don't want to not have it because INFO messages are not logged:
+https://github.com/facebook/mysql-5.6/issues/369
+https://github.com/facebook/mysql-5.6/issues/350
+
+https://github.com/facebook/rocksdb/pull/1448
+
+thanks
+

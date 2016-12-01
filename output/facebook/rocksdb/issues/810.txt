@@ -1,0 +1,62 @@
+OS:Raspberry Pi 2
+uname -a
+4.1.7-v7+ #817 SMP PREEMPT Sat Sep 19 15:32:00 BST 2015 armv7l GNU/Linux
+
+g++ -v
+Using built-in specs.
+COLLECT_GCC=g++
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/arm-linux-gnueabihf/4.9/lto-wrapper
+Target: arm-linux-gnueabihf
+Configured with: ../src/configure -v --with-pkgversion='Raspbian 4.9.2-10' --with-bugurl=file:///usr/share/doc/gcc-4.9/README.Bugs --enable-languages=c,c++,java,go,d,fortran,objc,obj-c++ --prefix=/usr --program-suffix=-4.9 --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --with-gxx-include-dir=/usr/include/c++/4.9 --libdir=/usr/lib --enable-nls --with-sysroot=/ --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --enable-gnu-unique-object --disable-libitm --disable-libquadmath --enable-plugin --with-system-zlib --disable-browser-plugin --enable-java-awt=gtk --enable-gtk-cairo --with-java-home=/usr/lib/jvm/java-1.5.0-gcj-4.9-armhf/jre --enable-java-home --with-jvm-root-dir=/usr/lib/jvm/java-1.5.0-gcj-4.9-armhf --with-jvm-jar-dir=/usr/lib/jvm-exports/java-1.5.0-gcj-4.9-armhf --with-arch-directory=arm --with-ecj-jar=/usr/share/java/eclipse-ecj.jar --enable-objc-gc --enable-multiarch --disable-sjlj-exceptions --with-arch=armv6 --with-fpu=vfp --with-float=hard --enable-checking=release --build=arm-linux-gnueabihf --host=arm-linux-gnueabihf --target=arm-linux-gnueabihf
+Thread model: posix
+gcc version 4.9.2 (Raspbian 4.9.2-10)
+
+apt-get install libsnappy-dev zlib1g-dev libbz2-dev  libgflags-dev
+cd rocksdb-4.0 
+rocksdb-4.0# make shared_lib
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+g++: error: unrecognized command line option ‘-momit-leaf-frame-pointer’
+
+I would be surprised if this is the only compile error for Raspberry Pi :)
+
+But it should be easy to fix. We already have a option to not include -momit-leaf-frame-pointer when compiling for ppc64: https://github.com/facebook/rocksdb/blob/master/Makefile#L79
+
+We just need to add Raspberry Pi to the list of machines.
+
+Thank you!
+
+rocksdb-4.0# ll | grep librocksdb
+-rw-r--r--  1 root root 113944526 Nov  3 09:05 librocksdb.a
+
+Compile success!!!
+
+checking for `armv7l`  on raspberry 2 does the tricks (and the tests from our CI pass) . What would be the proper patch to add its support? Btw why enabling this function? Why not simply using `-02` and no `-fno-omit-frame-pointer` or `-momit-leaf-frame-pointer` ? 
+
+@benoitc https://github.com/facebook/rocksdb/pull/964 is a good fix :)
+
+We just need to make sure that we're not breaking the compile, by setting a proper CI
+
+Even better fix would be to detect if a compiler supports `-momit-leaf-frame-pointer` in https://github.com/facebook/rocksdb/blob/master/build_tools/build_detect_platform and pass that information to the Makefile.
+

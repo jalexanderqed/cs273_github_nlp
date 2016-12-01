@@ -1,0 +1,579 @@
+# make shared_lib && INSTALL_PATH=/usr make install-shared && ldconfig
+
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+  GEN      util/build_version.cc
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+cc1plus: error: bad value (zEC12) for -march= switch
+g++ -Wl,--no-as-needed -shared -Wl,-soname -Wl,librocksdb.so.4.1  -g -W -Wextra -Wall -Wsign-compare -Wshadow -Wno-unused-parameter -I. -I./include -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_FALLOCATE_PRESENT -DSNAPPY -DGFLAGS=google -DZLIB -DBZIP2 -DROCKSDB_MALLOC_USABLE_SIZE -march=zEC12   -isystem ./third-party/gtest-1.7.0/fused-src -O2 -fno-omit-frame-pointer -DDUMBDUMMY -DNDEBUG -Woverloaded-virtual -Wnon-virtual-dtor -Wno-missing-field-initializers -fPIC db/builder.cc db/c.cc db/column_family.cc db/compacted_db_impl.cc db/compaction.cc db/compaction_iterator.cc db/compaction_job.cc db/compaction_picker.cc db/convenience.cc db/db_filesnapshot.cc db/dbformat.cc db/db_impl.cc db/db_impl_debug.cc db/db_impl_readonly.cc db/db_impl_experimental.cc db/db_iter.cc db/experimental.cc db/event_helpers.cc db/file_indexer.cc db/filename.cc db/flush_job.cc db/flush_scheduler.cc db/forward_iterator.cc db/internal_stats.cc db/log_reader.cc db/log_writer.cc db/managed_iterator.cc db/memtable_allocator.cc db/memtable.cc db/memtable_list.cc db/merge_helper.cc db/merge_operator.cc db/repair.cc db/slice.cc db/snapshot_impl.cc db/table_cache.cc db/table_properties_collector.cc db/transaction_log_impl.cc db/version_builder.cc db/version_edit.cc db/version_set.cc db/wal_manager.cc db/write_batch.cc db/write_batch_base.cc db/write_controller.cc db/write_thread.cc port/stack_trace.cc port/port_posix.cc table/adaptive_table_factory.cc table/block_based_filter_block.cc table/block_based_table_builder.cc table/block_based_table_factory.cc table/block_based_table_reader.cc table/block_builder.cc table/block.cc table/block_hash_index.cc table/block_prefix_index.cc table/bloom_block.cc table/cuckoo_table_builder.cc table/cuckoo_table_factory.cc table/cuckoo_table_reader.cc table/flush_block_policy.cc table/format.cc table/full_filter_block.cc table/get_context.cc table/iterator.cc table/merger.cc table/meta_blocks.cc table/sst_file_writer.cc table/plain_table_builder.cc table/plain_table_factory.cc table/plain_table_index.cc table/plain_table_key_coding.cc table/plain_table_reader.cc table/table_properties.cc table/two_level_iterator.cc tools/dump/db_dump_tool.cc util/arena.cc util/auto_roll_logger.cc util/bloom.cc util/build_version.cc util/cache.cc util/coding.cc util/comparator.cc util/compaction_job_stats_impl.cc util/crc32c.cc util/db_info_dumper.cc util/delete_scheduler_impl.cc util/dynamic_bloom.cc util/env.cc util/env_hdfs.cc util/env_posix.cc util/file_util.cc util/file_reader_writer.cc util/filter_policy.cc util/hash.cc util/hash_cuckoo_rep.cc util/hash_linklist_rep.cc util/hash_skiplist_rep.cc util/histogram.cc util/instrumented_mutex.cc util/iostats_context.cc utilities/backupable/backupable_db.cc utilities/convenience/info_log_finder.cc utilities/checkpoint/checkpoint.cc utilities/compaction_filters/remove_emptyvalue_compactionfilter.cc utilities/document/document_db.cc utilities/document/json_document_builder.cc utilities/document/json_document.cc utilities/flashcache/flashcache.cc utilities/geodb/geodb_impl.cc utilities/leveldb_options/leveldb_options.cc utilities/merge_operators/put.cc utilities/merge_operators/string_append/stringappend2.cc utilities/merge_operators/string_append/stringappend.cc utilities/merge_operators/uint64add.cc utilities/redis/redis_lists.cc utilities/spatialdb/spatial_db.cc utilities/table_properties_collectors/compact_on_deletion_collector.cc utilities/transactions/optimistic_transaction_impl.cc utilities/transactions/optimistic_transaction_db_impl.cc utilities/transactions/transaction_base.cc utilities/transactions/transaction_db_impl.cc utilities/transactions/transaction_db_mutex_impl.cc utilities/transactions/transaction_lock_mgr.cc utilities/transactions/transaction_impl.cc utilities/transactions/transaction_util.cc utilities/ttl/db_ttl_impl.cc utilities/write_batch_with_index/write_batch_with_index.cc utilities/write_batch_with_index/write_batch_with_index_internal.cc util/event_logger.cc util/log_buffer.cc util/logging.cc util/memenv.cc util/murmurhash.cc util/mutable_cf_options.cc util/options_builder.cc util/options.cc util/options_helper.cc util/options_parser.cc util/perf_context.cc util/perf_level.cc util/rate_limiter.cc util/skiplistrep.cc util/slice.cc util/statistics.cc util/status.cc util/status_message.cc util/string_util.cc util/sync_point.cc util/thread_local.cc util/thread_status_impl.cc util/thread_status_updater.cc util/thread_status_updater_debug.cc util/thread_status_util.cc util/thread_status_util_debug.cc util/vectorrep.cc util/xfunc.cc util/xxhash.cc  \
+     -lpthread -lrt -lsnappy -lgflags -lz -lbz2 -o librocksdb.so.4.1.0
+db/builder.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/c.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/column_family.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/compacted_db_impl.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+db/compaction.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/compaction_iterator.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Use of this source code is governed by a BSD-style license that can be
+ ^
+db/compaction_job.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/compaction_picker.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/convenience.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/db_filesnapshot.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/dbformat.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/db_impl.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/db_impl_debug.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/db_impl_readonly.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/db_impl_experimental.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/db_iter.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/experimental.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+db/event_helpers.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/file_indexer.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/filename.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/flush_job.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/flush_scheduler.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/forward_iterator.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/internal_stats.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  This source code is licensed under the BSD-style license found in the
+ ^
+db/log_reader.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/log_writer.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/managed_iterator.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/memtable_allocator.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+db/memtable.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/memtable_list.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/merge_helper.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/merge_operator.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/repair.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/slice.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+db/snapshot_impl.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+db/table_cache.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/table_properties_collector.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/transaction_log_impl.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/version_builder.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/version_edit.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/version_set.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/wal_manager.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/write_batch.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/write_batch_base.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+db/write_controller.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+db/write_thread.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+port/stack_trace.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+port/port_posix.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+table/adaptive_table_factory.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2011 The LevelDB Authors. All rights reserved.
+ ^
+table/block_based_filter_block.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+table/block_based_table_builder.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+table/block_based_table_factory.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+table/block_based_table_reader.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+table/block_builder.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+table/block.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+table/block_hash_index.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2013, Facebook, Inc. All rights reserved.
+ ^
+table/block_prefix_index.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2014, Facebook, Inc. All rights reserved.
+ ^
+table/bloom_block.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+table/cuckoo_table_builder.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+table/cuckoo_table_factory.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2014, Facebook, Inc. All rights reserved.
+ ^
+table/cuckoo_table_reader.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+table/flush_block_policy.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+table/format.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+table/full_filter_block.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+table/get_context.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+table/iterator.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+table/merger.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+table/meta_blocks.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+table/sst_file_writer.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+table/plain_table_builder.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+table/plain_table_factory.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2011 The LevelDB Authors. All rights reserved.
+ ^
+table/plain_table_index.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+table/plain_table_key_coding.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+table/plain_table_reader.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2011 The LevelDB Authors. All rights reserved.
+ ^
+table/table_properties.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+table/two_level_iterator.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+tools/dump/db_dump_tool.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+util/arena.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/auto_roll_logger.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/bloom.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+util/build_version.cc:1:0: error: bad value (zEC12) for -march= switch
+ #include "build_version.h"
+ ^
+util/cache.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/coding.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/comparator.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/compaction_job_stats_impl.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/crc32c.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/db_info_dumper.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/delete_scheduler_impl.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+util/dynamic_bloom.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2013, Facebook, Inc. All rights reserved.
+ ^
+util/env.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/env_hdfs.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/env_posix.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/file_util.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/file_reader_writer.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/filter_policy.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/hash.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/hash_cuckoo_rep.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+util/hash_linklist_rep.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/hash_skiplist_rep.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/histogram.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/instrumented_mutex.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+util/iostats_context.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+utilities/backupable/backupable_db.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+utilities/convenience/info_log_finder.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+utilities/checkpoint/checkpoint.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+utilities/compaction_filters/remove_emptyvalue_compactionfilter.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+utilities/document/document_db.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+utilities/document/json_document_builder.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+utilities/document/json_document.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+utilities/flashcache/flashcache.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+utilities/geodb/geodb_impl.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+utilities/leveldb_options/leveldb_options.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+utilities/merge_operators/put.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+utilities/merge_operators/string_append/stringappend2.cc:1:0: error: bad value (zEC12) for -march= switch
+ /**
+ ^
+utilities/merge_operators/string_append/stringappend.cc:1:0: error: bad value (zEC12) for -march= switch
+ /**
+ ^
+utilities/merge_operators/uint64add.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+utilities/redis/redis_lists.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright 2013 Facebook
+ ^
+utilities/spatialdb/spatial_db.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+utilities/table_properties_collectors/compact_on_deletion_collector.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+utilities/transactions/optimistic_transaction_impl.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+utilities/transactions/optimistic_transaction_db_impl.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+utilities/transactions/transaction_base.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+utilities/transactions/transaction_db_impl.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+utilities/transactions/transaction_db_mutex_impl.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+utilities/transactions/transaction_lock_mgr.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+utilities/transactions/transaction_impl.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+utilities/transactions/transaction_util.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+utilities/ttl/db_ttl_impl.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2011 The LevelDB Authors. All rights reserved.
+ ^
+utilities/write_batch_with_index/write_batch_with_index.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+utilities/write_batch_with_index/write_batch_with_index_internal.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+util/event_logger.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+util/log_buffer.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+util/logging.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/memenv.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2011 The LevelDB Authors. All rights reserved.
+ ^
+util/murmurhash.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/mutable_cf_options.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+util/options_builder.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/options.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/options_helper.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+util/options_parser.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+util/perf_context.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/perf_level.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/rate_limiter.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+util/skiplistrep.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/slice.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/statistics.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/status.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/status_message.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2015, Facebook, Inc.  All rights reserved.
+ ^
+util/string_util.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/sync_point.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+util/thread_local.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/thread_status_impl.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/thread_status_updater.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+util/thread_status_updater_debug.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+util/thread_status_util.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/thread_status_util_debug.cc:1:0: error: bad value (zEC12) for -march= switch
+ // Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/vectorrep.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2013, Facebook, Inc.  All rights reserved.
+ ^
+util/xfunc.cc:1:0: error: bad value (zEC12) for -march= switch
+ //  Copyright (c) 2014, Facebook, Inc.  All rights reserved.
+ ^
+util/xxhash.cc:1:0: error: bad value (zEC12) for -march= switch
+ /*
+ ^
+make: **\* [librocksdb.so.4.1.0] Error 1
+
+Environment 
+
+RHEL - 7
+
+gcc --version
+gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-4)
+Copyright (C) 2015 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+Is there any way to resolve this. Thanks in advance :)
+

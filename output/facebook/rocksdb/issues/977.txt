@@ -1,0 +1,90 @@
+I did a checkout today afternoon and I got one of the tests failing (see below). It fails repeatedly, although I don't get a crash in subsequent iterations. 
+
+I was able to reproduce it with ulimit -c unlimited and get the coredump stacktrace, see below.
+
+===== Running env_test
+[==========] Running 15 tests from 1 test case.
+[----------] Global test environment set-up.
+[----------] 15 tests from EnvPosixTest
+[ RUN      ] EnvPosixTest.RunImmediately
+[       OK ] EnvPosixTest.RunImmediately (101 ms)
+[ RUN      ] EnvPosixTest.UnSchedule
+[       OK ] EnvPosixTest.UnSchedule (0 ms)
+[ RUN      ] EnvPosixTest.RunMany
+[       OK ] EnvPosixTest.RunMany (100 ms)
+[ RUN      ] EnvPosixTest.StartThread
+[       OK ] EnvPosixTest.StartThread (100 ms)
+[ RUN      ] EnvPosixTest.TwoPools
+[       OK ] EnvPosixTest.TwoPools (8007 ms)
+[ RUN      ] EnvPosixTest.DecreaseNumBgThreads
+[       OK ] EnvPosixTest.DecreaseNumBgThreads (7303 ms)
+[ RUN      ] EnvPosixTest.RandomAccessUniqueID
+[       OK ] EnvPosixTest.RandomAccessUniqueID (1001 ms)
+[ RUN      ] EnvPosixTest.AllocateTest
+util/env_test.cc:650: Failure
+Expected: ((f_stat.st_size + kPageSize + kBlockSize - 1) / kBlockSize) >= ((unsigned int)f_stat.st_blocks), actual: 2056 vs 204800
+terminate called after throwing an instance of 'testing::internal::GoogleTestFailureException'
+  what():  util/env_test.cc:650: Failure
+Expected: ((f_stat.st_size + kPageSize + kBlockSize - 1) / kBlockSize) >= ((unsigned int)f_stat.st_blocks), actual: 2056 vs 204800
+/bin/sh: line 7: 24328 Aborted                 (core dumped) ./$t
+make: **\* [check] Error 1
+#0  0x00000034bf8328a5 in raise () from /lib64/libc.so.6
+
+Missing separate debuginfos, use: debuginfo-install bzip2-libs-1.0.5-7.el6_0.x86_64 glibc-2.12-1.107.el6.x86_64 libgcc-4.4.7-3.el6.x86_64 libstdc++-4.4.7-3.el6.x86_64 zlib-1.2.3-29.el6.x86_64
+(gdb) bt
+#0  0x00000034bf8328a5 in raise () from /lib64/libc.so.6
+#1  0x00000034bf834085 in abort () from /lib64/libc.so.6
+#2  0x00000034cc4bea5d in __gnu_cxx::__verbose_terminate_handler() () from /usr/lib64/libstdc++.so.6
+#3  0x00000034cc4bcbe6 in ?? () from /usr/lib64/libstdc++.so.6
+#4  0x00000034cc4bcc13 in std::terminate() () from /usr/lib64/libstdc++.so.6
+#5  0x00000034cc4bcc96 in __cxa_rethrow () from /usr/lib64/libstdc++.so.6
+#6  0x00000000006881ab in HandleExceptionsInMethodIfSupported<testing::internal::UnitTestImpl, bool> (this=Unhandled dwarf expression opcode 0xf3
+
+) at third-party/gtest-1.7.0/fused-src/gtest/gtest-all.cc:3863
+#7  testing::UnitTest::Run (this=Unhandled dwarf expression opcode 0xf3
+
+) at third-party/gtest-1.7.0/fused-src/gtest/gtest-all.cc:5681
+#8  0x000000000040a3b1 in RUN_ALL_TESTS (argc=1, argv=Unhandled dwarf expression opcode 0xf3
+
+) at ./third-party/gtest-1.7.0/fused-src/gtest/gtest.h:20722
+#9  main (argc=1, argv=Unhandled dwarf expression opcode 0xf3
+
+) at util/env_test.cc:1024
+
+Thanks for reporting. Does your filesystem/kernel version fall outside the range mentioned here: https://github.com/facebook/rocksdb/blob/master/util/io_posix.cc#L551-L561 ? I'll think about how to make these tests less platform-dependent, but just wanted to make sure this is the cause of your issue first.
+
+Thanks for following up.
+
+I am using ext4 on a 2.6.32-358.el6.x86_64 kernel. What is the impact of this test failing? Do you recommend that we move to ext3 (it is unlikely we will go to a 3.0 kernel for now).
+
+Thanks again.
+
+With the commit above, you can set the environment variable ROCKSDB_DISABLE_FALLOCATE=1 when running "make" to avoid fallocate() altogether. I'd expect this is better for your platform since otherwise it wouldn't be able to deallocate extra pre-allocated blocks. Let us know if you have further questions!
+
+Thanks for the change. I get the following error while building the env_test now:
+
+util/env_test.cc: In function ‘bool rocksdb::ioctl_support__FS_IOC_GETVERSION(const string&)’:
+util/env_test.cc:473:29: error: ‘O_CREAT’ was not declared in this scope
+     fd = open(file.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0644);
+                             ^
+util/env_test.cc:473:39: error: ‘O_RDWR’ was not declared in this scope
+     fd = open(file.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0644);
+                                       ^
+util/env_test.cc:473:48: error: ‘O_TRUNC’ was not declared in this scope
+     fd = open(file.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0644);
+                                                ^
+util/env_test.cc:473:61: error: ‘open’ was not declared in this scope
+     fd = open(file.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0644);
+                                                             ^
+make: **\* [util/env_test.o] Error 1
+
+make shared_library worked fine. I only got a warning (which I believe I also got prior to the latest commit),
+
+utilities/transactions/transaction_base.cc: In member function ‘virtual void rocksdb::TransactionBaseImpl::UndoGetForUpdate(rocksdb::ColumnFamilyHandle*, const rocksdb::Slice&)’:
+utilities/transactions/transaction_base.cc:505:8: warning: variable ‘can_unlock’ set but not used [-Wunused-but-set-variable]
+   bool can_unlock = false;
+
+Thanks again, that was actually another unrelated bug, which should be fixed now.
+
+Thanks! Now everything passes.I appreciate the quick response. I am closing the issue now. 
+

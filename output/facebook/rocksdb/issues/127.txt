@@ -1,0 +1,17 @@
+Hi,
+
+I'd like to make use of the readonly DB implementation in the Go bindings:
+
+https://github.com/tecbot/gorocksdb
+
+but a patch requires a corresponding call in the c.h header file. Is this easily accomplished?
+
+Yes! People maintaining Go bindings usually contribute to our C API. Here's one example of the pull request: https://github.com/facebook/rocksdb/pull/108/files
+
+Feel free to send a pull request, or ask tecbot or alberts (Go rocks maintainers) to help out.
+
+BTW there's another Go binding: https://github.com/alberts/gorocks
+They are planning to merge soon.
+
+I believe we can close this now, right?
+

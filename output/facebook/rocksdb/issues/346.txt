@@ -1,0 +1,53 @@
+Given that -Werror is a compilation flag, the tests in the current tar.gz don't compile flawlessly.
+
+When issueing "make all", you get "unused variable" errors or worse, something like this:
+
+In file included from tools/db_stress.cc:35:0:
+tools/db_stress.cc:194:40: error: integer overflow in expression [-Werror=overflow]
+ DEFINE_int64(cache_size, 2 \* KB \* KB \* KB,
+
+I should have said that this happened on the Github master. Also several tests crash.
+For instance:
+==== Test DBTest.Empty
+db_test: db/memtable.cc:55: rocksdb::MemTable::MemTable(const rocksdb::InternalKeyComparator&, const rocksdb::Options&): Assertion `!should_flush_' failed.
+Received signal 6 (Aborted)
+#0   [0x40022424] ??    ??:0  
+#1   /lib/i386-linux-gnu/libc.so.6(gsignal+0x47) [0x401f6577] ??    ??:0  
+#2   /lib/i386-linux-gnu/libc.so.6(abort+0x143) [0x401f99a3] ?? ??:0  
+#3   /lib/i386-linux-gnu/libc.so.6(+0x276c7) [0x401ef6c7] ??    ??:0  
+#4   /lib/i386-linux-gnu/libc.so.6(+0x27777) [0x401ef777] ??    ??:0  
+#5   ./db_test() [0x814f929] rocksdb::MemTable::MemTable(rocksdb::InternalKeyComparator const&, rocksdb::Options const&)    /home/nicolas/rocksdb-rocksdb-3.5.1/db/memtable.cc:55 (discriminator 1) 
+#6   ./db_test() [0x8106548] rocksdb::ColumnFamilyData::CreateNewMemtable() /home/nicolas/rocksdb-rocksdb-3.5.1/db/column_family.cc:324 (discriminator 1)  
+#7   ./db_test() [0x81638c0] rocksdb::ColumnFamilyData::SetLogNumber(unsigned long long)    /home/nicolas/rocksdb-rocksdb-3.5.1/./db/column_family.h:165 (discriminator 1)  
+#8   ./db_test() [0x816945e] rocksdb::VersionSet::Recover(std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, bool)  /home/nicolas/rocksdb-rocksdb-3.5.1/db/version_set.cc:2137  
+#9   ./db_test() [0x8131f2b] rocksdb::DBImpl::Recover(std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, bool, bool)    /home/nicolas/rocksdb-rocksdb-3.5.1/db/db_impl.cc:1180  
+#10  ./db_test() [0x8133503] rocksdb::DB::Open(rocksdb::DBOptions const&, std::string const&, std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, std::vector<rocksdb::ColumnFamilyHandle*, std::allocator<rocksdb::ColumnFamilyHandle*> >_, rocksdb::DB__)  /home/nicolas/rocksdb-rocksdb-3.5.1/db/db_impl.cc:4874  
+#11  ./db_test() [0x8134524] rocksdb::DB::Open(rocksdb::Options const&, std::string const&, rocksdb::DB__)  /home/nicolas/rocksdb-rocksdb-3.5.1/db/db_impl.cc:4811  
+#12  ./db_test() [0x80f0b33] rocksdb::DBTest::TryReopen(rocksdb::Options_)  /home/nicolas/rocksdb-rocksdb-3.5.1/db/db_test.cc:664  
+#13  ./db_test() [0x80f0deb] Tester /home/nicolas/rocksdb-rocksdb-3.5.1/./util/testharness.h:56 
+#14  ./db_test() [0x8093260] rocksdb::DBTest::ChangeOptions(int)    /home/nicolas/rocksdb-rocksdb-3.5.1/db/db_test.cc:429  
+#15  ./db_test() [0x80f8581] ~_Test_Empty   /home/nicolas/rocksdb-rocksdb-3.5.1/db/db_test.cc:1120  
+#16  ./db_test() [0x82133c8] rocksdb::test::RunAllTests()   /home/nicolas/rocksdb-rocksdb-3.5.1/util/testharness.cc:60  
+#17  ./db_test() [0x804f73b] main   /home/nicolas/rocksdb-rocksdb-3.5.1/db/db_test.cc:7750  
+#
+
+Dammit, same errors on release 3.51
+
+@njanin what is your environment?
+
+Can you also post the full compilation output?
+
+Ubuntu 14.04 64 bits, gcc 4.8 I believe. I don't have the output here but I'm surprised you don't get these errors.
+
+We don't get any errors on Mac 64bit or CentOS 6.4 64bit with gcc 4.8 and clang 6.0. Interesting.
+
+Can you try RocksDB 3.8?
+
+Same here on a Raspberry Pi
+
+@njanin @pihomeserver  Is it still an issue?
+
+@siying : no i now use influxdb  0.9 wich is pure Go and without rocksdb ....
+
+Closing this since it's no longer an issue.
+

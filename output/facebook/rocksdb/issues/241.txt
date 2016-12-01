@@ -1,0 +1,77 @@
+Dear guys 
+
+recently I have met a problem during I study RocksDB. Because I want to distinguish the rocksdb data file through some rules or some common characteristics. For example , the files on level-0 are one kind of files, the files on level-1 are another kind of files etc. 
+I know it may be good to distinguish the log file from the data file , but what else rules or any other common characteristics can be used to distinguish these files? Do you have any creative ideas about this? Thanks for your suggestions!
+
+I use the term "sorted run". Logically this is many key/value pairs in key
+order. Physically this may use one or more files. Below by "L0" I mean
+"level 0" and by "Ln" I mean "level n".
+
+For leveled compaction:
+- the L0 has 0 or more files and each file is a sorted run
+- the Ln (n > 0) has one sorted run that can be split over many files
+
+For universal compaction I assume that either:
+- all files are in the L0
+- or that all but the oldest file are in the L0, and the oldest file is the
+  L1
+
+Then for universal compaction each file is a sorted run.
+
+On Fri, Aug 22, 2014 at 1:17 AM, AaronCsy notifications@github.com wrote:
+
+> Dear guys
+> 
+> recently I have met a problem during I study RocksDB. Because I want to
+> distinguish the rocksdb data file through some rules or some common
+> characteristics. For example , the files on level-0 are one kind of files,
+> the files on level-1 are another kind of files etc.
+> I know it may be good to distinguish the log file from the data file , but
+> what else rules or any other common characteristics can be used to
+> distinguish these files? Do you have any creative ideas about this? Thanks
+> for your suggestions!
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/241.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@AaronCsy what's the use case of it? If the manifest of your DB is still there, you can simply run ldb tool to dump the contents of the manifest file, which will tell you how each SST file fits the LSM tree structure. Is it good enough for you?
+
+Just run
+./ldb manifest_dump --path=your_manifest_file
+your_manifest_file is MANIFEST-\* file under your DB directory.
+
+you can make the api call GetLiveFilesMetadata to retrieve a list of files and which level each file is in.
+
+@siying 
+I want to finger out is there any common and same characteristics among these db files, which can be used to separate the db files?
+Do I tell it clearly?
+
+@dhruba 
+I do not want to separate the db files through levels actually.
+I want to find another way to distinguish these files and every kind of files has a
+ same  characteristics .
+
+@siying 
+I use the ldb command and get the info , but can not make clear the come out information meaning. Could you explain it for me kindly?
+
+ 6997:135562842['user1514624953517965649' @ 118545048 : 1 .. 'user1784821055473002807' @ 123419936 : 1]
+
+6998:33235366['user1784822707184405041' @ 123149666 : 1 .. 'user193810141151727103' @ 124762507 : 1]
+
+7000:44014574['user2434310238411592493' @ 122983889 : 1 .. 'user2748357839070424575' @ 124379863 : 1]
+
+7002:116726968['user3282601306013951901' @ 123033240 : 1 .. 'user3710080503440955009' @ 123724673 : 1]
+
+This is the format:
+<file_number>:<file_size>['smallest_key' @ sequence_number : key_type ... 'largest_key' @ sequence_number : key_type]
+
+Sorry for the delay.
+
+Closing this issue, but feel free to reopen if you have any new questions.
+

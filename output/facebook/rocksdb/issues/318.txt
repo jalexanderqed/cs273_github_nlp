@@ -1,0 +1,97 @@
+Initial pass at a RocksDB JNI cross-platform fat jar.
+
+Building a cross-platform JAR requires:
+- [Vagrant](https://www.vagrantup.com/)
+- [Virtualbox](https://www.virtualbox.org/)
+- A Mac OSX machine that can compile RocksDB.
+
+Once you have these items, run this make command from RocksDB's root source directory:
+
+```
+make jclean clean rocksdbjavastaticrelease
+```
+
+This command will build RocksDB natively on OSX, and will then spin up two Vagrant Virtualbox Ubuntu images to build RocksDB for both 32-bit and 64-bit Linux.
+
+You can find all native binaries and JARs in the java directory upon completion:
+
+```
+librocksdbjni-linux32.so
+librocksdbjni-linux64.so
+librocksdbjni-osx.jnilib
+rocksdbjni-all.jar
+rocksdbjni-linux32.jar
+rocksdbjni-linux64.jar
+rocksdbjni-osx.jar
+```
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+Thanks a lot Chris for these changes. These are awesome :)  One comment:
+1. Can these steps be executed only on OS X platform? Do we have support for Linux as well?
+
+The cross build must be run from a Mac. The reason for this is that there is no public virtual box image for Macs because OS X is proprietary.
+
+Also, can you comment on this:
+- Current pull request doesn't version the JARs. How are versions handled in RocksDB? I need to publish the JARs with something like rocksdbjni-3.5.2-all.jar. Where can I get the current version for a build?
+
+Not sure how JARs are versioned. @yhchiang, can you please comment if you have any idea on how JARs are versioned currently.
+
+It appears JARs are not currently versioned. I can add that, but I need to know how RocksDB itself handles versions. Is there a file somewhere with a version number? I couldn't find one.
+
+In RocksDB C++, version is defined in include/rocksdb/version.h, we might need some way to port this number to Java side.
+
+https://github.com/facebook/rocksdb/blob/master/include/rocksdb/version.h#L8-L9
+
+I have successfully built and published all JARs to a staging directory in Sonatype with:
+
+```
+make jclean clean rocksdbjavastaticrelease rocksdbjavastaticpublish
+```
+
+@criccomini @ankgup87 @yhchiang I think one remaining issue is the inconsitency of JavaDoc within the source. I would propose to work on getting JavaDoc consistent and to update each public interface with versioning information in JavaDoc.
+
+update: https://github.com/facebook/rocksdb/pull/334 I solved there the main issues with the current version of JavaDoc
+
+This looks great! Just one small comment.
+
+@criccomini looks like there are some merge conflicts. Can you please resolve them and update the pull request?
+
+Fixed Make publish target to depend on release. Did a clean checkout and build. Appears to work.
+
+Waiting on @naveenatceg for a final round of tests. Once that's done, I'll let you know it's ready to merge.
+
+Thanks @criccomini.  Please keep me posted in this :)
+
+Thanks a lot Chris. Please update the ticket regarding tests. Diff looks good and after the tests succeed, we can merge this diff.
+
+Hey all, we've finished running tests with the jar using Apache Samza on both Mac OSX and RHEL 6.4. Works on both. I believe we're ready to commit.
+
+When may I publish the 3.6 release to Maven? It's staged right now, but we're building off of master.
+
+Hi Chris,
+
+Thanks for testing out these changes. I don't have any issues in publishing a jar on maven built from master. @yhchiang @igorcanadi can you please weigh in here.
+
+Merging this pull request.
+
+I should be releasing 3.6 internally today, but will wait a couple of days to release 3.6 publicly in case we detect some regressions in internal tests.
+
+@igorcanadi awesome. In that case, I think we can wait until the official 3.6 tag to do the Maven publication. This way the Java 3.6 binary will be the same as the 3.6 release.
+
+Do you think it's likely that this will be done by EOW?
+
+Out of interest do the Jars include the relevant metadata in META-INF/ ?
+
+@criccomini I would say mid-next week
+
+> Out of interest do the Jars include the relevant metadata in META-INF/ ?
+
+The Jars include a META-INF with some really basic stuff (Java version that was used seems to be about it).
+
+[![Coverage Status](https://coveralls.io/builds/5687176/badge)](https://coveralls.io/builds/5687176)
+
+Changes Unknown when pulling **1e5a52815be9b4c84e3c3e2b6c3ab615bd4a907f on criccomini:master** into *\* on facebook:master**.
+

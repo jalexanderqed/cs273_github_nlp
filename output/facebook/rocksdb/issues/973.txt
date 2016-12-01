@@ -1,0 +1,7 @@
+This partially addresses issue https://github.com/facebook/rocksdb/issues/935
+
+  testutil.cc and testharness.cc could not be moved out at this time
+  as they are used by 4 benchmarks in release builds.
+
+@siying This is a CMake windows only change so Travis failure is unrelated
+

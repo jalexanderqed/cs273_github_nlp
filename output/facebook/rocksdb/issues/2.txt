@@ -1,0 +1,22 @@
+Thanks for open sourcing your work.
+
+I think it would be extremely helpful if OSX were a supported platform for the purposes of _experimentation_.
+
+I'm curious to hear your thoughts as I've begun preparing a patch that takes this approach with some tradeoffs, notably:
+- only microsecond timer accuracy
+- sacrificing some of the `posix_fadvise` hinting that is supported on other platforms
+
+looks like they're working on it but "The work to make sure mac os compiles rocksdb is not completed yet.": https://github.com/facebook/rocksdb/commit/21587760b912aa133760ec10c38912b051a86f2c
+
+also is there a public issue tracker other than this one?
+
+@mreiferson I'm still working on it :-)
+
+@liukai good to hear :)
+
+If it's at all helpful here is my WIP: https://github.com/mreiferson/rocksdb/commit/906ceafdda7826fddb0321d1e7a43c4dd41de801
+
+Rocksdb now works on Mac. Please refer to https://github.com/facebook/rocksdb/blob/master/COMPILATION.md to get more details.
+
+COMPILATION.md moved to https://github.com/facebook/rocksdb/blob/master/INSTALL.md
+

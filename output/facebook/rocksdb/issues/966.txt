@@ -1,0 +1,26 @@
+Hi,
+
+I built RocksDB on AIX including JNI. It required many changes in sources and also has prerequisite for my other pull requests. I will wait until others will be merged until I will create another pull request.
+
+I just created issue to track the progress and discussion. First of all I would like to ask if RocksDB team wants to merge AIX build?
+
+Thanks,
+Tomas
+
+Wow, I hope this gets done. How will we avoid breaking AIX support going forward? OSUOSL has Power servers for open source projects. Not sure who is signed up to manage that.
+http://osuosl.org/services/powerdev
+
+You are right. Continuous integration would be nice. We will need to investigate our options. Right now I am using my company resources (CA Technologies) as part of our project. It is quite hard to prepare the machine and I am not sure about all AIX version we can support. I was successful on AIX 7.1 ppc64 using gcc 4.8.3 based on 4.1.fb branch. But it is a good start. I will try to use official AIX compiler xlc, but it will probably have problems with latest c++11 that is used on many places.
+
+I just want to push initial support into master (most of the tests are passing - 95%) that is not affecting others so that I will not need to do merges all the time. After some time we can agree on some build automation.
+
+@koldat : curious to know if you were able to run RocksDB on AIX?
+
+@dhruba Yes we make it working. I have JNI on branch 4.1 running on AIX, Solaris Sparc, Mac, Windows, Linux. All Java tests passes. Very small number of non Java ones do not pass, because of problem with endianity (cuckoo hashing). We are finalizing tests and then I will start merge to master branch so I can do pull request. Hopefully soon.
+
+Thanks for the update @koldat. 
+
+@koldat If you have any patches to contribute back to open-source rocksdb, that would be great.
+
+Sorry that we did not do it yet. We were finalizing our product and fixing some of the stuff related to RocksDB. I will plan this work for next sprint we will have.
+

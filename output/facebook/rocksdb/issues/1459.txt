@@ -1,0 +1,35 @@
+Summary:
+
+This handles two issues: (1) range deletion iterator sometimes outlives
+the table reader that created it, in which case the block must not be destroyed
+during table reader destruction; and (2) we prefer to read these range tombstone
+meta-blocks from file fewer times.
+
+- Extracted cache-populating logic from NewDataBlockIterator() into a separate function: MaybeLoadDataBlockToCache()
+- Use MaybeLoadDataBlockToCache() to load range deletion meta-block and pin it through the reader's lifetime. This code reuse works since range deletion meta-block has same format as data blocks.
+- Use NewDataBlockIterator() to create range deletion iterators, which uses block cache if enabled, otherwise reads the block from file. Either way, the underlying block won't disappear until after the iterator is destroyed.
+
+Test Plan: new unit test in table_test that uses the range deletion
+iterator after reader deletion. This used to fail ASAN.
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4123175).
+
+fyi, the diff looks much, much cleaner on internal phabricator.
+
+Add statistics (add/evict/hit/miss/insert_bytes) for these cache blocks?
+
+yeah we can consider adding those statistics later. currently we reuse the data block code paths so the cache stats for data blocks will include stats for range tombstone meta-blocks. I think this is ok because range tombstone meta-block stores actual data and could be considered a special type of data block.
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1459/files/ef0ae5549b2b396cfd2418115dac6026c4abfc47..7ddbdfde2cd360de59dc36b71669c5bb103345e6) - [changes since last import](https://github.com/facebook/rocksdb/pull/1459/files/ef0ae5549b2b396cfd2418115dac6026c4abfc47..7ddbdfde2cd360de59dc36b71669c5bb103345e6)
+
+@yhchiang fyi comments are addressed
+
+Thanks for the reminder.  I will give a final pass today!
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1459/files/7ddbdfde2cd360de59dc36b71669c5bb103345e6..ba3f4d60948fcd55056fb6cdbb238f181b90346b) - [changes since last import](https://github.com/facebook/rocksdb/pull/1459/files/7ddbdfde2cd360de59dc36b71669c5bb103345e6..ba3f4d60948fcd55056fb6cdbb238f181b90346b)
+
+@yhchiang the comments are all addressed with very little code change, can you accept?
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1459/files/ba3f4d60948fcd55056fb6cdbb238f181b90346b..cc3f26ee238f5557e5f27f48e4180af95838a5e4) - [changes since last import](https://github.com/facebook/rocksdb/pull/1459/files/7ddbdfde2cd360de59dc36b71669c5bb103345e6..cc3f26ee238f5557e5f27f48e4180af95838a5e4)
+
+Yes, good to go!  Thanks for addressing all the comments!!  Now you can ship it!
+

@@ -1,0 +1,8 @@
+Need to move debug variable under #ifndef NDEBUG. Sorry it was missed earlier.
+
+Changes are in Windows port only.
+
+Changes are in Windows port only. Would you please merge? Sorry for the additional iteration.
+
+@siying @igorcanadi Pls, find a few mins to merge this. It is important.
+

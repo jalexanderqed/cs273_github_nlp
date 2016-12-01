@@ -1,0 +1,14 @@
+Another error I see while compiling with gcc47 on OSX
+
+```
+table/full_filter_block_test.cc: In member function 'virtual rocksdb::Slice rocksdb::TestFilterBitsBuilder::Finish(std::unique_ptr<const char []>*)':
+table/full_filter_block_test.cc:33:20: error: use of deleted function 'void std::unique_ptr<_Tp [], _Dp>::reset(_Up) [with _Up = char*; _Tp = const char; _Dp = std::default_delete<const char []>]'
+In file included from /opt/local/include/gcc47/c++/memory:86:0,
+                 from ./table/full_filter_block.h:10,
+                 from table/full_filter_block_test.cc:6:
+/opt/local/include/gcc47/c++/bits/unique_ptr.h:404:7: error: declared here
+make: *** [table/full_filter_block_test.o] Error 1
+```
+
+Is this fixed? Please repoen if not.
+

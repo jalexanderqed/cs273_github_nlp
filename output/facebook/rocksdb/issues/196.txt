@@ -1,0 +1,70 @@
+When I use db_bench tool to benchmark the rocksdb v3.1
+
+I configured the benchmark as readrandom, firsty load the data and then do readrandrom. 
+
+And I found the read operations read almost data from memory but not through the SSD, the read data always 0 from command 'iostat'.
+
+Do you think this is strange? How can I make it read data through the SSD?
+
+I am not sure what you mean by loading the data first. If "load the data"
+means that all data is read into the OS filesystem cache and the database
+is smaller than RAM, then it is likely that the next tests don't require
+disk IO.
+
+On Mon, Jul 7, 2014 at 8:55 PM, AaronCsy notifications@github.com wrote:
+
+> When I use db_bench tool to benchmark the rocksdb v3.1
+> 
+> I configured the benchmark as readrandom, firsty load the data and then do
+> readrandrom.
+> 
+> And I found the read operations read almost data from memory but not
+> through the SSD, the read data always 0 from command 'iostat'.
+> 
+> Do you think this is strange? How can I make it read data through the SSD?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/196.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@mdcallag 
+Actually I load the data size more than the cache and the data is located on disk as sst file.
+
+But when I read these data , the situation happened
+
+If load means to insert data into a RocksDB instance. If data size is
+larger than the RocksDB cache but data size is less than RAM, then data can
+still be cached by the OS filesystem in RAM after the load. That would
+prevent disk reads.  This shows how to uncache data in that case --
+http://ptspts.blogspot.com/2011/01/how-to-drop-caches-on-linux.html
+
+On Mon, Jul 7, 2014 at 9:38 PM, AaronCsy notifications@github.com wrote:
+
+> @mdcallag https://github.com/mdcallag
+> Actually I load the data size more than the cache and the data is located
+> on disk as sst file.
+> 
+> But when I read these data , the situation happened
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/196#issuecomment-48271403.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@mdcallag 
+
+My RAM is about 65 GB and the data set is about 115 GB
+
+That's weird. Can you send us db_bench command line?
+
+Closing this issue since it's gone old. Feel free to reopen if you have any new questions.
+

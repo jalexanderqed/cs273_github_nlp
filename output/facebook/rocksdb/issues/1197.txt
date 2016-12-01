@@ -1,0 +1,46 @@
+Added new statistics that our team wants to be able to track:
+Tickers:
+
+```
+NUMBER_BLOCK_COMPRESSED      // number of compressions that occur
+NUMBER_BLOCK_DECOMPRESSED    // number of decompressions that occur
+```
+
+Histograms:
+
+```
+BYTES_COMPRESSED             // tracks size of compressions
+BYTES_DECOMPRESSED           // tracks size of decompressions
+COMPRESSION_TIMES_NANOS      // tracks time spent on each compression
+DECOMPRESSION_TIMES_NANOS    // tracks time spent on each decompression
+```
+
+As can be seen from the change list, adding these statistics required modification of existing function definitions. To track the new statistics, an environment pointer and statistics pointer are required in the `WriteBlock()` function of `block_based_table_builder.cc` and the `UncompressBlockContentsForCompressionType()` function in `format.cc`. To achieve this, the necessary function signatures have been changed to pass a reference to the `ImmutableCFOptions` object `ioptions`. Besides encapsulating the environment and statistics pointer, `ioptions` also holds `info_log`, allowing this parameter to be removed from the signatures of the modified functions.
+
+Tests for the new counters can be found in `db/db_test.cc`.
+
+Note that `DECOMPRESSION_TIMES_NANOS` can replace `block_decompress_time` in `perf_context.h`, which is almost certainly inaccurate. This counter is only updated from `ReadBlockContents()` in `format.cc` before a call to `UncompressBlockContents()` that may or may not happen (it's inside an `if`). This is also not the only place from which `UncompressBlockContents()` is called, so `block_decompress_time` isn't tracking all decompressions. `DECOMPRESSION_TIMES_NANOS`, on the other hand, is updated directly from within `UncompressBlockContentsForCompressionType()`, guaranteeing its accuracy.
+
+Hi, @siying @IslamAbdelRahman @yhchiang 
+We are concerned about the CPU usage for the compression/decompression operation and thus added the counters above for monitoring this. 
+
+Could you please take a look at this pull request when you have time? Really appropriate it. 
+
+Can you add a StatsLevel that excludes these options and make that one the default? I'm worried about performance regression. 
+
+Something is not right with the PR now. Can you try to fix it?
+
+@siying Yes, really sorry about that. I ran into problems while moving in the code from Facebook 's master. I'll have it fixed by tomorrow morning.
+
+@siying The PR is fixed, and I implemented your requested changes.
+
+@siying Could we get a resolution on this when you have a chance? We would like to start updating our code with the latest changes from the public repo, but we want to finalize this first.
+
+I'll take a look. In the mean time, can you fix the Travis failures?
+
+@siying Done! The builds timed out the first time (I don't know why), but they're both fixed now.
+
+Thank you for your contribution!
+
+Thank you!
+

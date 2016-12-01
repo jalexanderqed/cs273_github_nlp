@@ -1,0 +1,20 @@
+Is there a way to load the compressed tables into memory without using a tmpfs or ramfs?
+
+@ekg did you have a look at `MemEnv` ?
+
+Is there a test case showing how to use it to open a db from disk? I
+haven't found one and my attempts at getting it to work have failed.
+On May 29, 2015 6:49 AM, "Jörg Maier" notifications@github.com wrote:
+
+> @ekg https://github.com/ekg did you have a look at MemEnv ?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/618#issuecomment-106697267.
+
+@ekg it's a hacky way and i think it was also not the devs intention. But a possible way would be to use the `BackupableDB` to backup to a `MemEnv` which incorporates a virtual directory layout. After backing things up you can use the memory environment. Theoretically this should work, but i didnt test it.
+
+@ekg you can use `vmtcouch` command to preload your table into OS cache. You can even make them pinned in memory.
+
+@igorcanadi Thanks, vmtouch seems to do the trick. However, as non-root I'm not sure I can use `mlock` to make large files sticky.
+

@@ -1,0 +1,26 @@
+Hi,
+
+Working on the erlang binding of rocksdb I tried to compile it on SmartOS but got the error reported here in leo-project/erocksdb#12 . Is there a recommended version of gcc/clang to build rocksdb?
+
+ Any idea on how to compile rocksdb on old versions?
+
+RocksDB needs C++11 support, so any compiler with C++11 support should be OK. In gcc land this is 4.7 version.
+
+It seems not to be enough the bug mentioned uses gcc 4.9
+
+@igorcanadi yes the issue here is that some os shipped GCC with custom templates that allow the overloading. The comment here is more descriptive:
+
+https://github.com/leo-project/erocksdb/issues/12#issuecomment-173125008
+
+a reasonnable solution would be patching the rocksdb utility to be more strict with its c++ usage imo. Thoughts?
+
+@benoitc : just curious to know if any patches need to be done to rocksdb to make it compile on SmartOS. If you have such a patch, please consider contributing it back here..
+
+The following patch is what was missing to compile it on SmartOS: https://github.com/project-fifo/erocksdb/blob/r3/c_src/smartos.patch
+
+Is  std::emplace_hint not available in the C++ compiler on SmartOS?
+
+nope it was not :(
+
+That said I have no idea about c libraires so it's just pulling togehter work of @benoitc and google to get it to work
+

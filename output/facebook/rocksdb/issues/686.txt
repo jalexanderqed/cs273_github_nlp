@@ -1,0 +1,44 @@
+Presently in a couple of patches; let me know if you'd like them squashed first (I didn't see guidance on this). 
+
+Refs #300, I suppose
+
+If this approach (and feature) are interesting I'd be happy to add column family support to the rest of the [relevant, anyway] ldb commands; just let me know. 
+
+I've signed the CLA; I'm not sure why that's not showing up on this PR.
+
+Hey @flandr . Sorry for the late reply. This approach looks good to me. We're working on persisting RocksDB options, which should make opening database with many column families much easier. You can follow along here: https://reviews.facebook.net/D46059
+
+Thanks for the review pointer for the config options @igorcanadi; I look forward to that feature, though I'm late to / irrelevant at the table with a "I prefer YAML" vote ;)
+
+In your inline comment, are you suggesting initializing the `ColumnFamilyOptions` with the command-specific `PrepareOptionsForOpenDB()`? That sounds reasonable, but just want to make sure that I understand.
+
+> I look forward to that feature, though I'm late to / irrelevant at the table with a "I prefer YAML" vote ;)
+
+It's the argument that matters, not the person proposing it. :) Please feel free to comment on that diff with your ideas.
+
+> In your inline comment, are you suggesting initializing the ColumnFamilyOptions with the command-specific PrepareOptionsForOpenDB()?
+
+Exactly.
+
+> I look forward to that feature, though I'm late to / irrelevant at the table with a "I prefer YAML" vote ;)
+
+Thank you for the feedback, @flandr.  While we are currently working on the INI format, it's still not finalized and not too late to change :).  Here're the current reasons why we choose INI instead of YAML or JSON:
+- We don't need the full expressive power of YAML or JSON as RocksDB options have simple structure.  It does not have nested objects or nested arrays.  The only object-array would be ColumnFamilyOptions, which can be expressed as sections in the INI format.
+- INI format is easier to parse, compared to YAML or JSON.  If we choose YAML or JSON, it is very likely that the core rocksdb will depend on other third-party library.  Note that the current dependency on fbson is from the utilities not from the core rocksdb, while the persist-option feature is very likely to be part of the core rocksdb in the near future.
+
+And please feel free to let us know your thoughts / suggestion / concern on this.  It's not too late to change at this point as everything that is format related is not yet committed :)
+
+I looked at the review board that Igor linked and I certainly understand the desire for both (1) a simple configuration file format and (2) avoiding taking dependencies on external libraries. The ini-style formatting seems sufficient for the options you'd want to store right now. The only thing I would worry about is if you need to serialize arbitrary binary types, e.g. keys if an encryption feature ever makes it into the implementation. I've found YAML's support for binary types really convenient for configurations that need to store arbitrary data (e.g. cloud configs in coreos deployments).
+
+Thanks for the feedback, @flandr.  It's an interesting direction, and I've been thinking about your points for days.  Here's my opinion on the binary types and YAML.
+
+If supporting binary type is concerned, I think augmenting INI format to support binary type is simpler than using YAML if we really need binary type.  (For instance, it can be as easy as introducing something like b"0af37b", which does not add too much overhead.)  But if we decide to include YAML parser into rocksdb library, then it's harder to roll this back.  In addition, I don't see a near need for storing binary type information into rocksdb options.  So my current vote would be using a simple but effective format for rocksdb options and not over engineering on this part.  Furthermore, we can make option serialization / deserialization part pluggable in the future if there's such a need.
+
+As far as encryption is concerned, encrypting the whole option file might also be an option, which could be safer than just encrypt part of the context.
+
+Does this make any sense to you?
+
+Sure, makes sense. 
+
+Pulling the conversation back to this patch set, should we merge the existing patches and build on them, or would you like me to push support for column families on other ldb commands for a more complete feature?
+

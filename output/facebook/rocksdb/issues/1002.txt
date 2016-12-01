@@ -1,0 +1,4 @@
+https://github.com/facebook/rocksdb/commit/3943d16780b66881fd3d3e62ab47525b7957a4f7#diff-342b5bc643f6f2fb7b6d0df6c6ab98c1R70 breaks Windows build by failing to include MutexLock header.
+
+c:\dev\rocksdb\rocksdb\util\thread_local_test.cc(6): fatal error C1083: Cannot open include file: 'pthread.h'
+

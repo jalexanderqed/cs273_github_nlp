@@ -15,6 +15,8 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
+import java.nio.charset.Charset;
+import java.util.Properties;
 
 public class IssueGetter {
     private String repository;
@@ -26,16 +28,18 @@ public class IssueGetter {
     public void read() throws IOException {
         String oauth;
         try {
-            oauth = Files.readAllLines(Paths.get("target/classes/secrets/oauth.txt")).get(0);
+            Charset charset = Charset.forName("ISO-8859-1");
+            oauth = Util.readLines("target/classes/secrets/oauth.txt").get(0);
         } catch (NoSuchFileException e) {
             System.out.println("Please place a personal GitHub access token in src/main/resources/secrets/oauth.txt");
             return;
         }
         GitHub gitHub = GitHub.connectUsingOAuth(oauth);
 
-
-        new File("output/" + repository).mkdirs();
-        String filePrefix = "output/" + repository + "/";
+        String issuesDir = Util.getIssuesDir(repository);
+        String usersDir = Util.getUsersDir(repository);
+        new File(issuesDir).mkdirs();
+        new File(usersDir).mkdirs();
 
         int count = 0;
         int pullCount = 0;
@@ -44,26 +48,29 @@ public class IssueGetter {
         PagedIterable<GHIssue> issues = rocksdb.listIssues(GHIssueState.ALL);
         for (GHIssue issue : issues) {
             try {
-                PrintWriter issueWriter = new PrintWriter(filePrefix + issue.getNumber() + ".txt", "UTF-8");
+                PrintWriter issueWriter = new PrintWriter(issuesDir + issue.getNumber() + ".txt", "UTF-8");
                 issueWriter.println(issue.getBody());
                 List<GHIssueComment> comments = issue.getComments();
                 String originalPoster = issue.getUser().getLogin();
 
-                HashMap<String, Integer> relatedUsers = new HashMap<String, Integer>();
+                Properties relatedUsers = new Properties();
 
                 for(GHIssueComment comment : comments){
                     issueWriter.println(comment.getBody());
                     String poster = comment.getUser().getLogin();
                     if(!originalPoster.equals(poster)) {
-                        relatedUsers.put(poster, 1);
+                        relatedUsers.setProperty(poster, "1");
                     }
                 }
 
                 if(issue.isPullRequest()) {
-                    //relatedUsers.put(originalPoster, 2);
+                    relatedUsers.setProperty(originalPoster, "2");
                 }
 
                 issueWriter.close();
+
+                PrintWriter usersWriter = new PrintWriter(usersDir + issue.getNumber() + ".properties", "UTF-8");
+                relatedUsers.store(usersWriter, "");
             } catch (IOException e) {
                 throw e;
             }

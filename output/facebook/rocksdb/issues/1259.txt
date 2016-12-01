@@ -1,0 +1,12 @@
+In rocksdbJava API, how to pass Options argument to open function? And I tried to construction self-comparator,what should I do?
+
+@xh931076284 `Options` is used when you open the Database without specifying any column families.
+
+`DBOptions` is used when you open the Database with column families, in addition each column family takes a `ColumnFamilyOptions`.
+
+I am not sure what you are asking about `Comparator` exactly, if you don't specify one, then RocksDB will do a byte-wise comparison of your keys by default.
+
+@adamretter In our db, key can be defined by uint64, so I want to realize a comparator compared between uint64 types
+
+@xh931076284 you can use the bytewise comparator for that
+

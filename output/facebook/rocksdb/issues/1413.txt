@@ -1,0 +1,26 @@
+In one deployment we saw high latencies (presumably from slow iterator operations) and a lot of CPU time reported by perf with this stack:
+
+```
+  rocksdb::MergingIterator::Next
+  rocksdb::DBIter::FindNextUserEntryInternal
+  rocksdb::DBIter::Seek
+```
+
+I think what's happening is:
+1. we create a snapshot iterator,
+2. we do lots of Put()s for the same key x; this creates lots of entries in memtable,
+3. we seek the iterator to a key slightly smaller than x,
+4. the seek walks over lots of entries in memtable for key x, skipping them because of high sequence numbers.
+
+CC @IslamAbdelRahman
+
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4083879).
+
+@IslamAbdelRahman @lightmark do you mind review the PR? Thanks!
+
+looks like now we need to rebase as well
+
+@al13n321 updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1413/files/5aa58ca05d786b6bc8529959f41f831715922acb..28830bfe593c37dd0c9a8c847508ad909b554b7c) - [changes since last import](https://github.com/facebook/rocksdb/pull/1413/files/5aa58ca05d786b6bc8529959f41f831715922acb..28830bfe593c37dd0c9a8c847508ad909b554b7c)
+@al13n321 updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1413/files/28830bfe593c37dd0c9a8c847508ad909b554b7c..cb4e1fd42683db1f73ba9eb2e54895e2813b7723) - [changes since last import](https://github.com/facebook/rocksdb/pull/1413/files/5aa58ca05d786b6bc8529959f41f831715922acb..cb4e1fd42683db1f73ba9eb2e54895e2813b7723)
+Rebased and fixed ROCKSDB_LITE build.
+Are the two test failures in travis legit? One of them also appears in https://github.com/facebook/rocksdb/pull/1553 , and other recent PRs have test failures. `make -j check` passes locally.

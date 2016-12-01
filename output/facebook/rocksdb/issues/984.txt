@@ -1,0 +1,10 @@
+Fixes #983.
+
+Travis build failure looks unrelated.
+
+Thanks for the fix!
+
+@igorcanadi can this fix be pulled into a release? Looks like 4.3.1 (released 10 days ago) doesn't yet include it.
+
+4.3.1 is built on a branch from January. Even though we release frequently (every one month or so), our release process is slow. The reason is that we don't publish the release publicly until we have been running the release internally for couple of weeks. Release 4.5.1 will include it (it's in the pipeline in this branch: https://github.com/facebook/rocksdb/commits/4.5.fb)
+

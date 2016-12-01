@@ -1,0 +1,178 @@
+Hi,
+
+We saw a compaction error in RocksDB logs that there was a truncated block read [1]. This was during normal DB operations. We are using Virident 2TB flash drive and DB was opened with universal compaction [2]. Because of this error, any operation on DB is returning "Compaction error: Corruption: truncated block read" error.
+
+Please let us know if any other information is required.
+
+Ankit
+
+[1] - 
+2014/08/26-00:11:37.511450 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511423) [default] Universal: candidate files(6): files_size[#312(seq=8010334,sz=10MB,1) #310(seq=8002861,sz=644B,1) #266(seq=7988719,sz=7724KB,1) #264(seq=7815766,sz=17MB,1) #252(seq=7089221,sz=46MB,1) #220(seq=0,sz=89MB,0)]
+2014/08/26-00:11:37.511465 7fa830f93700 (Original Log Time 2014/08/26-00:11:37.511391) [default] Universal: file 312[0] being compacted, skipping
+2014/08/26-00:11:37.511467 7fa830f93700 (Original Log Time 2014/08/26-00:11:37.511392) [default] Universal: file 310[1] being compacted, skipping
+2014/08/26-00:11:37.511466 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511425) [default] Universal: skipping file 312[0] compacted  cannot be a candidate to reduce size amp.
+2014/08/26-00:11:37.511468 7fa830f93700 (Original Log Time 2014/08/26-00:11:37.511393) [default] Universal: file 266[2] being compacted, skipping
+2014/08/26-00:11:37.511471 7fa830f93700 (Original Log Time 2014/08/26-00:11:37.511393) [default] Universal: Possible candidate file 264[3].
+2014/08/26-00:11:37.511473 7fa830f93700 (Original Log Time 2014/08/26-00:11:37.511396) [default] Universal: Picking file 264[3] with size 18846503 (compensated size 18846503)
+2014/08/26-00:11:37.511470 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511427) [default] Universal: skipping file 310[1] compacted  cannot be a candidate to reduce size amp.
+2014/08/26-00:11:37.511474 7fa830f93700 (Original Log Time 2014/08/26-00:11:37.511398) [default] Universal: Picking file 252[4] with size 48389176 (compensated size 48389176)
+2014/08/26-00:11:37.511476 7fa830f93700 (Original Log Time 2014/08/26-00:11:37.511398) [default] Universal: compacting for file num
+2014/08/26-00:11:37.511475 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511428) [default] Universal: skipping file 266[2] compacted  cannot be a candidate to reduce size amp.
+2014/08/26-00:11:37.511477 7fa830f93700 (Original Log Time 2014/08/26-00:11:37.511406) [default] Compacting 2@0 + 0@0 files, score 1.50 slots available 2
+2014/08/26-00:11:37.511478 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511430) [default] Universal: skipping file 264[3] compacted  cannot be a candidate to reduce size amp.
+2014/08/26-00:11:37.511479 7fa830f93700 (Original Log Time 2014/08/26-00:11:37.511411) [default] Compaction start summary: Base version 4 Base level 0, seek compaction:0, inputs: [264(17MB) 252(46MB)]
+2014/08/26-00:11:37.511481 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511431) [default] Universal: skipping file 252[4] compacted  cannot be a candidate to reduce size amp.
+2014/08/26-00:11:37.511484 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511432) [default] Universal: file 312[0] being compacted, skipping
+2014/08/26-00:11:37.511487 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511433) [default] Universal: file 310[1] being compacted, skipping
+2014/08/26-00:11:37.511490 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511434) [default] Universal: file 266[2] being compacted, skipping
+2014/08/26-00:11:37.511492 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511435) [default] Universal: file 264[3] being compacted, skipping
+2014/08/26-00:11:37.511495 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511436) [default] Universal: file 252[4] being compacted, skipping
+2014/08/26-00:11:37.511498 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511437) [default] Universal: Possible candidate file 220[5].
+2014/08/26-00:11:37.511500 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511439) [default] Universal: Skipping file 220[5] with size 93749440 (compensated size 93749440) 0
+2014/08/26-00:11:37.511503 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511441) [default] Universal: file 312[0] being compacted, skipping
+2014/08/26-00:11:37.511528 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511441) [default] Universal: file 310[1] being compacted, skipping
+2014/08/26-00:11:37.511532 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511442) [default] Universal: file 266[2] being compacted, skipping
+2014/08/26-00:11:37.511534 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511442) [default] Universal: file 264[3] being compacted, skipping
+2014/08/26-00:11:37.511537 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511443) [default] Universal: file 252[4] being compacted, skipping
+2014/08/26-00:11:37.511540 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511444) [default] Universal: Possible candidate file 220[5].
+2014/08/26-00:11:37.511542 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511445) [default] Universal: Skipping file 220[5] with size 93749440 (compensated size 93749440) 0
+2014/08/26-00:11:37.511545 7fa7c17fb700 (Original Log Time 2014/08/26-00:11:37.511447) Compaction nothing to do
+2014/08/26-00:11:37.791876 7fa7beff7700 Table was constructed:
+  [basic properties]: # data blocks=628; # entries=24549; raw key size=1153954; raw average key size=47.006151; raw value size=39901809; raw average value size=1625.394476; data block size=15536367; index block size=36864; filter block size=61883; (estimated) table size=15635114; filter policy name=rocksdb.BuiltinBloomFilter; 
+
+2014/08/26-00:11:37.809395 7fa7beff7700 [default] Generated table #313: 24549 keys, 15615382 bytes
+2014/08/26-00:11:37.809867 7fa7beff7700 (Original Log Time 2014/08/26-00:11:37.809572) [default] Compacted 3@0 + 0@0 files => 15615382 bytes
+2014/08/26-00:11:37.809870 7fa7beff7700 (Original Log Time 2014/08/26-00:11:37.809832) [default] compacted to: files[4 0 0 0 0 0 0], 114.1 MB/sec, level 0, files in(3, 0) out(1) MB in(17.5, 0.0) out(14.9), read-write-amplify(1.8) write-amplify(0.8) OK
+2014/08/26-00:11:38.792500 7fa830f93700 [WARN] Compaction error: Corruption: truncated block read
+2014/08/26-00:11:38.792512 7fa830f93700 (Original Log Time 2014/08/26-00:11:38.792465) [default] compacted to: files[4 0 0 0 0 0 0], 93.7 MB/sec, level 0, files in(2, 0) out(1) MB in(64.1, 0.0) out(50.4), read-write-amplify(1.8) write-amplify(0.8) Corruption: truncated block read
+2014/08/26-00:11:38.792515 7fa830f93700 Waiting after background compaction error: Corruption: truncated block read, Accumulated background error counts: 1
+2014/08/26-00:11:39.818477 7fa830f93700 Delete /export/content/data/followfeed-storage-db/34/000314.sst type=2 #314 -- OK
+2014/08/26-00:11:39.821121 7fa830f93700 Delete /export/content/data/followfeed-storage-db/34/000312.sst type=2 #312 -- OK
+2014/08/26-00:11:39.821162 7fa830f93700 Delete /export/content/data/followfeed-storage-db/34/000310.sst type=2 #310 -- OK
+2014/08/26-00:11:39.822678 7fa830f93700 Delete /export/content/data/followfeed-storage-db/34/000266.sst type=2 #266 -- OK
+2014/08/26-00:11:39.822697 7fa830f93700 Delete /export/content/data/followfeed-storage-db/34/000312.sst type=2 #312 -- IO error: /export/content/data/followfeed-storage-db/34/000312.sst: No such file or directory
+2014/08/26-00:11:39.822704 7fa830f93700 Delete /export/content/data/followfeed-storage-db/34/000310.sst type=2 #310 -- IO error: /export/content/data/followfeed-storage-db/34/000310.sst: No such file or directory
+2014/08/26-00:11:39.822711 7fa830f93700 Delete /export/content/data/followfeed-storage-db/34/000266.sst type=2 #266 -- IO error: /export/content/data/followfeed-storage-db/34/000266.sst: No such file or directory
+
+[2] - 2014/08/25-19:55:15.023021 7fa8321a5700 Git sha rocksdb_build_git_sha:0b1db9e969c4d64ff34a75f173ae2e3058d2367d
+2014/08/25-19:55:15.023296 7fa8321a5700 Compile time 20:01:37 Jul 25 2014
+2014/08/25-19:55:15.023299 7fa8321a5700          Options.error_if_exists: 0
+2014/08/25-19:55:15.023302 7fa8321a5700        Options.create_if_missing: 1
+2014/08/25-19:55:15.023303 7fa8321a5700          Options.paranoid_checks: 1
+2014/08/25-19:55:15.023306 7fa8321a5700                      Options.env: 0x7fa8332f8260
+2014/08/25-19:55:15.023308 7fa8321a5700                 Options.info_log: 0x7fa80400fb10
+2014/08/25-19:55:15.023310 7fa8321a5700           Options.max_open_files: 5000
+2014/08/25-19:55:15.023312 7fa8321a5700       Options.max_total_wal_size: 0
+2014/08/25-19:55:15.023314 7fa8321a5700        Options.disableDataSync: 0
+2014/08/25-19:55:15.023316 7fa8321a5700              Options.use_fsync: 0
+2014/08/25-19:55:15.023317 7fa8321a5700      Options.max_log_file_size: 0
+2014/08/25-19:55:15.023319 7fa8321a5700 Options.max_manifest_file_size: 18446744073709551615
+2014/08/25-19:55:15.023321 7fa8321a5700      Options.log_file_time_to_roll: 0
+2014/08/25-19:55:15.023323 7fa8321a5700      Options.keep_log_file_num: 1000
+2014/08/25-19:55:15.023325 7fa8321a5700        Options.allow_os_buffer: 1
+2014/08/25-19:55:15.023327 7fa8321a5700       Options.allow_mmap_reads: 0
+2014/08/25-19:55:15.023329 7fa8321a5700      Options.allow_mmap_writes: 0
+2014/08/25-19:55:15.023331 7fa8321a5700          Options.create_missing_column_families: 0
+2014/08/25-19:55:15.023333 7fa8321a5700                              Options.db_log_dir: 
+2014/08/25-19:55:15.023335 7fa8321a5700                                 Options.wal_dir: /export/content/data/followfeed-storage-db/34
+2014/08/25-19:55:15.023337 7fa8321a5700                Options.table_cache_numshardbits: 4
+2014/08/25-19:55:15.023338 7fa8321a5700     Options.table_cache_remove_scan_count_limit: 16
+2014/08/25-19:55:15.023340 7fa8321a5700     Options.delete_obsolete_files_period_micros: 21600000000
+2014/08/25-19:55:15.023342 7fa8321a5700              Options.max_background_compactions: 5
+2014/08/25-19:55:15.023343 7fa8321a5700                  Options.max_background_flushes: 1
+2014/08/25-19:55:15.023345 7fa8321a5700                         Options.WAL_ttl_seconds: 0
+2014/08/25-19:55:15.023347 7fa8321a5700                       Options.WAL_size_limit_MB: 0
+2014/08/25-19:55:15.023349 7fa8321a5700             Options.manifest_preallocation_size: 4194304
+2014/08/25-19:55:15.023350 7fa8321a5700                          Options.allow_os_buffer: 1
+2014/08/25-19:55:15.023352 7fa8321a5700                         Options.allow_mmap_reads: 0
+2014/08/25-19:55:15.023354 7fa8321a5700                        Options.allow_mmap_writes: 0
+2014/08/25-19:55:15.023356 7fa8321a5700                      Options.is_fd_close_on_exec: 1
+2014/08/25-19:55:15.023357 7fa8321a5700               Options.skip_log_error_on_recovery: 0
+2014/08/25-19:55:15.023359 7fa8321a5700                    Options.stats_dump_period_sec: 3600
+2014/08/25-19:55:15.023361 7fa8321a5700                    Options.advise_random_on_open: 1
+2014/08/25-19:55:15.023363 7fa8321a5700          Options.access_hint_on_compaction_start: NORMAL
+2014/08/25-19:55:15.023364 7fa8321a5700                       Options.use_adaptive_mutex: 0
+2014/08/25-19:55:15.023366 7fa8321a5700                           Options.bytes_per_sync: 0
+2014/08/25-19:55:15.024874 7fa8321a5700 Recovering from manifest file: MANIFEST-000305
+2014/08/25-19:55:15.025347 7fa8321a5700 Options for column family "default":
+2014/08/25-19:55:15.025356 7fa8321a5700               Options.comparator: rocksdb.InternalKeyComparator:leveldb.BytewiseComparator
+2014/08/25-19:55:15.025359 7fa8321a5700           Options.merge_operator: None
+2014/08/25-19:55:15.025363 7fa8321a5700        Options.compaction_filter_factory: DefaultCompactionFilterFactory
+2014/08/25-19:55:15.025365 7fa8321a5700        Options.compaction_filter_factory_v2: DefaultCompactionFilterFactoryV2
+2014/08/25-19:55:15.025367 7fa8321a5700         Options.memtable_factory: SkipListFactory
+2014/08/25-19:55:15.025372 7fa8321a5700            Options.table_factory: BlockBasedTable
+2014/08/25-19:55:15.025377 7fa8321a5700        Options.write_buffer_size: 67108864
+2014/08/25-19:55:15.025379 7fa8321a5700  Options.max_write_buffer_number: 3
+2014/08/25-19:55:15.025382 7fa8321a5700              Options.block_cache: 0x7fa80400ddd8
+2014/08/25-19:55:15.025384 7fa8321a5700   Options.block_cache_compressed: (nil)
+2014/08/25-19:55:15.025387 7fa8321a5700         Options.block_cache_size: 1073741824
+2014/08/25-19:55:15.025389 7fa8321a5700               Options.block_size: 65536
+2014/08/25-19:55:15.025390 7fa8321a5700   Options.block_restart_interval: 16
+2014/08/25-19:55:15.025411 7fa8321a5700          Options.compression: 1
+2014/08/25-19:55:15.025421 7fa8321a5700          Options.filter_policy: rocksdb.BuiltinBloomFilter
+2014/08/25-19:55:15.025431 7fa8321a5700       Options.prefix_extractor: nullptr
+2014/08/25-19:55:15.025439 7fa8321a5700    Options.whole_key_filtering: 1
+2014/08/25-19:55:15.025447 7fa8321a5700             Options.num_levels: 7
+2014/08/25-19:55:15.025449 7fa8321a5700        Options.min_write_buffer_number_to_merge: 1
+2014/08/25-19:55:15.025453 7fa8321a5700         Options.purge_redundant_kvs_while_flush: 1
+2014/08/25-19:55:15.025465 7fa8321a5700            Options.compression_opts.window_bits: -14
+2014/08/25-19:55:15.025479 7fa8321a5700                  Options.compression_opts.level: -1
+2014/08/25-19:55:15.025482 7fa8321a5700               Options.compression_opts.strategy: 0
+2014/08/25-19:55:15.025493 7fa8321a5700      Options.level0_file_num_compaction_trigger: 4
+2014/08/25-19:55:15.025495 7fa8321a5700          Options.level0_slowdown_writes_trigger: 20
+2014/08/25-19:55:15.025534 7fa8321a5700              Options.level0_stop_writes_trigger: 24
+2014/08/25-19:55:15.025591 7fa8321a5700                Options.max_mem_compaction_level: 2
+2014/08/25-19:55:15.025593 7fa8321a5700                   Options.target_file_size_base: 2097152
+2014/08/25-19:55:15.025595 7fa8321a5700             Options.target_file_size_multiplier: 1
+2014/08/25-19:55:15.025654 7fa8321a5700                Options.max_bytes_for_level_base: 10485760
+2014/08/25-19:55:15.025688 7fa8321a5700          Options.max_bytes_for_level_multiplier: 10
+2014/08/25-19:55:15.025689 7fa8321a5700 Options.max_bytes_for_level_multiplier_addtl[0]: 1
+2014/08/25-19:55:15.025691 7fa8321a5700 Options.max_bytes_for_level_multiplier_addtl[1]: 1
+2014/08/25-19:55:15.025693 7fa8321a5700 Options.max_bytes_for_level_multiplier_addtl[2]: 1
+2014/08/25-19:55:15.025706 7fa8321a5700 Options.max_bytes_for_level_multiplier_addtl[3]: 1
+2014/08/25-19:55:15.025729 7fa8321a5700 Options.max_bytes_for_level_multiplier_addtl[4]: 1
+2014/08/25-19:55:15.025760 7fa8321a5700 Options.max_bytes_for_level_multiplier_addtl[5]: 1
+2014/08/25-19:55:15.025762 7fa8321a5700 Options.max_bytes_for_level_multiplier_addtl[6]: 1
+2014/08/25-19:55:15.025780 7fa8321a5700       Options.max_sequential_skip_in_iterations: 8
+2014/08/25-19:55:15.025782 7fa8321a5700              Options.expanded_compaction_factor: 25
+2014/08/25-19:55:15.025784 7fa8321a5700                Options.source_compaction_factor: 1
+2014/08/25-19:55:15.025785 7fa8321a5700          Options.max_grandparent_overlap_factor: 10
+2014/08/25-19:55:15.025787 7fa8321a5700                          Options.no_block_cache: 0
+2014/08/25-19:55:15.025820 7fa8321a5700                        Options.arena_block_size: 6710886
+2014/08/25-19:55:15.025843 7fa8321a5700                       Options.soft_rate_limit: 0.00
+2014/08/25-19:55:15.025848 7fa8321a5700                       Options.hard_rate_limit: 0.00
+2014/08/25-19:55:15.025851 7fa8321a5700       Options.rate_limit_delay_max_milliseconds: 1000
+2014/08/25-19:55:15.025873 7fa8321a5700                Options.disable_auto_compactions: 0
+2014/08/25-19:55:15.025875 7fa8321a5700          Options.purge_redundant_kvs_while_flush: 1
+2014/08/25-19:55:15.025876 7fa8321a5700                     Options.block_size_deviation: 10
+2014/08/25-19:55:15.025878 7fa8321a5700                           Options.filter_deletes: 0
+2014/08/25-19:55:15.025893 7fa8321a5700           Options.verify_checksums_in_compaction: 1
+2014/08/25-19:55:15.025895 7fa8321a5700                         Options.compaction_style: 1
+2014/08/25-19:55:15.025913 7fa8321a5700  Options.compaction_options_universal.size_ratio: 1
+2014/08/25-19:55:15.025915 7fa8321a5700 Options.compaction_options_universal.min_merge_width: 2
+2014/08/25-19:55:15.025938 7fa8321a5700 Options.compaction_options_universal.max_merge_width: 4294967295
+2014/08/25-19:55:15.025941 7fa8321a5700 Options.compaction_options_universal.max_size_amplification_percent: 200
+2014/08/25-19:55:15.025943 7fa8321a5700 Options.compaction_options_universal.compression_size_percent: 4294967295
+2014/08/25-19:55:15.025945 7fa8321a5700 Options.compaction_options_fifo.max_table_files_size: 1073741824
+2014/08/25-19:55:15.025949 7fa8321a5700                   Options.table_properties_collectors: InternalKeyPropertiesCollectorFactory; 
+2014/08/25-19:55:15.025952 7fa8321a5700                   Options.inplace_update_support: 0
+2014/08/25-19:55:15.025980 7fa8321a5700                 Options.inplace_update_num_locks: 10000
+2014/08/25-19:55:15.025982 7fa8321a5700               Options.min_partial_merge_operands: 2
+2014/08/25-19:55:15.025999 7fa8321a5700               Options.memtable_prefix_bloom_bits: 0
+2014/08/25-19:55:15.026001 7fa8321a5700             Options.memtable_prefix_bloom_probes: 6
+2014/08/25-19:55:15.026003 7fa8321a5700   Options.memtable_prefix_bloom_huge_page_tlb_size: 0
+2014/08/25-19:55:15.026023 7fa8321a5700                           Options.bloom_locality: 0
+2014/08/25-19:55:15.026032 7fa8321a5700                    Options.max_successive_merges: 0
+
+that means the size of the read block is smaller than expected. When any IO error happens, RocksDB enters into read-only mode and rejects further operations. Is it possible to be caused by some kind of hardware failure?
+
+@ljinfb Thanks for the reply! There was indeed a hardware failure which had caused this issue.
+
+@ankgup87 what is the largest file size you see? We encountered similar issue in our prod.
+
+Based on the log, file sizes seem small
+
+@ankgup87 how did you confirm that this was a hardware failure?
+
+this is a related diff that fixes the same error when an SST file is huge. But I think you problem is not related since files are small. https://reviews.facebook.net/D22569
+

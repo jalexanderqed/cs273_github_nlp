@@ -1,0 +1,100 @@
+It is common practice to pre-allocate arrays so in high write
+situations you don't need to keep
+creating large array objects. As the current API requires full array,
+this means an array needs to be
+copied before passing to RocksDB.
+
+By supporting the underlying C API, an additional memory copy can be
+avoided leading to
+a big saving in GC in high write circumstances.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+How about making the method support both key length and value length?
+
+Perhaps one could do that. In our case (and I suspect most) it is the value that varies in length the most. Our keys are fixed length GUID byte arrays where as the value size varies a lot. 
+It is a trade off between simplicity versus generality of API.
+
+Profiling picked up lack of value length as a performance issue and hence the submission.
+
+I would like to generalise this to also take an offset, as that would then also support the use case reported by Chris Cleveland in the Facebook rocksb.dev group.
+
+No probs. Will push an update once I get a chance to test it Monday morn.
+
+@phaynes I think we could generalize this pattern, so far you have added:
+
+``` java
+public void put(final byte[] key, final int keyLength, final byte[] value, final int valueLength) throws RocksDBException
+```
+
+But, what if instead we had both :
+
+``` java
+public void put(final byte[] key, final int keyOffset, final byte[] value, final int valueOffset) throws RocksDBException
+```
+
+Which would copy all bytes from the offsets until the end of the array, for the key and value respectively.
+
+and the most general version:
+
+``` java
+public void put(final byte[] key, final int keyOffset, final int keyLength, final byte[] value, final int valueOffset, final int valueLength) throws RocksDBException
+```
+
+Which would allow you to copy a region of bytes, for the key and value respectively.
+
+@adamretter The goal of the additional methods is to avoid copying data within the JVM to minimise / avoid GC operation and GC pause times when under load. To do this, the key and value can must be pre-allocated. The current underlying JNI api supports zero based rather than arbitrary offsets.  Thus to support the offset based generalisation you would have to copy data given the current JNI API.
+
+For the API is to be updated, it needs to be for the memory / performance optimisation otherwise the current API is adequate, since in terms of generally handling of byte arrays there are better ways - e.g. Agrona's [UnsafeBuffer](https://github.com/real-logic/Agrona/blob/master/src/main/java/org/agrona/concurrent/UnsafeBuffer.java)
+
+Now the JNI interface could potentially be extended. Apart from the significant additional work, looking at the JNI implementation, unless I have misread the Slice implementation, it too only supports zero based arrays. Pushing a memory copy from Java to C won't materialise the full performance improvement opportunity.
+
+Thus in terms of how Rocks works today, my proposed change seems to be the best balance.
+
+Hi @adamretter : Do you think that we need to address the basic issue that "The current underlying JNI api supports zero based rather than arbitrary offsets.". If we fix this, then the Java code could get a performance boost perhaps?
+
+Discussion (for the records): https://www.facebook.com/groups/rocksdb.dev/permalink/985085361589978/
+
+> Do you think that we need to address the basic issue that "The current underlying JNI api supports zero based rather than arbitrary offsets."
+
+@dhruba Yes. However, that is not necessarily the complete solution. If we allowed an offset to be passed in the Java API, this would allow Java users to have a single `byte[]` containing multiple keys or values and then `put` then as needed by changing the `offset` and `length` arguments. This would solve @phaynes issue and part that of Chris Cleveland. I could expose this from JNI very quickly if @phayes wishes.
+
+However, in the JNI code for `put` (and others) we call `JNIEnv::GetByteArrayElements`, which may or may not make a copy of the data (it is up to the JVM), so we have no guarantee that any of this would be zero copy. If we wanted to approach zero-copy, we would need to use `NativeSlice` from RocksJava here which allocates memory on the heap in a _direct_ `java.nio.ByteBuffer`.
+
+I think we might want to just implement the offset stuff for this in the first instance, and then address the zero-copy stuff in the separate issue https://github.com/facebook/rocksdb/issues/1227, as this will most likely apply to many more functions than just `put`, e.g. at least `get`, etc.
+
+@adamretter  Thanks for the info. 
+
+"If we allowed an offset to be passed in the Java API, this would allow Java users to have a single byte[] containing multiple keys or values" -- this sounds like a good first start, this approach might reduce one additional copy that an application might have to do with the existing api
+
+"If we wanted to approach zero-copy, we would need to use NativeSlice from RocksJava " -- this seems to be the long-term approach. We would need a benchmark that can show the improvement if/when we adopt this approach.
+
+Hi @adamretter, 
+
+Sounds like there is agreement then on adding the additional offset into the JNI API then? Whilst `JNIEnv::GetByteArrayElements` handling of arrays is not guaranteed - it is how arrays are 
+passed now anyway.
+
+What do you need on my side  to get the change done?
+
+@phaynes I will send a PR shortly which includes the native changes. After than, if your happy, you can just rebase your PR on that and adjust the Java side :-)
+
+@phayes here is the PR which exposes both `offset` and `length` parameters to the following functions in the JNI layer of RocksJava:
+- put
+- keyMayExist
+- merge
+- get
+- multiGet
+- remove
+
+Once this is merged, you could rebase this PR to expose them in `RocksDB.java`.
+
+@dhruba I agree that we need a good benchmark for measuring the performance and memory overhead of `byte[]` vs `Slice` vs `DirectSlice`
+
+@phaynes https://github.com/facebook/rocksdb/pull/1264 has now been merged. So the infrastructure is there for you now if you wish to change this PR to add overloaded functions which provide `offset` and `length` parameters.
+
+@phaynes Are you still interested in this?
+
+Hi Adam - terribly sorry have gone quite. Yes I am - just the engineer working with me locally on this went on leave and went into crunch mode on the project. We have Jira tickets to give this some focus over the next couple of weeks.
+

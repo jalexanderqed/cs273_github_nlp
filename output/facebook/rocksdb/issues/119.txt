@@ -1,0 +1,8 @@
+The function TempFileName (https://github.com/facebook/rocksdb/blob/master/db/filename.cc#L90) takes a uint64 argument and then asserts it is >= 0. clang++ gives a warning since this is a tautology, and the compilation fails because of -Werror.
+
+I've silenced the warning with -Wno-tautological-compare, but the assert seems unnecessary anyway.
+
+Lol, smart clang :)
+
+https://github.com/facebook/rocksdb/commit/5c12f2779142842828814114cbe4e4ad5ba2f4f9
+

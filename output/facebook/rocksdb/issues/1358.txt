@@ -1,0 +1,119 @@
+tested on macos and gnu/linux
+
+Thank you for your pull request.  As you may know, we require contributors to sign our Contributor License Agreement, and we don't seem to have you on file and listed as active anymore.  In order for us to review and merge your code, please email cla@fb.com with your details so we can update your status.
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+@yuslepukhin can you help take a look at it?
+
+Windows build seems to be failing.
+
+@siying the Windows build failure is fixed.
+
+```
+[ RUN      ] DBBloomFilterTest.BloomFilterRate
+No output has been received in the last 10m0s, this potentially indicates a stalled build or something wrong with the build itself.
+Check the details on how to adjust your build configuration on: https://docs.travis-ci.com/user/common-build-problems/#Build-times-out-because-no-output-was-received
+The build has been terminated
+```
+
+And the test failure above is irrelevant to this change.
+
+Looks good. Please, document all the test failures. Also, did you get a change running standalone test executables, besides db_test and db_test2? I will get to all the unimplemented features soon if somebody else does not get those first.
+
+@yuslepukhin thank you for taking a look. should I press the "merge" bottom?
+
+@siying Lets merge it, it is a better cross platform cmake start than we ever had. Thank you @tchaikov 
+
+Thanks for your contribution and Sorry for commenting late:
+
+`# This cmake build is for Windows 64-bit only.`
+
+You want to edit this comment at the top of the CMakeLists.txt
+
+> #ifdef WIN32 #else ..
+
+Why not separate these into cmake files of its own? There is some risk if these things are order sensitive. Should be a solvable problem though.
+
+Simple RPM/DEB creation using continuous integration (I used packagecloud.io) can be built on top of this. It's not a replacement for distro packaging, but still useful to automate testing of CI generated bits. There is precedent in the Linux kernel doing this.
+
+tested with devtoolset-3:
+
+```
+Linking CXX executable arena_test
+librocksdblib.a(env_posix.cc.o): In function `rocksdb::(anonymous namespace)::PosixEnv::NowNanos()':
+env_posix.cc:(.text+0x2909): undefined reference to `clock_gettime'
+```
+
+Two comments: why is the library called librocksdblib.a and not librocksdb.a?
+Also target_link_libraries needs "rt" 
+
+```
+du -sh build
+1.4G    build
+```
+
+Using rocksdb-shared for tests should cut down disk usage significantly.
+
+> Why not separate these into cmake files of its own?
+
+i think it would be easier for the posterity to read when maintaining this building system.
+
+> why is the library called librocksdblib.a and not librocksdb.a?
+
+it's not intentional. and yes, it should be `librocksdb.a`.
+
+> i think it would be easier for the posterity to read when maintaining this building system.
+
+I interpret that to mean you agree with splitting into platform specific cmake files.
+Happy to review it if you submit a PR.
+
+Once that's done, we can forward port the following snippets from #1135:
+- librocksdb-<version>.so, so the shared libraries can co-exist and versioned properly
+- deb/rpm packaging support (move them to the cmake subdir to avoid polluting top level)
+- ${ROCKSDB_LIB} seems to represent shared lib on windows and static on linux. Reconcile.
+- circle.yml + packagecloud integration (code here: https://github.com/adsharma/rocksdb/commits/cmake_451)
+- verify that benchmarks are at parity relative to the ones built by the current system.
+
+Happy to pitch in as much as I can.
+
+> I interpret that to mean you agree with splitting into platform specific cmake files.
+
+@adsharma, no, i meant it would be easier in current way.
+
+> librocksdb-.so, so the shared libraries can co-exist and versioned properly
+
+yeah, i am all for this.
+
+On Windows when building it produces two things rocksdb.dll and rocksdb.lib. For the DLL it also produces import library rocksdb.lib. So in order that import library does not mix up or overwrite the stati library the latter is called rocksdblib.lib
+
+It is important that c_tests properly links to import library so it can test the exported interfaces the DLL that is actually used instead of the static library.
+
+Thanks for explaining. I didn't grok the difference between static, dynamic and import library when I wrote #1364.
+
+How about:
+
+```
+${ROCKSDB_LIB} = shared
+${ROCKSDB_STATIC_LIB} = static
+${ROCKSDB_IMPORT_LIB} = import lib 
+```
+
+so the distinction is clear?
+
+@adsharma Not sure where you would actually explicitly use  ${ROCKSDB_IMPORT_LIB}
+- Not present on non-Windows
+- On Windows the name it is automatically derived from the DLL name
+- When linking you do not explicitly specify that either, You simply say link to the shared target and CMake knows to put there import library
+
+@yuslepukhin: Sounds good. Let's stick with just the first two then.
+We should be able to control the name of the file on disk via:
+
+```
+set_target_properties(OUTPUT_NAME, ...)
+```
+
+@adsharma Speaking about the names. Did not look here, but the original build had ARTIFACT_SUFFIX. This was primarily for building libraries and binaries with _je suffix if they are built with JEMALLOC. We run 4 builds from the same build directory and end up with two sets of Debug and two sets of Release binaries so we can easily internally package them from the same location. _je suffix provides the way out so we would like to keep that if possible.
+
+@adsharma set_target_properties sound a little complex. Simply setting the name of the target different on Windows will do.
+

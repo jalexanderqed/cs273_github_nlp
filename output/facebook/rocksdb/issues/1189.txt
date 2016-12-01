@@ -1,0 +1,92 @@
+Some files were not included in CMakeLists.txt.
+Fixed default perf level in db_bench_tool.cc
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Curious to understand why the default perf level in the db_bench tool is changing from 0 to 1.
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+Thanks @jalexanderqed for fixing windows build, I have the same question as @dhruba, We dont want to enable PerfContext by default in db_bench.
+
+@dhruba @IslamAbdelRahman 
+Sorry, should have clarified that in the pull request. The previous default perf value in db_bench was actually bugged. It was zero, which is not a valid perf level, as can be seen in perf_level.h:
+
+enum PerfLevel : unsigned char {
+  kUninitialized = 0,             // unknown setting
+  kDisable = 1,                   // disable perf stats
+  kEnableCount = 2,               // enable only count stats
+  kEnableTimeExceptForMutex = 3,  // Other than count stats, also enable time
+                                  // stats except for mutexes
+  kEnableTime = 4,                // enable count and time stats
+  kOutOfBounds = 5                // N.B. Must always be the last value!
+};
+
+Thus, the first time I tried to run db_bench without setting the perf level from the command line, the first assert in perf_level.cc failed:
+
+void SetPerfLevel(PerfLevel level) {
+  assert(level > kUninitialized);
+  assert(level < kOutOfBounds);
+  perf_level = level;
+}
+
+As you can see from the enum, the new default (1) should still disable stats.
+
+Just so you know, this is in preparation for a much larger pull request I'll make later this week that adds some new statistics that we want to be able to use here at Microsoft.
+
+Oh, Thanks @jalexanderqed, we changed this enum recently. Initially PerfLevel::kDisable was 0
+Can we change these lines in db_bench_tool.cc
+
+```
+if (FLAGS_perf_level > 0) {
+  thread->stats.AddMessage(perf_context.ToString());
+}
+```
+
+to
+
+```
+if (FLAGS_perf_level > 1) {
+  thread->stats.AddMessage(perf_context.ToString());
+}
+```
+
+as well
+
+@IslamAbdelRahman 
+Would it also be a good to change all of these hard-coded values to the enum names? So:
+
+```
+if (FLAGS_perf_level > PerfLevel::kDisable) {
+    thread->stats.AddMessage(perf_context.ToString());
+}
+```
+
+instead of
+
+```
+if (FLAGS_perf_level > 1) {
+    thread->stats.AddMessage(perf_context.ToString());
+}
+```
+
+and
+
+`DEFINE_int32(perf_level, PerfLevel::kDisable, "Level of perf collection");`
+instead of
+`DEFINE_int32(perf_level, 1, "Level of perf collection");`
+
+@jalexanderqed, Yes .. that would be much better.
+
+@IslamAbdelRahman 
+Added enum values to db_bench_tool.cc
+
+@jalexanderqed, There are multiple other
+`if (FLAGS_perf_level > 0) {`
+lines in the file, can you replace them as well
+
+@IslamAbdelRahman 
+Sorry, should have caught that. Here is an updated version.
+
+Thanks @jalexanderqed !
+

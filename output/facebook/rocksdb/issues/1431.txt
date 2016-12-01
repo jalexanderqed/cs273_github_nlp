@@ -1,0 +1,25 @@
+Hi,
+
+Together with @thatsafunnyname we've noticed optimistic transactions failing to commit straight after reopening a RocksDB. We were able to reduce the problem to a simple reproducer and add it as a unit test to optimistic_transactions_test.cc.
+
+We believe this is a regression introduced in a400336, and can be reproduced reliably.
+
+The transaction fails with `Operation failed. Try again.: Transaction could not
+check for conflicts for operation at SequenceNumber 1 as the MemTable
+only contains changes newer than SequenceNumber 2.  Increasing the value
+of the max_write_buffer_number_to_maintain option could reduce the
+frequency of this error` error.
+
+We believe the problem is caused by creating a memtable with a wrong sequence number (an off by one error).
+
+mdlugajczyk/rocksdb@5ebfd2623a01e69a4cbeae3ed2b788f2a84056ad includes the test demonstrating the problem and a proposed solution.
+
+@reidHoruff do you mind take a look? Thanks!
+
+Will do.
+
+Please let me know if there's any way I could help with reproducing the problem/fixing it. 
+I've signed the CLA so would be happy to contribute the code as a pull request.
+
+I have created a copy here: https://github.com/facebook/rocksdb/pull/1458
+

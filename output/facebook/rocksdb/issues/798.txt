@@ -1,0 +1,17 @@
+  introduce a new DBOption random_access_max_buffer_size to limit
+  the size of the random access buffer used for unbuffered access.
+  Implement read ahead buffering when enabled.
+  To that effect propagate compaction_readahead_size and the new option
+  to the env options to make it available for the implementation.
+  Add Hint() override so SetupForCompaction() call would call Hint()
+  readahead can now be setup from both Hint() and EnableReadAhead()
+  Add new option random_access_max_buffer_size support
+  db_bench, options_helper to make it string parsable
+  and the unit test.
+
+@siying Restored the deleted branch.
+
+Can you follow fix the 80-char issues here? If you feel a follow-up PR is more comfortable. It's OK to me too.
+
+@siying Will do in a moment. 
+

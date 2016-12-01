@@ -1,0 +1,15 @@
+Hi,
+
+I am thinking to write an S3 environment for rocksdb, turned out we can leverage the AWS cpp sdk (https://github.com/aws/aws-sdk-cpp), but I wonder what's the best practice here to wind a 3rd party lib into rocks db?
+
+This is a great initiative. Is the change all localized to a new rocksdb::Env?
+
+We have similar integration of rocksdb + HDFS, see https://github.com/facebook/rocksdb/blob/master/util/env_hdfs.cc. If you can create a similar file for S3, that would be awesome!
+
+@dhruba yes, my assumption is that we can create another environment implementation separately.
+The HDFS integration has the assumption that the user has HDFS library installed by themselves. Should we also push the responsibility of installing AWS sdk to users, or Rocksdb itself will integrate necessary aws libraries? Looks there is a third-party folder there.
+
+My vote would be to make the user install the S3 libraries outside of rocksdb, but have a env_s3.cc inside of the rocksdb code. Basically, follow the same structure that we have done for HDFS
+
+@dhruba SGTM, thanks!
+

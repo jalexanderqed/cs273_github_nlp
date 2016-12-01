@@ -1,0 +1,23 @@
+The data contains about 1.3 million records(key/value pairs), with total 50 Gb storage. I save it as a RocksDB database on an NFS share file system. In the cluster, I want to use the MPI I/O to read this database using multiple client processes. In each slave node, the client process will open this database and read the part according to the cursor position given by the master process. In this way, there is no need to transfer the actual data via network, and consequently it can decrease the time of data transportation. 
+Is the RocksDB suitable for this project?
+
+Unfortunately, the answer is No. When I opened the database using two processes, it says "LOCK: Resource temporarily unavailable", just like the LevelDB.
+
+If the database is not being written to when the readers are reading, you can potentially open the database in readonly-mode (https://github.com/facebook/rocksdb/wiki/RocksDB-Basics#readonly-mode). That might allow you to open the same database from multiple processes.
+
+@dhruba , thank you very much for your valuable advice! 
+
+Yes, the data is not changable after it is generated. No inserted, no deleted, no modification, just for read. I'll test that.
+In fact, I tried the LMDB, but in the NFS share file system, when the disk load is large, the process of reading the LMDB database usually died unexpectedly. And It often shows "No locks available". Thus I'm looking for a database that are suitable in this circumstance. 
+
+UPDATE:
+Yes, I changed the `Open` to `OpenForReadOnly`, it works! 
+
+@dhruba Yes, the `OpenForReadOnly` and `Seek` can help achieve my goal, I also wish the high efficiency of doing the work as expected. 
+
+You save me a lot of time! Thank you very much! 
+
+@strongbanker Great to be of any help. If there is anything else that you need from RocksDB, pl do let us know.
+
+@dhruba, if the database was changing, can I keep closing and re-opening it every minute or so ?  Would that be a viable strategy if there are the update volume is not high.
+

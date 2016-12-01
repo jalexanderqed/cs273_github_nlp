@@ -1,0 +1,78 @@
+When performing "make" I am getting "db/db_bench.cc:379:5: error: ‘google’ has not been declared" and so on errors. I have gcc/g++ 4.7 and have installed all dependencies. I followed this tutorial to install gflags, and am using Ubuntu 12.04: http://askubuntu.com/questions/312173/installing-gflags-12-04
+
+If you don't need our tools, I'd just recommend running `make static_lib` or `make shared_lib`, which should just compile rocksdb and does not depend on gflags.
+
+As for gflags, can you try compiling this simple program: 
+
+```
+   #include <gflags/gflags.h>
+   int main() {}
+```
+
+Does it compile?
+
+I want to run the benchmarks used to get results shown here: https://github.com/facebook/rocksdb/wiki/Performance-Benchmarks
+
+Difference being that I want to run the tests on disks instead of SSD/Flash. Will the make static_lib or make shared_lib suffice for my purpose? It does complete without errors, although "make check" returns the same error, which I guess is understandable.
+
+The simple program you showed does compile. Also, since posting this question I upgraded to gflags 2.1.1 and also ran make test, and all tests passed.
+
+Any ideas..? Thanks.
+
+Hi Atish: do you want to run it on a single disk or on multiple disks striped together? what is the total disk bandwidth that your system has? These will help us advice you on how to configure rocksdb for ur benchmark.
+
+As a first cut I am planning to run it on a single disk. 64 byte keys and 64 byte values and a read/write ratio of 90/10. Similarly for 256 byte key/values as well.
+
+@atishbits you will need gflags to run db_bench. Does `make all` work with new gflags?
+
+Can you C/P your `build_config.mk` file?
+
+@igorcanadi make all fails with the same <code>error: ‘google’ has not been declared</code>
+build_config.mk file:
+'''
+SOURCES=db/builder.cc db/c.cc db/column_family.cc db/compaction.cc db/compaction_picker.cc db/db_filesnapshot.cc db/dbformat.cc db/db_impl.cc db/db_impl_debug.cc db/db_impl_readonly.cc db/db_iter.cc db/db_stats_logger.cc db/file_indexer.cc db/filename.cc db/internal_stats.cc db/log_reader.cc db/log_writer.cc db/memtable.cc db/memtable_list.cc db/merge_helper.cc db/merge_operator.cc db/repair.cc db/table_cache.cc db/table_properties_collector.cc db/tailing_iter.cc db/transaction_log_impl.cc db/version_edit.cc db/version_set.cc db/write_batch.cc table/block_based_table_builder.cc table/block_based_table_factory.cc table/block_based_table_reader.cc table/block_builder.cc table/block.cc table/block_hash_index.cc table/filter_block.cc table/flush_block_policy.cc table/format.cc table/iterator.cc table/merger.cc table/meta_blocks.cc table/plain_table_builder.cc table/plain_table_factory.cc table/plain_table_reader.cc table/table_properties.cc table/two_level_iterator.cc util/arena.cc util/auto_roll_logger.cc util/blob_store.cc util/bloom.cc util/build_version.cc util/cache.cc util/coding.cc util/comparator.cc util/crc32c.cc util/dynamic_bloom.cc util/env.cc util/env_hdfs.cc util/env_posix.cc util/filter_policy.cc util/hash.cc util/hash_cuckoo_rep.cc util/hash_linklist_rep.cc util/hash_skiplist_rep.cc util/histogram.cc utilities/backupable/backupable_db.cc utilities/geodb/geodb_impl.cc utilities/merge_operators/put.cc utilities/merge_operators/string_append/stringappend2.cc utilities/merge_operators/string_append/stringappend.cc utilities/merge_operators/uint64add.cc utilities/redis/redis_lists.cc utilities/ttl/db_ttl_impl.cc util/ldb_cmd.cc util/ldb_tool.cc util/log_buffer.cc util/logging.cc util/murmurhash.cc util/options.cc util/perf_context.cc util/skiplistrep.cc util/slice.cc util/statistics.cc util/status.cc util/string_util.cc util/sync_point.cc util/thread_local.cc util/vectorrep.cc util/xxhash.cc  port/stack_trace.cc port/port_posix.cc
+SOURCESCPP=
+MEMENV_SOURCES=helpers/memenv/memenv.cc
+CC=cc
+CXX=g++
+PLATFORM=OS_LINUX
+PLATFORM_LDFLAGS= -lpthread -lrt -lsnappy -lgflags -lz -lbz2
+VALGRIND_VER=
+PLATFORM_CCFLAGS= -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_ATOMIC_PRESENT -DROCKSDB_FALLOCATE_PRESENT -DSNAPPY -DGFLAGS -DZLIB -DBZIP2
+PLATFORM_CXXFLAGS=-std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_ATOMIC_PRESENT -DROCKSDB_FALLOCATE_PRESENT -DSNAPPY -DGFLAGS -DZLIB -DBZIP2
+PLATFORM_SHARED_CFLAGS=-fPIC
+PLATFORM_SHARED_EXT=so
+PLATFORM_SHARED_LDFLAGS=-shared -Wl,-soname -Wl,
+PLATFORM_SHARED_VERSIONED=false
+EXEC_LDFLAGS=
+JEMALLOC_INCLUDE=
+JEMALLOC_LIB=
+'''
+
+Here's the catch:
+
+```
+- GFLAGS_NAMESPACE   Name of the C++ namespace to be used by the gflags library.
+                  Note that the public source header files are installed in
+                  a subdirectory named after this namespace. To maintain
+                  backwards compatibility with the Google Commandline Flags,
+                  set this variable to "google". The default is "gflags".
+```
+
+I will make rocksdb work with both gflags. But one solution is to compile gflags with "google" GFLAGS_NAMESPACE.
+
+@atishbits should be fixed with https://github.com/facebook/rocksdb/commit/a1068c91a1bd00bb3b209cac63ff93bb8780df27. Can you confirm?
+
+@igorcanadi The fix in  a1068c9 works. Below are some additional files containing the google:: scope, which I had to modify.
+
+util/bloom_test.cc
+table/table_reader_bench.cc
+util/dynamic_bloom_test.cc
+util/log_write_bench.cc
+
+<code>make</code> and <code>make check</code> complete without errors. I will try running the benchmarks next.
+
+Thanks!
+
+Missed few spots. Hopefully https://github.com/facebook/rocksdb/commit/fec4269966c0436c6429ef5da00ccc0d9cdb3c78 fixes all. Closing this for now, feel free to reopen if it doesn't work.
+

@@ -1,0 +1,66 @@
+This diff is required for sst_dump to actually report the error of a corrupt property block:
+
+``` diff
+diff --git a/tools/sst_dump.cc b/tools/sst_dump.cc
+index b8c470f..8e00d69 100644
+--- a/tools/sst_dump.cc
++++ b/tools/sst_dump.cc
+@@ -118,10 +118,10 @@ Status SstFileReader::SetTableOptionsByMagicNumber(uint64_t table_magic_number,
+   Status s = rocksdb::ReadTableProperties(file, file_size, table_magic_number,
+                                           options_.env, options_.info_log.get(),
+                                           &table_properties);
+-  std::unique_ptr<TableProperties> props_guard(table_properties);
+   if (!s.ok()) {
+     return s;
+   }
++  std::unique_ptr<TableProperties> props_guard(table_properties);
+
+   if (table_magic_number == kBlockBasedTableMagicNumber) {
+     options_.table_factory = std::make_shared<BlockBasedTableFactory>();
+```
+
+Without this a segmentation fault results. As an extra question, what is the best way to recover the data from a single corrupted sst file? The MANIFEST believes the file is the wrong size and the properties block isn't at the end of the file. Do I need to build a custom RepairDB tool? Or can I just re-add the records found in that single file?
+
+Thanks for any help!
+
+Hello dono.  Thank you for your diff.  I can answer the first part of your question.  We currently have a diff under review to address the sst_dump issue (which also include the necessary change you observed!): https://reviews.facebook.net/D18039.  We hope to fix this soon.
+
+Looks good! Thanks for the reply. Wasn't aware of the code review site,
+will keep an eye on it from now on :-)
+
+On 20 April 2014 19:12, Yueh-Hsuan Chiang notifications@github.com wrote:
+
+> Hello dono. Thank you for your diff. I can answer the first part of your
+> question. We currently have a diff under review to address the sst_dump
+> issue (which also include the necessary change you observed!):
+> https://reviews.facebook.net/D18039. We hope to fix this soon.
+> 
+> —
+> Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/123#issuecomment-40901015
+> .
+
+With regard to the patch on the code review site, can I apply this to the
+master branch on github?  Bit confused by the code review arcanist tool and
+which prior commits the diff is applicable to.
+
+Thanks for any help! Just need to extract some data from a sst file gone
+wrong:-)
+
+@donovanhide the patch is going to be merged to master branch, correct (hopefully today). Does that answer your question?
+
+I think we can just get this patch in anyway.
+
+@donovanhide  the problem with truncated files has (hopefully) been fixed with https://github.com/facebook/rocksdb/commit/c2da9e59971a061438d661ff0f4b6e9dba895a2d
+
+@donovanhide diff for sst_dump issue has been committed https://github.com/facebook/rocksdb/commit/af6ad113a857a6ab9593063330219a0ce4605956
+
+Ace! Thank you very much for pushing this :-)
+
+sst_dump doesn't segfault anymore, which is great. However I still have the issue of a corrupt sst to deal with. Can you share any thoughts you might have about recovering any data in the blocks in the sst, given that the footer is now non-existent? I've searched for the magic number using bgrep, but it is nowhere to be found. If I know the compression type and filter policy, can I somehow just iterate over the blocks until I find a corrupt one and stop there? I've noticed that sst_dump is using features not exposed in the public API header files. Do you think a RecoverBlocks call would be a useful API addition? 
+
+@donovanhide we fixed the bug that caused sst files losing track of footers (last 53 bytes): https://github.com/facebook/rocksdb/commit/c2da9e59971a061438d661ff0f4b6e9dba895a2d
+
+Most of our use-cases have backups or replicas and were able to restore data from backups. You might be able to manually repair sst file if you assume that the last 53 bytes are missing. Sorry about the data loss :(
+
+@donovanhide closing this for now, feel free to reopen if you have issues in the future.
+

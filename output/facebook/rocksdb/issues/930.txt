@@ -1,0 +1,39 @@
+I am trying to limit the size of the Database using the rocksdb options.
+Following is the configuration:
+No. of Memtables = 4
+Size of memtable = 4M
+No. of Levels = 4
+Target file size base = 4M
+Target file size multiplier = 1
+Max bytes for level base = 32M
+Max bytes for level multiplier = 4
+level0_file_num_compaction_trigger = 4
+level0_slowdown_writes_trigger = 48
+level0_stop_writes_trigger = 64
+Block cache size = 128MB
+Compression = No
+Block Size = 16KB
+
+Based on this, total size of my Database should not exceed 1GB.
+I am observing that DB grows beyond this limit and uses the entire partition.
+In this experiment, a partition of 2GB has been given to DB and I am trying to limit the DB size to 1GB.
+Any suggestions on how to achieve this?  Is this a bug?
+
+NOTE: rocskdb version 3.13.0 is used for this experiment.
+
+Thanks!
+
+How much data are you putting in the db? Your settings do not guarantee that DB doesn't grow to more than 1GB. You should put less than 1GB of data if you want the db to be smaller than 1GB.
+
+I am putting data worth more than 1GB and expecting the rocksdb to give back "No space left" once it reaches 1GB limit. I thought num of levels and level size control the size of DB. If not, how is # of levels and level size useful here? Please clarify. Thanks!
+
+@lookforsandy I don't think we have an option to limit DB size. What behavior do you expect if DB reach the size limit you give?
+
+@lookforsandy we don't have a feature like what you said now. We will soon have something. @IslamAbdelRahman is working on https://reviews.facebook.net/D50469 and the follow up will be to cap the size and throw you an error message if total SST file sizes exceed a limit.
+
+This feature should help. Thanks for the response.
+I guess for now this leaves me with only option of partitioning the storage to the limit size and feeding that partition to the DB open.
+Being optimistic, by any chance  https://reviews.facebook.net/D50469 feature will be available in 3.13.0 ? :)
+
+@lookforsandy we are not going to backport it to 3.13.x.
+

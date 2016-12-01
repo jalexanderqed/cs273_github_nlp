@@ -1,0 +1,18 @@
+ColumnFamilyOptions + ColumnFamilyOptionsTest 
+
+Relates to Options Refactoring (Part3)
+
+Differential: https://reviews.facebook.net/D28023
+
+@fyrz: Great stuff.  Please rebase and use DBOptions in RocksDB::open() and it should be ready to go :)
+
+@fyrz: The patch is great. It would be nice if we can have it in RocksDB 3.7, but I didn't find the test for the new open() API. Can you add a test for new RocksDB::open API, or even better, an example code of column family in RocksJava?
+
+@yhchiang rebased and resolved merge conflict.
+
+@yhchiang should now be ready to go. 
+
+Awesome! Thanks for the update!  Would you mind updating the HISTORY.md and java/HISTORY-JAVA.md after this diff? It would be nice if rocksdb 3.8 can highlight your update on the RocksJava column-family support.
+
+@yhchiang i have it on my list to update histroy.md and java/history.md ;)
+

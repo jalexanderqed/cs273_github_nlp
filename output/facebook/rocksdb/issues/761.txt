@@ -1,0 +1,24 @@
+Hi I'm facing an error which is: Compression type Snappy is not linked with the binary.
+
+I got this error while running the `simple_example` in the `examples/` directory. I simply built this by using `make simple_example`. However, this program failed at the `s.ok()` assertion. So I followed the instruction in the wiki to find out what had happened. With `s.ToString()`, I've got the error message listed previously.
+
+It seems that I haven't got this library, so I've built it again with this option:
+
+```
+options.compression = kNoCompression;
+```
+
+But still, that error message showed up again..
+
+Thanks for your help!
+
+Can you please install snappy library before compiling RocksDB? This should be pretty simple. For example, if you're running Ubuntu, you just have to call: `sudo apt-get install libsnappy-dev`
+
+Hi @igorcanadi Your idea works, thanks a lot. :+1: 
+
+I make a rocksdb shared library for golang use, I want to use `LZ4` compression. But it said `Invalid argument: Compression type LZ4 is not linked with the binary.`
+
+I execute `make liblz4.a`, It still show this message.
+
+lz4  lz4-devel needed by   rocksdb  . But the document do not mention it  
+

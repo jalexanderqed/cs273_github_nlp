@@ -1,0 +1,36 @@
+Hi guys,
+
+I am new to rocksdb. In order to avoid data loss after machine crashes, I enabled both sync and WAL for write operation, but the performance downgraded significantly.
+
+After adding some logs before and after this line (https://github.com/facebook/rocksdb/blob/4.1.fb/db/db_impl.cc#L3897), it shows this Sync operation takes 20-50 ms. 
+
+Will try to dig into Sync operation, but it will be appreciated to get some help from here.
+
+P.S. Each rocksdb instance uses one HDD disk, including operation logs, data logs, sst files, etc, are on this disk.
+
+Thanks.
+
+@david-z this is as expected. With sync option, we need to call fsync() on each write, which needs to wait for disk to persist the operation (which can take tens of milliseconds on spinning disk). If you want to avoid data loss on machine crash, you need to pay this cost, unfortunately.
+
+Adding HW RAID with battery backed write cache will make fsync much faster.
+
+On Mon, Oct 12, 2015 at 9:25 AM, Igor Canadi notifications@github.com
+wrote:
+
+> @david-z https://github.com/david-z this is as expected. With sync
+> option, we need to call fsync() on each write, which needs to wait for disk
+> to persist the operation (which can take tens of milliseconds on disk). If
+> you want to avoid data loss on machine crash, you need to pay this cost,
+> unfortunately.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/762#issuecomment-147452105.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@mdcallag  Thanks for your suggestion. I tried to turn on each disk's write cache but with no lock. The performance has almost no difference. It seems weird. Do you have any idea?  
+

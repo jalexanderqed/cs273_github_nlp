@@ -1,0 +1,391 @@
+Hi guys,
+
+Below the stack trace. The use case is one YCSB client running 4 threads during the loading phase, with workload,
+
+fieldcount=1
+recordcount=1000000000
+operationcount=1000000000
+workload=com.yahoo.ycsb.workloads.CoreWorkload
+readallfields=true
+readproportion=0.5
+updateproportion=0.5
+scanproportion=0
+insertproportion=0
+requestdistribution=zipfian
+
+There is a different server process that serves requests of the YCSB client and writes to RocksDB with a single writer thread with batches of size 100, writeoptions with sync flag set to true. After writting ~ 20 million entries, I get the crash. 
+#0  0x00000034bf8328a5 in raise () from /lib64/libc.so.6
+
+Missing separate debuginfos, use: debuginfo-install bzip2-libs-1.0.5-7.el6_0.x86_64 glibc-2.12-1.107.el6.x86_64 libgcc-4.4.7-3.el6.x86_64 libstdc++-4.4.7-3.el6.x86_64 zlib-1.2.3-29.el6.x86_64
+(gdb) bt
+#0  0x00000034bf8328a5 in raise () from /lib64/libc.so.6
+#1  0x00000034bf834085 in abort () from /lib64/libc.so.6
+#2  0x00007fb18fcabe85 in os::abort(bool) () from /home/fgomez/java/jdk1.7.0/jre/lib/amd64/server/libjvm.so
+#3  0x00007fb18fe00907 in VMError::report_and_die() () from /home/fgomez/java/jdk1.7.0/jre/lib/amd64/server/libjvm.so
+#4  0x00007fb18fcafab0 in JVM_handle_linux_signal () from /home/fgomez/java/jdk1.7.0/jre/lib/amd64/server/libjvm.so
+#5  <signal handler called>
+#6  _mm_crc32_u64 (crc=Unhandled dwarf expression opcode 0xf3
+
+) at /opt/centos/devtoolset-2/root/usr/lib/gcc/x86_64-redhat-linux/4.8.2/include/smmintrin.h:822
+#7  Fast_CRC32 (crc=Unhandled dwarf expression opcode 0xf3
+
+) at util/crc32c.cc:321
+#8  rocksdb::crc32c::ExtendImplrocksdb::crc32c::Fast_CRC32 (crc=Unhandled dwarf expression opcode 0xf3
+
+) at util/crc32c.cc:361
+#9  0x00007fb1668052a4 in rocksdb::log::Writer::EmitPhysicalRecord (this=0x7fb0c4b6c700, t=Unhandled dwarf expression opcode 0xf3
+
+) at db/log_writer.cc:121
+#10 0x00007fb16680551d in rocksdb::log::Writer::AddRecord (this=0x7fb0c4b6c700, slice=Unhandled dwarf expression opcode 0xf3
+
+) at db/log_writer.cc:82
+#11 0x00007fb1667d6332 in rocksdb::DBImpl::WriteImpl (this=0x7fb188265a30, write_options=Unhandled dwarf expression opcode 0xf3
+
+) at db/db_impl.cc:4381
+#12 0x00007fb1667d6c94 in rocksdb::DBImpl::Write (this=Unhandled dwarf expression opcode 0xf3
+
+) at db/db_impl.cc:4101
+#13 0x00007fb16676818c in Java_org_rocksdb_RocksDB_write0 (env=0x7fb1888869d0, jdb=0x7fb15e33f790, jwrite_options_handle=140400476573760, jwb_handle=140397742812128)
+
+```
+at java/rocksjni/rocksjni.cc:411
+```
+
+I got a different stack trace the second time around, but similar scenario (~ 16 million entries in),
+
+#1  0x00000034bf834085 in abort () from /lib64/libc.so.6
+#2  0x00007f0df822ae85 in os::abort(bool) () from /home/fgomez/java/jdk1.7.0/jre/lib/amd64/server/libjvm.so
+#3  0x00007f0df837f907 in VMError::report_and_die() () from /home/fgomez/java/jdk1.7.0/jre/lib/amd64/server/libjvm.so
+#4  0x00007f0df822eab0 in JVM_handle_linux_signal () from /home/fgomez/java/jdk1.7.0/jre/lib/amd64/server/libjvm.so
+#5  <signal handler called>
+#6  size (this=0x7f0d1d2dbba0, handler=0x7f0dd69192b0) at /opt/centos/devtoolset-2/root/usr/include/c++/4.8.2/bits/basic_string.h:716
+#7  Slice (this=0x7f0d1d2dbba0, handler=0x7f0dd69192b0) at ./include/rocksdb/slice.h:40
+#8  rocksdb::WriteBatch::Iterate (this=0x7f0d1d2dbba0, handler=0x7f0dd69192b0) at db/write_batch.cc:251
+#9  0x00007f0dded53fb1 in rocksdb::WriteBatchInternal::InsertInto (writers=..., sequence=Unhandled dwarf expression opcode 0xf3
+) at db/write_batch.cc:811
+#10 0x00007f0ddece8079 in rocksdb::DBImpl::WriteImpl (this=0x7f0df0275e50, write_options=Unhandled dwarf expression opcode 0xf3
+) at db/db_impl.cc:4443
+#11 0x00007f0ddece8c94 in rocksdb::DBImpl::Write (this=Unhandled dwarf expression opcode 0xf3
+) at db/db_impl.cc:4101
+#12 0x00007f0ddec7a18c in Java_org_rocksdb_RocksDB_write0 (env=0x7f0df08859d0, jdb=0x7f0dd6919890, jwrite_options_handle=139697846764960, jwb_handle=139694300838816)
+    at java/rocksjni/rocksjni.cc:411
+
+@ehamilto How did you build RocksJava? Do you have a recent C++ compiler and GDB. I noticed the string:
+
+> Unhandled dwarf expression opcode 0xf3
+
+ in your output, Googling about seemed to suggest that the version of gdb you have does not match your version of gcc, and so not all of the information can be provided. Also is this a production version, or a version with debug symbols? If it's production, and chance or reproducing on a version with debug symbols so we can maybe get some more info in the trace?
+
+Thank you for your quick reply,
+
+The version of gcc that I am using for building RocksDB is different from the one that comes by default in my OS (RHEL 6.4, 2.6.32-358.el6.x86_64 ). The default is 4.4.7.
+
+For building, I am using,
+
+export GCC_HOME=/opt/centos/devtoolset-2/root/usr
+export CC=$GCC_HOME/bin/gcc
+export CPP=$GCC_HOME/bin/cpp
+export CXX=$GCC_HOME/bin/c++
+
+ `$CC -v`
+Using built-in specs.
+COLLECT_GCC=/opt/centos/devtoolset-2/root/usr/bin/gcc
+COLLECT_LTO_WRAPPER=/opt/centos/devtoolset-2/root/usr/bin/../libexec/gcc/x86_64-redhat-linux/4.8.2/lto-wrapper
+Target: x86_64-redhat-linux
+Configured with: ../configure --prefix=/opt/rh/devtoolset-2/root/usr --mandir=/opt/rh/devtoolset-2/root/usr/share/man --infodir=/opt/rh/devtoolset-2/root/usr/share/info --with-bugurl=http://bugzilla.redhat.com/bugzilla --enable-bootstrap --enable-shared --enable-threads=posix --enable-checking=release --with-system-zlib --enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object --enable-linker-build-id --enable-languages=c,c++,fortran,lto --enable-plugin --with-linker-hash-style=gnu --enable-initfini-array --disable-libgcj --with-isl=/builddir/build/BUILD/gcc-4.8.2-20140120/obj-x86_64-redhat-linux/isl-install --with-cloog=/builddir/build/BUILD/gcc-4.8.2-20140120/obj-x86_64-redhat-linux/cloog-install --with-mpc=/builddir/build/BUILD/gcc-4.8.2-20140120/obj-x86_64-redhat-linux/mpc-install --with-tune=generic --with-arch_32=i686 --build=x86_64-redhat-linux
+Thread model: posix
+gcc version 4.8.2 20140120 (Red Hat 4.8.2-15) (GCC)
+
+This is a production version, but I can definitely reproduce it with a debug build (it happens consistently). I will submit what I find later. 
+
+I created a debug version and rerun the test. It happened a couple of times with different stack traces, see below. While I cannot share my code, I can execute gdb commands on the core files to get info if that might help you.
+
+#0  0x00000034bf8328a5 in raise () from /lib64/libc.so.6
+#1  0x00000034bf834085 in abort () from /lib64/libc.so.6
+#2  0x00007f97a3bfee85 in os::abort(bool) () from /home/fgomez/java/jdk1.7.0/jre/lib/amd64/server/libjvm.so
+#3  0x00007f97a3d53907 in VMError::report_and_die() () from /home/fgomez/java/jdk1.7.0/jre/lib/amd64/server/libjvm.so
+#4  0x00007f97a3c02ab0 in JVM_handle_linux_signal () from /home/fgomez/java/jdk1.7.0/jre/lib/amd64/server/libjvm.so
+#5  <signal handler called>
+#6  _mm_crc32_u64 (crc=Unhandled dwarf expression opcode 0xf3
+) at /opt/centos/devtoolset-2/root/usr/lib/gcc/x86_64-redhat-linux/4.8.2/include/smmintrin.h:822
+#7  Fast_CRC32 (crc=Unhandled dwarf expression opcode 0xf3
+) at util/crc32c.cc:321
+#8  rocksdb::crc32c::ExtendImplrocksdb::crc32c::Fast_CRC32 (crc=Unhandled dwarf expression opcode 0xf3
+) at util/crc32c.cc:361
+#9  0x00007f977a70b034 in rocksdb::log::Writer::EmitPhysicalRecord (this=0x7f9705baf2c0, t=Unhandled dwarf expression opcode 0xf3
+) at db/log_writer.cc:121
+#10 0x00007f977a70b2ad in rocksdb::log::Writer::AddRecord (this=0x7f9705baf2c0, slice=Unhandled dwarf expression opcode 0xf3
+) at db/log_writer.cc:82
+#11 0x00007f977a6dc0c2 in rocksdb::DBImpl::WriteImpl (this=0x7f979c265e60, write_options=Unhandled dwarf expression opcode 0xf3
+) at db/db_impl.cc:4381
+#12 0x00007f977a6dca24 in rocksdb::DBImpl::Write (this=Unhandled dwarf expression opcode 0xf3
+) at db/db_impl.cc:4101
+#13 0x00007f977a66c0b4 in Java_org_rocksdb_RocksDB_write0 (env=0x7f979c8759d0, jdb=0x7f977229b690, jwrite_options_handle=140289142900464, jwb_handle=140286604214944)
+    at java/rocksjni/rocksjni.cc:411
+
+#0  0x00000034bf8328a5 in raise () from /lib64/libc.so.6
+#1  0x00000034bf834085 in abort () from /lib64/libc.so.6
+#2  0x00007fc62dd00e85 in os::abort(bool) () from /home/fgomez/java/jdk1.7.0/jre/lib/amd64/server/libjvm.so
+#3  0x00007fc62de55907 in VMError::report_and_die() () from /home/fgomez/java/jdk1.7.0/jre/lib/amd64/server/libjvm.so
+#4  0x00007fc62dd04ab0 in JVM_handle_linux_signal () from /home/fgomez/java/jdk1.7.0/jre/lib/amd64/server/libjvm.so
+#5  <signal handler called>
+#6  0x00007fc620909dc5 in size (this=0x7fc62826e348, leader=0x7fc6003d05c0, last_writer=0x7fc6003d0378, write_batch_group=0x7fc6003d0560)
+    at /opt/centos/devtoolset-2/root/usr/include/c++/4.8.2/bits/basic_string.h:716
+#7  ByteSize (this=0x7fc62826e348, leader=0x7fc6003d05c0, last_writer=0x7fc6003d0378, write_batch_group=0x7fc6003d0560) at ./db/write_batch_internal.h:113
+#8  rocksdb::WriteThread::EnterAsBatchGroupLeader (this=0x7fc62826e348, leader=0x7fc6003d05c0, last_writer=0x7fc6003d0378, write_batch_group=0x7fc6003d0560)
+    at db/write_thread.cc:238
+#9  0x00007fc62089a12e in rocksdb::DBImpl::WriteImpl (this=0x7fc62826de60, write_options=Unhandled dwarf expression opcode 0xf3
+) at db/db_impl.cc:4310
+#10 0x00007fc62089ba24 in rocksdb::DBImpl::Write (this=Unhandled dwarf expression opcode 0xf3
+) at db/db_impl.cc:4101
+#11 0x00007fc62082b0b4 in Java_org_rocksdb_RocksDB_write0 (env=0x7fc62888d9d0, jdb=0x7fc6003d0810, jwrite_options_handle=140489060263840, jwb_handle=140485707344560)
+    at java/rocksjni/rocksjni.cc:411
+
+@ehamilto I think you are still using the wrong version of GDB however. Also perhaps it is easier to learn from the hs_err files from the JVM crash?
+
+OK, here is what the hs_errr files give with the debug builds. I can upload them if you want them.
+
+Stack: [0x00007fc6002d1000,0x00007fc6003d2000],  sp=0x00007fc6003d0240,  free space=1020k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  [librocksdbjni-linux64.so+0x23bdc5]  rocksdb::WriteThread::EnterAsBatchGroupLeader(rocksdb::WriteThread::Writer_, rocksdb::WriteThread::Writer__, rocksdb::autovector<rocksdb::WriteThread::Writer_, 8ul>_)+0x25
+C  [librocksdbjni-linux64.so+0x1cc12e]  rocksdb::DBImpl::WriteImpl(rocksdb::WriteOptions const&, rocksdb::WriteBatch_, rocksdb::WriteCallback_)+0x63e
+C  [librocksdbjni-linux64.so+0x1cda24]  rocksdb::DBImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch_)+0x14
+C  [librocksdbjni-linux64.so+0x15d0b4]  Java_org_rocksdb_RocksDB_write0+0x64
+J  org.rocksdb.RocksDB.write0(JJ)V
+
+Stack: [0x00007f977219c000,0x00007f977229d000],  sp=0x00007f977229b018,  free space=1020k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  [librocksdbjni-linux64.so+0x280788]  unsigned int rocksdb::crc32c::ExtendImpl<&(rocksdb::crc32c::Fast_CRC32(unsigned long_, unsigned char const__))>(unsigned int, char const_, unsigned long)+0x58
+C  [librocksdbjni-linux64.so+0x1fc2ad]  rocksdb::log::Writer::AddRecord(rocksdb::Slice const&)+0xfd
+C  [librocksdbjni-linux64.so+0x1cd0c2]  rocksdb::DBImpl::WriteImpl(rocksdb::WriteOptions const&, rocksdb::WriteBatch_, rocksdb::WriteCallback_)+0x15d2
+C  [librocksdbjni-linux64.so+0x1cda24]  rocksdb::DBImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch*)+0x14
+C  [librocksdbjni-linux64.so+0x15d0b4]  Java_org_rocksdb_RocksDB_write0+0x64
+J  org.rocksdb.RocksDB.write0(JJ)V
+
+@ehamilto Is there a way you can give us a reproducible test-case with a test-code that you share with us? Then I can run the same code on my machine and see if I can debug/fix it for you.
+
+Let me try to reproduce the issue by running YCSB in embedded mode (ie, without the client/server code). If I am able to do that, I'll be happy to share the code.
+
+I was getting the crash with the stand alone code, but now I am not. So let me make sure that I post the code that reproduces it consistently. I'll get back later in the day. 
+
+Hi,
+
+Unfortunately, I am unable to produce a standalone test that produces the crash (I attach below the code I have been using for this purpose, a slightly modified version of the one that I posted yesterday in which each thread uses a dedicated WriteBatch object to maximize write activity). 
+
+I cannot share the code from the setup that produces the crash because of confidentiality reasons. I can only say that it is a client and a server. The client implements the DB class required for the YCSB tests and sends requests to a server that processes those requests as RocksDB operations. 
+
+I have tried to run the same YCSB test suite that produces the crash using the standalone code without much success.
+
+As an alternative, I can inspect the crash, that I consistently get, or run a santized build using https://github.com/google/sanitizers/wiki/AddressSanitizer ) if you provide instructions on how to create one. In the past we have used it successfully to identify crahes created by memory corruption between threads (which I don't know if it is the case here).
+
+Thanks again for your help.
+
+import com.yahoo.ycsb.ByteArrayByteIterator;
+import com.yahoo.ycsb.ByteIterator;
+import com.yahoo.ycsb.DB;
+import com.yahoo.ycsb.Status;
+import com.yahoo.ycsb.DBException;
+import org.rocksdb.*;
+import org.rocksdb.util.SizeUnit;
+
+import java.nio.ByteBuffer;
+import java.util.*;
+
+public class RocksDBYCSBBatchBinding extends DB {
+    private static final String DB_PATH = "/mnt/ssd/rocksdbstore";
+    private static final int BYTE_BUFFER_SIZE = 8192;
+    private static final int BATCH_SIZE = 20000;
+
+```
+private static Integer lock = new Integer(0);
+private static RocksDB db;
+private static Options options;
+
+private WriteOptions writeOptions;    
+private WriteBatch writebatch;
+private long threadid;
+
+@Override
+public void init() throws DBException {
+    synchronized(lock)
+    {     
+        if (db == null)
+        {
+            System.out.println("Initializing RocksDB...");
+            String db_path = DB_PATH;
+            options = new Options();
+            options.setCreateIfMissing(true);
+            try 
+            {
+                db = RocksDB.open(options, db_path);
+                db.put("hello".getBytes(), "world".getBytes());
+                byte[] value = db.get("hello".getBytes());
+                assert("world".equals(new String(value)));
+            } 
+            catch (RocksDBException ex) 
+            {
+                System.out.println("ERROR opening RocksDB: caught RocksDB exception");
+                ex.printStackTrace();
+                System.exit(0);                     
+            }
+            System.out.println("Initializing RocksDB is over");
+        }
+        threadid = lock++;
+        writeOptions = new WriteOptions();
+        writeOptions.setSync(true);
+        writebatch =  new WriteBatch();
+        System.out.println("Initialization of YSCBClient is over for threadid = "+threadid);
+    }
+}
+
+@Override
+public Status read(String table, String key, Set<String> fields, HashMap<String, ByteIterator> result) {
+    byte[] serkey = key.getBytes();
+    try 
+    {
+        byte[] value = db.get(serkey);
+        HashMap<String, ByteIterator> deserialized = deserialize(value);
+        result.putAll(deserialized);
+    } 
+    catch (RocksDBException ex)
+    {
+        System.out.println("ERROR in READ: caught RocksDB exception");
+        ex.printStackTrace();
+        System.exit(0);
+    }
+    return Status.OK;
+}
+
+@Override
+public Status scan(String table, String startkey, int recordcount, Set<String> fields, Vector<HashMap<String, ByteIterator>> result) {
+    System.out.println("SCAN CALLED, NOT IMPLEMENTED");
+    return Status.OK;
+}
+
+@Override
+public Status update(String table, String key, HashMap<String, ByteIterator> values) {
+    byte[] serkey = key.getBytes();
+    byte[] servalue = serialize(values);        
+    try 
+    {
+        db.put(writeOptions,serkey, servalue);
+    } 
+    catch (RocksDBException ex) 
+    {
+        System.out.println("ERROR in UPDATE: caught RocksDB exception");
+        ex.printStackTrace();
+        System.exit(0);
+    }
+    return Status.OK;
+}
+
+@Override
+public Status insert(String table, String key, HashMap<String, ByteIterator> values) {
+    byte[] serkey = key.getBytes();
+    byte[] servalue = serialize(values);        
+    writebatch.put(serkey,servalue);
+    if (writebatch.count() == BATCH_SIZE)
+    {
+        try 
+        {
+            db.write(writeOptions,writebatch);
+            writebatch.clear();
+        } 
+        catch (RocksDBException ex) 
+        {
+            System.out.println("ERROR in INSERT: caught RocksDB exception");
+            ex.printStackTrace();
+            System.exit(0);
+        }               
+    }           
+    return Status.OK;
+}
+
+@Override
+public Status delete(String table, String key) {
+    byte[] serkey = key.getBytes();
+    try 
+    {
+        db.remove(writeOptions,serkey);
+    } catch (RocksDBException ex) 
+    {
+        System.out.println("ERROR in DELETE: caught RocksDB exception");
+        ex.printStackTrace();
+        System.exit(0);
+    }
+    return Status.OK;
+}
+
+@Override
+public void cleanup() throws DBException {
+    super.cleanup();
+    synchronized (lock)
+    {
+        lock--;
+        if(lock == 0)
+        {
+            try 
+            {
+                String str = db.getProperty("rocksdb.stats");
+                System.out.println(str);
+            } 
+            catch (RocksDBException ex) 
+            {
+                throw new DBException("Error while trying to print RocksDB statistics");
+            }
+            System.out.println("Cleaning up RocksDB database...");
+            db.close();
+            options.dispose();
+        }
+    }
+    int batchcount = writebatch.count();
+    if (batchcount != 0)
+    {
+        System.out.println("CLEANUP "+ batchcount +"records not written, pending in writebatch for threadid = "+threadid);                  
+    }
+    System.out.println("Cleanup of YSCBClient is over for threadid = "+threadid);
+}
+
+private byte[] serialize(HashMap<String, ByteIterator> values) {
+    ByteBuffer buf = ByteBuffer.allocate(BYTE_BUFFER_SIZE);
+    // Number of elements in HashMap (int)
+    buf.put((byte) values.size());
+    for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
+        // Key string length (int)
+        buf.put((byte) entry.getKey().length());
+        // Key bytes
+        buf.put(entry.getKey().getBytes());
+        // Value bytes length (long)
+        buf.put((byte) entry.getValue().bytesLeft());
+        // Value bytes
+        buf.put((entry.getValue().toArray()));
+    }
+
+    byte[] result = new byte[buf.position()];
+    buf.get(result, 0, buf.position());
+    return result;
+}
+
+private HashMap<String, ByteIterator> deserialize(byte[] bytes) {
+    HashMap<String, ByteIterator> result = new HashMap<String, ByteIterator>();
+    ByteBuffer buf = ByteBuffer.wrap(bytes);
+    int count = buf.getInt();
+    for (int i = 0; i < count; i++) {
+        int keyLength = buf.getInt();
+        byte[] keyBytes = new byte[keyLength];
+        buf.get(keyBytes, buf.position(), keyLength);
+
+        int valueLength = buf.getInt();
+        byte[] valueBytes = new byte[valueLength];
+        buf.get(valueBytes, buf.position(), valueLength);
+
+        result.put(new String(keyBytes), new ByteArrayByteIterator(valueBytes));
+    }
+    return result;
+}
+```
+
+}
+
+After careful analysis it seems a different library we are using for the project when running on client/server mode was corrupting RocksDB's native memory, Sorry I cannot give more details. The issue can be closed now. 
+

@@ -1,0 +1,47 @@
+## Why my librocksdb.so file size is 60MB?it's too big,how to optimization the size？thanks!
+
+```
+-rw-r--r--  1 root root 196853756 Nov 21 06:55 librocksdb.a
+lrwxrwxrwx  1 root root        19 Nov 21 07:00 librocksdb.so -> librocksdb.so.4.1.0
+lrwxrwxrwx  1 root root        19 Nov 21 07:00 librocksdb.so.4 -> librocksdb.so.4.1.0
+lrwxrwxrwx  1 root root        19 Nov 21 07:00 librocksdb.so.4.1 -> librocksdb.so.4.1.0
+-rwxr-xr-x  1 root root  60865048 Nov 21 07:00 librocksdb.so.4.1.0
+```
+
+CXXFLAGS="-flto -Os -s"
+
+lrwxrwxrwx 1 root root   19 Nov 19 17:36 librocksdb.so -> librocksdb.so.4.1.0
+lrwxrwxrwx 1 root root   19 Nov 19 17:36 librocksdb.so.4 -> librocksdb.so.4.1.0
+lrwxrwxrwx 1 root root   19 Nov 19 17:36 librocksdb.so.4.1 -> librocksdb.so.4.1.0
+-rwxr-xr-x 1 root root 1.5M Nov 19 17:36 librocksdb.so.4.1.0
+
+upx --lzma librocksdb.so.4.1.0 
+
+total 672K
+-rwxr-xr-x 1 root root 679K Nov 22 13:03 librocksdb.so.4.1.0
+
+hi, @nwcs ,  i have a question, are these params usefull for librocksdb.a?
+with "-s",  there are no symbols in binary,  how can you debug a program?
+
+most of the file size is debug information, so unless you're constrained by storage space or deployment bandwidth, there isn't anything to worry about.
+~w/git/dht_rocksdb/rocksdb bluekey-dl-vm0& ls -l librocksdb.so.4.0.0-rwxr-xr-x 1 msb users 60271914 Nov 21 17:24 librocksdb.so.4.0.0~w/git/dht_rocksdb/rocksdb bluekey-dl-vm0& size $_   text    data     bss     dec     hex filename3257226   74036   16824 3348086  331676 librocksdb.so.4.0.0~w/git/dht_rocksdb/rocksdb bluekey-dl-vm0& strip $_~w/git/dht_rocksdb/rocksdb bluekey-dl-vm0& ls -l $_-rwxr-xr-x 1 msb users 3334040 Nov 22 19:15 librocksdb.so.4.0.0
+
+```
+On Saturday, November 21, 2015 7:10 AM, aegsea <notifications@github.com> wrote:
+```
+
+Why my librocksdb.so file size is 60MB?it's too big,how to optimization the size？thanks!
+-rw-r--r--  1 root root 196853756 Nov 21 06:55 librocksdb.a
+lrwxrwxrwx  1 root root        19 Nov 21 07:00 librocksdb.so -> librocksdb.so.4.1.0
+lrwxrwxrwx  1 root root        19 Nov 21 07:00 librocksdb.so.4 -> librocksdb.so.4.1.0
+lrwxrwxrwx  1 root root        19 Nov 21 07:00 librocksdb.so.4.1 -> librocksdb.so.4.1.0
+-rwxr-xr-x  1 root root  60865048 Nov 21 07:00 librocksdb.so.4.1.0
+—
+Reply to this email directly or view it on GitHub.  
+
+If you are using rocksdb for android/ios (where smaller code-size has good benefits), you can also use rocksdb lite:
+https://github.com/facebook/rocksdb/blob/master/ROCKSDB_LITE.md
+
+Production Environment 
+CXXFLAGS="-flto -Os -s"
+

@@ -1,0 +1,4 @@
+Resolved raw use of parametrized class issues.
+
+Okay, I have built and tested this here and all looks good. It is a simple change, so I will merge it.
+

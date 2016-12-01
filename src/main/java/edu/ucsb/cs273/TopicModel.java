@@ -19,6 +19,8 @@ public class TopicModel {
     private String directory;
     File modelLocation;
     File instancesLocation;
+    InstanceList instances;
+    ParallelTopicModel model;
     int numTopics = 100;
 
     public TopicModel(String targetDir, File modelLoc, File instancesLoc){
@@ -33,8 +35,12 @@ public class TopicModel {
     }
 
     public void load() throws Exception{
-        ParallelTopicModel model = ParallelTopicModel.read(modelLocation);
-        InstanceList instances = InstanceList.load(instancesLocation);
+        model = ParallelTopicModel.read(modelLocation);
+        instances = InstanceList.load(instancesLocation);
+    }
+
+    public void testLoad() throws Exception{
+        load();
 
         // The data alphabet maps word IDs to strings
         Alphabet dataAlphabet = instances.getDataAlphabet();
@@ -48,10 +54,6 @@ public class TopicModel {
         }
         System.out.println(out);
 
-        // Estimate the topic distribution of the first instance,
-        //  given the current Gibbs state.
-        double[] topicDistribution = model.getTopicProbabilities(0);
-
         // Get an array of sorted sets of word ID/count pairs
         ArrayList<TreeSet<IDSorter>> topicSortedWords = model.getSortedWords();
 
@@ -60,7 +62,7 @@ public class TopicModel {
             Iterator<IDSorter> iterator = topicSortedWords.get(topic).iterator();
 
             out = new Formatter(new StringBuilder(), Locale.US);
-            out.format("%d\t%.3f\t", topic, topicDistribution[topic]);
+            out.format("%d\t", topic);
             int rank = 0;
             while (iterator.hasNext() && rank < 5) {
                 IDSorter idCountPair = iterator.next();
@@ -96,22 +98,14 @@ public class TopicModel {
     }
 
     public void run() throws Exception {
-
         // Begin by importing documents from text to feature sequences
-        ArrayList<Pipe> pipeList = new ArrayList<Pipe>();
+        ArrayList<Pipe> pipeList = Util.getStandardPipes();
 
-        // Pipes: lowercase, tokenize, remove stopwords, map to features
-        pipeList.add(new Input2CharSequence());
-        pipeList.add(new CharSequenceLowercase());
-        pipeList.add(new CharSequence2TokenSequence(Pattern.compile("\\p{L}[\\p{L}\\p{P}]+\\p{L}")));
-        pipeList.add(new TokenSequenceRemoveStopwords(new File("stoplists/en.txt"), "UTF-8", false, false, false));
-        pipeList.add(new TokenSequence2FeatureSequence());
-
-        InstanceList instances = new InstanceList(new SerialPipes(pipeList));
+        instances = new InstanceList(new SerialPipes(pipeList));
 
         instances.addThruPipe(new FileIterator(directory));
 
-        ParallelTopicModel model = new ParallelTopicModel(numTopics, 1.0, 0.01);
+        model = new ParallelTopicModel(numTopics, 1.0, 0.01);
 
         model.addInstances(instances);
 

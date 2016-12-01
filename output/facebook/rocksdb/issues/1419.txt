@@ -1,0 +1,57 @@
+Summary: Currently our skip-list have an optimization to speedup sequential
+inserts from a single stream, by remembering the last insert position.
+We extend the idea to support sequential inserts from multiple streams,
+and even tolerate small reordering wihtin each stream.
+
+This PR is the interface part adding the following:
+- Add `memtable_insert_prefix_extractor` to allow specifying prefix for each key.
+- Add `InsertWithHint()` interface to memtable, to allow underlying
+  implementation to return a hint of insert position, which can be later
+  pass back to optimize inserts.
+- Memtable will maintain a map from prefix to hints and pass the hint
+  via `InsertWithHint()` if `memtable_insert_prefix_extractor` is non-null.
+
+Test Plan: `make all check`. Will add more test and benchmarks in later
+PR.
+
+cc @mvm3k @al13n321
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1419/files/40f473a1c330f0a47012a1cf6ab2103952c96478..8462d451fcf5af9b7be249b5056cd735aa8739bd) - [changes since last import](https://github.com/facebook/rocksdb/pull/1419/files/40f473a1c330f0a47012a1cf6ab2103952c96478..8462d451fcf5af9b7be249b5056cd735aa8739bd)
+
+PR updated:
+- Improve inline comment. Change the option name to `memtable_insert_with_hint_prefix_extractor`.
+- whitelist keys from using hints if prefix for the key is empty.
+- disabling the feature if concurrent writes are allowed.
+
+Pending work:
+- Unit test
+
+Will appear in another PR:
+- Make `Arena` compatible with `std::allocator` and use it for allocating the hints map.
+
+Many tests are failing.
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1419/files/8462d451fcf5af9b7be249b5056cd735aa8739bd..c4a4273714864ca8002853bfec9ed0ccfb3b4faa) - [changes since last import](https://github.com/facebook/rocksdb/pull/1419/files/8462d451fcf5af9b7be249b5056cd735aa8739bd..c4a4273714864ca8002853bfec9ed0ccfb3b4faa)
+
+Fix test.
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1419/files/c4a4273714864ca8002853bfec9ed0ccfb3b4faa..c866d4a0f982fba422cde9ff32a2aded24b3a980) - [changes since last import](https://github.com/facebook/rocksdb/pull/1419/files/c4a4273714864ca8002853bfec9ed0ccfb3b4faa..c866d4a0f982fba422cde9ff32a2aded24b3a980)
+
+Adding db_memtable_test to test the new options. Build will fail before landing #1449.
+
+Also, mention it in HISTORY.md
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1419/files/c866d4a0f982fba422cde9ff32a2aded24b3a980..df4c5494c25dd58da4c6a43fe2c52b231ee56cde) - [changes since last import](https://github.com/facebook/rocksdb/pull/1419/files/c4a4273714864ca8002853bfec9ed0ccfb3b4faa..df4c5494c25dd58da4c6a43fe2c52b231ee56cde)
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1419/files/df4c5494c25dd58da4c6a43fe2c52b231ee56cde..58487d625046d90f36e2b226e1fb85562d336ed3) - [changes since last import](https://github.com/facebook/rocksdb/pull/1419/files/c4a4273714864ca8002853bfec9ed0ccfb3b4faa..58487d625046d90f36e2b226e1fb85562d336ed3)
+
+Rebase and update HISTORY.md.
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1419/files/58487d625046d90f36e2b226e1fb85562d336ed3..1070bf5b92e66a9c6d4e552af44384dd0f2a7be4) - [changes since last import](https://github.com/facebook/rocksdb/pull/1419/files/58487d625046d90f36e2b226e1fb85562d336ed3..1070bf5b92e66a9c6d4e552af44384dd0f2a7be4)
+
+clang-format
+
+Fix `InsertWithHint` not mark with `override`.
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1419/files/1070bf5b92e66a9c6d4e552af44384dd0f2a7be4..fd98e10649ba0c29e0c78651ebc45f6e35388ae0) - [changes since last import](https://github.com/facebook/rocksdb/pull/1419/files/1070bf5b92e66a9c6d4e552af44384dd0f2a7be4..fd98e10649ba0c29e0c78651ebc45f6e35388ae0)
+

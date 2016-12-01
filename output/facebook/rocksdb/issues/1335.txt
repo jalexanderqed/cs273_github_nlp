@@ -1,0 +1,23 @@
+For issue: https://github.com/facebook/rocksdb/issues/1333
+
+I also modified other relevant code.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+LGTM, Thanks @rockeet, I have some minor comments.
+Can you also add a simple unit test if possible ?
+
+Passing level to table builder is fine to me. I think what is needed more is whether the file is the bottonmost level to me. I assume you only want to apply strong compression in the bottommost level, which you can get from Compaction::bottommost_level(). 
+
+@IslamAbdelRahman Thanks for your review again. A unit test is not need now, because this code change does not impact any existing code, ---- there is no any existing code in rocksdb really using this newly added 'level'. The 'level' is only used in our custom TableFactory. Or you could give me a unit test scenario in rocksdb ?
+
+@siying I used `sub_compact->compaction->output_level()` for `TableBuilderOptions::level` and didn't use `Compaction::bottommost_level()`, is this right? ref:[https://github.com/rockeet/rocksdb/commit/88518a284e9996fd7e2e70d0fd4ccfe885190eae?diff=unified#diff-6e99ed9f03dfac4fb36ae1a1e5a770bbR1140](url)
+
+@rockeet, I believe what @siying meant was that the TableBuilder will now know the level number but what you really want to know is if this level is the bottommost level or not, and you can know what is the bottommost level by checking Compaction::bottommost_level()
+
+@rockeet what you are doing is correct. I was just saying that, you could use a better indication of whether you need to use your compression, which is whether the file is for the bottom-most level.
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+Thanks @rockeet !
+

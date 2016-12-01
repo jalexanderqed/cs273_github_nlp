@@ -1,0 +1,48 @@
+Good day,
+
+We use Go and [gorocksdb](https://github.com/tecbot/gorocksdb).
+
+However, as far as I'm concerned, gorocksdb requires an exposed C function [here](https://github.com/facebook/rocksdb/blob/master/include/rocksdb/c.h) in order to run table_options.block_cache->GetUsage();
+
+If that is the case, can we go ahead and make this modification and send a PR here first?
+
+Thanks.
+
+JC
+
+I should add that yes, we wanted to get the size of the block cache through gorocksdb, and intend to send a PR to gorocksdb once this C function is added here.
+
+Thanks @jchiu0, will be waiting for the C API pull request
+
+Hihi, I am not really allowed to push here.. Can I be added?
+
+Sorry @jchiu0, I don't understand what do you mean by `not allowed to push`, Can you send a pull request ?
+
+I thought I need to push to a remote branch before I can send a pull
+request?
+
+I don't have any permission to push this remote branch.
+
+Am I getting something wrong here?
+
+Thanks!
+
+On Tue, Aug 23, 2016 at 1:58 AM, Islam AbdelRahman <notifications@github.com
+
+> wrote:
+> 
+> Sorry @jchiu0 https://github.com/jchiu0, I don't understand what do you
+> mean by not allowed to push, Can you send a pull request ?
+> 
+> —
+> You are receiving this because you were mentioned.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1289#issuecomment-241495961,
+> or mute the thread
+> https://github.com/notifications/unsubscribe-auth/ATYzutTpaejf1K4vpAg3NPFGbr9yfS7Dks5qieM7gaJpZM4JpSw8
+> .
+
+## 
+
+Jay Chiu
+

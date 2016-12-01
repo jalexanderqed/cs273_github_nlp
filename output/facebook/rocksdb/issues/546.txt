@@ -1,0 +1,22 @@
+Summary:
+In 3.10 the C++ code was extended with a MemEnv implementation. This
+is now also available in RocksJava.
+
+Changes:
+- Extraced abstract super class Env
+- Introduced RocksMemEnv
+- Remove unnecessary disposeInternal method. The disposal of the default environment is managed by C++ so there needs to be no disposeInternal method in Java.
+- Introduced a RocksMemEnvTest, which is aligned with the C++ equivalent.
+
+Test Plan:
+make rocksdbjava
+make jtest
+
+Reviewers: adamretter, yhchiang, ankgup87
+
+Subscribers: dhruba
+
+Differential Revision: https://reviews.facebook.net/D35619
+
+Great patch!  Thanks for the contribution!
+

@@ -1,0 +1,22 @@
+After initial crash process using debug build of rocks 4.2.0 consistently fails with the error below. Please let me know what additional information you would like me to provide. I don't have core dump for initial crash to confirm that this failure caused the first crash but subsequent restarts result in the following assert failure included in this message.
+
+Thank you,
+Dmitry
+#0  0x00007f3bdfc3ccc9 in __GI_raise (sig=sig@entry=6) at ../nptl/sysdeps/unix/sysv/linux/raise.c:56
+#1  0x00007f3bdfc400d8 in __GI_abort () at abort.c:89
+#2  0x00007f3bdfc35b86 in __assert_fail_base (fmt=0x7f3bdfd86830 "%s%s%s:%u: %s%sAssertion `%s' failed.\n%n", assertion=assertion@entry=0x7f3b96983588 "search_left_bound == (int32_t)level_files.size() || search_right_bound == -1",
+
+```
+file=file@entry=0x7f3b969834d8 "db/forward_iterator.cc", line=line@entry=321, function=function@entry=0x7f3b96985260 "void rocksdb::ForwardIterator::SeekInternal(const rocksdb::Slice&, bool)") at assert.c:92
+```
+#3  0x00007f3bdfc35c32 in __GI___assert_fail (assertion=0x7f3b96983588 "search_left_bound == (int32_t)level_files.size() || search_right_bound == -1", file=0x7f3b969834d8 "db/forward_iterator.cc", line=321,
+
+```
+function=0x7f3b96985260 "void rocksdb::ForwardIterator::SeekInternal(const rocksdb::Slice&, bool)") at assert.c:101
+```
+#4  0x00007f3b9672ca05 in rocksdb::ForwardIterator::SeekInternal(rocksdb::Slice const&, bool) () from /tmp/librocksdbjni1082100708791379795..so
+#5  0x00007f3b9672c0e1 in rocksdb::ForwardIterator::Seek(rocksdb::Slice const&) () from /tmp/librocksdbjni1082100708791379795..so
+#6  0x00007f3b96717134 in rocksdb::DBIter::Seek(rocksdb::Slice const&) () from /tmp/librocksdbjni1082100708791379795..so
+#7  0x00007f3b968b38b0 in rocksdb::TtlIterator::Seek(rocksdb::Slice const&) () from /tmp/librocksdbjni1082100708791379795..so
+#8  0x00007f3b96639899 in Java_org_rocksdb_RocksIterator_seek0 () from /tmp/librocksdbjni1082100708791379795..so
+

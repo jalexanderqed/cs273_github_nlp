@@ -1,0 +1,21 @@
+These are really micro optimizations, small and not at all important. Just what immediately jumped at me when looking through the code.
+
+Nice :) It looks like there is a minor problem with code formatting: https://travis-ci.org/facebook/rocksdb/jobs/81066094
+
+You can use `make format` to fix the code formatting automatically.
+
+Ok, thanks. I wasn't aware of that code formatting is checked automatically and may lead to failing builds.
+I tried to run `make format`, but was unsuccessful. First, it came up with a message that `clang-format-diff.py` was not installed, and suggested to fetch it via `curl http://goo.gl/iUW1u2`.
+That command produces an HTTP 302 to `https://raw.github.com/leaningtech/duetto-clang/master/tools/clang-format/clang-format-diff.py`. So I download that file and make it executable. After that, `make format` produced some `file not found` when the python script tried to start a subprocess. Debugging the script, I found that it requires `clang-format`. So I installed that (clang-format-3.5), too. After that, the script detected that util/env_posix.cc needed some reformatting, but it didn't apply any changes although it told it would. Amending the last commit with the changes also produced absolutely no difference to the commit I pushed.
+So I am stuck now, and don't know what formatting changes are required.
+
+Sorry for the troubles, I added the format checking in Travis yesterday/today, so it is pretty new :) I cloned your repo and ran `make format` on the micro-optimization branch and it didn't find any formatting issues. `make format` only checks the newest commit, so this is expected. What worked for me is to squash the commits into a single commit and then do `make format`. I believe that we are generally shooting for one commit per pull request so squashing might be a good idea anyway (but I will let someone else from the team with more experience comment on that) :)
+
+Formatting issues seem to be fixed now. Build is still failing, but it looks like some unrelated Java-based tests fail.
+
+Thanks for this contribution @jsteemann .
+
+In the future, we'd prefer if you'd squash all the commits into a single one (per PR). That makes our git history a bit easier to read.
+
+Thanks, will do.
+

@@ -1,0 +1,76 @@
+In Java: if one wants to open a db without knowing all the column families, the listColumnFamilies can be used. However that returns a list of byte[] whereas for opening the database one needs a list of ColumnFamilyDescriptor which itself is built from a String.
+In addition it is not clear how the options can influence the return of listColumnFamilies. 
+
+@xpromache true that doesn`t seem consistent. I think the correct way to change it would be to use a byte array also within the ColumnFamilyDescriptor. Because the name of a column family is stored bytewise and contains no encoding information.
+@yhchiang what do you think ?
+
+Another thing is the lack of information in the JavaDoc. The Options(DBOptions) instance is only necessary to transport the environment.
+
+I would alter the code for 3.10 as soon as yhchiang shared his opinion on the first topic.
+
+@yhchiang did you have time to look at this.
+
+Hello @xpromache, @fyrz.  I think taking byte array would be the right way to go, but this means an API change and old database might not be able to open with the new code.  The code is submitted in https://github.com/facebook/rocksdb/commit/18004d2f202712546d8769c0b666aae63c60d7d7 in Oct and it's only in the latest release, and I hope it's not too late to make this change?
+
+@yhchiang true. Another possibility would be to put a deprecated annotation in the string constructor and invent a new one taking a byte array and drop the deprecated constructor in 3.11
+
+@fyrz: That sounds a good plan to me.
+@ankgup87: we are thinking about making ColumnFamilyDescriptor take byte-array instead of string, but this involves public API change.  Can I know your opinion on this?
+
+@yhchiang made pull request for this here. see: https://github.com/facebook/rocksdb/pull/441
+
+@yhchiang this one can be closed.
+
+I close this as the code was aligned as proposed above. (See for reference: https://github.com/facebook/rocksdb/pull/441)
+
+@xpromache feel free to open that one here again if the pull request didnt adress your concerns.
+
+Ok, so I have now updated to the latest rocksdb and changed my code to use byte[] instead of strings for column families, just to discover that internally they are still stored somehow as null terminated strings :(
+
+The following piece of code gives an error that the Column Family 0x0001 already exists although I only created 0x0000.
+
+package inutil;
+
+import org.rocksdb.ColumnFamilyDescriptor;
+import org.rocksdb.ColumnFamilyHandle;
+import org.rocksdb.CompressionType;
+import org.rocksdb.RocksDB;
+import org.rocksdb.Options;
+
+public class RdbTest {
+    public static void main(String[] args) throws Exception {
+          RocksDB.loadLibrary();
+          Runtime.getRuntime().exec("rm -r /tmp/rdb-test");
+          Options options = new Options().setCreateIfMissing(true).setCompressionType(CompressionType.SNAPPY_COMPRESSION);
+          RocksDB db = RocksDB.open(options, "/tmp/rdb-test");
+          byte[] b0 =  new byte[]{0,0};
+          byte[] b1 =  new byte[]{0,1};
+
+```
+      ColumnFamilyDescriptor cfd1 = new ColumnFamilyDescriptor(b0);
+      ColumnFamilyDescriptor cfd2 = new ColumnFamilyDescriptor(b1);
+
+      ColumnFamilyHandle cfh1 =  db.createColumnFamily(cfd1);
+      ColumnFamilyHandle cfh2 =  db.createColumnFamily(cfd2);         
+
+      db.close();
+}
+```
+
+}
+
+@xpromache thats correct. As internally the column family name is a string we transform the byte array to a string using a char pointer which leads to zero bytes being interpreted as termination points.
+
+@xpromache is there any reason why someone would store zero bytes ? I mean in my opinion the bug is that it is allowed to pass zero bytes to a string based method.
+
+The thing is that from the java API, Column Families are identified by byte[]. Therefore you would think that any byte[] will do. Same as for the key and values, you can put an arbitrary byte[]. You don't expect (or want) that your byte[] is not ok because it's got a 0 in it...
+In my application I need short numbers as Column Families so I encode them on byte[] of length 2 0x0000, 0x0001...
+
+(I suggested when I opened this issue to have Strings as Column Family identifier but there was a problem with encoding).
+
+@xpromache ok valid point. Let me think about it. The byte array thing is only because you want a homogenous behavior between listColumnFamilies and createColumnFamily. From listColumnFamilies we cannot determine the String encoding anymore that`s the point.
+
+@xpromache i provided a solution see pull requests.
+
+thanks a lot!
+

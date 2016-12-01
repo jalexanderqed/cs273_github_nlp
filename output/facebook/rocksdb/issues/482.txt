@@ -1,0 +1,5 @@
+While fixing the RocksDB ColumnFamily name the TTL DB
+wasn`t touched. This commit resolves this.
+
+Okay this looks good to me. As this is a small fix and straight-forward fix to an intermittent issue in a limited part of the Java API, I am happy to directly merge this now.
+

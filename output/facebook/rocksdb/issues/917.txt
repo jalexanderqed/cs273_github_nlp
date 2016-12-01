@@ -1,0 +1,12 @@
+Should fix #634.
+
+This re-enabled cross compiling 32-bit on both 64-bit Mac and 64-bit Linux.
+
+Hey @warrenfalk , why close this?
+
+I accidentally opened the pull request for an incomplete commit at first.
+
+I didn't reopen because I later realized that although I fixed the one compile error, I wasn't able to test it because the main test crashes in 32 bit.  Also on Mac there were a huge number of other warnings when compiling 32 bit.  Ultimately it looks like a lot more work may need to be done to get 32 bit working.
+
+Since it does fix the bug, I may submit another pull request, even though 32 bit isn't all the way there yet.
+

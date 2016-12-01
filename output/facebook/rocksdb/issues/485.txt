@@ -1,0 +1,10 @@
+This is a BW-Tree implementation of Memtable for RocksDB.
+It was done as part of Facebook Open Academy.
+The original paper by Microsoft Research can be viewed at http://research.microsoft.com/pubs/178758/bw-tree-icde2013-final.pdf
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+@YosubShin can you rebase that to head ? This branch is 561 commits behind.
+
+I close this one in favor to the rebased one.
+

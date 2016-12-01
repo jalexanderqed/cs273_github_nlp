@@ -1,0 +1,26 @@
+This is a small tweak to the Makefile that also verifies that the unity code added in 93e6b5e9 still builds when running 'make check'.
+
+How long time does unity build take? `make check` is a frequent part of our workflow and it would suck if it got 2x slower. Can we just make unity build part of travis standard test?
+
+The unity build should be much faster when recompiling a significant fraction or all of the sources. It can be slower for a one line change. But you might want to try it as each project is different. In particular, using the unity on Travis where each build is a full build can result in _spectacular_ improvements in compilation time. To do this you would need to build the rocksdb library using the unity file instead of the individual sources, and then link against that instead of the static or dynamic library.
+
+@vinniefalco I don't think it matters, since its all exactly the same code just packaged differently.
+
+@igorcanadi I've noticed that 'make clean && make unity' runs a lot faster than 'make clean && make', so the difference might be negligible.
+
+However I'm also in favor of adding it to just travis instead of the full Makefile.
+
+@tdfischer  It makes an enormous difference. Compare compiling 40 different files simultaneously, which share the same headers, versus compiling the concatenation of all 40 files as one unit.
+
+What is the status of this? Looks like Travis is failing
+
+@vinniefalco thats exactly what I said. 'make unity' vs 'make'. What "doesn't matter" is referring to whether or not the tests link against a .so built via the unity approach or a .so built using traditional methods.
+
+@igorcanadi Branch updated. It now only builds unity in travis instead of every time 'make check' is ran, though there are some other unity-related errors involving anonymous namespaces which cause travis to fail.
+
+If there are fresh compile errors it means that new commits were made which broke the unity build. Which just underscores the need to get this merged so that people will know when they break it!
+
+Yeah, it will definitely be useful. Could we also fix unity bugs before committing this, so that our travis build doesn't start failing? :)
+
+@igorcanadi fixed for real this time ;)
+

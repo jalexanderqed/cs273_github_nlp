@@ -1,0 +1,12 @@
+In response to https://github.com/facebook/osquery/pull/1284, we'd
+like to add a test to ensure that the RocksDB we're building with was
+compiled with Snappy support.
+
+If you all would prefer a different approach with this, happy to oblige.
+
+I successfully built and ran the tests for this on my local machine.
+
+Looks like travis is trying to pull from origin:public-compression-header instead of marpaia:public-compression-header. Weak.
+
+Closing and re-opening in another pull to see if I can trick travis into pulling from my branch.
+

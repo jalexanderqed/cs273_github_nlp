@@ -1,0 +1,12 @@
+I tried to build master branch of rocksdb on Windows 7.
+I think these files should not be included in release build:
+
+```
+table/mock_table.cc
+util/mock_env.cc
+util/testharness.cc
+util/testutil.cc
+```
+
+@strrchr testharness.cc and testutil.cc are currently required by the code. I tried to move them to a test only library but failed.
+

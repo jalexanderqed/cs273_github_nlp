@@ -1,0 +1,2 @@
+Currently the expectation is that `make check` builds o files differently than necessary for rocksdbjava
+

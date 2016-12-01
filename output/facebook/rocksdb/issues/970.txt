@@ -1,0 +1,7 @@
+Cumulative compaction: 36.98 GB write, 11.01 MB/s write, 42.67 GB read, 12.70 MB/s read, 6183.1 seconds
+Interval compaction: 18.80 GB write, 31.62 MB/s write, 24.38 GB read, 41.00 MB/s read, 3369.7 seconds
+
+Cumulative metrics are collected since process start.
+Interval metrics are collected since the previous measurement interval.
+The measurement interval is configurable.
+

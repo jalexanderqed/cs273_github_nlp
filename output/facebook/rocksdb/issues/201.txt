@@ -1,0 +1,43 @@
+Release: 2.8
+Tag: question
+1 Is it possible to have multiple merge operators for the same data base? If yes then is there a way to atomically switch (reset()) the merge operator, or that is left to the application programmer?
+example: I am currently using a merge operator for appending to existing data in the value fields, using : m_options.merge_operator.reset(new StringAppendTESTOperator('#'));
+Likewise, I would like to use another merge operator, on the same DB for operations where instead of append, I need to do say a "erase" of a portion of the value.
+
+2 Going through the sample code on StringAppendTESTOperator(char\* delimit), I see it is allocated on the heap using merge_operator.reset(new StringAppendTESTOperator('#'));
+In the destructor of my db, am I supposed to explicitly call delete for the merge operator, apart from delete on the db_ptr itself?
+
+Hi, 
+regarding 1).
+I would recommend https://github.com/facebook/rocksdb/wiki/Merge-Operator#tips "Multiplexing".
+As far as I can see only one "Merge Operator" per database can be used.
+I had kind of the same problem and added at 16bit integer at the front of my data.
+Inside the merge operator I have something like this. Not exactly the code but you get the point.
+
+```
+const char* op_data = value.data() + sizeof(uint16_t);
+uint16_t op_type;
+memcpy(&op_type, value.data(), sizeof(uint16_t));
+switch (op_type):
+    case APPEND:
+       ....
+    case DELETE:
+      ......
+```
+
+Important: I don't think this multiplexing works with a 'Associativite Merge Operator. I'm using a "Non-Associative Merge Operator" and for simplicity my PartialMerge returns always 'False'.
+If this becomes a performance problem it is still possible to change the implementation for PartialMerge afterwards.
+
+Regarding 2)
+merge_operator is a smart pointer => The destructor of the db calls the destructor of merge_operator, which calls the destructor of StringAppendTESTOperator. So there is no need to delete merge_operator yourself. I never deleted the MergeOperator myself and valgrind doesn't complain about that.
+
+Side note: Not all pointers at the options object are smart pointers. For example the 'filter_policy' is not. => You have to delete the return value of NewBloomFilterPolicy yourself. Which is annoying from my point of view and I would appreciate a API change here, even if its backward breaking.
+
+Thanks this really helped!
+
+Thanks for answering the question @stephan-hof!
+
+We are considering changing raw pointers in Options to smart pointers. Raw pointers are inherited from LevelDB. It will be painful as it's breaking old APIs. :( However, it has been done before: https://github.com/facebook/rocksdb/commit/8d007b4aaf581a54756759c58270eb6a4d70f472#diff-88dc7475eedf918122374be6d7c2c151R13
+
+@atishbits feel free to reopen the issue if you have any more questions. You can also join our group https://www.facebook.com/groups/rocksdb.dev/
+

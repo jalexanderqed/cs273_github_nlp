@@ -1,0 +1,9 @@
+In commit 3214905 the following functions were removed: `rocksdb_options_set_max_grandparent_overlap_factor`, `rocksdb_options_set_expanded_compaction_factor`, and `rocksdb_options_set_source_compaction_factor`.
+
+However in `include/rocksdb/c.h` those functions still have prototypes on lines [565](https://github.com/facebook/rocksdb/blob/master/include/rocksdb/c.h#L565), [562](https://github.com/facebook/rocksdb/blob/master/include/rocksdb/c.h#L562), and [661](https://github.com/facebook/rocksdb/blob/master/include/rocksdb/c.h#L661). If somebody attempted to use those functions, their program would compile but not link.
+
+Thanks @ammongit for reporting the issue !
+Do you want to send a pull request to fix the issue ?
+
+Sure. It's available at #1326.
+

@@ -1,0 +1,6 @@
+Fixes hdfs access for public hadoop distributions. Compiles and tested (using db_bench) on CDH 4.4.
+
+This is great, thanks! I have couple of inline comments, but overall looks great.
+
+Igor - thanks for the feedback. 
+

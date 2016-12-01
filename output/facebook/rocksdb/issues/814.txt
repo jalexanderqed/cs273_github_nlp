@@ -1,0 +1,114 @@
+There is no document for how to compile rocksdb with lz4 support, I work on it for whole afternoon, failed.
+
+You just have to install it on your system -- our compile process detects this automatically: https://github.com/facebook/rocksdb/blob/master/build_tools/build_detect_platform#L263
+
+Thanks, I get it. But I got another issue with how to link librocksdb.a.
+
+I use `gorocks`, is a golang module. It should compile with `cgo`.
+
+Command:
+
+`CGO_CFLAGS="-I../rocksdb/include" CGO_LDFLAGS="-L../rocksdb" go install ./`
+
+Error:
+
+```
+VERY LONG TEXT ABOVE
+....
+std::__1::future<rocksdb::BackupEngineImpl::CopyResult>::future(std::__1::__assoc_state<rocksdb::BackupEngineImpl::CopyResult>*) in librocksdb.a(backupable_db.o)
+      rocksdb::(anonymous namespace)::ParseCompressionType(std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > const&) in librocksdb.a(options_helper.o)
+      rocksdb::(anonymous namespace)::ParseOptionHelper(char*, rocksdb::OptionType const&, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > const&) in librocksdb.a(options_helper.o)
+      ...
+  "___dynamic_cast", referenced from:
+      rocksdb::ParseColumnFamilyOption(std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > const&, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > const&, rocksdb::ColumnFamilyOptions*) in librocksdb.a(options_helper.o)
+      void std::__1::__sort<rocksdb::(anonymous namespace)::CompareLogByPointer&, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*>(std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, rocksdb::(anonymous namespace)::CompareLogByPointer&) in librocksdb.a(wal_manager.o)
+      unsigned int std::__1::__sort3<rocksdb::(anonymous namespace)::CompareLogByPointer&, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*>(std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, rocksdb::(anonymous namespace)::CompareLogByPointer&) in librocksdb.a(wal_manager.o)
+      unsigned int std::__1::__sort4<rocksdb::(anonymous namespace)::CompareLogByPointer&, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*>(std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, rocksdb::(anonymous namespace)::CompareLogByPointer&) in librocksdb.a(wal_manager.o)
+      unsigned int std::__1::__sort5<rocksdb::(anonymous namespace)::CompareLogByPointer&, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*>(std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, rocksdb::(anonymous namespace)::CompareLogByPointer&) in librocksdb.a(wal_manager.o)
+      bool std::__1::__insertion_sort_incomplete<rocksdb::(anonymous namespace)::CompareLogByPointer&, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*>(std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, rocksdb::(anonymous namespace)::CompareLogByPointer&) in librocksdb.a(wal_manager.o)
+  "___gxx_personality_v0", referenced from:
+      _rocksdb_open in librocksdb.a(c.o)
+      _rocksdb_open_for_read_only in librocksdb.a(c.o)
+      _rocksdb_backup_engine_open in librocksdb.a(c.o)
+      _rocksdb_backup_engine_create_new_backup in librocksdb.a(c.o)
+      _rocksdb_backup_engine_restore_db_from_latest_backup in librocksdb.a(c.o)
+      _rocksdb_open_column_families in librocksdb.a(c.o)
+      _rocksdb_open_for_read_only_column_families in librocksdb.a(c.o)
+      ...
+  "_deflate", referenced from:
+      rocksdb::BlockBasedTableBuilder::WriteBlock(rocksdb::Slice const&, rocksdb::BlockHandle*) in librocksdb.a(block_based_table_builder.o)
+  "_deflateEnd", referenced from:
+      rocksdb::BlockBasedTableBuilder::WriteBlock(rocksdb::Slice const&, rocksdb::BlockHandle*) in librocksdb.a(block_based_table_builder.o)
+  "_deflateInit2_", referenced from:
+      rocksdb::BlockBasedTableBuilder::WriteBlock(rocksdb::Slice const&, rocksdb::BlockHandle*) in librocksdb.a(block_based_table_builder.o)
+  "_inflate", referenced from:
+      rocksdb::Zlib_Uncompress(char const*, unsigned long, int*, unsigned int, int) in librocksdb.a(format.o)
+  "_inflateEnd", referenced from:
+      rocksdb::Zlib_Uncompress(char const*, unsigned long, int*, unsigned int, int) in librocksdb.a(format.o)
+  "_inflateInit2_", referenced from:
+      rocksdb::Zlib_Uncompress(char const*, unsigned long, int*, unsigned int, int) in librocksdb.a(format.o)
+ld: symbol(s) not found for architecture x86_64
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+```
+
+I change my install command, add `-lz` flag
+
+```
+CGO_CFLAGS="-I../rocksdb/include" CGO_LDFLAGS="-L../rocksdb -lz" go install ./
+```
+
+The error become:
+
+```
+VERY LONG TEXT ABOVE
+...
+(options_helper.o)
+      ...
+  "___dynamic_cast", referenced from:
+      rocksdb::ParseColumnFamilyOption(std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > const&, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > const&, rocksdb::ColumnFamilyOptions*) in librocksdb.a(options_helper.o)
+      void std::__1::__sort<rocksdb::(anonymous namespace)::CompareLogByPointer&, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*>(std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, rocksdb::(anonymous namespace)::CompareLogByPointer&) in librocksdb.a(wal_manager.o)
+      unsigned int std::__1::__sort3<rocksdb::(anonymous namespace)::CompareLogByPointer&, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*>(std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, rocksdb::(anonymous namespace)::CompareLogByPointer&) in librocksdb.a(wal_manager.o)
+      unsigned int std::__1::__sort4<rocksdb::(anonymous namespace)::CompareLogByPointer&, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*>(std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, rocksdb::(anonymous namespace)::CompareLogByPointer&) in librocksdb.a(wal_manager.o)
+      unsigned int std::__1::__sort5<rocksdb::(anonymous namespace)::CompareLogByPointer&, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*>(std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, rocksdb::(anonymous namespace)::CompareLogByPointer&) in librocksdb.a(wal_manager.o)
+      bool std::__1::__insertion_sort_incomplete<rocksdb::(anonymous namespace)::CompareLogByPointer&, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*>(std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, std::__1::unique_ptr<rocksdb::LogFile, std::__1::default_delete<rocksdb::LogFile> >*, rocksdb::(anonymous namespace)::CompareLogByPointer&) in librocksdb.a(wal_manager.o)
+  "___gxx_personality_v0", referenced from:
+      _rocksdb_open in librocksdb.a(c.o)
+      _rocksdb_open_for_read_only in librocksdb.a(c.o)
+      _rocksdb_backup_engine_open in librocksdb.a(c.o)
+      _rocksdb_backup_engine_create_new_backup in librocksdb.a(c.o)
+      _rocksdb_backup_engine_restore_db_from_latest_backup in librocksdb.a(c.o)
+      _rocksdb_open_column_families in librocksdb.a(c.o)
+      _rocksdb_open_for_read_only_column_families in librocksdb.a(c.o)
+      ...
+ld: symbol(s) not found for architecture x86_64
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+```
+
+This looks like some library wasn't linked properly. Quick google search led me to this: http://stackoverflow.com/questions/16368480/xcode-when-i-have-a-library-that-is-using-c-why-must-i-use-compile-as-object
+
+I want to make a golang rocksdb server, link all required libraries inside on folder, without any dependencies with system environment.
+
+```
+/project/vendor/include
+     |- rocksdb/c.h ...
+/project/vendor/lib
+     |- librocksdb.a
+     |- liblz4.a
+/project/gofiles
+     |- *.go
+```
+
+`LD_LIBRARY_PATH=vendor/lib  CGO_CFLAGS="-Ivendor/include" CGO_LDFLAGS="-Lvendor/lib -lz -llz4 -lrocksdb" go install ./`
+
+`gorocks` only depends on `rocksdb`, but `rocksdb` seems depends on other libraries, I think I need all the list of rocksdb depends libraries on compile time.
+
+I solved this eventually. Mac OS use DYLD_LIBRARY_PATH instead of LD_LIBRARY_PATH.
+
+DYLD_LIBRARY_PATH=/path/to/rocksdb
+
+Every thing works well.
+
+I still can't compile rocksdb with lz4 support on mac OSX. it just not show any errors.
+
+Are there any way I can force the compile script force compile with lz4, so I can see any error exists.
+

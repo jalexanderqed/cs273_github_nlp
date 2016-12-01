@@ -1,0 +1,7 @@
+Introduced final keyword to parameters with immutable values and classes
+which should not be derived.
+
+Differential: https://reviews.facebook.net/D33417
+
+Okay I have run and tested this here and all looks fine. As it is a small change, I am happy to merge it.
+

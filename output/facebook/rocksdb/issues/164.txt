@@ -1,0 +1,110 @@
+Hi,
+
+I got an error message
+
+org.rocksdb.RocksDBException: IO error: /Volumes/Backup/pbf/planet-140514/nodes/021806.log: Too many open files
+    at org.rocksdb.RocksDB.put(Native Method)
+    at org.rocksdb.RocksDB.put(RocksDB.java:139)
+
+Does the max open files have any limits ?
+
+I open rocksdb with following options:
+
+options = new Options();
+options.setCreateIfMissing(true);
+options.setMaxOpenFiles(-1);
+options.setAllowMmapReads(false);
+options.setAllowMmapWrites(false);
+options.setMaxWriteBufferNumber(4);
+
+When error occurs, the db folder contains about 9620 sst files and folder size is about 19GB.
+The version of RocksDB is 3.0.
+
+Does any one have any suggestion?
+
+Thanks.
+
+After I searched the keywords "Too many open files" in source files, I don't find any things.
+I found this exception should throw by OS X system.
+
+Some information links:
+http://superuser.com/questions/433746/is-there-a-fix-for-the-too-many-open-files-in-system-error-on-os-x-10-7-1
+And many leveled users encounter same issue, I list two links only:
+https://github.com/bitcoinjs/bitcoinjs-server/issues/55
+https://code.google.com/p/leveldb/issues/detail?id=175
+
+To change the system setting seems not the best way to solve this problem.
+Do you have any suggestions to force to db to close opened files ?
+
+Thanks.
+
+Can I know what is the output when you run `ulimit -a` on your OS X command line?  In case it shows a low maximum open files, you can change it by `ulimit -n <your_max_open_files>`.  For instance, `ulimit -n 2048` allows you to open 2048 files at a time.
+
+Hi yhchiang
+
+The output is 
+
+core file size          (blocks, -c) 0
+data seg size           (kbytes, -d) unlimited
+file size               (blocks, -f) unlimited
+max locked memory       (kbytes, -l) unlimited
+max memory size         (kbytes, -m) unlimited
+open files                      (-n) 256
+pipe size            (512 bytes, -p) 1
+stack size              (kbytes, -s) 8192
+cpu time               (seconds, -t) unlimited
+max user processes              (-u) 709
+virtual memory          (kbytes, -v) unlimited
+
+The default number of max opened files is 256, it seems too be small, I will try use large setting.
+Very thanks for your suggestion.
+
+Another my question is when the program run a long time, and there are many new data put into db, the number of un-closed files will increase or it will be in some range?
+
+@yuchi518 check out options.max_open_files. However, your DB seems to have a lot of files. You might want to increase the files sizes. Check out this function, might be useful: https://github.com/facebook/rocksdb/blob/master/include/rocksdb/options.h#L109
+
+Hi @igorcanadi 
+
+OK
+I will try to study that function.
+
+Thanks
+
+@yuchi518  when u use this `ulimit -n <your_max_open_files>` , this is only implemented in current shell, pls pay attention it. Or u can change them forever, go to /etc/security/limits.conf  , add 
+`*                -       nofile          65536`, then reboot you can see it always be changed
+
+@AaronCsy 
+
+Very thanks your suggestion.
+
+I changed them in /etc/sysctl.conf file with following setting
+kern.maxfiles=20480 
+kern.maxfilesperproc=18000
+
+But adding more data, these value should be updated again, doesn't it?
+
+@yuchi518 
+Yeah, I think so.
+
+Closing this issue, but feel free to reopen it if it's not resolved.
+
+hi @yuchi518 did you slove this problem?i across this problem now,it occured when i insert many new data ,i set the ulimit ,but i think if i insert more than current data,it will be occured. 
+
+Hi @haochun,
+
+Yes, it should always occurs when more data are inserted.
+Sometimes I think rocksdb is not suitable for big data, not like other
+NoSQL db.
+
+haochun notifications@github.com 於 2014年11月17日星期一寫道：
+
+> hi @yuchi518 https://github.com/yuchi518 did you slove this problem?i
+> across this problem now,it occured when i insert many new data ,i set the
+> ulimit ,but i think if i insert more than current data,it will be occured.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/164#issuecomment-63249245.
+
+@haochun  @yuchi518  no you can set that setting also to unlimited in addition you can control how many handles are open using options.
+

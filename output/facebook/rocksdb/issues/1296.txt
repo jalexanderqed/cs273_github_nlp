@@ -1,0 +1,23 @@
+Hi, I think I found a bug in the C api. (Not a C++ expert). Can someone sanity check this before I try to fix it?
+https://github.com/facebook/rocksdb/blob/master/db/c.cc#L1790
+If I do this:
+
+```
+rocksdb_options_t a;
+rocksdb_options_t b;
+rocksdb_options_set_memtable_vector_rep(&a);
+rocksdb_options_destroy(a);
+rocksdb_options_set_memtable_vector_rep(&b);
+```
+
+then try to use b, I get segfaults accessing the memtable factory. I'm guessing that's because the shared_ptr memtable_factory destroys the underlying MemtableRepFactory when a is destroyed.
+
+Does this seem to make sense? I'm not very familiar with C++.
+
+Is there any real reason to make this pointer static here? Seems like initializing a separate VectorRepFactory per options here would be quite cheap?
+
+I'm able to work around this by writing my own version of set_memtable_vector_rep that just allocates a new VectorRepFactory.
+
+Hi @adamfaulkner, You are correct.
+I don't see any significant benefit from the way the code is written now, Can you please send a pull request to fix it ?
+

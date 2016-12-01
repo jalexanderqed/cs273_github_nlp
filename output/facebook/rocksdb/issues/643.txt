@@ -1,0 +1,27 @@
+Summary:
+The option bottommost_level_compaction was introduced lately.
+This option breaks the Java API behavior. To prevent the library
+from doing so we set that option to a fixed value in Java.
+
+In future we are going to remove that portion and replace the
+hardcoded options using a more flexible way.
+
+Fixed bug introduced by WriteBatchWithIndex Patch
+
+Lately icanadi changed the behavior of WriteBatchWithIndex.
+See commit: 821cff1
+
+This commit solves problems introduced by above mentioned commit.
+
+Test Plan:
+make rocksdbjava
+make jtest
+
+Reviewers: yhchiang, adamretter, ankgup87
+
+Subscribers: dhruba
+
+Differential Revision: https://reviews.facebook.net/D40647
+
+The patch has been merged.  Close the pull request.
+

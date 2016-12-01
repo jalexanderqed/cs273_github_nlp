@@ -1,0 +1,7 @@
+1. Correct time conversions
+2. Make compile again after deprecated option was removed
+
+looks good to me. thx for the fix. 
+
+also fine for me.
+

@@ -1,0 +1,50 @@
+Hi!
+
+I found a bug here (db/table_cache.cc:95). RocksDB v.4.4.1
+
+```
+Status s = ioptions_.env->NewRandomAccessFile(fname, &file, env_options);
+if (sequential_mode && ioptions_.compaction_readahead_size > 0) {
+  file = NewReadaheadRandomAccessFile(std::move(file),
+                                      ioptions_.compaction_readahead_size);
+}
+```
+
+If the file 'fname' does not exist, and the condition in the next line is true,
+the app crashes inside of NewReadaheadRandomAccessFile because 'file' is null.
+
+This code works fine:
+
+```
+Status s = ioptions_.env->NewRandomAccessFile(fname, &file, env_options);
+if (s.ok() && sequential_mode && ioptions_.compaction_readahead_size > 0) {
+  file = NewReadaheadRandomAccessFile(std::move(file),
+                                      ioptions_.compaction_readahead_size);
+}
+```
+
+Good finding. Do you want to fix it, or you want us to fix it for you?
+
+I'll be happy if you fix it, guys :)
+
+I'm really not very good at pulling requests. Never done it :)
+
+By the way, why doesn't the file exist? Did you manually delete a file?
+
+No, I did not..
+
+In my system I use manual CompactFiles call with parallel background flush and compactions.
+I need this manual compaction to delete obsolete keys on high (4 and 5) levels by CompactionFilter.
+
+So I cought this bug:
+https://github.com/facebook/rocksdb/commit/eef63ef807eaf13b55d07d044ac35152371963ff
+It suddenly happened after 2 weeks of stable work (later I understood why)
+
+Nevertheless, now some of my bases (I use 24 parallel instances) have missed files (fortunatelly, it's just a testing setup at cusomer's side, not a production)
+
+As a result, I saw two types of coredumps:
+1. in CompactFilesImpl() when putting a log message resetted 'unique_ptr<Compaction> c' was used. It is fixed already.
+2. this issue.
+
+Now I'm trying to repair my DBs. The plan is: to start with paranoid_checks=false and call DeleteFile for missed file. Sandbox tests have shown it works..
+

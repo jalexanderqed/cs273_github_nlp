@@ -1,0 +1,16 @@
+- correct OSX format is `libname.major.minor.patch.dylib` and not `libname.dylib.major.minor.patch`
+- closes #666
+
+```
+$ make shared_lib
+... -DOS_MACOSX -DSNAPPY -DGFLAGS=gflags -DZLIB -DBZIP2 -DLZ4 -Wshorten-64-to-32 ... util/vectorrep.cc util/xfunc.cc util/xxhash.cc  \
+         -lsnappy -lgflags -lz -lbz2 -llz4 -o librocksdb.3.13.0.dylib
+ln -fs librocksdb.3.13.0.dylib librocksdb.dylib
+ln -fs librocksdb.3.13.0.dylib librocksdb.3.dylib
+ln -fs librocksdb.3.13.0.dylib librocksdb.3.13.dylib
+```
+
+LGTM at least on OSX.
+
+LGTM.  Thanks for the fix!
+

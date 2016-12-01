@@ -1,0 +1,4 @@
+  calls. #ifdef in the source code and make this a default build option.
+
+Seems to be a Travis timeout issue. Changes are Windows specific
+

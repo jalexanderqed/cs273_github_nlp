@@ -1,0 +1,11 @@
+When running on a ppc64 architecture, the JNI wrapper should not try to use the pre-built librocksdbjni-linux64.so, which only runs on x64 architectures. Consequently, the shared library naming convention should consider the whole architecture name (e.g. X64/PPC64 instead of only 64).
+
+@twiechert Interesting! I can fix this pretty easily, but I need to know what the filename should be on:
+1. PPC Linux?
+2. PPC AIX?
+
+Any ideas?
+
+I would suggest the default values returned by JVM property 'os.name'+ 'os.arch':
+http://lopica.sourceforge.net/os.html
+

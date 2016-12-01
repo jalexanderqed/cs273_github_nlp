@@ -1,0 +1,125 @@
+`env_win.cc` calls `GetSystemTimePreciseAsFileTime` which is only supported on Windows 8 or later:
+https://msdn.microsoft.com/en-us/library/windows/desktop/hh706895(v=vs.85).aspx
+
+CC @yuslepukhin 
+
+@vinniefalco I am aware of it but to date there is not a viable alternative. We are building it only on server platform here. I would not be able to justify to build it on Windows 7.
+
+@yuslepukhin @vinniefalco is there a way to add a guard somewhere and call a different function in older Windows?
+
+@siying Sure one can such a thing providing it they can live with certain failure cases and it is clearly documented. I was not able to come with alternative for us.
+
+What's the failure case?
+
+@siying If you want to conditionally compile code based on the version of Windows being targeted I believe you need to simply check `_WIN32_WINNT` (see https://msdn.microsoft.com/en-us/library/6sehtctf.aspx). I've never done it but maybe something along these lines:
+
+```
+#if _WIN32_WINNT > _WIN32_WINNT_WIN7
+// Windows 8 and later
+#else
+// Windows 7 and earlier
+#endif
+```
+
+@vinniefalco The way to compile conditionally is well understood.
+However, you may have to invest into researching the alternative implementation. There are two requirements for NowMicros() interface 1) Has to be a system time, thus QPC does not fit 2) Has to have micros resolution. While many interfaces on Windows claim to return needed resolution of microseconds or even FILETIME, in practice it is not true. Consecutive calls often return the same values. It will cause log rotation to break and potentially overwrite logs (happens in tests). Also breaks RateLimiter for which both 1) and 2) has to be satisfied although std::condition_variable::wait_until() is buggy itself on Windows.
+I am sure there are other places. The combination of the factors made it prohibitively expensive for me to drive home an all encompassing solution.
+
+1. The initial problem was in log rotation itself. It should not assume that it cannot rotate even faster than one microsecond. I simply wrapped that rename in cycle that checks if file already exists.
+2. Then I reverted NowMicro function to the one using STD.
+3. Log rotation and rate limiter works fine.
+
+Do you agree with this solution? Should I create this as patch? I was looking on NowMicro usage in sources and all of these are using it for measuring durations, etc. I think it could work even with performance counters, but we would need to:
+1. Ensure that it always grows. There was some discussions that it can return incorrect values when execution moves to different core...
+2. Use it even in CondVar for calculating time we want to wait. It should not mix STD and PerfC.
+
+Patch I was testing: koldat/rocksdb@686ad5952ec2eefe88d3319009f8b7b6d666192c
+
+@koldat 
+1) While log rotation may work on your system it has been demonstrated to loose logs on others. However, I am not thinking it is a stop ship
+
+2) A rough draft of a proper fix was demonstrated by @msb-at-yahoo using
+
+  static auto p = GetProcAddress(GetModuleHandle("kernel32.dll"),
+            "GetSystemTimePreciseAsFileTime"));
+
+with a slight adjustment of doing it only once when the WinEnv object is first instantiated
+
+3) Rate Limiter usage requires it to be system wall clock and not an interval. You need to propose a fix to CondVar interface or an additional interface that would take an interval.
+
+4) Said that the interval is used in CondVar on MS is only because of the bug in MS STL which is fixed in MS VC 15. The proper wait is until the absolute time. 
+
+@yuslepukhin we can leave a comment rate limiter saying the problem. Rater limiter is a feature that can be disabled.
+
+@siying I think switchin on the GetSystemTimePreciseAsFileTime funciton ptr between the function and STD implementation returning system time micsoseconds would be the cheapest and acceptable solution w/o disabling anything. That way with the same build everyone will get the best available functionality.
+
+@yuslepukhin I do have a problem with using system time and especially absolute time for condition variables.The issue is that what happens when for example NTP service or user changes time? What if the time was moved by one or two hours back? The server will be unresponsive and be blocking for that time. That is why we should use increasing only source (Perf counters) and change the contract of the function so that no one takes it as system time.
+
+Answers:
+1) It cannot happen. I am checking if log file exists. If it does I simply increase by one and try again in cycle.
+2) I can do that until we agree on something else.
+3) Where do you see it requires system time? I do not see it. But yes having interval interface is even more clean solution.
+4) It should not be a problem. We can say that supported is only 2015. But still that absolute time is not good I think.
+
+@koldat I think you are arguing with the wrong person, I do not own the product. :)
+
+CondVar is a portable interface which has two implementations posix and windows. The same can be said about NowMicros(). The output of the latter is fed into CondVar interface.
+
+Needless to say that the two implementations must be consistent if we want logic built around to work cross platform in the same way.
+
+On Posix NowMicros() is implemented in terms of gettimeofday() which does return system time.
+
+`CondVar::bool TimedWait(uint64_t abs_time_us);` requires absolute time because pthread_cond_timedwait() requires it.
+
+The platform independent code at `rate_limiter.cc:107`
+
+`timedout = r.cv.TimedWait(next_refill_us_);`
+
+Is written in a way to wait until some time in the future and that time has to have some baseline and the system time is that base line common for NowMicros() and CondVar interfaces.
+
+While the comment for NowMicros() says it is _only_ used for measuring intervals I found it to be false.
+
+Another example, `thread_status_util.cc:58`
+
+ `if (op != ThreadStatus::OP_UNKNOWN) {
+    uint64_t current_time = Env::Default()->NowMicros();
+    thread_updater_local_cache_->SetOperationStartTime(current_time);`
+
+A simple search will reveal more places.
+
+This is just the way it is, arguing with me will not change it. I have not created the interface with the current semantics, we just tried to port it to Windows the best I could. 
+
+If you want to change it you will have to change both and ensure that both Posix and Windows continue deliver the same functionality as before in the same way. This may include NowMicros(), CondVar() and various other env that are created for different purposes.
+
+Now, you have a valid concerns over the wait semantics.
+
+std::condition_variable provides two interfaces wait_for and wait_until.
+
+Perhaps, this is what is missing in CondVar and that something could be implemented to express that rather than pondering the existing interface.
+
+For your purposes, you do not have to use CondVar, you can use std implementation of that where you can use wait_for.
+
+However, what you want will not solve your concern with regards to the clock that may change. 
+
+For example, much of the code that wants to wait for interval semantically want to wait until a certain absolute time and that is not guaranteed because internally implementations may still convert it to absolute time. However, I have not seen them block when the time has already expired.
+
+For that the standard specified `steady_clock` or `monotonic_clock`.
+
+Disclaimer: I have been wrong before.
+
+Said that, I would be fine with your proposed change if preserved the option of calling GetSystemTimePreciseAsFileTime() when it is available on the system AND we do not want to create our own fork of the source code.
+
+@koldat I agree with you. Using absolute time can cause problem and it will be nice if we can drop the dependency to it. But over the past two years we've added dependency to in in many places and we can't replace them any time soon. We also need to learn more about what would be the best way to do that.
+
+@yuslepukhin RocksDB is open-sourced, so it is your product. It's everyone's product. We RocksDB team in Facebook doesn't the expertise to join the Windows-related discussion like it. But I'm sure experts like you will make the best decision to the project and we'll merge whatever change you agree on if @yuslepukhin still haven't figured out the commit permission problem.
+
+As I previously mentioned, I don't care the solution will make some functionality not working if it can be disabled, as long as we document it clearly. But @yuslepukhin 's suggestion of something even better than that sounds great to me. We don't have expertise to verify it.
+
+@siying We want rate limiter internally. So that is why I am advocating a solution that could work for both.
+
+@yuslepukhin @siying OK I will do smallest change possible using proposed solution of dynamic load of GetSystemTimePreciseAsFileTime.
+
+Then we can go through the sources to identify if real system time is really needed. I found only around 30 locations that is using NowMicros. I do not see on any of these that they need system time including the example from @yuslepukhin. After I will investigate all these places more I would really declare that NowMicros is number of microseconds from some "random" time that always increase so that all places will know that they can use it for measuring time difference. If all places will be safe to change we should change return value to some strong type so that no one can misinterpret the result like class Ticks with proper documentation. This class can also be used as an argument for ConvVar. What do you think?
+
+@yuslepukhin we should also declare that VS15 is required, because of known issues in standard library.
+

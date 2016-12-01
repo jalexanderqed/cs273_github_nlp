@@ -1,0 +1,41 @@
+The C++ API .key() and .value() methods return Slice objects, which are just pointers to external byte arrays. This is very efficient because it avoids copying data.
+
+The Java API, unfortunately, forces some unnecessary copying internally. Instead, it should offer the option to get a slice of a native data structure. This change will yield substantial performance benefits and greatly reduce the amount of garbage that gets generated in the JVM.
+
+See related discussion on Facebook: https://www.facebook.com/groups/rocksdb.dev/permalink/985085361589978/ with @adamretter 
+
+@ccleve Please, also consider the case when RocksDB is built and operates with Jemalloc memory allocator. If you link to such a Rocksdb DLL or SO then you can not pass the memory out of it and successfully deallocate outside such a shared object. In this case data copy at the boundary is unavoidable and beneficial.
+
+@ccleve I am aware that this comment may be not exactly on the topic if so disregard.
+
+For reference, also relevant is the discussion here: https://github.com/facebook/rocksdb/pull/1247#issuecomment-238017960
+
+I'd like to suggest a possible design. Create ByteSequence RocksIterator.keySlice() and .valueSlice(), where ByteSequence looks like this:
+
+public interface ByteSequence {
+  public byte byteAt(int index);
+  public int length();
+  public ByteSequence subSequence(int start, int end);
+  public String toString();
+}
+
+ByteSequence is directly analogous to Java's [CharSequence](https://docs.oracle.com/javase/7/docs/api/java/lang/CharSequence.html).
+
+The benefit of this scheme is that the underlying implementation can be anything. It can be backed by a byte[], a portion of a byte[], a ByteBuffer, or a hunk of operating system memory. It could be backed by multiple hunks. It's a read-only interface, so it's totally safe. It would be very cheap to create.
+
+The rule would be that the ByteSequence would only be valid while the iterator was still on the record. A call to next() would invalidate it.
+
+db.put() and .seek() should also accept ByteSequences. WriteBatch too.
+
+A ByteSequence backed by a byte[] would be no slower that having direct access to the byte[], because the JVM would optimize out the call to byteAt().
+
+It would also be nice to have an absolute bulk get() method:
+
+void ByteSequence.get(int offset, int numberOfBytesToCopy, byte [] bufferToReceiveOutput);
+
+@adamretter Let me know your thoughts. (And whether you've given more thought to slices and improving iterator performance in Java.)
+
+I'd work on this myself, but my C++ is really weak and I've had zero luck getting rocksdb to compile inside an IDE.
+
+Any thoughts or progress on this issue?
+

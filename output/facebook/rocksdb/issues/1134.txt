@@ -1,0 +1,70 @@
+Hello!
+
+We have a use case of RocksDB where the application itself keeps its own caching layer as well as WAL on top of the RocksDB, and hence all writes to RocksDB itself is batched writes upon cache flushing. We have already `setDisableWAL` in the write options.
+
+I'm wondering if there is a recommended way to "turn off" memtable as well in RocksDB, and only use sstfile?
+
+cc @enothereska @mjsax
+
+We do not have such an option at present. One option would be fro you to create the file on disk and then use the AddFile api: https://github.com/facebook/rocksdb/wiki/Creating-and-Ingesting-SST-files
+
+is that what you were looking for?
+
+The vector memtable will reduce the CPU overhead from the memtable.
+
+On Mon, May 23, 2016 at 11:26 PM, dhruba borthakur <notifications@github.com
+
+> wrote:
+> 
+> We do not have such an option at present. One option would be fro you to
+> create the file on disk and then use the AddFile api:
+> https://github.com/facebook/rocksdb/wiki/Creating-and-Ingesting-SST-files
+> 
+> is that what you were looking for?
+> 
+> —
+> You are receiving this because you are subscribed to this thread.
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1134#issuecomment-221177706
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@mdcallag I am not sure I understand your previous comment, could you elaborate a bit?
+
+Also I am considering to pick some good default configs for our RocksDB use cases: https://issues.apache.org/jira/browse/KAFKA-3740, since you are a top expert I would love to hear your opinions!
+
+You need to write in key order to create an SST file. I assume there is a
+low level interface to create an SST file from sorted input but I have no
+idea if that is exposed. Otherwise, using a vector memtable can reduce the
+overhead of the memtable assuming the internal sort done on it is better
+than O(N log N) for sorted input and you don't mind the memory overhead of
+keeping all key-value pairs in memory before writing the SST file.
+
+On Thu, May 26, 2016 at 7:18 PM, Guozhang Wang notifications@github.com
+wrote:
+
+> @mdcallag https://github.com/mdcallag I am not sure I understand your
+> previous comment, could you elaborate a bit?
+> 
+> Also I am considering to pick some good default configs for our RocksDB
+> use cases: https://issues.apache.org/jira/browse/KAFKA-3740, since you
+> are a top expert I would love to hear your opinions!
+> 
+> —
+> You are receiving this because you were mentioned.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1134#issuecomment-222044396,
+> or mute the thread
+> https://github.com/notifications/unsubscribe/ABkKTU3beFu9bVnSi388_9gFdnT1q4f9ks5qFlR0gaJpZM4Ik_x6
+> .
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Thanks @mdcallag , we will check if vector memtable config is exposed in the JNI.
+

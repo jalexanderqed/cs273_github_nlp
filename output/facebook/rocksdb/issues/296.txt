@@ -1,0 +1,9 @@
+Hi,
+When I do serialisation and Deserialization of Map of type Map<String, String[]> or Map<Object1, Object2[]> then said process is done successFully but json created does not contain values for array, instead its an Object reference Id (as Ljava.lang.String;@1b77f8).
+I will be greatfull for any solution.
+thank you.
+
+Hello, I am afraid that I didn't get your question.  Can you explain your question in more detail and which part is RocksDB related?  Are you talking about the Json API of RocksDB?
+
+I'm closing this due to inactivity. @soneejaiswal feel free to reopen with more information if you still need help.
+

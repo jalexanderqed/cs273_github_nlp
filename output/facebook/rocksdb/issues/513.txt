@@ -1,0 +1,45 @@
+As per the title, how big of an object can be stored in rocksdb? Is there any limit?
+
+I don't think there's a limit, but RocksDB is better optimized for values on the smaller side. Inserting megabyte values should work, but it will not be optimal use of RocksDB.
+
+We never tested it. We know for sure it works for values of megabytes and it won't work if length is close to limit of int32. I can't think of anything would fail  if a value in the middle but I might miss some factors.
+
+Have you considered a variable-width format for storing the value length?
+
+The int32 limit the reason that you have to use level-style compaction on
+large datasets. (I haven't read the related source, but the wiki notes this
+limitation.) If so, this would allow a workaround for that.
+
+On Thu, Feb 19, 2015 at 6:22 PM, Siying Dong notifications@github.com
+wrote:
+
+> We never tested it. We know for sure it works for values of megabytes and
+> it won't work if length is close to limit of int32. I can't think of
+> anything would fail a value in the middle but I might miss some factors.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/513#issuecomment-75106623.
+
+Are you trying to store values bigger than 4GB in RocksDB?
+
+No, although it would be nice to be able to not have to worry about size limits.
+
+I was referring to the 100-200G limit to the size of a single SST. Is this not caused by the 32-bit size limit of the data index block?
+
+I think the issue there is that we try to compress index block as a whole, but compression library uses `int` somewhere. You should be able to create sst files bigger than 100GB, but index block will probably not be compressed in that case. Or you could increase your block_size (4KB is quite small), which should decrease size of the index.
+
+We didn't focus on this problem much because most of our services run level compaction. It creates bigger number of files, but each file is smaller. Also, it benefits because some files can be moved through levels without extra write amp.
+
+@igorcanadi What kind of _read_ performance tradeoff is there between many or few files in the db? Am I misguided in aiming for a small number of files in an application that is effectively build-once read-often?
+
+If it's build-once read-often, you should probably use level style compaction and then Compact() after writing. That will put all the files into the same level, which means when you want to read a key, only a single file will be consulted (we prune based on key-range -- each file has non-overlapping key range)
+
+@igorcanadi but the number of files in that level. Is it better to have more or less?
+
+Try benchmarking :) Shouldn't be a big difference though.
+
+@siying There are some questions I can't find the answer: If a key value is 1GB, is it will split and persistent in multiple sst files? If I read this key value with `read_options.fill_cache=true`, will the blocks can fill block cache?
+
+@zhangjinpeng1987 no. A key-value will never expand to even two data blocks.
+

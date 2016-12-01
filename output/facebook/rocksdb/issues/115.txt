@@ -1,0 +1,164 @@
+g++ -g -Wall -Werror -Wno-sign-compare -I. -I./include -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_MACOSX -DROCKSDB_ATOMIC_PRESENT -DSNAPPY -DGFLAGS -DZLIB -DBZIP2   -DHAVE_JEMALLOC -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c util/testutil.cc -o util/testutil.o 
+g++ db/db_bench.o db/builder.o db/c.o db/column_family.o db/compaction.o db/compaction_picker.o db/db_filesnapshot.o db/db_impl.o db/db_impl_readonly.o db/db_iter.o db/db_stats_logger.o db/dbformat.o db/filename.o db/internal_stats.o db/log_reader.o db/log_writer.o db/memtable.o db/memtable_list.o db/merge_helper.o db/merge_operator.o db/repair.o db/table_cache.o db/table_properties_collector.o db/tailing_iter.o db/transaction_log_impl.o db/version_edit.o db/version_set.o db/write_batch.o table/block.o table/block_based_table_builder.o table/block_based_table_factory.o table/block_based_table_reader.o table/block_builder.o table/block_hash_index.o table/filter_block.o table/flush_block_policy.o table/format.o table/iterator.o table/merger.o table/meta_blocks.o table/plain_table_builder.o table/plain_table_factory.o table/plain_table_reader.o table/table_properties.o table/two_level_iterator.o util/arena.o util/auto_roll_logger.o util/blob_store.o util/bloom.o util/build_version.o util/cache.o util/coding.o util/comparator.o util/crc32c.o util/dynamic_bloom.o util/env.o util/env_hdfs.o util/env_posix.o util/filter_policy.o util/hash.o util/hash_linklist_rep.o util/hash_skiplist_rep.o util/histogram.o util/ldb_cmd.o util/ldb_tool.o util/log_buffer.o util/logging.o util/murmurhash.o util/options.o util/perf_context.o util/skiplistrep.o util/slice.o util/statistics.o util/status.o util/string_util.o util/sync_point.o util/thread_local.o util/vectorrep.o utilities/backupable/backupable_db.o utilities/geodb/geodb_impl.o utilities/merge_operators/put.o utilities/merge_operators/string_append/stringappend.o utilities/merge_operators/string_append/stringappend2.o utilities/merge_operators/uint64add.o utilities/redis/redis_lists.o utilities/ttl/db_ttl.o port/port_posix.o port/stack_trace.o  ./util/testutil.o   -o db_bench  -lsnappy -lgflags -lz -lbz2 
+Undefined symbols for architecture x86_64:
+  "google::SetUsageMessage(std::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)", referenced from:
+      _main in db_bench.o
+ld: symbol(s) not found for architecture x86_64
+collect2: error: ld returned 1 exit status
+make: **\* [db_bench] Error 1
+
+➜  rocksdb git:(master) g++ -v
+Using built-in specs.
+COLLECT_GCC=g++
+COLLECT_LTO_WRAPPER=/usr/local/Cellar/gcc48/4.8.2/libexec/gcc/x86_64-apple-darwin13.1.0/4.8.2/lto-wrapper
+Target: x86_64-apple-darwin13.1.0
+Configured with: ../configure --build=x86_64-apple-darwin13.1.0 --prefix=/usr/local/Cellar/gcc48/4.8.2 --enable-languages=c,c++,objc,obj-c++ --program-suffix=-4.8 --with-gmp=/usr/local/opt/gmp4 --with-mpfr=/usr/local/opt/mpfr2 --with-mpc=/usr/local/opt/libmpc08 --with-cloog=/usr/local/opt/cloog018 --with-isl=/usr/local/opt/isl011 --with-system-zlib --enable-version-specific-runtime-libs --enable-libstdcxx-time=yes --enable-stage1-checking --enable-checking=release --enable-lto --disable-werror --enable-plugin --disable-nls --disable-multilib
+Thread model: posix
+gcc version 4.8.2 (GCC) 
+
+It's because rocksdb depends on gflag library.  Have you tried running mac-install-gflags.sh in the rocksdb/build_tools directory?
+
+yes,i have installed it with the `brew` command. but the error still occurred.
+
+---
+
+➜  ~LIBRARY_PATH git:(master) pwd  
+/usr/local/lib
+➜  ~LIBRARY_PATH git:(master) ls | grep gflags
+libgflags.2.dylib
+libgflags.a
+libgflags.dylib
+libgflags_nothreads.2.dylib
+libgflags_nothreads.a
+libgflags_nothreads.dylib
+➜  ~LIBRARY_PATH git:(master) 
+
+---
+
+➜  ~CPATH git:(master) pwd
+/usr/local/include
+➜  ~CPATH git:(master) ll | grep gflags
+lrwxr-xr-x   1 crnsnl  admin     35 Mar 15 01:26 gflags@ -> ../Cellar/gflags/2.0/include/gflags
+lrwxr-xr-x   1 crnsnl  admin     35 Mar 15 01:26 google@ -> ../Cellar/gflags/2.0/include/google
+➜  ~CPATH git:(master) 
+
+---
+
+➜  local git:(master) echo $LIBRARY_PATH
+/usr/local/lib
+➜  local git:(master) echo $CPATH
+/usr/local/include
+➜  local git:(master) 
+
+You can just try compiling the rocksdb library `make static_lib` or `make shared_lib`. They don't depend on gflags.
+
+Not sure if it's the gflag api issue, but can you verify whether one of your header files in include/gflags and include/google has google::SetUsageMessage(std::basic_string, std::allocator > const&) with exact api?
+
+@yhchiang i only found this function declaration at gflags.h with line number : 330
+330 extern void SetUsageMessage(const std::string& usage);
+
+and your code at db/db_bench.cc like bellows which seems has no problem...
+2407   google::SetUsageMessage(std::string("\nUSAGE:\n") + std::string(argv[0]) 
+                          + " [OPTIONS]...");
+
+#101 may be has reported this issue..
+
+But from your error message, it seems it it trying to find the one with signature "google::SetUsageMessage(std::basic_string, std::allocator > const&)", which makes me suspect whether it finds the right gflag library.  Would you mind trying to install gflag again using our mac-install-gflags.sh?
+
+but https://code.google.com/p/gflags/source/browse/src/gflags.h.in also do not have that method signature ... 
+
+and the brew script is similar to your mac-install-gflags.
+
+---
+
+➜  rocksdb git:(master) ✗ brew install gflags
+==> Downloading https://gflags.googlecode.com/files/gflags-2.0.tar.gz
+Already downloaded: /Library/Caches/Homebrew/gflags-2.0.tar.gz
+==> ./configure --prefix=/usr/local/Cellar/gflags/2.0
+==> make install
+🍺  /usr/local/Cellar/gflags/2.0: 27 files, 740K, built in 23 seconds
+
+---
+
+cd $DIR
+wget https://gflags.googlecode.com/files/gflags-2.0.tar.gz
+tar xvfz gflags-2.0.tar.gz
+cd gflags-2.0
+
+./configure
+make
+make install
+
+@zhenchuan this might help: http://stackoverflow.com/questions/9183540/linking-error-when-building-google-test-on-mac-commandline
+
+It looks like you used different compiler to build gflags than rocksdb.
+
+@igorcanadi  thanks ;
+i reinstall the flags,and then doing `make` again , still the same error ;
+can you integrate the gflags in the rocksdb project ?
+
+➜  rocksdb git:(master) ✗ brew uninstall gflags 
+➜  rocksdb git:(master) ✗ brew install gflags 
+
+@zhenchuan we don't really depend on gflags (it's just our tools, like `db_bench`). You can just do `make static_library` and that should work.
+
+@igorcanadi  thx.  
+when forced to use the mac g++ , it works. 
+
+benchmark on my mac with ssd
+
+---
+
+➜  rocksdb git:(master) ./db_bench -num 10000000
+LevelDB:    version 3.0
+Keys:       16 bytes each
+Values:     100 bytes each (50 bytes after compression)
+Entries:    10000000
+Prefix:    0 bytes
+Keys per prefix:    0
+RawSize:    1106.3 MB (estimated)
+FileSize:   629.4 MB (estimated)
+Write rate limit: 0
+Compression: snappy
+Memtablerep: skip_list
+Perf Level: 0
+
+## wARNING: Assertions are enabled; benchmarks unnecessarily slow
+
+DB path: [/tmp/rocksdbtest-501/dbbench]
+fillseq      :       3.704 micros/op 269962 ops/sec;   29.9 MB/s
+DB path: [/tmp/rocksdbtest-501/dbbench]
+fillsync     :     130.928 micros/op 7637 ops/sec;    0.8 MB/s (10000 ops)
+DB path: [/tmp/rocksdbtest-501/dbbench]
+fillrandom   :      13.991 micros/op 71474 ops/sec;    7.9 MB/s
+DB path: [/tmp/rocksdbtest-501/dbbench]
+overwrite    :      19.701 micros/op 50758 ops/sec;    5.6 MB/s
+DB path: [/tmp/rocksdbtest-501/dbbench]
+readrandom   :      12.594 micros/op 79402 ops/sec; (10000000 of 10000000 found)
+DB path: [/tmp/rocksdbtest-501/dbbench]
+newiterator  :       2.253 micros/op 443898 ops/sec;  
+DB path: [/tmp/rocksdbtest-501/dbbench]
+newiteratorwhilewriting :       8.397 micros/op 119088 ops/sec;
+DB path: [/tmp/rocksdbtest-501/dbbench]
+seekrandom   :      42.447 micros/op 23558 ops/sec; (10000000 of 10000000 found)
+DB path: [/tmp/rocksdbtest-501/dbbench]
+seekrandomwhilewriting :      58.564 micros/op 17075 ops/sec; (6322236 of 10000000 found)
+DB path: [/tmp/rocksdbtest-501/dbbench]
+readseq      :       1.035 micros/op 966104 ops/sec;  106.9 MB/s
+DB path: [/tmp/rocksdbtest-501/dbbench]
+readreverse  :       1.315 micros/op 760335 ops/sec;   84.1 MB/s
+DB path: [/tmp/rocksdbtest-501/dbbench]
+compact      : 48398138.000 micros/op 0 ops/sec;
+DB path: [/tmp/rocksdbtest-501/dbbench]
+readrandom   :       8.400 micros/op 119043 ops/sec; (10000000 of 10000000 found)
+DB path: [/tmp/rocksdbtest-501/dbbench]
+multireadrandom : 92295514.000 micros/op 0 ops/sec; (10000000 of 10000000 found)
+DB path: [/tmp/rocksdbtest-501/dbbench]
+readseq      :       0.253 micros/op 3947433 ops/sec;  436.7 MB/s
+DB path: [/tmp/rocksdbtest-501/dbbench]
+readtocache  :       0.256 micros/op 3898789 ops/sec;  431.3 MB/s
+DB path: [/tmp/rocksdbtest-501/dbbench]
+readreverse  :       0.465 micros/op 2150213 ops/sec;  237.9 MB/s
+DB path: [/tmp/rocksdbtest-501/dbbench]
+^C. finished 30300000 ops
+

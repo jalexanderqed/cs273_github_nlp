@@ -1,0 +1,117 @@
+Allow storage backend to store private metadata
+
+Summary: This patch provides a set of helper functions that would enable
+a storage backend (e.g., posix, HDFS) to store sstable private metadata
+in the manifest. This frees the storage backend from implementing its
+own metadata mechanisms by reusing the functionality already present in
+the manifest. This same idea can be applied to the WAL and MANIFEST; if
+the mechanism is correct, patches for these will follow.
+
+Test Plan: This patch has been tested in posix and in a new backend for
+OpenChannel SSDs [1], where the private metadata functions have been
+implemented. The idea is that testing functions are provided by the
+storage backend when used.
+
+[1] https://github.com/OpenChannelSSD
+
+The errors coming from Travis do not seem to relate to this patch. I have run the command failing [1] in my machine and the problematic tests pass. Also, I'm getting different errors pushing when the exact same patch.
+Would be great if you guys could look at the patch. Am I missing something?
+Thanks!
+
+[1] OPT=-DTRAVIS V=1 make -j4 check && OPT=-DTRAVIS V=1 make clean jclean rocksdbjava jtest
+
+Hi, 
+I added some more functionality to the patch and successfully run the Linux tests on my machine. The current error in Travis is clang++-3.6 not being found. AppVenyor fails also due to linking error.
+Could you look at the patch and tell me if I am missing something?
+Thanks!
+
+Curious to understand what type of use0-case this would support. You mentioned "posix, HDFS metadat", can you pl give more details on what this data is? Thanks.
+
+Hi Dhruba,
+The main use case is for the new storage backend we are building for the Open-Channel SSDs. Here, the flash translation layer (FTL) is managed by the host, which means that physical flash can be used directly. For RocksDB this means that the LSM would have full control over data placement. Also, the LSM merging strategy would serve as GC for the physical flash (if we align flash block properly). These two allow to have predictable latency from the storage device's perspective (e.g., we do not get the hit that we get now when a traditional SSD starts its own GC).
+
+The objective of this patch is to enable the storage backend to store its own metadata. In our case, we store metadata for the physical blocks that form a "file". We need this to maintain all the abstraction used in upper layers. Not sure if this would be useful for other backends such as posix or HDFS as they are implemented now, but the idea is to reuse the mechanisms present instead of reinventing our own metadata scheme.
+
+I understand your use-case now, thanks for explaining.
+
+One question: this approach means that the sst-files are not real ext3/xfs files, instead theere is some user-space filesystem code that interprets the PrivateData stored in the manifest and issues appropriate calls to the SSD-driver to retrieve the relevant blocks of data, is that right?
+
+if the above assumption is right, how do you retrieve the contents of the manifest file itself? Is the manifest file stored in a real- ext3/xfs backed filesystem?
+
+Exactly; we are working on a library that handles the user space filesystem for use; pretty much like HDFS does.
+
+Since RocksDB code needs to be somewhere, we assume now a traditional SSD (or a small partition) holding CURRENT. Here, we store the superblock metadata that allows us to retrieve the current manifest after the manifest's name, and from there we start loading the necessary metadata as the manifest FileMetadata is loaded. in the  future we could store the superblock in the root file system in the SSD if necessary. The motivation for doing it this way is to minimize the abstractions that RocksDB is using.
+
+One consequence of this design is that we actually need 2 storage backends working simultaneously, one for the Open-Channel SSD, and Posix, to be able to store CURRENT (and LOG, IDENTITY, and LOCK). I have ported posix into a library so that other backends could use it too; I imagine that this could be directly used in HDFS. I will start pushing this patches when I am sure that the approach I am following is the right one.
+
+Ok, makes sense.
+
+@dhruba Should I make any changes so that it is good to merge?
+
+I think siying/igor and rest of the rocksdb team will be looking into this patch sometime soon.
+
+Manifest writes are in-frequent enough that it does not significantly affect the read/write performance of the db. That said, here is al alternate proposal (it might need more work):
+
+Have a database that has two column families. One column family CF1 stores precisely the same PrivateData that you currently store in the manifest. CF1 is configured to store sst files in a directory that is backed by a real ext3/xfs filesystem. Another column family CF2 stores data on the OpenSSD device. 
+
+In your customized Env implementation, you can implement your own way of interacting with files. Each of these file-related-methods will first query CF1 to get the associated metadata and then issue the relevant calls to the OpenSSD device.
+
+When it is time to create a new sst file, you can atomically write to both CF1 and CF2. The key in CF1 will be the name of the sst file, and the value is the PrivateMetadata.  The total amount of data in CF1 will be very small,  maybe a few megabytes at most and will remain in cache all the time.
+
+For the above proposal to work, RocksDB code would need to support the ability to create sst files for a column family in one directory and the sst files for another column family in another directory.
+
+I'm fine with adding a field in manifest to store extra information to tell Env hope it should open the file. We need to discuss the manifest format though. We are currently working on a manifest format improvement to make it easier for us to add new fields in the future. Let me see whether we can prioritize that task and finish it quickly and apply your change on top of that. Hopefully we can have it done in 2 weeks.
+
+@dhruba Thanks for the proposal. The initial idea was to reuse the MANIFEST mechanisms to (i) avoid adding more complexity to the metadata scheme, and (ii) to take advantage of all the logic that ensure that sstables' and most logs' metadata make it to persistent storage. Seems to me that this approach would require maintaining a dedicated metadata I/O path, which probably would trigger more specific changes in the LSM logic. This said, I already added the logic to have two different directories (and storage backends) based on type file; this way I can store the superblock and other metadata that is not in the critical IO path (namely CURRENT, LOCK, and IDENTITY) in a normal ext partition using posix. I think this would be beneficial to other storage backends (e.g., HDFS); I will pack the changes in a patch and send them for you guys to look at them. In any case, if you guys think that a dedicated metadata path is the right way to do it, we can discuss about it.
+
+@siying Thanks for considering to prioritize this :) At the moment I add a new opcode (kPrivMeta) in the Tag enum; then the helper functions that you can see in this patch lead to a callback function in Env. For sstables I think that the approach is very clean since we already have struct FileMetadata. For the log it is a bit more intrusive (not in this patch) since (i) we do not have metadata more than the number, and (ii) the last log is not guaranteed to make it to the MANIFEST. It would be great to have a good way to do it, and maybe this new manifest format you are working on is the solution. Let me know if I can help with the manifest format, or if you want some input on it. I will prepare some other patches I intend to push upstream during these two weeks and put them in a branch for you to look at; maybe it helps having an overview of how to enable Env to save private metadata for different file types.
+
+I sent a code review for the support of customized fields in manifest format: https://reviews.facebook.net/D48123
+
+Let's see how others think about it.
+
+It looks good; it's pretty much the same format I have used in Env to keep track of the private metadata size. One question though: Whose responsibility is to set has_customized_fields? I see that it is checked, but not who sets it. 
+
+Let me know if I can help.
+
+@javigon it's going to be RocksDB that determine whether there are things to be encoded there.
+
+@siying Ok. Thanks.
+
+@javigon if I only allow you to get an int64, will it be good to you? You can you more fields if you need.
+
+@siying For our specific case we store 5 uint64, which corresponds to the flash block information associated with the file. Note that these increase with the number of blocks used by the file. 
+In general, I was thinking that the storage backend should be allowed to store whichever metadata it would want to, as long as it respects the MANIFEST format. The code you added in db/version_edit.cc would allow this; we only need to add the helper functions in this patch to reach in Env. the actual private metadata implementation. Does this make sense to you?
+
+@javigon if that is the case, we will need to support typing of the customized filed in some way. We can do something like two types first, int64 and byte array. You can get your byte array and do whatever you want. Does providing a byte array a good idea to you?
+
+@javigon is the format in the commit good for you?
+
+@siying A byte array is perfect. As far as I can see the format is pretty much what I would need. I will rebase my changes on top of the new commit and send a new pull request. Thanks!! 
+
+@javigon is it possible to avoid VersionEdit depending on Env? Can we instead add the Env dependency to the callers of VersionEdit, which have the pointer to Env callback?
+
+VersionEdit is a very simple, which makes it easily testable. It's pretty critical to the correctness of RocksDB database, so we want to keep it as simple as possible
+
+@igorcanadi The problem is that we might not have an object (e.g., when we recover the database), which means that we cannot make it to the callback function that know how to encode/decode the private metadata. That is the reason why the helper functions are static. You propose to move this logic to the callers of EncodeTo/DecodeFrom instead?
+I have followed a similar approach to store/recovering private metadata for the WAL. It is a bit more intrusive, since there is no actual metadata stored for the WAL, and the last WAL might not even make it to the manifest. Would be nice to find a clean solution for both.
+ I can see if it is easier to move given the new format of the manifest; I will look into it on Monday.
+
+Hi,
+Just resubmitted on top of the new manifest form. A couple of comments/explanations:
+@siying I cannot calculate the size of the metadata being stored in advance; the number of flash block forming the file is variable and to simplify the interaction with Env, I give all the responsibility to the PrivateMetadata::GetMetadata(), which in my case iterates a list of blocks, encodes them, and returns them. I keep my own boundaries and size checks in the Env implementation.
+@igorcanadi I have though how we could decouple Env from VersionEdit, but I cannot see a clean mode to do it. This is because FileMetadata - where the private metadata is hooked to - is a central piece on VersionEdit. As it is now, the dependency is only to static functions which contain the format to encode/decode and free the memory allocated to hold the private metadata. If you think of a way to do it cleaner, please let me know.
+Thanks! 
+
+Pushed again using @siying 's feedback
+
+Pushed again after applying part of @siying 's feedback.
+
+Fixed error on encode / decode metadata. Now it is only written once to the manifest.
+
+@siying Pushed again. I think I have addresses all the issues. Can you take a look? This solution should be cleaner and less intrusive. I commented too on kPrivMeta being 10. Thoughts? Thanks!
+
+Pushed again. Changes: 
+- Add comments describing FilePrivateMetadata functions
+- Fix commented function call (@siying )
+

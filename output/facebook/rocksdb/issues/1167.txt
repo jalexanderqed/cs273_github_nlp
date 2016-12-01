@@ -1,0 +1,50 @@
+Exposed support for `DBOptions`:
+- `base_background_compactions`
+- `max_subcompactions`
+- `allow_concurrent_memtable_write`
+- `enable_write_thread_adaptive_yield`
+- `write_thread_max_yield_usec`
+- `write_thread_slow_yield_usec`
+
+Closes https://github.com/facebook/rocksdb/issues/1015
+
+https://reviews.facebook.net/D61959
+
+https://github.com/facebook/rocksdb/commit/d367555027a1d5858bb508eacb6662bfcc7ce9bd
+
+Hi Adam,
+
+I do not see these methods in any available rocksdbjni.jar.
+
+Thanks,
+Kobi
+
+@kobikis, hmm that is very interesting. I see that it is present in master but somehow not in the 4.11.2 tag, let me ask the FB team what happened...
+
+@kobikis Somehow this didn't make it into those releases. @yhchiang just confirmed to me that 4.13 will most likely be arriving next week, and I just checked and can confirm that that includes the changes that you are looking for.
+
+Adam, Thanks again!
+
+Kobi
+
+On Sat, Nov 5, 2016 at 8:29 PM, Adam Retter notifications@github.com
+wrote:
+
+> @kobikis https://github.com/kobikis Somehow this didn't make it into
+> those releases. @yhchiang https://github.com/yhchiang just confirmed to
+> me that 4.13 will most likely be arriving next week, and I just checked and
+> can confirm that that includes the changes that you are looking for.
+> 
+> —
+> You are receiving this because you were mentioned.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/pull/1167#issuecomment-258631712,
+> or mute the thread
+> https://github.com/notifications/unsubscribe-auth/AAVMax0KE8oNn1SHwVBDwBAVtA11fT-Oks5q7MsNgaJpZM4I1eox
+> .
+
+## 
+
+Regards,
+Kobi Kisos
+

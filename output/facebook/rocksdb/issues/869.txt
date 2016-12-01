@@ -1,0 +1,18 @@
+The Windows porting uses certain API which is only available on Windows 8 or later.
+
+GetSystemTimePreciseAsFileTime is one of such APIs.
+
+I am not sure if there are other such APIs too...
+
+Can we eliminate using of such kind of APIs so the rockdb.dll can be used on Windows 7 too?
+
+seems no other API block Windows 7 support.
+
+As long as replace GetSystemTimePreciseAsFileTime to GetSystemTimeAsFileTime, test app can work on Windows 7 well. 
+
+But I am not sure if such replace is valid. I did not get time to check the context of the usage.
+
+@allspace See discussion here https://github.com/facebook/rocksdb/issues/726
+
+@allspace You can propose a patch that would have an `#ifdef` for a Windows 7 build driven by a CMake switch.That would mean a deliberate choice with known trade offs.
+

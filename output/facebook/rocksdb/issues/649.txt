@@ -1,0 +1,67 @@
+(gdb) bt
+#0  0x00007f60147b4925 in raise () from /lib64/libc.so.6
+#1  0x00007f60147b6105 in abort () from /lib64/libc.so.6
+#2  0x000000000054fe05 in __gnu_cxx::__verbose_terminate_handler() () at ../../../../gcc-4.8.4/libstdc++-v3/libsupc++/vterminate.cc:95
+#3  0x000000000051dc56 in __cxxabiv1::__terminate(void (*)()) () at ../../../../gcc-4.8.4/libstdc++-v3/libsupc++/eh_terminate.cc:38
+#4  0x000000000051dc83 in std::terminate() () at ../../../../gcc-4.8.4/libstdc++-v3/libsupc++/eh_terminate.cc:48
+#5  0x000000000051ec9f in __cxa_pure_virtual () at ../../../../gcc-4.8.4/libstdc++-v3/libsupc++/pure.cc:50
+#6  0x000000000041daf3 in rocksdb::DBImpl::FindObsoleteFiles(rocksdb::JobContext*, bool, bool) () at db/db_impl.cc:470
+#7  0x00000000004288e7 in rocksdb::DBImpl::~DBImpl() () at db/db_impl.cc:289
+#8  0x0000000000428951 in rocksdb::DBImpl::~DBImpl() () at db/db_impl.cc:307
+#9  0x000000000041044d in boost::checked_deleterocksdb::DB (x=0x1380210) at /usr/releng/external/boost/1.39.0b_gcc411-fPIC/include/boost-1_39_0b/boost/checked_delete.hpp:34
+#10 0x0000000000412424 in boost::detail::sp_counted_impl_procksdb::DB::dispose (this=0x13848e0)
+
+```
+at /usr/releng/external/boost/1.39.0b_gcc411-fPIC/include/boost-1_39_0b/boost/smart_ptr/detail/sp_counted_impl.hpp:78
+```
+#11 0x000000000040c650 in boost::detail::sp_counted_base::release (this=0x13848e0)
+
+```
+at /usr/releng/external/boost/1.39.0b_gcc411-fPIC/include/boost-1_39_0b/boost/smart_ptr/detail/sp_counted_base_gcc_x86.hpp:145
+```
+#12 0x000000000040c6df in boost::detail::shared_count::~shared_count (this=0x1388630, __in_chrg=<value optimized out>)
+
+```
+at /usr/releng/external/boost/1.39.0b_gcc411-fPIC/include/boost-1_39_0b/boost/smart_ptr/detail/shared_count.hpp:217
+```
+#13 0x000000000040cb3a in boost::shared_ptrrocksdb::DB::~shared_ptr (this=0x1388628, __in_chrg=<value optimized out>)
+
+...
+
+Hi Igor,
+Yes, I destruct rocksdb as part of static destruction. Should I not supposed to do so?
+
+Thanks,
+Wei
+
+Igor Canadi notifications@github.com
+4:38 PM (33 minutes ago)
+
+to facebook/rocks., me 
+@hwpw can you open a separate issue for your problem? This is likely a result of either:
+1) you keep using DB\* even after the destructor kicks in, or
+2) you destruct RocksDB as part of static destruction. You need to delete DB\* before int main() finishes.
+
+—
+
+> Yes, I destruct rocksdb as part of static destruction. Should I not supposed to do so?
+
+Yes, please delete RocksDB before the static destruction kicks in. RocksDB depends on statically allocated objects.
+
+@hwpw is this issue resolved now?
+
+yes it is resolved by explicitly destructing it before static destruction kicks in. Thanks!
+
+Does explicit destruction mean I need to destruct it in destructor using delete operator?
+
+Yes, issue is fixed. Thanks!
+
+On Fri, Jul 10, 2015 at 12:02 PM Igor Canadi notifications@github.com
+wrote:
+
+> @hwpw https://github.com/hwpw is this issue resolved now?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/649#issuecomment-120495188.
+

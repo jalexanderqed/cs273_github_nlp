@@ -1,0 +1,444 @@
+I've been doing some testing on a service that uses rocksdb for storage internally and finding that major compactions are sometimes causing outages which last for a few minutes (since major compactions seem to block everything else). Also, when I restart the process, sometimes a major compaction is triggered which causes the db to take many minutes to open.
+
+Wondering where I should start looking to alleviate these issues. Thanks!
+
+Hi James,
+
+Can you please post statistics regarding rocksdb compactions obtained by calling getProperty function with rocksdb.stats as the parameter. This will give information about stalls due to compactions and also how much IO cost is incurred due to compactions.
+
+Regarding long time taken during DB opening, please check size of your manifest file. I have seen that DB takes long time to open due to large manifest file size which can be controlled by max_manifest_file_size. 
+
+The manifest file was only 140MB when it was taking a long time to open. Is that too big?
+
+Hi James,
+
+Please limit manifest file small if you want DB to open quickly. In my tests, DB opens in less than a minute if manifest file is < 20MB. 
+
+Rocksdb developers might have a better idea as to what is the optimum size of manifest file.
+
+Hey @jamesgolick, can you please send us the LOG file of the rocksdb instance in which you observe big outages? Compaction process does not block reads/writes (mutex is held only for a short amount of time) and should not be causing any outages.
+
+@igorcanadi I built a way to dump the stats for this db and it looks like the `memtable_compaction` numbers are really high under Stalls(secs).
+
+I'm seeing stalls all over actually: 
+
+Stalls(secs): 8428.776 level0_slowdown, 3164.682 level0_numfiles, 2052.582 memtable_compaction, 0.000 leveln_slowdown
+Stalls(count): 7710150 level0_slowdown, 64 level0_numfiles, 286 memtable_compaction, 0 leveln_slowdown
+
+Stalls can be OK or bad. They are OK when (ingest-MB X write-amplification)
+exceeds the rate at which your storage can write to disk. They are bad when
+you configuration has a bad setting and RocksDB can be tricky to configure.
+
+What is your workload (describe it in a a few sentences)?
+Can you paste your configuration from the prefix of $database_dir/LOG?
+
+On Sat, Jan 11, 2014 at 10:40 AM, James Golick notifications@github.comwrote:
+
+> I'm seeing stalls all over actually:
+> 
+> Stalls(secs): 8428.776 level0_slowdown, 3164.682 level0_numfiles, 2052.582
+> memtable_compaction, 0.000 leveln_slowdown
+> Stalls(count): 7710150 level0_slowdown, 64 level0_numfiles, 286
+> memtable_compaction, 0 leveln_slowdown
+> 
+> —
+> Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/54#issuecomment-32103461
+> .
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+https://gist.github.com/jamesgolick/bed71f531b89d0bfc804
+
+The workload is all merges. It's an activity feed timeline storage service, so fanning out activity feed event IDs (16 byte) to their friends' timelines.
+
+The storage system is SSD and highest utilization I've seen on the disk array is 3%, although with a fairly high await of ~3.
+
+memtable_compaction stall happens when you have too many memtables and need to flush them to storage. In your configuration, memtable size is 4MB (Options.write_buffer_size) and number of memtables is 2 (Options.max_write_buffer_number). If you increase any of those numbers (let's say 64MB per memtable and 7 total memtables), memtable_compaction stalls should decrease.
+
+For all sources of stalls, please refer to DBImpl::MakeRoomForWrite()
+
+Some comments on your config. This uses leveled compaction with zlib
+compression for all levels - just an FYI for other readers.
+Options.compaction_style: 0
+Options.compression: 2
+
+I would limit compression to levels >= 2 to avoid stalls from the CPU
+overhead for compressing L0 and L1. Compressing them doesn't save much
+space. To prevent compression for L0 you need this bug fix:
+
+https://github.com/facebook/rocksdb/commit/50994bf6990eae4155f7541161f5eaf1edb3ef08
+
+Enable more background compaction threads. Looks like you are using the
+default which is 1. I hope we change that as many people have suffered from
+it:
+Options.max_background_compactions: 1
+
+This ratio is too large -- sizeof(L1) / sizeof(L0) -- so compacting L0 to
+L1 is likely to stall and the write amplification from that is large. For
+benchmarks I tend to use sizeof(L0) ~= sizeof(L1). Making the L1 twice the
+size of the L0 might be OK. From the data below I think your ratio is 64:
+1GB / (4 X 4MB)
+
+By "size of the L0" I mean:
+   write-buffer-size X level0_file_num_compaction_trigger
+Options.write_buffer_size: 4194304
+Options.max_bytes_for_level_base: 1048576000
+Options.level0_file_num_compaction_trigger: 4
+
+On Mon, Jan 13, 2014 at 12:59 PM, Igor Canadi notifications@github.comwrote:
+
+> memtable_compaction stall happens when you have too many memtables and
+> need to flush them to storage. In your configuration, memtable size is 4MB
+> (Options.write_buffer_size) and number of memtables is 2
+> (Options.max_write_buffer_number). If you increase any of those numbers
+> (let's say 64MB per memtable and 7 total memtables), memtable_compaction
+> stalls should decrease.
+> 
+> For all sources of stalls, please refer to DBImpl::MakeRoomForWrite()
+> 
+> —
+> Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/54#issuecomment-32210776
+> .
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+I'm doing a similar test and also seeing a major compaction of close to 15 minutes when the database is about 250 GB in size.
+
+Gzipped LOG is here:
+
+https://drive.google.com/file/d/0B0b-iwt-kSG2NEFadjFzTDdiUzg/edit?usp=sharing
+
+The action starts at around 21:43. Keys are of the form <(8 byte timestamp) (id)> and values are about 600 bytes. In my test keys arrive from many streams in order, but streams are offset a bit relative to each other in time. I'd expect the key stream to emerge mostly sorted from the write buffers/memtables (seems these are synonyms?) or at least be sorted by the time the L0s get compacted.
+
+Hardware is 24 \* Intel(R) Xeon(R) CPU E5-2630L v2 @ 2.40GHz with 128 GB RAM and a Fusion-io 1.65TB ioScale2 formatted with XFS.
+
+Any thoughts? I've tried to configure my database close to fillseq at https://github.com/facebook/rocksdb/wiki/Performance-Benchmarks.
+
+Are you running 2.7? If yes, can you try running on 2.6. and see if it works?
+
+Options.level0_slowdown_writes_trigger: 32, which means rocksdb will start delaying writes when number of level0 files is more than 32. For some reason, even though number of level0 files is 62, Compaction says "nothing to do". Will investigate some more.
+
+Yep, running HEAD of master more or less. Will try 2.6 tonight.
+
+I tried to test with release 2.6, but that's a bit hard since the C API still has the old leveldb names.
+
+Can you just copy new c.cc file to 2.6 release? Would that work?
+
+Anycase, I'll add more logging to compaction choosing so it will be easier to figure out why is the compaction not happening.
+
+are you running ur workload on disks or flash? How many disks?
+
+Igor: if you have extracted the log file somewhere, can you pl (via email) send me a pointer to it? I can look around to see what the problem is.
+
+@dhruba I downloaded it locally. It's not big.
+
+@dhruba Hardware is 24 \* Intel(R) Xeon(R) CPU E5-2630L v2 @ 2.40GHz with 128 GB RAM and a single Fusion-io 1.65TB ioScale2 formatted with XFS. Things start going wrong at about 200 GB into the database.
+
+@alberts what's your read workload?
+
+@igorcanadi no reads at this point. just testing writes.
+
+Just had a discussion with @dhruba 
+
+From reading your options, your level0 size is way too low (Options.max_bytes_for_level_base). It's currently at 10MB. Your memtable size is 128MB. Every time you push your memtable to level0, it's already too big and you need to do a compaction. There can be at most one concurrent compaction at level0, so when one file is compacting, other files are arriving to level0 and are piling up. When there are too many level0 files, we start delaying writes.
+
+Here are the settings that might work better:
+Options.write_buffer_size = 1GB (memtable size)
+Options.min_write_buffer_number_to_merge = 2 (as soon as you have 2 memtables, start flushing. no need to keep them in memory since you're not reading)
+Options.max_write_buffer_number = 10 (you'll probably never get to this number, but better safe than sorry)
+Options.max_bytes_for_level_base = 5GB (this will make level1 50GB and level2 500GB)
+
+Thanks, I'll do some tests. Could you explain the relationship between max_bytes_for_level_base and target_file_size_base? I'm guessing level base is the sum of all files (each approximately of target size)?
+
+max_bytes_for_level_base is level0 size, let's say 5GB (total size of all files in level0 that will trigger the compaction). That 5GB from level0 will get compacted and pushed to level1 chunked up into N files of target_file_size_base each. N is 5GB / target_file_size_base.
+
+Thanks. Here's another log:
+
+https://drive.google.com/file/d/0B0b-iwt-kSG2SE40NGxZZUpLRlk/edit?usp=sharing
+
+I still hit a 10 minute stall at around 23:19.
+
+Logs from around that time included. Looking forward to more debug logging.
+
+2014/02/06-22:56:42.837503 7f14dcff9700 compacted to: files[28 474 870 0 0 0 ], 99.1 MB/sec, level 2, files in(1, 2) out(4) MB in(64.1, 128.2) out(192.2), read-write-amplify(6.0) write-amplify(3.0) OK
+2014/02/06-22:56:43.252372 7f14f57fa700 compacted to: files[28 472 873 0 0 0 ], 121.2 MB/sec, level 2, files in(2, 2) out(5) MB in(128.2, 128.1) out(256.2), read-write-amplify(4.0) write-amplify(2.0) OK
+2014/02/06-22:56:43.256281 7f14b0996700 compacted to: files[28 469 876 0 0 0 ], 78.8 MB/sec, level 2, files in(3, 2) out(5) MB in(179.8, 128.1) out(307.9), read-write-amplify(3.4) write-amplify(1.7) OK
+2014/02/06-23:09:52.407980 7f14f57fa700 compacted to: files[36 1353 876 0 0 0 ], 313.8 MB/sec, level 1, files in(28, 469) out(1353) MB in(55573.6, 28631.1) out(84127.6), read-write-amplify(3.0) write-amplify(1.5) OK
+2014/02/06-23:28:34.589486 7f14bccca700 compacted to: files[28 2466 876 0 0 0 ], 327.8 MB/sec, level 1, files in(36, 1353) out(2466) MB in(71452.9, 84127.6) out(155472.7), read-write-amplify(4.4) write-amplify(2.2) OK
+2014/02/06-23:28:48.287452 7f14dd7fa700 compacted to: files[28 2465 877 0 0 0 ], 74.6 MB/sec, level 2, files in(1, 1) out(2) MB in(64.1, 64.1) out(128.2), read-write-amplify(4.0) write-amplify(2.0) OK
+2014/02/06-23:28:48.289521 7f14f4ff9700 compacted to: files[28 2462 880 0 0 0 ], 74.1 MB/sec, level 2, files in(1, 1) out(2) MB in(64.1, 62.0) out(126.1), read-write-amplify(3.9) write-amplify(2.0) OK
+2014/02/06-23:28:48.289651 7f14f57fa700 compacted to: files[28 2462 880 0 0 0 ], 73.2 MB/sec, level 2, files in(1, 1) out(2) MB in(64.1, 64.1) out(128.2), read-write-amplify(4.0) write-amplify(2.0) OK
+
+If you don't mind the risk of hanging/crashing your server then thread
+stack traces during the stall would be useful for debugging --
+http://poormansprofiler.org/
+
+On Thu, Feb 6, 2014 at 3:42 PM, Albert Strasheim
+notifications@github.comwrote:
+
+> Thanks. Here's another log:
+> 
+> https://drive.google.com/file/d/0B0b-iwt-kSG2SE40NGxZZUpLRlk/edit?usp=sharing
+> 
+> I still hit a 10 minute stall at around 23:19.
+> 
+> Logs from around that time included. Looking forward to more debug logging.
+> 
+> 2014/02/06-22:56:42.837503 7f14dcff9700 compacted to: files[28 474 870 0 0
+> 0 ], 99.1 MB/sec, level 2, files in(1, 2) out(4) MB in(64.1, 128.2)
+> out(192.2), read-write-amplify(6.0) write-amplify(3.0) OK
+> 2014/02/06-22:56:43.252372 7f14f57fa700 compacted to: files[28 472 873 0 0
+> 0 ], 121.2 MB/sec, level 2, files in(2, 2) out(5) MB in(128.2, 128.1)
+> out(256.2), read-write-amplify(4.0) write-amplify(2.0) OK
+> 2014/02/06-22:56:43.256281 7f14b0996700 compacted to: files[28 469 876 0 0
+> 0 ], 78.8 MB/sec, level 2, files in(3, 2) out(5) MB in(179.8, 128.1)
+> out(307.9), read-write-amplify(3.4) write-amplify(1.7) OK
+> 2014/02/06-23:09:52.407980 7f14f57fa700 compacted to: files[36 1353 876 0
+> 0 0 ], 313.8 MB/sec, level 1, files in(28, 469) out(1353) MB in(55573.6,
+> 28631.1) out(84127.6), read-write-amplify(3.0) write-amplify(1.5) OK
+> 2014/02/06-23:28:34.589486 7f14bccca700 compacted to: files[28 2466 876 0
+> 0 0 ], 327.8 MB/sec, level 1, files in(36, 1353) out(2466) MB in(71452.9,
+> 84127.6) out(155472.7), read-write-amplify(4.4) write-amplify(2.2) OK
+> 2014/02/06-23:28:48.287452 7f14dd7fa700 compacted to: files[28 2465 877 0
+> 0 0 ], 74.6 MB/sec, level 2, files in(1, 1) out(2) MB in(64.1, 64.1)
+> out(128.2), read-write-amplify(4.0) write-amplify(2.0) OK
+> 2014/02/06-23:28:48.289521 7f14f4ff9700 compacted to: files[28 2462 880 0
+> 0 0 ], 74.1 MB/sec, level 2, files in(1, 1) out(2) MB in(64.1, 62.0)
+> out(126.1), read-write-amplify(3.9) write-amplify(2.0) OK
+> 2014/02/06-23:28:48.289651 7f14f57fa700 compacted to: files[28 2462 880 0
+> 0 0 ], 73.2 MB/sec, level 2, files in(1, 1) out(2) MB in(64.1, 64.1)
+> out(128.2), read-write-amplify(4.0) write-amplify(2.0) OK
+> 
+> ## 
+> 
+> Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/54#issuecomment-34389080
+> .
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@mdcallag Stack trace here:
+https://gist.github.com/alberts/aaa52cdec468e99ea1c6
+Reasonably straight-forward. Calling this through the Go wrapper, so 128 threads simulating incoming connections with available data blocks inside rocksdb::DBImpl::Write.
+One thread in DoCompactionWork. Miscellaneous others.
+
+Can you turn on statistics (options.statistics) and send the LOG file when you run the DB with statistics enabled? Tnx.
+
+Hello. Testing with 1d08140e81 + a few patches to the C API. Log here:
+
+https://drive.google.com/file/d/0B0b-iwt-kSG2SHRVUVdORHU0WVE/edit?usp=sharing
+
+Stall starts around 2014/02/07 02:47:00.244781. Interestingly, no statistics are printed during that entire time:
+
+2014/02/07-02:40:45.697182 7f6cdeffd700 STATISTCS:
+2014/02/07-02:41:50.897204 7f6ce4ff9700 STATISTCS:
+2014/02/07-02:42:55.387432 7f6cddffb700 STATISTCS:
+2014/02/07-02:43:58.933508 7f6ce57fa700 STATISTCS:
+2014/02/07-02:45:02.117604 7f6cdeffd700 STATISTCS:
+2014/02/07-02:46:03.902854 7f6cdffff700 STATISTCS:
+2014/02/07-02:57:25.729889 7f6ce7fff700 STATISTCS:
+2014/02/07-02:58:31.813396 7f6ce5ffb700 STATISTCS:
+
+It's like the compaction never pauses and just keep going with something.
+
+This is interesting, I'm learning more about tuning RocksDB :)
+
+Didn't have time to dig deeper into LOG file, but would you mind trying the experiment with bigger Options.target_file_size_base (let's say 1GB).
+
+Also, it might be the case that your disk just can't process all the data coming in. In that case, stalls are good, however, we would need to reduce the variance (delay each write by 10ms instead of accepting all the writes and then all of a sudden start delaying writes by couple of minutes). What's your disk/cpu utilization when you see the stalls?
+
+To get less variance, good options to look at are level0_slowdown_writes_trigger and level0_stop_writes_trigger.
+
+Configuring RocksDB is not trivial and we're just starting an effort to provide simpler configuration APIs and less confusing options.
+
+I have not (yet) looked at the new logs, but I have never seen that increasing/decreasing target_file_size_base  has much effect on performance.  
+
+I'm going to decrease the stats dump period a bit. It gives an interesting view on the matter. Looking at the stats in the logs so far, it seems the DB goes above my limit slowdown writer trigger of 32, and then increases until it hits the stop writes trigger, and then goes back down to 32, but never below that.
+
+Would it make sense to try universal compaction here?
+
+FWIW, when it's stalling, about 80% of a core is being used, iostat looks like this:
+
+```
+Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
+fioa              0.00     0.00 1535.00  201.00 196468.00 196914.20   453.21     0.00    3.82    0.24   31.16   0.00   0.00
+```
+
+and the top functions for the process according to perf top are rocksdb::crc32c::Extend which calls rocksdb::crc32c::Fast_CRC32 and memcpy stuff. So a faster hash function will help a bit. xxhash looks promising, but I need to test more carefully.
+
+I think I agree with the statement that I'm basically writing too fast, but it seems the slowdown at 32 level0s has almost no effect until I hit the stop limit of 64 and stall hard.
+
+So I think for me it's more a CPU thing than a disk thing. You said "There can be at most one concurrent compaction at level0", so I guess the only way to go faster here is to figure out how to parallelize this work?
+
+Do you increase number of background threads in Env object? Take a look at Env::SetBackgroundThreads()
+
+@dhruba do you think that https://github.com/facebook/rocksdb/commit/abd70ecc2b7fe02709955ef14905d1628581b306 caused the crc32c function to slow down the compaction process?
+
+I call SetBackgroundThreads(16) and SetBackgroundThreads(16, Env::HIGH).
+LOG says: Options.max_background_compactions: 16
+I haven't set max_background_flushes, but it seems that only becomes important when you share an env between DBs. Haven't done that yet.
+
+Here's an insight. In the stable state, the level0 compaction with 32 files takes longer than it takes for your writer to generate 32 new level0 files.
+1. Compaction takes 32 files in level0 and starts compaction (no other compactions can happen on level0)
+2. while compaction is happening, writer dumps 32 new memtables (total is 64 now), causing hard stall.
+3. Compaction finishes, clears 32 files from level0, 32 files are left.
+4. Goto 1.
+
+Did you try with bigger target_file_size_base?
+
+The universal style compactions lowers write amplification and can sustain higher write throughput. It's a good thing to try if your goal is to optimize write throughput.
+
+Vague advice from someone who has spent a lot of time (weeks, months maybe)
+doing perf tests on fast HW with leveled compaction. If you need to sustain
+a high write rate then you have two choices:
+1) leveled compaction and expect stalls
+2) universal compaction
+
+One problem with leveled compaction is that either L0->L1 compaction can be
+done or L1->L2 compaction can be done. They can't be concurrent because
+L0->L1 needs exclusive access to all/most L1 files and that blocks L1->L2
+compaction.
+
+A workaround is to make L0->L1 compaction as fast as possible and that is
+done by making sizeof(L0) similar to sizeof(L1) and making sure that both
+levels don't get too big. I usually trigger compaction when the L0 is less
+than 1GB (maybe 256MB or 512MB).
+
+On Fri, Feb 7, 2014 at 11:09 AM, Igor Canadi notifications@github.comwrote:
+
+> Here's an insight. In the stable state, the level0 compaction with 32
+> files takes longer than it takes for your writer to generate 32 new level0
+> files.
+> 1. Compaction takes 32 files in level0 and starts compaction (no other
+>    compactions can happen on level0)
+> 2. while compaction is happening, writer dumps 32 new memtables (total
+>    is 64 now), causing hard stall.
+> 3. Compaction finishes, clears 32 files from level0, 32 files are left.
+> 4. Goto 1.
+> 
+> Did you try with bigger target_file_size_base?
+> 
+> The universal style compactions lowers write amplification and can sustain
+> higher write throughput. It's a good thing to try if your goal is to
+> optimize write throughput.
+> 
+> ## 
+> 
+> Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/54#issuecomment-34489164
+> .
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Hi. Makes sense. I haven't experimented with bigger target_file_size_base yet. What's the reasoning behind why it might help?
+
+2677091118 records in 3h1m21.811418742s: 246015 records/sec 135 MiB/sec... wrote 1431 GiB to the FIO drive before compaction hit first ENOSPC
+
+This is the total throughput measured on the put side including all the stall time. So my understanding is that if I write to this database at a bit less than 135 MiB/sec, I should be able to avoid the stalls.
+
+I am repeating the test with Snappy compression enabled now, and then I'll try universal compaction.
+
+Feature request: it would be _very_ useful to have an API to Write a batch with a timeout, so that if my RocksDB is stalling under me, I can at least easily signal an error and/or arrange to send the data I'm trying to write somewhere else (another DB, or /dev/null).
+
+It seems that any way to optimize or parallelize the compaction that is stalling might help. I don't think I'm I/O bound on this process (I'll make some flame graphs soon). Low hanging fruit: don't checksum so much, or checksum faster. Anything else?
+
+I am basically building a big circular buffer to retain some high volume time series data in order for a few hours, with a few additional indexes (please finish column families! :)).
+
+@mdcallag thanks for the advice. I've been reaching the same conclusions.
+
+Ur write amplification is
+
+Amplification cumulative: 3.8 write, 5.5 compaction
+Writes cumulative: 699713 total, 699713 batches, 1.0 per batch, 399.36 ingest GB
+
+Most of the stalls occur because of too many files in L0. Compaction is using  upto 100 MB/sec. Total data ingest is about 400 GB in about 100 minutes, which is about 70 MB/sec. With a write amplification of 5, you are writing 350 MB/sec to the flash drive. I suspect that you are maxing out the throughput on the flash storage.
+Writes cumulative: 699713 total, 699713 batches, 1.0 per batch, 399.36 ingest GB
+
+One alternative to reduce stalls is to use Universal compaction and shard your data into 10 rocksdb database, each with 20 GB in size. Is this possible?
+
+My perf model is that there are two things that have to be fast enough to
+keep up with the production of new L0 files, and both of these things can't
+run concurrently. The things are L0->L1 compaction and L1->L2 compaction.
+If you generate X L0 files per minute then you must do both of these at the
+same rate.
+
+You can be clever and try to reduce stalls with proper tuning for leveled
+compaction. But the simple solution is universal compaction.
+
+On Fri, Feb 7, 2014 at 11:24 AM, Albert Strasheim
+notifications@github.comwrote:
+
+> Hi. Makes sense. I haven't experimented with bigger target_file_size_base
+> yet. What's the reasoning behind why it might help?
+> 
+> 2677091118 records in 3h1m21.811418742s: 246015 records/sec 135
+> MiB/sec... wrote 1431 GiB to the FIO drive before compaction hit first
+> ENOSPC
+> 
+> This is the total throughput measured on the put side including all the
+> stall time. So my understanding is that if I write to this database at a
+> bit less than 135 MiB/sec, I should be able to avoid the stalls.
+> 
+> I am repeating the test with Snappy compression enabled now, and then I'll
+> try universal compaction.
+> 
+> Feature request: it would be _very_ useful to have an API to Write a
+> batch with a timeout, so that if my RocksDB is stalling under me, I can at
+> least easily signal an error and/or arrange to send the data I'm trying to
+> write somewhere else (another DB, or /dev/null).
+> 
+> It seems that any way to optimize or parallelize the compaction that is
+> stalling might help. I don't think I'm I/O bound on this process (I'll make
+> some flame graphs soon). Low hanging fruit: don't checksum so much, or
+> checksum faster. Anything else?
+> 
+> I am basically building a big circular buffer to retain some high volume
+> time series data in order for a few hours, with a few additional indexes
+> (please finish column families! :)).
+> 
+> @mdcallag https://github.com/mdcallag thanks for the advice. I've been
+> reaching the same conclusions.
+> 
+> ## 
+> 
+> Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/54#issuecomment-34490669
+> .
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@dhruba Yep, I'm planning to shard and test universal compaction. I was just trying to get a good feeling for what a single shard can handle before I do further development.
+I think the flash storage might be able to keep up most of the time, but I'll gather some more information to confirm.
+
+FWIW, here's the log from a run with universal compaction:
+
+https://drive.google.com/file/d/0B0b-iwt-kSG2aklKeWhkak0wWUU/edit?usp=sharing
+
+Over 3 hours, the throughput measured from at the put side is about 20% less than with level-style compaction. Universal compaction still stalled in this test, which I don't quite understand. As I see it, with a workload that has keys arriving mostly in order (and probably completely ordered by the time the memtables go to L0), universal style compaction should do pretty well. I will investigate more.
+
+Here's a flame graph of the level style compaction in action: http://alberts.github.io/fg.html
+
+With compression turned off for levels 0 and 1 with level style compaction, RocksDB is still CPU bound when compacting L0 and L1 and the CRC32 checksum on reads make up a significant part of the work that it has to do. Can abd70ec be tweaked to make this optional again?
+
+we can make checksum optional, but will be bad for real production use-case. i like ur other idea of using xxhash
+
+Albert: the new 3.0 release has hardware checksums enabled by default. It also has support for xxhash (contributed by you and your team). Are you seeing better performance with the 3.0 release?
+
+jamesgolick: if you re-run your benchmarks with 3.x release and your are still seeing performance isues, please provide us with LOG files so that we can investigate.
+
+@dhruba I think we've learnt a lot about tuning compaction since my previous comments. The fix I contributed in commit 56ca75e89ee3e89510fcf92cc58177cbd05566e8 also made CRC32C checksums significantly faster for us. Thanks.
+
+This was a really interesting thread. @alberts Can you please share the configuration that finally worked for you so that other readers can also utilize the same (if needed in future). 
+

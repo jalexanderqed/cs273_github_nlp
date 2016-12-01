@@ -1,0 +1,10 @@
+Summary: Auto-compactions will change memory usage of DB but memory_test
+didn't take it into account. This PR disable auto compactions in the
+test and hopefully it fixes its flakyness.
+
+Test Plan:
+UBSAN build used to catch the flakyness. Run `make ubsan_check` and it
+passes.
+
+LGTM.
+

@@ -1,0 +1,103 @@
+Hi,
+
+I am working on using Rocksdb as SSD cache, i.e. build an memcache interface on top of Rocksdb. There will be only point lookup and the read access pattern will be pretty random.
+
+The main things I am trying to solve is are 
+1) have low read amplification
+2) have TTL support
+3) have way to eviction items when disk becomes full.
+
+My current ideas are:
+1) Use level compaction, while caching all the indexes and bloom filters in memory(maybe not the last level, which will depend on how much memory are already used). For the rest memory, leave to block cache/page cache. With these, I hope to reduce keep read amplification to ~1.
+2) TTL support is easy, by suffixing TTL in the value.
+3) I saw the recent introduction of SstFileManager, which is great for preventing out of disk space. The basic idea of eviction I have in mind is in a background thread, to keep track of all the SST files, and their last modified time. When disk space usage reaches threshold1(e.g. 60%), I will compact the oldest SST files(by calling CompactFiles() API). Hopefully, we can remove some expired items to save space. When disk space usage reaches threshold2(e.g. 80%), I will delete oldest SST files(by calling DeleteFile() API). So such eviction is not LRU, but basically my assumption is the oldest file handles the lowest number of hits now.
+
+What do you guys think about this approach?
+
+Some questions I have are:
+1) How to know how many bytes are reduced after calling CompactFiles()? Is there a way to know after manual compaction ends, what's the generated new files and their size? In some cases if there are no expired items which causes compaction not able to free disk space, I might just want to stop doing compaction and wait for it reaches threshold2 and then delete files.
+2) To monitor SST files, I am thinking about inheriting SstFileManager, and keep track of the timestamps of all the SST files. I only want to delete the oldest files in the last level to prevent consistency issue(if I delete a file in a lower level, it might remove keys of higher version). Is there any easy way to know what level an SST file is at?
+3) Would running multiple rocksdb instances improve performance?
+
+Thanks!
+
+This is a great project! Do you plan on open -sourcing the memcache-interface for RocksDB?
+
+To use RocksDb as a cache, one needs to know the access times of records and/or sst-files. Keeping access informatiom per record/block is very resource consuming (we tried this earlier: https://reviews.facebook.net/D7215). One option is to keep some access-time information per file and this access-time information needs to be propagated across file-compactions.
+
+Without making any of the above enhancements to RocksDB, one can use RocksDB  as a cache by looking at the file-modification times of files in the last level.  GetLiveFileMetaData also tells you the level for each file. You can first delete files in the last level that were not modified for a long time. (Using the access-time returned by stat() of an sst file is not useful because of compaction).
+
+I am not sure if there are any advantages in running multiple instances of rocksdb, unless your write rate is very very high and the rocksdb-serialization-for-writes is a bottleneck. If I were you, I would make it configurable so that one memcache-api-instance can be backed by multiple rocksdb instances. 
+
+Do you want the cache to persist after a system restart? if not, you can switch off rocksdb wal. Or make it configurable.
+
+@hrjaco your approach sounds good to solve your problem. To get a real list of SST files, a better way is to either (1) poll DB by calling DB::GetMetaData(), or (2) implement options.listeners to get the event of file added or deleted.
+
+No easy way to estimate how much bytes are eliminated by CompactFiles() unless you know your workloads.
+
+It depends on your workload but multiple use cases can see better performance by using multiple DB instances. It's because a larger LSM tree implies higher costs of binary search to find the record, as well as larger compaction costs. But these improvements might not necessarily be significant in your use case.
+
+Thanks @dhruba and @siying for your suggestions!
+
+Yes, we definitely want to open source this if works great for us :)
+
+We also thought about some more sophisticated policy for eviction. e.g. keep track of each file's most recent access times, but it would require quite big change to Rocksdb, especially as you mentioned for compaction, we also need to propagate such information. So considering too much work here, we switched to use the file's last modified time. We assume that the oldest file would be likely the file which gets the least accesses now.
+
+We are currently using GetLiveFilesMetaData() which provides us with the level information. Is this API expensive? Would the call from a separate thread block any online GET/SET requests (considering there might be more than thousands of SST files)? Another approach I am considering is using callbacks(either though SstFileManager or EventListener) to record the diff, but both callbacks do not provide the level information of the newly created file. Is this sth that can be added?
+
+The WAL is configurable now. If the use case does not do cache invalidation, we would disable the WAL. Otherwise, we need to enable the WAL to avoid inconsistency in cases of system restart. The number of rocksdb instances is also configurable now, we will see whether it helps after we do more load testing.
+
+Best of luck with you work, and if u can contribute it back to open-source, that would be awesome.
+
+I feel that rocksdb can be enhanced to capture the access-time of data in a file  (and propagate across compactions). If somebody can do the design and validate the effectiveness of such a enhancement, that would be great for all cache-related use-cases.
+
+I have been doing some large data load testing(mainly writes). The limiting factor I found is the disk writes IO bytes/sec due to the write amplification. Suppose we want to support 20MB/sec Network In Byte/sec, we would write 20 \* X MB/sec to disk(where X is the write amplification).
+
+The box where I am going to use this has 1.6TB disk space. 
+
+At the beginning, I used one Rocksdb shard, where level multiplier of 10 and in total write amplification of 61(suppose we wait until L0 contain the same size as L1 does, then do the L0->L1 compaction, then L0->L1 write amplification can be 1). This would cause 1.2GB/sec writes/per. Our disk totally cannot handle this.
+
+I started to use multiple rocksdb instances to reduce the number of levels so as to reduce write amplification. Currently I use 256 shards, with each one:
+L0: 64MB(2 files, each 32MB)
+L1: 64MB(each 8MB, 8 files)
+L2: 0.64GB
+L3: 6.4GB
+With this, in theory, the write amplification can be at most 1+10+10 = 21. I tested this out, it makes things a lot better. But the writes bytes/sec to disk is still high, which impacts read latency(we observed GET p90 to be 9ms and p99 to be ~23ms, while PUT p99 is still 1ms as expected).
+
+In order to further reduce write amplification, I can run even more shards(and reduce the number of levels). Suppose we only run with 2 levels, we can get write amplification to be 1. So my question is are there any problems with running e.g. 10K rocksdb shards in the same process?
+
+We almost always see write amp much lower than what is estimated by theory. Did you actually measure write amplification of 60? We're seeing 15-20 write amp when we store a big database (hundreds of GB, or a TB) in one shard.
+
+But if you're constrained by write amp, you should try out universal compaction. It makes write amp much better while increasing read amp and space amp. But if you're running universal compaction you will probably need to run many shards (tens or hundreds)
+
+Yes, 60 is what I observed when I was doing load testing. The test basically generates PUT for a random key in a very large key space, so this is definitely not same as production traffic. Do you know why you get 15-20 write amp? Delete markers? duplicated puts? 
+
+I do not understand very well about universal compaction. How many levels can Rocksdb have if using universal compaction? From https://github.com/facebook/rocksdb/wiki/RocksDB-Basics it says only L0, but from https://github.com/facebook/rocksdb/wiki/Universal-Compaction the example shows there can be multiple levels. If it can have multiple level, can files on level >= L1 have overlapped keys with other files on the same level?
+
+Another thing to mention is I still want to have low read amplification since this is used as a cache. Level compaction gives good read amplification(~1) for point look up if we cache all the bloom filters.
+
+In order to also achieve close to 1 write amplification, I am thinking about running more rocksdb instances. But I am wondering what's the tradeoff here.
+
+Can you share compaction IO statistics from the RocksDB LOG file?
+
+On Tue, Mar 8, 2016 at 2:55 PM, hrjaco notifications@github.com wrote:
+
+> Another thing to mention is I still want to have low read amplification
+> since this is used as a cache. Level compaction gives good read
+> amplification(~1) for point look up if we cache all the bloom filters.
+> 
+> In order to also achieve close to 1 write amplification, I am thinking
+> about running more rocksdb instances. But I am wondering what's the
+> tradeoff here.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1014#issuecomment-194005749.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Hello @hrjaco : were u able to use rocksdb as a SSD cache?
+

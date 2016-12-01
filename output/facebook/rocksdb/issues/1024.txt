@@ -1,0 +1,10 @@
+Hi,
+
+i am trying to profiling rocksdb performance, basically i want to know the latency for a single PUT, GET operation spend at software part of the I/O path which excludes the real I/O transfer time.
+
+is there a way to at least know the part spend at rocksDB layer?
+
+I'm not fully understand what you are interested but this is what we have to break down single query: https://github.com/facebook/rocksdb/blob/master/include/rocksdb/iostats_context.h and https://github.com/facebook/rocksdb/blob/master/include/rocksdb/perf_context.h
+
+Just call SetPerfLevel() in here https://github.com/facebook/rocksdb/blob/master/include/rocksdb/perf_level.h and then you can operate on the thread local iostats_contex and perf_context files to get break down of counters inside one query.
+

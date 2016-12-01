@@ -1,0 +1,86 @@
+  Investigation shows that WinRandomAccess aligned buffer that we use for
+  unbuffered read access grows to the the size of the largest read
+  and remains so for a long period of time which impacts memory
+  footprint. We introduce a new DBoption random_access_max_buffer_size that
+  limits the size of the buffer with 1Mb default. For reads larger
+  than the option value we create one shot large buffers.
+  We also implement compaction_readahead option while re-using the same
+  buffer. When readahead is in effect we allocate a fixed size buffer
+  and use one shot buffer for very large reads.
+  We propagate both options above to the env ooptions to make them
+  available for Windows environment code.
+  We add a hint function that enables ReadAhead when necessary.
+
+@igorcanadi @siying Looks like the build was extremely slow this time and it exceeded 40 minutes limit on appveyor. It should be good though.
+
+@yuslepukhin we are going to have a premiere account of Appveyor. Then we won't have the 40 minute limit any more.
+
+@siying Typically it takes 12 minutes on my desktop.
+
+@siying Pls, comment when you have a chance.
+
+I will take a further look today.
+
+CC @igorcanadi  who added the read ahead wrapper.
+@yuslepukhin if we make our read ahead wrapper also only issue aligned read, would it simplify your codes?
+
+@siying @igorcanadi it would probably be the same for us but I would not get to it for a while. This change is what we are currently using internally and we gain about %40 in a standalone test.
+
+Instead of using compaction_readahead option and not really using our ReadaheadRandomAccessFile, why not just use our SetupForCompaction() function:  https://github.com/facebook/rocksdb/blob/master/table/block_based_table_reader.cc#L621
+
+When `rep_->file->file()->Hint(RandomAccessFile::SEQUENTIAL)` is called, you can just do EnableReadahead()
+
+@igorcanadi I agree with that
+
+@igorcanadi however, we need a way to get the setting anyway internally.
+
+@igorcanadi @siying Let me summarize. You want me to re-use the readahead code in the wrapper, make the buffer Aligned (just like we did for WritableFile) and simply call Hint instead of introducing a new virtual interface.
+
+Hmmm, no need to reuse the readahead code in the wrapper. I would just say don't use the wrapper at all, if you'd like to reimplement this on your own. If you set compaction_readahead_size_ to 0, the wrapper doesn't get invoked at all: https://github.com/facebook/rocksdb/blob/master/db/table_cache.cc#L96
+
+@igorcanadi I am Okay with using the wrapper that gets involved at the right place. Just need time to do something similar with WritetableFile above in the same source file.
+
+@yuslepukhin my only question is do we need to add the new options. Can we use the same parameter in both of the pass through mode and non-pass-through mode?
+
+@siying the reason for the new parameter is to limit the growth of the buffer when read-ahead is disabled. We make use of unbuffered I/O so we always need to use user buffer. In our experiments random access tends to allocate huge buffers that stay there until the file is closed. So I was not comfortable re-using the same parameter.
+
+@yuslepukhin OK then. I'll wait for more comments for a while. Will merge if nobody has further comments tomorrow.
+
+@siying OK, I will re-work this more in the future to eliminate code dups.
+
+Didn't realize @igorcanadi commented. @igorcanadi any suggestion how Windows build can use different setting for compaction input and normal read?
+
+@igorcanadi  sorry I missed your another comment. Yes, I feel it is better to me to call rep_->file->file()->EnableReadAhead() directly. @yuslepukhin is that good for you?
+
+@siying I see SetupForComaction() is an automatic thing. So I am gonna get rid of EnableReadAhead() and override Hint() for Sequential properly with read-ahead. Will add documentation for the option in the course of the day.
+
+@siying BTW, I see that the PR comments are not always preserved during the merge. Is there anything I(we) could do better here?
+
+@yuslepukhin if possible, we should move to using Phabricator for code reviews. It should be as easy as installing arcanist and doing `arc diff` (https://github.com/phacility/arcanist). However, it not that easy. We don't use the latest arcanist here at Facebook, so you'll likely have to install an older version (I would try with mid-2014, somewhere around here: https://github.com/phacility/arcanist/commits/master?page=18)
+
+Don't worry about this if you don't feel like it. But it would make code reviews much easier.
+
+@igorcanadi We did take a look at the Phabricator and this was our initial intent. But then we found that we need a server part (if we got this right) for it and it does not run on Windows. Believe it or not this is a Windows only shop.
+
+Arcanist is written in php and should be able to run on windows. The server part is already setup on our side, and configured in .arcconfig: https://github.com/facebook/rocksdb/blob/master/.arcconfig#L3
+
+@igorcanadi Will revisit `arc` with the next PR which is soon.
+
+@igorcanadi SetupForCompaction() does not appear to be called. At least, I see the perf gain disappears unless I call Hint on the ReadaheadRandomAccessFile directly from GetTableReader() which is inline with what it is done for RANDOM access a few lines down.
+
+@yuslepukhin  did you set options.new_table_reader_for_compaction_inputs=true?
+
+@siying I did not try that option. Would we prefer to a) have a single control in a form of compaction_readahead b) have readahead everythere ReadaheadRandomAccess is used?
+
+@siying Is this version more to your liking?
+
+@yuslepukhin you need to turn on the option options.new_table_reader_for_compaction_inputs=true in order to have the hint called. If you don't turn it on, compaction input is likely to share the same file reader already cached for normal reads so we will not call the hint.
+
+@yuslepukhin sorry for the delay of the reply. The code path we talk about is this: https://github.com/facebook/rocksdb/blob/v4.0/db/table_cache.cc#L200
+
+If you turn options.new_table_reader_for_compaction_inputs=true, this function will be called (otherwise it is a bug) and Hint() functions will be called by block based table reader, based on the options. As long as you can make block_based_table_reader to call the right functions, you should achieve what you want. For you, no need to use the read ahead wrapper then.
+
+@siying I am OK to use readhead wrapper since it is a good indication that readahead is necessary and to keep the functionality inline with the mainline. Do you have any issues with this iteration if I do not use SetupForCompaction? That would require two settings instead of just compaction_readahead_size.
+
+@siying This iteration has the hint being called right after Readahead wrapper is instantiated in case the input is sequential. I.e. Hint() is now properly implemented and will work for both with Readahead and with new table reader option set.
+

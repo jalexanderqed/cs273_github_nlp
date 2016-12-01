@@ -1,0 +1,23 @@
+Adding an option to ldb to make it possible to dump keys only, without values.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thanks for your contribution @alexander-fenster! Looks like the build throws a warning, check out https://travis-ci.org/facebook/rocksdb/builds/101656838
+
+My bad. Let me fix it
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+So this would make it possible to do `ldb --db=DB scan --no_value | wc -l` to get the number of entries, correct?
+
+This would certainly be an improvement over my current approach:
+
+```
+ldb --db=DB scan | grep -e '^[0-9a-f]\{40\} : ' | wc -l
+```
+
+Yup @bolinfest. We just need to wait for @alexander-fenster  to fix the compile warning.
+
+Sorry, totally forgot about it. Just fixed all the warnings.
+@bolinfest: you should also use --hex, otherwise, if your keys or values contain '\n', it may not count lines properly.
+

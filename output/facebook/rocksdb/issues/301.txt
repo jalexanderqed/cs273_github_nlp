@@ -1,0 +1,39 @@
+previous answer:
+  DB operations unaffected by backup
+new question  [what about DB operations during backup using BackupableDB?]
+  BackupableDB "consumes" DB interface, should use backupable_db for post backup DB operations,
+  how can this be? is there not a point in backup where DB becomes invalid?
+  possibly during a DB Put/Get?
+  is it required to use BackupEngine directly to safely do DB operations during and after backup? 
+
+BackupEngine example: shows "delete db" after CreateNewBackup
+    backup_engine->CreateNewBackup(db);
+    delete db;
+    delete backup_engine;
+is this required or can the "db" continue to be used during and after CreateNewBackup?
+
+db can be used safely during backup. Backup takes a snapshot for files to be copied. Normal operations to DB does not affect the set of files included in snapshot.
+
+You can safely use BackupableDB post backup. The way you can think of BackupableDB is that it just adds two new functions to the DB interface.
+
+I apologize but I am still confused.
+If there are three separate threads of execution in our application and all three threads concurrently call DB methods:
+    one calls DB.Put
+    one calls DB.Get
+    one calls backupable_db=BackupableDB(..) followed by backupable_db->CreateNewBackup()
+
+unless threads are serialized by the application the order in which these calls reach the DB methods is indeterminate.  a call to DB.Put can occur anytime during/after the BackupableDB(..) CreateNewBackup() sequence.  this means that the DB interface that is consumed by BackupableDB can be used by a thread calling DB.Put "after" the DB interface is "consumed". 
+[am I misunderstanding "consumed"?  I assume it means the interface becomes invalid for accesses]
+
+perhaps it is true that the DB interface is consumed in the call to backupable_db=BackupableDB(..)
+if this is so and the rocksDB execution time for this call is short then application can block Get/Put threads so previous DB interface is not used for DB.Put or DB.Get concurrently during call to backupable_db=BackupableDB(..)
+
+then application can switch to from previous DB interface to new backupable_db interface for all subsequent accesses to rocksDB methods and then unblock threads to use new backupable_db interface and then call CreateNewBackup.  this means that applications threads will call rocksDB 
+methods Get/Put using backupable_db interface during and after call to CreateNewBackup.
+
+or should we just use BackupEngine which does not appear to require switching to a new interface.
+
+BackupableDB interface has Get() and Put() calls. When you open the DB, let the BackupableDB consume your DB\* and do all RocksDB calls on BackupableDB interface. Does that make sense?
+
+BackupEngine is also a good solution. :)
+

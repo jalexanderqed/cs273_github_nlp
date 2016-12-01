@@ -1,0 +1,2 @@
+The Makefile includes incorrect paths to version.h which prevent proper test execution.
+

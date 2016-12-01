@@ -1,0 +1,35 @@
+This pull request adds enhancements to the API which I need for my Go wrapper: https://github.com/tecbot/gorocksdb
+
+Please review careful the part with the merge operator because I am not a C expert so maybe I did something wrong.
+
+I completed the CLA.
+
+LGTM
+
+I will probably switch my Go code to use gorocksdb instead of my gorocks package as soon as this is merged.
+
+Can you please add basic merge operator sanity tests to db/c_test.c (few puts, few gets, nothing major)? Can you also explain reason behind removing `free(filter)` at line 125?
+
+Otherwise looks good, thanks a lot!
+
+Hi Igor,
+- I fixed the size_t and the four space indent.
+- I removed `free(filter)` because you didn't know whether the client has allocated the memory in the C space. The client should take care of it this is also the problem why the valgrind test is failing but I didn't know how I can fix it or do you think we should force the client to allocate the return value in the C space?
+
+For the test I have currently no time. I could do it maybe on Friday.
+
+Somehow if the function returns a pointer the unwritten rule is that the caller is responsible for cleaning the memory. Can we make sure that client allocates the memory in the C space?
+
+Alternative solution could be to add a Delete method that would be default call free(filter), and client can implement its own solution for freeing the memory if he wishes.
+
+@igorcanadi 
+
+I decided to implement your alternative solution also I added a test case for the merge operator.
+
+Tnx!
+
+Merge operator test seg faulted. Here's the fix: https://github.com/facebook/rocksdb/commit/2bf1151a25de5c711d0c863973c2d995e1137c60
+
+Oh no, I didn't see the small message at the end of the test. Sry for that :/
+and the rename is of course correct, argh...
+

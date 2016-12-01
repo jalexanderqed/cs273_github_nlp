@@ -1,0 +1,17 @@
+Summary:
+1. Add Java bindings for iterators
+2. Unit-tests for iterators
+
+make rocksdbjava
+make sample
+
+Reviewers: haobo, yhchiang, sdong, dhruba, rsumbaly, zzbennett, swapnilghike
+
+Reviewed By: yhchiang
+
+CC: leveldb
+
+Differential Revision: https://reviews.facebook.net/D18117
+
+Merging since it was accepted by @yhchiang 
+

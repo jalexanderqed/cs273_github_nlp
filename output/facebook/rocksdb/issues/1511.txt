@@ -1,0 +1,33 @@
+Summary:
+It is hard to measure acutal memory usage by std containers. Even
+providing a custom allocator will miss count some of the usage. Here we
+only do a wild guess on its memory usage.
+
+Test Plan:
+Have a piece of custom code to open a DB, insert multiple keys with hint
+and verify the number is report through
+DB::Properties::kCurSizeAllMemTables property.
+@yiwu-arbug has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4179945).
+
+@yiwu-arbug has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4179945).
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1511/files/3f2877129dd1f8579029f6bd26931dcf262faac1..5954835fd777177f77af2724292ecda0885bb456) - [changes since last import](https://github.com/facebook/rocksdb/pull/1511/files/3f2877129dd1f8579029f6bd26931dcf262faac1..5954835fd777177f77af2724292ecda0885bb456)
+
+use `port::kMaxSizet` instead of `std::numeric_limits<size_t>::max()`.
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1511/files/5954835fd777177f77af2724292ecda0885bb456..3ef9ccee64ce66758fafda642c8922523bc86bf3) - [changes since last import](https://github.com/facebook/rocksdb/pull/1511/files/5954835fd777177f77af2724292ecda0885bb456..3ef9ccee64ce66758fafda642c8922523bc86bf3)
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1511/files/3ef9ccee64ce66758fafda642c8922523bc86bf3..67bad0ca54566086062d08766adcf7098c69c324) - [changes since last import](https://github.com/facebook/rocksdb/pull/1511/files/5954835fd777177f77af2724292ecda0885bb456..67bad0ca54566086062d08766adcf7098c69c324)
+
+Fix miscount of bucket size.
+
+Will fix db_properties_test.
+
+Fix db_properties_test.
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1511/files/67bad0ca54566086062d08766adcf7098c69c324..7a2b119c87ea904e839a3ae73480dca346f3bb2d) - [changes since last import](https://github.com/facebook/rocksdb/pull/1511/files/67bad0ca54566086062d08766adcf7098c69c324..7a2b119c87ea904e839a3ae73480dca346f3bb2d)
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1511/files/7a2b119c87ea904e839a3ae73480dca346f3bb2d..e3ec2ee43386faeb5315ccf694e4edef981e9d2f) - [changes since last import](https://github.com/facebook/rocksdb/pull/1511/files/7a2b119c87ea904e839a3ae73480dca346f3bb2d..e3ec2ee43386faeb5315ccf694e4edef981e9d2f)
+
+Fix lite build.
+

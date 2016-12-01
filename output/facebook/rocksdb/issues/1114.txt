@@ -1,0 +1,74 @@
+Hi all --
+
+Some users are requesting rocksdb packages for RHEL-based operating systems.  I found build_tools/make_packages.sh script but was not able to find any of the build artifacts in any external repos.  So I wonder if you are interested in getting rocksdb packaged for Fedora, CentOS (EPEL), etc?
+
+It would be good to get rocksdb packaged for Fedora, CentOS, etc? what are the steps/process to be followed?
+
+Process is listed here:  https://fedoraproject.org/wiki/New_package_process_for_existing_contributors
+
+Hi Jeremy,  I read through the guidelines.  Since rocksdb is a pure c++ library, the rocksdb release process is mainly focussed on producing periodic, high-quality, bug-free releases of the source-code that can be consumed in various operating systems.
+
+One way is for a volunteer to take a new rocksdb-release and then build packages for Fedora/CentOS and publish them in an open-source repository. The rocksdb github-repo can point to the location where the Fedora/CentOS packages are built/published. Does it sound acceptable to you?
+
+Yes that's what I was thinking.  There's an existing open Red Hat bugzilla for this:  https://bugzilla.redhat.com/show_bug.cgi?id=1200612.
+
+It has fallen silent for about a year, but we can still use that one.  I just wanted to make sure it was ok with the Facebook folks.
+
+One thing we would probably ask is that if it's possible that Facebook review our packaging (RPM spec files) for correctness.  The existing make_packages.sh is doing some things that we would want to sort out prior to inclusion.
+
+Yes I will be very happy to review whatever way I can (I am not a Fedora/CentOS expert). Thanks again for doing this.
+
+@dhruba I'd like to cc you on the bugzilla we have open for this, what email address could I use?
+
+Please use dhruba@gmail.com
+
+Ah, crap.  Unfortunately I can't cc addresses, you'd have to create a bugzilla account. I'll just ping you here if/when that BZ shows movement.
+
+Jeremy: I updated the cmake files to produce three rpms. Code in this branch:
+https://github.com/adsharma/rocksdb/commits/cmake_451
+
+Would be great if you could review and provide feedback. Things that need fixing:
+
+ls *.rpm
+rocksdb-4.5.1-Linux-devel.rpm  rocksdb-4.5.1-Linux-runtime.rpm  rocksdb-4.5.1-Linux-tools.rpm
+
+The files could be named better (rocksdb-devel\* for eg). 
+
+I am just wondering about RocksJava, should we have packages for that also?
+
+@adsharma hey -- I see your changes are to a CMakefile.  But to package rocksdb, we will want to arrive at an RPM spec file.
+
+The spec file would use a zip of (i.e.) git tag rocksdb-v4.5.1, compile the software according to the upstream project standards, and lay down files according to the distro-standardized locations.
+
+(I apologize if you know all this already).
+
+Jeremy: cmake has some rpm packaging support builtin.
+https://cmake.org/Wiki/CMake:CPackPackageGenerators#RPM_.28Unix_Only.29
+
+I tried to use it to the extent possible, but I'm not an expert on any of this. Hope someone more familiar with the distro standards can provide patches on top.
+
+Yeah, rocksdb@fb.com is probably not the best contact email. @dhruba or @igorcanadi may have better suggestions.
+
+Any progress on this?  I'm a Fedora user and a RocksDB package would be very much appreciated.  I can also help in testing the package if that is needed.
+
+Cmake has enough glue to create a usable package, but it may not be
+conforming to distro packaging standards.
+
+Distros are most likely going to implement their own packaging.
+
+On Aug 12, 2016 12:16 PM, "Wouter Beek" notifications@github.com wrote:
+
+> Any progress on this? I'm a Fedora user and a RocksDB package would be
+> very much appreciated. I can also help in testing the package if that is
+> needed.
+> 
+> —
+> You are receiving this because you were mentioned.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1114#issuecomment-239535972,
+> or mute the thread
+> https://github.com/notifications/unsubscribe-auth/AAoNA5Du7IwugpQXazZrRRQqwwyDSvkkks5qfMaRgaJpZM4IVUav
+> .
+
+@jeremyeder Do you need anything here to help package rocksdb into a redhat release?
+

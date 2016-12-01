@@ -1,0 +1,16 @@
+If I say I want 4 levels, does this include level 0?
+
+L0->LN-1. So yes.
+
+So level 0 is the "first level" and level 1 the second. I guess this is why
+my db didn't make it to the level I thought!
+On Feb 10, 2015 3:46 PM, "Igor Canadi" notifications@github.com wrote:
+
+> L0->LN-1. So yes.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/502#issuecomment-73722260.
+
+Yup :)
+

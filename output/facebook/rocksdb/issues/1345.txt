@@ -1,0 +1,30 @@
+Hi, 
+    I have a problem that when I open two db(A and B) in one progress, then called addfile interface to import sst file to`db A`, there was much(compare with don't called addfile interface) timeout when I called multi-get on `db B`. When timeout happened, the load of machine is low and there is no share block-cache.
+
+Can you please include more information about the issue, I am not sure I fully understand what's happening.
+
+Please note that after ingesting data using AddFile(), the first time you read the keys you ingested RocksDB will need to read these keys from the file and load them into the block cache.
+But if you do normal inserts (into the memtable), and then read the data you inserted you will be reading from the memory directly (read from the memtable).
+
+Is that's what is happening ? How many keys are in the file ? How much is the performance difference ?
+
+There two diff case about two db(A and B) open in one progress:
+case 1: A->addfile, then A->multiget. This is OK, without timeout when multiget. Every multiget request spend time less than 5ms.
+case 2: A->addfile, then B->addfile and A->multiget simultaneously, the operation of `A->multiget` is timeout. Some multiget request spend time more than 100ms.
+This is nothing with block-cache.
+
+Oh, That's a very interesting issue, the only thing that comes to my mind is that it's possible that in the first scenario the file was the OS page cache, but in the second scenario the file get's evicted.
+So first scenario you are reading from OS cache, second scenario you are reading from device and doing actual I/O
+
+hi IslamAbdelRahman, this problem occasional appear. I used systemtap to print info as below:
+![image](https://cloud.githubusercontent.com/assets/19619615/18858049/ba3a7a7e-849b-11e6-8827-acef16c5d13d.png)
+There are so much timeout operations(not only compare) which return after 10ms. And the system monitor as below:
+![image](https://cloud.githubusercontent.com/assets/19619615/18858073/06ca5cce-849c-11e6-9579-11f80a61eab6.png)
+And there are more disk write as below:
+![image](https://cloud.githubusercontent.com/assets/19619615/18858224/f3bdeeba-849c-11e6-8de8-efdaf9ceb3d7.png)
+
+Is there anything different from open db which will recover version and load sst? Because access db A will not timeout when db B is openning.
+@IslamAbdelRahman 
+
+Besides, I had changed the AddFile interface. It will  pick level which bigger than 0 and there is no overlap with added sst to load. All sst are sorted before, no overlap.
+

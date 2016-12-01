@@ -1,0 +1,42 @@
+Adding the ability to supply a filter object to be invoked while processing write-ahead-logs during recovery. 
+
+The filter provides a way to inspect log records, ignoring a particular record or skipping replay.
+
+This patch is cool!
+1. Would it be better have  another option to SkipProcessing all records till the end of the log?
+2. Also, can you pl put this ifndef ROCKSDB_LITE so that we do not include this feature for android/ios?
+3. Would it be possible to submit an "arc diff" so that we can provide review comments better?
+
+1. I think u already have the option called kStopReplay to achieve what I wanted. Maybe what I want is an option to indicate that log-processing has encountered an error and the DB should not be opened.
+2. Would it be good to send in a std::vector<WriteBatch> to the wal-filter so that the filter can process multiple log-records in one invocation? Such a feature might enable some kind of optimization in a custom-wal-filter?
+
+Done moving it under #ifndef ROCKSDB_LITE.
+1. Maybe I can add an enum that returns kCorruptedRecord and it can be handled similar to the way corruption is handled without filter (based on an option).
+2. This might need reworking of the code as single record nicely fits into the existing code. Is this something that can be added later?
+
+I will try to see if I can get arcanist work on Windows - I believe others had some problem with it earlier.
+
+ @dhruba @siying - addressed all the comments other than passing a vector of records to filter - I believe that would be a bit more intrusive change with the current code (since currently records are processed one by one) that can hopefully be done in the future if it would be significantly advantageous.
+
+Please take a look when you get a chance and merge or provide any feedback. Thanks!
+
+The public API looks fine to me, I am hoping that siying will get a chance to review it in detail
+
+@dhruba I'm doing it now.
+
+The patch looks good to me. There are some comments related to code convention. I can't list all of them, but need to fix that. Other than that, It's a great commit!
+
+I will fix the naming convention issues. For other formatting issues, is there an auto-formatter - when I see Travis build it seems to suggest formatting changes, it is possible to just apply them?
+
+Don't worry too much about other formatting changes. Just do your best. I can fix them as a follow-up.
+
+Added the change to fail recovery if filter provides more records than original and corresponding unit-test. Fixed naming conventions.
+
+Travis build failure doesn't seem to be related to my change.
+
+Would you like me to squash the commits into one?
+
+The test failure is odd. Let me try on my host and see how it works.
+
+@PraveenSinghRao I tried to apply your pull request against master but there is conflicts. Can you resolve the conflicts?
+

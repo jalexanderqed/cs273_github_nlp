@@ -1,0 +1,11 @@
+Follow up on https://github.com/facebook/rocksdb/pull/797
+@siying, as we have discussed, here's the fix.
+
+Hi @yhchiang, Could you please help reviewing this change? 
+This is a change I discussed with @siying before, but he is OOF this week. 
+Thank you. 
+
+Hi @siying, could you please take a look at this? Thank you :)
+
+Great! Thank you for your contribution!
+

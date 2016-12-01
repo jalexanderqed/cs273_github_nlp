@@ -1,0 +1,109 @@
+Hi,
+
+`c_simple_example`, built in ubuntu 16 with g++ 5.4, is unable to run in ubuntu 14, killed because of Illegal instruction.
+
+Built in ubuntu 16: 
+
+``` sh
+$ g++ --version
+g++ (Ubuntu 5.4.0-6ubuntu1~16.04.2) 5.4.0 20160609
+Copyright (C) 2015 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+$ make static_lib
+
+$ cd examples/
+
+$ make c_simple_example
+$ g++ -static c_simple_example.o -oc_simple_example ../librocksdb.a -lpthread -lrt -lsnappy -lgflags -lz -lbz2 -llz4
+```
+
+Runs in ubuntu 14:
+
+``` sh
+$ ./c_simple_example 
+Illegal instruction
+
+$ gdb ./c_simple_example 
+GNU gdb (Ubuntu 7.7.1-0ubuntu5~14.04.2) 7.7.1
+Copyright (C) 2014 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "x86_64-linux-gnu".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+<http://www.gnu.org/software/gdb/bugs/>.
+Find the GDB manual and other documentation resources online at:
+<http://www.gnu.org/software/gdb/documentation/>.
+For help, type "help".
+Type "apropos word" to search for commands related to "word"...
+Reading symbols from ./c_simple_example...done.
+(gdb) r
+Starting program: /root/c_simple_example 
+
+Program received signal SIGILL, Illegal instruction.
+0x0000000000488e33 in _M_bkt_for_elements (this=0xa13660 <rocksdb::db_options_type_info+32>, __n=<optimized out>) at /usr/include/c++/5/bits/hashtable_policy.h:474
+474 /usr/include/c++/5/bits/hashtable_policy.h: No such file or directory.
+(gdb) c
+Continuing.
+
+Program terminated with signal SIGILL, Illegal instruction.
+The program no longer exists.
+(gdb) q
+```
+
+Orginal issue pingcap/tikv#928 
+
+Any help will be appreciated!
+
+@overvenus I think you should show the `bt` result here too. 
+
+Thanks for reminding.
+
+``` sh
+gdb ./c_simple_example 
+GNU gdb (Ubuntu 7.7.1-0ubuntu5~14.04.2) 7.7.1
+Copyright (C) 2014 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "x86_64-linux-gnu".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+<http://www.gnu.org/software/gdb/bugs/>.
+Find the GDB manual and other documentation resources online at:
+<http://www.gnu.org/software/gdb/documentation/>.
+For help, type "help".
+Type "apropos word" to search for commands related to "word"...
+Reading symbols from ./c_simple_example...done.
+(gdb) r
+Starting program: /root/c_simple_example 
+
+Program received signal SIGILL, Illegal instruction.
+0x0000000000488e33 in _M_bkt_for_elements (this=0xa13660 <rocksdb::db_options_type_info+32>, __n=<optimized out>) at /usr/include/c++/5/bits/hashtable_policy.h:474
+474 /usr/include/c++/5/bits/hashtable_policy.h: No such file or directory.
+(gdb) bt
+#0  0x0000000000488e33 in _M_bkt_for_elements (this=0xa13660 <rocksdb::db_options_type_info+32>, __n=<optimized out>) at /usr/include/c++/5/bits/hashtable_policy.h:474
+#1  std::_Hashtable<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, rocksdb::OptionTypeInfo>, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, rocksdb::OptionTypeInfo> >, std::__detail::_Select1st, std::equal_to<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::hash<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<true, false, true> >::_Hashtable<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, rocksdb::OptionTypeInfo> const*> (this=0xa13640 <rocksdb::db_options_type_info>, __f=0x7fffffffd750, __l=0x7fffffffe1a0, __bucket_hint=0, __h1=..., __h2=..., __h=..., __eq=..., __exk=..., __a=...)
+    at /usr/include/c++/5/bits/hashtable.h:828
+#2  0x0000000000403d92 in _Hashtable (__a=..., __eql=..., __hf=..., __n=0, __l=..., this=0xa13640 <rocksdb::db_options_type_info>) at /usr/include/c++/5/bits/hashtable.h:446
+#3  unordered_map (__a=..., __eql=..., __hf=..., __n=0, __l=..., this=0xa13640 <rocksdb::db_options_type_info>) at /usr/include/c++/5/bits/unordered_map.h:222
+#4  __static_initialization_and_destruction_0 (__priority=65535, __initialize_p=1) at ./util/options_helper.h:146
+#5  0x00000000006a1337 in __libc_csu_init ()
+#6  0x00000000006a093e in generic_start_main ()
+#7  0x00000000006a0b8a in __libc_start_main ()
+#8  0x0000000000449d59 in _start ()
+(gdb) c
+Continuing.
+
+Program terminated with signal SIGILL, Illegal instruction.
+The program no longer exists.
+(gdb) q
+```
+
+Seems I forgot setting `PORTABLE=1`, now it works.
+

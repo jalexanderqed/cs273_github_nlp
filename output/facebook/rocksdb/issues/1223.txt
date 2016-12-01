@@ -1,0 +1,99 @@
+using new keyword to create variable-size arrays in order to satisfy most of the compilers
+
+@clumsy If you allocate memory with `new` you need to `delete` it when you are finished with it; `SetByteArrayRegion` makes a copy.
+
+How is it different from the current approach in terms of deleting the memory?
+
+@clumsy The current approach is allocated on the stack, but with `new` you are allocating on the heap. The stack will be cleaned up when the variable goes out of scope, variables on the heap are never cleaned up automatically, and must always be cleaned up manually.
+
+Ok, thanks for the clarification. In that case will a `const` variable holding the value help?
+
+E.g.:
+
+```
+const int size = compressionLevels.size();
+jbyte jbuf[size];
+```
+
+@clumsy The above would be allocated on the heap yes, but I do not know if that fixes the issue you are addressing on Windows. If it does then that is the simplest solution.
+
+If not, then you just need to add `delete [] my-array-variable`, before the return of your functions; where `my-array-variable` is the one that you previously `new`'d.
+
+No other solution is working for Visual Studio 15 C++ compiler on Windows.
+I'll amend the patch to include `delete[]`.
+
+@clumsy To do it right wrap it into `std::unique_ptr<char[]>` as delete in any form in C++ generally means a memory leak.
+
+The other way of doing this is to do alloca() then no delete is necessary and the space is allocated as before on the stack. Search for alloca() in the code as I have seen this issue before.
+
+Ok, found a solution for unique_ptr as suggested by @yuslepukhin:
+
+ttl.cc:
+
+```
+...
+if (s.ok()) {
+    jsize resultsLen = 1 + len_cols; //db handle + column family handles
+    std::unique_ptr<jlong[]> results = std::make_unique<jlong[]>(resultsLen);
+    results[0] = reinterpret_cast<jlong>(db);
+    for(int i = 1; i <= len_cols; i++) {
+      results[i] = reinterpret_cast<jlong>(handles[i - 1]);
+    }
+
+    jlongArray jresults = env->NewLongArray(resultsLen);
+    env->SetLongArrayRegion(jresults, 0, resultsLen, results.get());
+    return jresults;
+  }
+...
+```
+
+options.cc:
+
+```
+...
+jbyteArray rocksdb_compression_list_helper(JNIEnv* env,
+    std::vector<rocksdb::CompressionType> compressionLevels) {
+  std::unique_ptr<jbyte[]> jbuf = std::make_unique<jbyte[]>(compressionLevels.size());
+  for (std::vector<rocksdb::CompressionType>::size_type i = 0;
+        i != compressionLevels.size(); i++) {
+      jbuf[i] = compressionLevels[i];
+  }
+  // insert in java array
+  jbyteArray jcompressionLevels = env->NewByteArray(
+      static_cast<jsize>(compressionLevels.size()));
+  env->SetByteArrayRegion(jcompressionLevels, 0,
+      static_cast<jsize>(compressionLevels.size()), jbuf.get());
+  return jcompressionLevels;
+}
+...
+```
+
+rocksjni.cc:
+
+```
+...
+if (s.ok()) {
+    jsize resultsLen = 1 + len_cols; //db handle + column family handles
+    std::unique_ptr<jlong[]> results = std::make_unique<jlong[]>(resultsLen);
+    results[0] = reinterpret_cast<jlong>(db);
+    for(int i = 1; i <= len_cols; i++) {
+      results[i] = reinterpret_cast<jlong>(handles[i - 1]);
+    }
+
+    jlongArray jresults = env->NewLongArray(resultsLen);
+    env->SetLongArrayRegion(jresults, 0, resultsLen, results.get());
+    return jresults;
+  }
+...
+```
+
+Will update my patch shortly.
+
+Please check most recent commit.
+
+wrap it into std::unique_ptr<char[]> sounds good to me.
+
+LGTM.  Merged it.
+
+Closes https://github.com/facebook/rocksdb/issues/1220
+

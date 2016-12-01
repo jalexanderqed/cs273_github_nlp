@@ -1,0 +1,18 @@
+At present the design of the Java RocksIterator is not very Java'esk. That is to say that as a Java developer you will typically hold the assumption that calling `getKey()` or `getValue()` on the iterator will be stable until you call `next()`, `prev()`, `seek...`. This is not the case; see: https://github.com/facebook/rocksdb/issues/616#issuecomment-124246253
+
+I would suggest that the Java RocksIterator should be replaced by two different types of iterator:
+1. A direct iterator which uses `ByteBuffer` to access the underlying C++ memory. This would avoid the JNI copy that is done with the current RocksIterator on every call to `getKey()` or `getValue()`. It would also be unstable like the current RocksIterator, however because of the use of ByteBuffer this would be expected by the Java developer.
+2. A non-direct iterator which uses `byte[]` just as the current RocksIterator does, however the behaviour of `getKey()` and `getValue()` would be stable until `next()` or `prev()` is called; It would also be stable for example when remove is called on a non-direct iterator of a WriteBatch. This could for example be achieved by the first call to `getKey` internally caching the value, the value would be disposed on the call to `next` or `close`, the same principle would apply to `getValue`.
+
+Comments?
+
+Thanks for spotting and fixing the problem.  The suggestion sounds a good plan to me.  Please feel free to submit the pull request once it's ready!
+
+@yhchiang Thanks I have re-opened this, so that I don't forget and will attempt to close with a pull-request in the near future.
+
+@adamretter Is this issue resolved in trunk yet?
+
+@guozhangwang No, this is a desirable future improvement.
+
+Misusing a Iterator from Java should also never result in a SIGSEGV, see - https://github.com/facebook/rocksdb/issues/1121
+

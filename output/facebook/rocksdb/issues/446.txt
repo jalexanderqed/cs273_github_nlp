@@ -1,0 +1,25 @@
+Just a note about typo on https://github.com/facebook/rocksdb/wiki/Performance-Benchmarks.
+
+ --compression_ratio=50
+
+The above appears to be a bad option setting.  Should be 
+
+ --compression_ratio=0.5
+
+The use of 50 produces values that will not compress.  The timing of tests changes dramatically with proper option setting.  See db_bench.cc for verification.  Default is setting to 0.5.  Settings parsed via:
+
+ double d;
+ int n;
+ char junk;
+
+   if (leveldb::Slice(argv[i]).starts_with("--benchmarks=")) {
+      FLAGS_benchmarks = argv[i] + strlen("--benchmarks=");
+    } else if (sscanf(argv[i], "--compression_ratio=%lf%c", &d, &junk) == 1) {
+      FLAGS_compression_ratio = d;
+
+Thanks @matthewvon, I updated the wiki to say 0.5 now!
+
+Are you planning to share benchmark results?
+
+I was not testing RocksDB.  Was using your scripts because I was too lazy to look up the db_bench details for myself.  The result was some good stuff in code I maintain.  So thank you.
+

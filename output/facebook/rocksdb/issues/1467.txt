@@ -1,0 +1,6 @@
+In ForwardIterator::SeekInternal(), we may end up passing empty Slice representing an internal key to InternalKeyComparator::Compare.
+and when we try to extract the user key from this empty Slice, we will create a slice with size = 0 - 8 ( which will overflow and cause us to read invalid memory as well )
+ 
+Scenarios to reproduce these issues are in the unit tests
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4136660).
+

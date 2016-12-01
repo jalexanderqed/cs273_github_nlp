@@ -1,0 +1,15 @@
+Exposing persistent cache stats (counters) to the user via public API.
+Can you fix the unit tests?
+
+@kradhakrishnan updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1485/files/b46678a43f8ba173b6fc15e2c13d6142674fb790..0556812cd120218cbab88069f613de6eeec03f22) - [changes since last import](https://github.com/facebook/rocksdb/pull/1485/files/b46678a43f8ba173b6fc15e2c13d6142674fb790..0556812cd120218cbab88069f613de6eeec03f22)
+
+Fixed Siying's comments.
+
+@kradhakrishnan updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1485/files/0556812cd120218cbab88069f613de6eeec03f22..41926ecdbd4cf8d9f99fbf8cdd474d84b7992040) - [changes since last import](https://github.com/facebook/rocksdb/pull/1485/files/0556812cd120218cbab88069f613de6eeec03f22..41926ecdbd4cf8d9f99fbf8cdd474d84b7992040)
+
+@kradhakrishnan updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1485/files/41926ecdbd4cf8d9f99fbf8cdd474d84b7992040..c7201b830b964237c922f8c9503f4a110ff4342d) - [changes since last import](https://github.com/facebook/rocksdb/pull/1485/files/0556812cd120218cbab88069f613de6eeec03f22..c7201b830b964237c922f8c9503f4a110ff4342d)
+
+Updated to the latest master.
+
+@kradhakrishnan updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1485/files/c7201b830b964237c922f8c9503f4a110ff4342d..f38c4b1ad22cb01cd78e22af63dc92db999dada5) - [changes since last import](https://github.com/facebook/rocksdb/pull/1485/files/0556812cd120218cbab88069f613de6eeec03f22..f38c4b1ad22cb01cd78e22af63dc92db999dada5)
+

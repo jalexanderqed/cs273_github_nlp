@@ -1,0 +1,10 @@
+When I'm compiling the rocksdb in Ubuntu Studio 13.04, I get below error.
+
+util/env_posix.cc: In member function ‘virtual rocksdb::Status rocksdb::{anonymous}::PosixWritableFile::Close()’:
+util/env_posix.cc:691:32: error: ignoring return value of ‘int ftruncate(int, __off_t)’, declared with attribute warn_unused_result [-Werror=unused-result]
+       ftruncate(fd_, filesize_);  // ignore errors
+
+I guess ftruncate is declared with **attribute**((warn_unused_result)) in some environment.
+
+I'm now creating the patch for this compile error, because I'm interested in rocksdb and I'd like to contribute to this project :)
+

@@ -1,0 +1,79 @@
+I'm evaluating RocksDB for use as a persistent key-value store for a high-availability, fault-tolerant data structure with frequent random updates. I hope this is the right place for this kind of discussion.
+
+Does RocksDB support recovery from power loss without explicit usage of backup API? Are all 'open' transactions undone? How long does it take to recover after such a failure? Does it depend on data size?
+From my understanding of the online documentation, Snapshots are not persistent by nature, but I don't understand if this means they are not maintained over proper shutdown or whether they are concrete only in RAM (i.e., stored data has no version).
+Can I separate all modifications done before and after the snapshot after a crash? can I recreate the snapshot upon recovery? does it depend on whether new writes occurred?
+
+What are the assumptions on services provided by the file system and its recovery abilities? Can any 'journalled' file system be used? If RocksDB is the only 'user' of this file-system, what can I expect from it's recovery in terms of time to return to consistency (i.e., are most operations read-write or are there also frequent space allocations, file system defragmentation, etc.)?
+are there any recommendations for a file system (and tuning parameters) for good performance and rapid recovery after failures?
+
+Is there a sample 'recovery' log which you can post regarding such a recovery attempt (non-trivial, i.e., with pending writes and transactions) that shows what's being done and how long does each step take?
+
+> Does RocksDB support recovery from power loss without explicit usage of backup API?
+
+Yes. If you Write() with `WriteOptions.sync = true` you won't lose any commits after power failures. If you set `sync = false` (which is much faster), you will lose N last commits.
+
+> Are all 'open' transactions undone? 
+
+Yes.
+
+> How long does it take to recover after such a failure? Does it depend on data size?
+
+The speed of recovery rarely comes up as an issue. It's good to benchmark this to make sure that it satisfies your constraints. It depends on memtable size, not data size.
+
+> From my understanding of the online documentation, Snapshots are not persistent by nature, but I don't understand if this means they are not maintained over proper shutdown or whether they are concrete only in RAM (i.e., stored data has no version).
+
+Snapshots are concrete only in RAM, correct.
+
+> Can I separate all modifications done before and after the snapshot after a crash? can I recreate the snapshot upon recovery? does it depend on whether new writes occurred?
+
+Unfortunately I don't think we have this feature.
+
+> are there any recommendations for a file system (and tuning parameters) for good performance and rapid recovery after failures?
+
+We use XFS at Facebook. The speed of recovery after failure hasn't been an issue in the past.
+
+> Is there a sample 'recovery' log which you can post regarding such a recovery attempt (non-trivial, i.e., with pending writes and transactions) that shows what's being done and how long does each step take?
+
+All pending writes are kept in memory only. Only persisted writes are being recovered. Same is true for transactions. I found a sample LOG that shows recovery of ~5MB of unpersisted writes (memtable size) in 1.3 seconds and then 1 second more to create new MANIFEST:
+
+```
+2016/01/27-22:53:34.266521 7fd7765ed700 EVENT_LOG_v1 {"time_micros": 1453964014266515, "job": 1, "event": "recovery_started", "log_files": [5790, 5792]}
+2016/01/27-22:53:34.266534 7fd7765ed700 Recovering log #5790
+2016/01/27-22:53:34.841321 7fd7765ed700 EVENT_LOG_v1 {"time_micros": 1453964014841308, "job": 1, "event": "table_file_creation", "file_number": 5793, "file_size": 4620800, "table_properties": {"data_size": 4604759, "index_size": 22747, "filter_size": 0, "raw_key_size": 3981960, "raw_average_key_size": 32.0001, "raw_value_size": 6046206, "raw_average_value_size": 48.5889, "num_data_blocks": 543, "num_entries": 124436, "filter_policy_name": "", "kDeletedKeys": "0"}}
+2016/01/27-22:53:34.847638 7fd7765ed700 Recovering log #5792
+2016/01/27-22:53:35.515530 7fd7765ed700 EVENT_LOG_v1 {"time_micros": 1453964015515509, "job": 1, "event": "table_file_creation", "file_number": 5794, "file_size": 262612, "table_properties": {"data_size": 261235, "index_size": 1172, "filter_size": 0, "raw_key_size": 211112, "raw_average_key_size": 32.0012, "raw_value_size": 321553, "raw_average_value_size": 48.7423, "num_data_blocks": 29, "num_entries": 6597, "filter_policy_name": "", "kDeletedKeys": "0"}}
+2016/01/27-22:53:35.515562 7fd7765ed700 Creating manifest 5795
+2016/01/27-22:53:36.659162 7fd7765ed700 Deleting manifest 5784 current manifest 5795
+2016/01/27-22:53:36.659399 7fd7765ed700 EVENT_LOG_v1 {"time_micros": 1453964016659397, "job": 1, "event": "recovery_finished"}
+```
+
+When you create a snapshot, you get a SequenceNumber associated with that snapshot. Your code (outside of RocksDB) can remember that SequenceNumber anywhere u like. On a database restart, you can recreate the same snapshot using the SequenceNumber that you saved before the database restart.
+
+Sorry for the delay in response, your information has been very helpful an indeed looks promising. 
+@igorcanadi, this log is just what I was looking for. How about XFS power-loss recovery? I assume it is a pre-requisite for the next phase of RocksDB recovery. From wiki documentation, I understand the journal is limited in size and number of entries, but I don't know much about on disk layout and journal recovery to extrapolate a time limit. 
+@dhruba, if I can recreate the snapshot using a SequenceNumber I previously saved, I don't see much difference between this usage and maintaining all snapshots persistent until deleted. Have you considered this feature?
+
+@infidob I was not clear on my previous communication. When u create a snapshot, u get a SequenceNumber associated with that snapshot. On a database restart, u can recreate a new snapshot using the sequencenumber that you created the snapshot. This newly created snapshot will have the same data as the previous snapshot if you had switched off compaction via CompactionStyle::kCompactionStyleNone and then periodically use manual compaction via DB::CompactRange
+
+Is compaction implemented by generating new SequenceNumbers for entries that are rewritten (evicted from old file and added to a new file)? Is version information (i.e., when data was written) lost after compaction?
+If the interval between snapshots is long enough, such that most updates are between snapshots, can compaction still work and preserve version info (this conflicts with creating new sequence numbers, so if the answer to above question is false - this is relevant)?
+regarding my question, I meant - what's keeping snapshots from being persistent? i.e., why doesn't RocksDB store the sequence numbers of snapshots and enable their persistence? is reducing effectiveness of automatic compaction the only concern ? 
+
+Your request to have 'persistent snapshots' seem like a good requirement. It might be enough if the core rocksdb library has a vector of Snapshots passed to the OpenDB call. That way, when an application opens the db, it can specify the Snapshots that need to be maintained by the database.
+
+The rocksdb compaction code is such that it does not compact keys across a snapshot seqno.
+
+@dhruba, on your comment regarding switching off compaction - can I do it online, without closing the database? i.e., can I stop compaction and then poll/block until it is finished?
+I don't intend to compact manually, just want to stop compaction and resume it when processing is done. should I use PauseBackgroundWork instead? will this also guarantee snapshot has same data? i.e., if I PauseBackgroundWork, exit process and then restart it - will I be able to recreate the snapshot?
+
+@infidob : I am confused by your question(s). PauseBackgroundWork will ensure that compaction are stalled. Do you plan to close the database or do you plan to kill the process and restart it? Can you pl provide me the exact steps that you are planning to do?
+
+@dhruba:
+I didn't know whether snapshots are affected by compaction and wasn't aware of checkpoints at the time - I guess those are persistent snapshots.
+Even though I may not need the snapshots in case of shutdown and restart, I wanted to know what state the DB is left if it crashes with snapshots and then restarts.
+
+I want to phase-in a new node to a cluster and transfer some fraction of the database to it (load-balancing and fault tolerance). I begin with a checkpoint and replicate data files to the new node (non-trivial time period). during this time, I want to make sure I don't lose the ability to replicate new changes later (i.e.,  GetUpdatesSince checkpoint's sequence number). I thought I need to stop compaction to make this work, but WAL_ttl_seconds option solved it.
+
+thanks.
+

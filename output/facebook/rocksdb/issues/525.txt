@@ -1,0 +1,52 @@
+When running `make check` on Mac OS X (10.10.2), the tests fail with a segfault on master where HEAD is revision [694988b62793343c54d5620f7207c8d94e7d7f6e](https://github.com/facebook/rocksdb/commit/694988b62793343c54d5620f7207c8d94e7d7f6e). e.g.:
+
+``` bash
+$ make clean check
+```
+
+Eventual output:
+
+```
+***** Running document_db_test
+==== Test DocumentDBTest.SimpleQueryTest
+Received signal 11 (Segmentation fault: 11)
+#0   0x0000000104526c50 (in document_db_test)   
+#1   std::__1::ios_base::~ios_base() (in libc++.1.dylib) + 67   
+#2   fbson::FbsonOutStream::~FbsonOutStream() (in document_db_test) (FbsonStream.h:78)  
+#3   fbson::FbsonWriterT<fbson::FbsonOutStream>::~FbsonWriterT() (in document_db_test) (FbsonWriter.h:61)   
+#4   rocksdb::JSONDocument::ParseJSON(char const*) (in document_db_test) (FbsonJsonParser.h:97) 
+#5   rocksdb::DocumentDBTest::Parse(std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > const&) (in document_db_test) (document_db_test.cc:60)    
+#6   rocksdb::_Test_SimpleQueryTest::_Run() (in document_db_test) (document_db_test.cc:70)  
+#7   rocksdb::_Test_SimpleQueryTest::_RunIt() (in document_db_test) (document_db_test.cc:67)    
+#8   rocksdb::test::RunAllTests() (in document_db_test) (testharness.cc:71) 
+#9   start (in libdyld.dylib) + 1   
+#10  0x00000001 (in document_db_test)   
+/bin/sh: line 1: 22201 Segmentation fault: 11  ./$t
+make: *** [check] Error 1
+```
+
+looking
+
+For some reason, this throws a segmentation fault on Mac OS: https://gist.github.com/igorcanadi/f30e025050bc585462fd
+
+It looks like this is the bug
+http://llvm.org/bugs/show_bug.cgi?id=15337
+
+It advise using the basic_ostream(basic_streambuf<char_type,traits>\* sb)
+I tried to compile this code 
+https://gist.github.com/IslamAbdelRahman/3383c108707a79b7e171
+
+and it did not produce any segfaults
+
+I had the same conclusion posted in Igor's gist note as well :). Will send out a patch soon.
+
+Thanks guys. @igorcanadi any further thoughts on getting a Mac CI? I also mentioned it to @dhruba when I saw him on Weds.
+
+@adamretter Dhruba started internal discussion about this. Stay tuned.
+
+@adamretter is that one fixed ?
+
+@fyrz Ah yes it is now, thanks. @igorcanadi Any updated on a Mac CI?
+
+No updates yet. It will probably be a couple of months before we have something to share there. 
+

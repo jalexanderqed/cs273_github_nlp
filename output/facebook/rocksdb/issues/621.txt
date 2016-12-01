@@ -1,0 +1,2 @@
+sidenote: naming convention was most challenging part: since C api doesn't say anything about 'Slice' or 'SliceParts' I went for the 'writev' convention. totally open to ideas though
+

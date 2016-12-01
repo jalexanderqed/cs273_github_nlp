@@ -1,0 +1,5 @@
+  C4101 'identifier' : unreferenced local variable
+  C4189 'identifier' : local variable is initialized but not referenced
+  C4100 'identifier' : unreferenced formal parameter
+  C4296 'operator' : expression is always false
+

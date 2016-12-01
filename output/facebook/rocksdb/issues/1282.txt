@@ -1,0 +1,12 @@
+Hi,
+We'd like to make use of https://github.com/facebook/rocksdb/wiki/EventListener, but in the java API. Are there any plans to add this?
+
+Thanks,
+Damian
+
+@dguy There is no support for that in the Java API at the moment.
+
+I am just finishing the first PR for transactions in the Java API. However I could attempt to tackle this next, unless you want to approach it yourself?
+
+@adamretter thanks for getting back to me.  If you have the time to look into it, that'd be great! 
+

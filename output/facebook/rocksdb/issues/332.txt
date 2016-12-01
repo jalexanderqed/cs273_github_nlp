@@ -1,0 +1,291 @@
+I am using RocksDB for about two months in this configuration:
+OS X Server 10.9.5/2.3 MGhz Intel Core i7, 16 GB RAM, 2TB Hard Drive.
+GoLang (https://golang.org/dl/) 1.2.1
+RockDB 3.3.0
+
+The reason to switch to RockDB from LevelDB was about 10 times performance increase when generating a database.
+
+Recently I updated the GoLang to 1.3.3 - the latest stable version.
+
+I made extensive tests with different permutations of following:
+1) go version go1.2.2 darwin/amd64
+2) go version go1.3.2 darwin/amd64
+3) go version go1.3.3 darwin/amd64
+with
+RocksDB:
+3.3.0 (7/10/2014) AND also
+3.5.0 (9/3/2014)
+
+I can generate the DB but reading it:
+2) and 3) create a new directory with original name + "se)." to it. Additionally I see all content moved to this new directory and trying to read the DB AGAIN returns an error because the DB content is not there but in this new directory.
+
+A NOTE: this directory created comes with different names: "se).", "aterhole)." which seems random.
+
+The following combination is working OK:
+go version go1.2.2 darwin/amd64
+3.3.0 (7/10/2014) AND also
+3.5.0 (9/3/2014)
+
+Huh, this is interesting. Could this be a go problem?
+
+is it possible db_name passed to c interface does not terminated with '\0' properly?
+
+The question is that it happens during read. Why would RocksDB should write to disk in this case at all?
+
+Investigating further, here is the go to rocksdb interface I am using
+github.com/tecbot/gorocksdb
+
+from there:
+// OpenDb opens a database with the specified options.
+func OpenDb(opts _Options, name string) (_DB, error) {
+    var cErr *C.char
+    db := C.rocksdb_open(opts.c, stringToChar(name), &cErr)
+    if cErr != nil {
+        defer C.free(unsafe.Pointer(cErr))
+
+```
+    return nil, errors.New(C.GoString(cErr))
+}
+
+return &DB{
+    name: name,
+    c:    db,
+    opts: opts,
+}, nil
+```
+
+}
+
+// OpenDbForReadOnly opens a database with the specified options for readonly usage.
+func OpenDbForReadOnly(opts _Options, name string, errorIfLogFileExist bool) (_DB, error) {
+    var cErr *C.char
+    db := C.rocksdb_open_for_read_only(opts.c, stringToChar(name), boolToChar(errorIfLogFileExist), &cErr)
+    if cErr != nil {
+        defer C.free(unsafe.Pointer(cErr))
+
+```
+    return nil, errors.New(C.GoString(cErr))
+}
+
+return &DB{
+    name: name,
+    c:    db,
+    opts: opts,
+}, nil
+```
+
+}
+
+we found this bug as well and forgot to cross pollenate to tecbot repo. here is the commit, it covers all of the uses that we have, but there are likely others. the simple (and more robust) fix would be to fix stringToChar. hope this is helpful, be happy to work with you on fix
+
+https://github.com/rdallman/gorocksdb/commit/74f8826943a62520867cdbc31995649cb26aba5f
+
+how to apply the fix?
+
+use separate remote and cherry pick, copy files, manually make changes, however you'd like. Will be sending a patch to tecbot repo some time this weekend for 3.5 updates.
+
+tried to install from https://github.com/rdallman/gorocksdb/tree/master/db, but cannot compile under OS X
+
+yeah, that's an issue at present. I'm open to PR if you want to do the env for OSX it would be great,  but you should be able to just copy the .go files that you need from my repo into tecbots. I'm hoping to get a proper PR into tecbot repo today with some updates for 3.5. 
+
+thank you, I will wait for your update
+
+@thstart opened PR here: https://github.com/tecbot/gorocksdb/pull/21 if you want to jump the gun. I want to say "rocks on" but I just can't bring myself to do it. enjoy :)
+
+With
+go get github.com/tecbot/gorocksdb
+
+Got these errors:
+38: error: use of undeclared identifier 'rocksdb_options_set_cache'; did you mean 'rocksdb_options_set_env'?
+38: error: use of undeclared identifier 'rocksdb_options_set_filter_policy'; did you mean 'rocksdb_options_set_filter_deletes'?
+38: error: use of undeclared identifier 'rocksdb_options_set_block_restart_interval'; did you mean 'rocksdb_block_based_options_set_block_restart_interval'?
+38: error: use of undeclared identifier 'rocksdb_options_set_whole_key_filtering'; did you mean 'rocksdb_block_based_options_set_whole_key_filtering'?
+38: error: use of undeclared identifier 'rocksdb_options_set_db_stats_log_interval'
+38: error: use of undeclared identifier 'rocksdb_options_set_disable_seek_compaction'; did you mean 'rocksdb_options_set_disable_auto_compactions'?
+38: error: use of undeclared identifier 'rocksdb_options_set_allow_thread_local'; did you mean 'rocksdb_options_set_allow_mmap_reads'?
+38: error: use of undeclared identifier 'rocksdb_options_set_block_size'; did you mean 'rocksdb_options_set_arena_block_size'?
+38: error: use of undeclared identifier 'rocksdb_options_set_cache_compressed'; did you mean 'rocksdb_options_set_compression'?
+mo
+
+yeah, it's because it wasn't merged yet. just merged, give it a try now. 
+
+Do you ever test it?
+
+Tried again, with
+go get github.com/tecbot/gorocksdb
+
+Got these errors:
+
+37: error: use of undeclared identifier 'rocksdb_options_set_disable_seek_compaction'; did you mean 'rocksdb_options_set_disable_auto_compactions'?
+38: error: use of undeclared identifier 'rocksdb_options_set_whole_key_filtering'; did you mean 'rocksdb_block_based_options_set_whole_key_filtering'?
+38: error: use of undeclared identifier 'rocksdb_options_set_cache_compressed'; did you mean 'rocksdb_options_set_compression'?
+38: error: use of undeclared identifier 'rocksdb_options_set_db_stats_log_interval'
+38: error: use of undeclared identifier 'rocksdb_options_set_block_restart_interval'; did you mean 'rocksdb_block_based_options_set_block_restart_interval'?
+38: error: use of undeclared identifier 'rocksdb_options_set_block_size'; did you mean 'rocksdb_options_set_arena_block_size'?
+39: error: use of undeclared identifier 'rocksdb_options_set_cache'; did you mean 'rocksdb_options_set_env'?
+39: error: use of undeclared identifier 'rocksdb_options_set_allow_thread_local'; did you mean 'rocksdb_options_set_allow_mmap_reads'?
+39: error: use of undeclared identifier 'rocksdb_options_set_filter_policy'; did you mean 'rocksdb_options_set_filter_deletes'?
+
+go get don't overwrite the package if it's already exists, so you are not working on the latest version.
+Delete and get again the package, then it's should work. 
+
+I deleted it - now I got these messages:
+
+go get github.com/tecbot/gorocksdb
+
+# github.com/tecbot/gorocksdb
+
+38: error: use of undeclared identifier 'rocksdb_options_set_cache_compressed'; did you mean 'rocksdb_options_set_compression'?
+38: error: use of undeclared identifier 'rocksdb_options_set_disable_seek_compaction'; did you mean 'rocksdb_options_set_disable_auto_compactions'?
+38: error: use of undeclared identifier 'rocksdb_options_set_filter_policy'; did you mean 'rocksdb_options_set_filter_deletes'?
+38: error: use of undeclared identifier 'rocksdb_options_set_db_stats_log_interval'
+38: error: use of undeclared identifier 'rocksdb_options_set_block_size'; did you mean 'rocksdb_options_set_arena_block_size'?
+38: error: use of undeclared identifier 'rocksdb_options_set_cache'; did you mean 'rocksdb_options_set_env'?
+38: error: use of undeclared identifier 'rocksdb_options_set_allow_thread_local'; did you mean 'rocksdb_options_set_allow_mmap_reads'?
+38: error: use of undeclared identifier 'rocksdb_options_set_block_restart_interval'; did you mean 'rocksdb_block_based_options_set_block_restart_interval'?
+39: error: use of undeclared identifier 'rocksdb_options_set_whole_key_filtering'; did you mean 'rocksdb_block_based_options_set_whole_key_filtering'?
+
+Can you show me the output of: `git log --pretty=format:'%h' -n 1` in the `github.com/tecbot/gorocksdb` directory, please.
+
+In 
+mygo ▸ pkg ▸ darwin_amd64 ▸ github.com
+there is not a "tecbot" directory because it didn't compile
+
+Look into the src directory. Btw: it's better to have the dependency in your workspace not global.
+
+Think just need to update rocksdb to >= 3.5 but I haven't looked to see if
+api broke in 3.6. Try 3.5?
+On Oct 17, 2014 11:06 AM, "thstart" notifications@github.com wrote:
+
+> In
+> mygo ▸ pkg ▸ darwin_amd64 ▸ github.com
+> there is not a "tecbot" directory because it didn't compile
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/332#issuecomment-59552049.
+
+I just deleted it from there, tried again, now it is just one message:
+
+go get github.com/tecbot/gorocksdb
+
+# github.com/tecbot/gorocksdb
+
+38: error: use of undeclared identifier 'rocksdb_options_set_allow_thread_local'; did you mean 'rocksdb_options_set_allow_mmap_reads'?
+
+I checked the RocksDB version I am using:
+
+# Rocksdb Change Log
+
+## Unreleased (will be released with 3.6)
+
+### Disk format changes
+- If you're using RocksDB on ARM platforms and you're using default bloom filter, there is a disk format change you need to be aware of. There are three steps you need to do when you convert to new release: 1. turn off filter policy, 2. compact the whole database, 3. turn on filter policy
+
+### Behavior changes
+- We have refactored our system of stalling writes.  Any stall-related statistics' meanings are changed. Instead of per-write stall counts, we now count stalls per-epoch, where epochs are periods between flushes and compactions. You'll find more information in our Tuning Perf Guide once we release RocksDB 3.6.
+- When disableDataSync=true, we no longer sync the MANIFEST file.
+- Add identity_as_first_hash property to CuckooTable. SST file needs to be rebuilt to be opened by reader properly.
+
+### Public API changes
+- Change target_file_size_base type to uint64_t from int.
+- Remove allow_thread_local. This feature was proved to be stable, so we are turning it always-on.
+
+----- Past Releases -----
+
+## 3.5.0 (9/3/2014)
+
+### New Features
+
+That would explain it. Can you use 3.5? If you need 3.6 you'll have to
+update the bindings to compile (or comment out those lines in your
+local...), I can't look into updating them for a few days.
+
+On Fri, Oct 17, 2014 at 11:12 AM, thstart notifications@github.com wrote:
+
+> I checked the RocksDB version I am using:
+> Rocksdb Change Log Unreleased (will be released with 3.6) Disk format
+> changes
+> - If you're using RocksDB on ARM platforms and you're using default
+>   bloom filter, there is a disk format change you need to be aware of. There
+>   are three steps you need to do when you convert to new release: 1. turn off
+>   filter policy, 2. compact the whole database, 3. turn on filter policy
+> 
+> Behavior changes
+> - We have refactored our system of stalling writes. Any stall-related
+>   statistics' meanings are changed. Instead of per-write stall counts, we now
+>   count stalls per-epoch, where epochs are periods between flushes and
+>   compactions. You'll find more information in our Tuning Perf Guide once we
+>   release RocksDB 3.6.
+> - When disableDataSync=true, we no longer sync the MANIFEST file.
+> - Add identity_as_first_hash property to CuckooTable. SST file needs
+>   to be rebuilt to be opened by reader properly.
+> 
+> Public API changes
+> - Change target_file_size_base type to uint64_t from int.
+> - Remove allow_thread_local. This feature was proved to be stable, so
+>   we are turning it always-on.
+> 
+> ----- Past Releases -----
+> 3.5.0 (9/3/2014) New Features
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/332#issuecomment-59552920.
+
+## 
+
+Reed Allman
+
+I see but this is the latest and I downloaded it.
+
+How to get 3.5?
+
+versions are tagged on git, just check out 3.5
+
+On Fri, Oct 17, 2014 at 11:21 AM, thstart notifications@github.com wrote:
+
+> I see but this is the latest and I downloaded it.
+> 
+> How to get 3.5?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/332#issuecomment-59554144.
+
+## 
+
+Reed Allman
+
+@thstart -- https://github.com/facebook/rocksdb/releases
+
+There is a new problem.
+for bash I used: 
+ulimit -n 16356
+
+In OS X Yosemite
+the maximum is
+ulimit -n 10000
+
+If I try to set it to 16356 using:
+/etc/bashrc or ~/.bash_profile or manually
+I get an error.
+
+Obviously the new bash limits are limited.
+
+From other side each database I use has ~15,000 files.
+
+How to handle this situation? 
+
+You can increase target_file_size_base. I'm closing this issue since it's been resolved. Please open another one if you still have trouble after you increase target_file_size_base
+
+I see:
+// Default: 2MB
+func (self *Options) SetTargetFileSizeBase(value uint64) {
+    C.rocksdb_options_set_target_file_size_base(self.c, C.uint64_t(value))
+}
+
+What value to set? Is value=20000000 OK? 
+
+Usually people run it with 64MB
+

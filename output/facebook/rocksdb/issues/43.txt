@@ -1,0 +1,10 @@
+Hi, there is document on "Proposal for prefix API". Is this available yet or any information on its development?
+
+Lastly, I could not find any reference to rocksdb mailing list, if it does not exist let's start it please?
+
+Thanks and regards.
+
+The design discussions happen at https://www.facebook.com/groups/rocksdb.dev/, please join this group, 
+
+Thanks Dhruba :)
+

@@ -1,0 +1,20 @@
+Fixed build issue from https://github.com/facebook/rocksdb/pull/486
+
+In reply to @mdcallag, the original paper uses CAS(compare and swap) to synchronize updates of MappingTable(a table that maintains logical pages(nodes) to physical pages(nodes)). Since RocksDB guarantees that there is only one writer, my implementation does not need to utilize CAS to ensure that there are no multiple writers.
+
+---
+
+This is a BW-Tree implementation of Memtable for RocksDB.
+It was done as part of Facebook Open Academy.
+The original paper by Microsoft Research can be viewed at http://research.microsoft.com/pubs/178758/bw-tree-icde2013-final.pdf
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+Hey @YosubShin can you please squash all these commits into one?
+
+Also, please submit the diff using `arc diff`. Let me know if you have any issues running this. You need to install arcanist: https://secure.phabricator.com/book/phabricator/article/arcanist/
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

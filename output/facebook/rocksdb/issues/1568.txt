@@ -1,0 +1,9 @@
+Use cache_bench set cache_size to 2000000000, the RSS of this program is increasing along the time,  much larger than 2000000000.
+RocksDB Version: 4.9
+Maybe I got the idea. 
+The memory used for LRUHandle itself will occupy lots of memory, especially when the value size is small relative to the key size(allocated for LRUHandle ), the real cache will be double of the setting size
+So  maybe it's need to take accout of the memory allocted for LRUHandle 
+@siying do you think it a good idea to take handle size into account when calculating cache usage? We can add a flag for it.
+@yiwu-arbug the problem is table_cache. It uses a dummy size 1 for entry.
+@hustchensi LRUHandle cannot explain "much larger". I think each handle is 60 byte or something, if your page is compressed to say 4KB, the memory usage is only 1.5% more.
+There is no problem when using block cache. But in row cache, if each value is not so bigger then the key, that's the problem

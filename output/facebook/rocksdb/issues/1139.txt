@@ -1,0 +1,10 @@
+- Make CompressType explicitly signed char because kDisableCompressionOption = -1 breaks
+  on platforms where gcc/g++ defaults to unsigned char.
+- Use cmath instead of math.h in util/options_builder.cc since std::log is defined by cmath.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+Hi, the check failures have nothing to do with the patches. How does one proceed in this case? Thanks.
+

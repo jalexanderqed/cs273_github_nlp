@@ -1,0 +1,6 @@
+The following problem occurred on Mac, using CMake 3.5.1.
+
+The solution is to simply quote the last argument of `string(REGEX REPLACE` in `CMakeLists.txt`
+
+Closed by https://github.com/facebook/rocksdb/pull/1231
+

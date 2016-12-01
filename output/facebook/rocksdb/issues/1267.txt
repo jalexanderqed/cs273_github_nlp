@@ -1,0 +1,324 @@
+We are using rocksdb(0.4.2) in our project. Currently we met some 'core dump' problem. Here is some information about it.
+### The stack in error file
+
+```
+Stack: [0x00007fdedd6ff000,0x00007fdedd800000],  sp=0x00007fdedd7fdbb8,  free space=1018k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  0x00007fde00000001
+C  [librocksdbjni7623879195517844425..so+0x22d6ee]  rocksdb::BlockIter::PrefixSeek(rocksdb::Slice const&, unsigned int*)+0x2e
+C  [librocksdbjni7623879195517844425..so+0x22d791]  rocksdb::BlockIter::Seek(rocksdb::Slice const&)+0x61
+C  [librocksdbjni7623879195517844425..so+0x228db0]  rocksdb::BlockBasedTable::Get(rocksdb::ReadOptions const&, rocksdb::Slice const&, rocksdb::GetContext*)+0x1d0
+C  [librocksdbjni7623879195517844425..so+0x1e667b]  rocksdb::TableCache::Get(rocksdb::ReadOptions const&, rocksdb::InternalKeyComparator const&, rocksdb::FileDescriptor const&, rocksdb::Slice const&, rocksdb::GetContext*, rocksdb::HistogramImpl*)+0x38b
+C  [librocksdbjni7623879195517844425..so+0x1f57f0]  rocksdb::Version::Get(rocksdb::ReadOptions const&, rocksdb::LookupKey const&, std::string*, rocksdb::Status*, rocksdb::MergeContext*, bool*)+0x6a0
+C  [librocksdbjni7623879195517844425..so+0x196cdd]  rocksdb::DBImpl::GetImpl(rocksdb::ReadOptions const&, rocksdb::ColumnFamilyHandle*, rocksdb::Slice const&, std::string*, bool*)+0x60d
+C  [librocksdbjni7623879195517844425..so+0x196ea9]  rocksdb::DBImpl::Get(rocksdb::ReadOptions const&, rocksdb::ColumnFamilyHandle*, rocksdb::Slice const&, std::string*)+0x19
+C  [librocksdbjni7623879195517844425..so+0x2c1610]  rocksdb::DBWithTTLImpl::Get(rocksdb::ReadOptions const&, rocksdb::ColumnFamilyHandle*, rocksdb::Slice const&, std::string*)+0x20
+C  [librocksdbjni7623879195517844425..so+0x17181a]  rocksdb::DB::Get(rocksdb::ReadOptions const&, rocksdb::Slice const&, std::string*)+0x4a
+C  [librocksdbjni7623879195517844425..so+0x1485f1]  rocksdb_get_helper(JNIEnv_*, rocksdb::DB*, rocksdb::ReadOptions const&, rocksdb::ColumnFamilyHandle*, _jbyteArray*, int)+0x1b1
+C  [librocksdbjni7623879195517844425..so+0x14871f]  Java_org_rocksdb_RocksDB_get__J_3BI+0x3f
+J 805  org.rocksdb.RocksDB.get(J[BI)[B (0 bytes) @ 0x00007fdf20da7673 [0x00007fdf20da7600+0x73]
+
+Java frames: (J=compiled Java code, j=interpreted, Vv=VM code)
+J 805  org.rocksdb.RocksDB.get(J[BI)[B (0 bytes) @ 0x00007fdf20da7644 [0x00007fdf20da7600+0x44]
+J 1562 C2 com.alibaba.yarn.blink.runtime.reader.StreamInputProcessor.processInput(Lorg/apache/flink/streaming/api/operators/OneInputStreamOperator;Ljava/util/concurrent/locks/Lock;)Z (325 bytes) @ 0x00007fdf20f5fdac [0x00007fdf20f5eea0+0xf0c]
+J 889% C2 com.alibaba.yarn.blink.runtime.tasks.OneInputStreamTask.run()V (42 bytes) @ 0x00007fdf20d89168 [0x00007fdf20d89040+0x128]
+j  org.apache.flink.streaming.runtime.tasks.StreamTask.invoke()V+336
+j  com.alibaba.yarn.blink.runtime.taskexecutor.Task.run()V+537
+j  java.lang.Thread.run()V+11
+v  ~StubRoutines::call_stub
+```
+### The options we use
+
+```
+Options opt = new Options();
+opt.setUseFsync(false);
+opt.setDisableDataSync(true);
+opt.setCreateIfMissing(true);
+opt.setMergeOperator(new StringAppendOperator());
+BlockBasedTableConfig table_options = new BlockBasedTableConfig();
+table_options.setBlockSize(32 * SizeUnit.KB);
+table_options.setBlockCacheSize(DEFAULT_BLOCK_CACHE_SIZE * SizeUnit.MB);
+table_options.setFilter(new BloomFilter(DEFAULT_BLOOM_FILTER_BITS, false));
+table_options.setCacheIndexAndFilterBlocks(true);
+table_options.setIndexType(IndexType.kHashSearch);
+table_options.setWholeKeyFiltering(false);
+opt.setMemTableConfig(new HashLinkedListMemTableConfig());
+opt.useFixedLengthPrefixExtractor(Integer.SIZE / Byte.SIZE * 2);
+opt.setMemtablePrefixBloomBits(10000000);
+opt.setMemtablePrefixBloomProbes(6);
+opt.setTableFormatConfig(table_options);
+opt.createStatistics();
+opt.setWriteBufferSize(32 * SizeUnit.MB);
+opt.setTargetFileSizeBase(64 * SizeUnit.MB);
+opt.setMaxWriteBufferNumber(4);
+opt.setAllowOsBuffer(true);
+opt.setMaxOpenFiles(-1);
+opt.setMaxBackgroundFlushes(2);
+opt.setMaxBackgroundCompactions(2);
+opt.setCompactionStyle(CompactionStyle.LEVEL);
+opt.setLevelZeroFileNumCompactionTrigger(4);
+opt.setLevelZeroSlowdownWritesTrigger(20);
+opt.setLevelZeroStopWritesTrigger(30);
+opt.setNumLevels(4);
+opt.setMaxBytesForLevelBase(64 * 4 * SizeUnit.MB);
+```
+- We only use put and get method, something like this
+
+```
+TtlDB db = TtlDB.open(opt, rocksDbPath.getAbsolutePath(),(int)TimeUnit.DAYS.toSeconds(DEFAULT_TTL_DAY_NUMBER), false);
+db.put(writeOptions, key, value);
+byte[] valueBytes = db.get(key);
+```
+### The situation is
+- When we set opt.setCacheIndexAndFilterBlocks(false), there will be no problem
+- When we not set prefix, there will be no problem(We need prefix in some other situation, such as seeking)
+
+```
+//table_options.setIndexType(IndexType.kHashSearch);
+//table_options.setWholeKeyFiltering(false);
+//opt.setMemTableConfig(new HashLinkedListMemTableConfig());
+//opt.useFixedLengthPrefixExtractor(Integer.SIZE / Byte.SIZE * 2);
+//opt.setMemtablePrefixBloomBits(10000000);
+//opt.setMemtablePrefixBloomProbes(6);
+```
+- But when we put index into block cache and use prefix at the same time, it will crash after processing some data. I guess it may crash when index is not in block cache? We also tested in 4.5.1 version, but it still not work.
+
+Let me further check whether putting hash index into block cache is supported or not. I'm not sure it is supported.
+
+Is it possible for you to try version 4.9 or newer? I want to rule out some bugs that we fixed in 4.9.
+
+I was not able to reproduce the issue in the unit test. Some more information of the failure will be helpful.
+I'm not an expert on this but is there a way to get line number from the call stack? It will help us with what we should look at.
+
+@siying @ifndef-SleePy The line number can be retrieved by using `addr2line` if you have the original binary. I wrote up how to do that on the Wiki here - https://github.com/facebook/rocksdb/wiki/JNI-Debugging#interpreting-hs_err_pid-files
+
+@siying @adamretter 
+we have reproduce the core in our test enviroment, and see the call stack as below. Have anyone met this before?
+#13 0x00007fb6f98877ac in rocksdb::BlockPrefixIndex::GetBlocks (this=0x7fb6b3373620, key=..., blocks=blocks@entry=0x7fb6f14e0f78) at table/block_prefix_index.cc:215
+#14 0x00007fb6f9885fb3 in rocksdb::BlockIter::PrefixSeek (this=this@entry=0x7fb6f14e10e0, target=..., index=index@entry=0x7fb6f14e0fbc) at table/block.cc:287
+#15 0x00007fb6f9886081 in rocksdb::BlockIter::Seek (this=this@entry=0x7fb6f14e10e0, target=...) at table/block.cc:93
+#16 0x00007fb6f98812c0 in rocksdb::BlockBasedTable::Get (this=0x7fb6b00882e0, read_options=..., key=..., get_context=0x7fb6f14e1480) at table/block_based_table_reader.cc:1228
+#17 0x00007fb6f9838913 in rocksdb::TableCache::Get (this=0x7fb7105f5ab0, options=..., internal_comparator=..., fd=..., k=..., get_context=get_context@entry=0x7fb6f14e1480, file_read_hist=
+    0x7fb7105f7df0) at db/table_cache.cc:266
+#18 0x00007fb6f9849df8 in rocksdb::Version::Get (this=0x7fb6b2437c60, read_options=..., k=..., value=value@entry=0x7fb6f14e1840, status=status@entry=0x7fb6f14e1870, 
+    merge_context=merge_context@entry=0x7fb6f14e15e0, value_found=value_found@entry=0x0) at db/version_set.cc:889
+#19 0x00007fb6f97e2fbd in rocksdb::DBImpl::GetImpl (this=this@entry=0x7fb7105e3010, read_options=..., column_family=<optimized out>, key=..., value=value@entry=0x7fb6f14e1840, 
+    value_found=value_found@entry=0x0) at db/db_impl.cc:3075
+#20 0x00007fb6f97e3199 in rocksdb::DBImpl::Get (this=this@entry=0x7fb7105e3010, read_options=..., column_family=<optimized out>, key=..., value=value@entry=0x7fb6f14e1840) at db/db_impl.cc:2983
+#21 0x00007fb6f97ba70a in rocksdb::DB::Get (this=0x7fb7105e3010, options=..., key=..., value=0x7fb6f14e1840) at ./include/rocksdb/db.h:242
+#22 0x00007fb6f978f791 in rocksdb_get_helper (env=env@entry=0x7fb71063f9f8, db=db@entry=0x7fb7105e3010, read_opt=..., column_family_handle=column_family_handle@entry=0x0, 
+    jkey=jkey@entry=0x7fb6f14e1940, jkey_len=jkey_len@entry=50) at java/rocksjni/rocksjni.cc:555
+#23 0x00007fb6f978f8cf in Java_org_rocksdb_RocksDB_get__J_3BI (env=0x7fb71063f9f8, jdb=<optimized out>, jdb_handle=140424230350864, jkey=0x7fb6f14e1940, jkey_len=50)
+    at java/rocksjni/rocksjni.cc:589
+
+@siying @adamretter Thanks for reply. The comment of @hedengcheng shows more details about this problem. Do you have any idea?
+
+@hedengcheng which RocksDB version is it? We may have fixed something in 4.9 related to this.
+
+To explain more, the call stack shows that the index block in the block cache out-lived the table reader. It can happen in three cases: table reader is evicted by table cache, the DB is reopened in the same process, or you opened the same DB twice with the same block cache in the same process. The last case is rare so I assume it's not the case. We have some change in 4.9 that clears up the cached index block in the first two cases. If you are running 4.8 or earlier, I suggest you retry 4.9 or later. You are running 4.9 or later, we need to investigate more.
+
+Sorry I thought 4.9 has been official released but just realized that we haven't published release note yet. We will do it soon and the tag "v4.9" is ready to use already.
+
+@ifndef-SleePy @hedengcheng RocksJava 4.9.0 binaries are now on their way to Maven Central :-)
+
+Sounds great, we have tested it in version 4.2 and 4.5.1. We will test it in 4.9. Thanks a lot!
+
+### RocksJava 4.9.0 has the similar error:
+
+```
+ Stack: [0x00007f5532613000,0x00007f5532714000],  sp=0x00007f5532711eb8,  free space=1019k
+ Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+ C  0x00007f541d3ff460
+ C  [librocksdbjni972000177566262187.so+0x27c93e]  rocksdb::BlockIter::PrefixSeek(rocksdb::Slice const&, unsigned int*)+0x2e
+ C  [librocksdbjni972000177566262187.so+0x27c9f2]  rocksdb::BlockIter::Seek(rocksdb::Slice const&)+0x72
+ C  [librocksdbjni972000177566262187.so+0x2a0654]
+ C  [librocksdbjni972000177566262187.so+0x2a067f]
+ C  [librocksdbjni972000177566262187.so+0x28c6ba]  rocksdb::MergingIterator::Seek(rocksdb::Slice const&)+0x19a
+ C  [librocksdbjni972000177566262187.so+0x202cd3]  rocksdb::DBIter::Seek(rocksdb::Slice const&)+0x153
+ C  [librocksdbjni972000177566262187.so+0x16f8d4]  Java_org_rocksdb_RocksIterator_seek0+0x44
+ J 1165  org.rocksdb.RocksIterator.seek0(J[BI)V (0 bytes) @ 0x00007f5f92b1288a [0x00007f5f92b127c0+0xca]
+ J 3929 C2 com.mmmyb.index.InvertIndex$$anon$1.load(Ljava/lang/Object;)Ljava/lang/Object; (9 bytes) @ 0x00007f5f92f79a40 [0x00007f5f92f79600+0x440]
+ J 3973 C2 com.google.common.cache.LocalCache$Segment.lockedGetOrLoad(Ljava/lang/Object;ILcom/google/common/cache/CacheLoader;)Ljava/lang/Object; (433 bytes) @ 0x00007f5f93052744 [0x
+ 00007f5f93052080+0x6c4]
+ J 3085 C2 com.google.common.cache.LocalCache$Segment.get(Ljava/lang/Object;ILcom/google/common/cache/CacheLoader;)Ljava/lang/Object; (210 bytes) @ 0x00007f5f92b4f9d8 [0x00007f5f92b4
+ f680+0x358]
+ J 3003 C2 com.google.common.cache.LocalCache.get(Ljava/lang/Object;Lcom/google/common/cache/CacheLoader;)Ljava/lang/Object; (21 bytes) @ 0x00007f5f92f53e18 [0x00007f5f92f53d40+0xd8]
+ J 2823 C2 com.google.common.cache.LocalCache.getAll(Ljava/lang/Iterable;)Lcom/google/common/collect/ImmutableMap; (323 bytes) @ 0x00007f5f92f0557c [0x00007f5f92f03560+0x201c]
+ J 3246 C2 org.apache.thrift.TBaseProcessor.process(Lorg/apache/thrift/protocol/TProtocol;Lorg/apache/thrift/protocol/TProtocol;)Z (131 bytes) @ 0x00007f5f92feabe4 [0x00007f5f92fe812
+ 0+0x2ac4]
+ J 3738 C2 org.apache.thrift.server.TThreadPoolServer$WorkerProcess.run()V (241 bytes) @ 0x00007f5f92993594 [0x00007f5f92992b60+0xa34]
+ J 4072 C1 java.util.concurrent.ThreadPoolExecutor.runWorker(Ljava/util/concurrent/ThreadPoolExecutor$Worker;)V (225 bytes) @ 0x00007f5f92bfb814 [0x00007f5f92bfa880+0xf94]
+ j  java.util.concurrent.ThreadPoolExecutor$Worker.run()V+5
+ j  java.lang.Thread.run()V+11
+ v  ~StubRoutines::call_stub
+ V  [libjvm.so+0x68dbc6]  JavaCalls::call_helper(JavaValue*, methodHandle*, JavaCallArguments*, Thread*)+0x1056
+ V  [libjvm.so+0x68e0d1]  JavaCalls::call_virtual(JavaValue*, KlassHandle, Symbol*, Symbol*, JavaCallArguments*, Thread*)+0x321
+ V  [libjvm.so+0x68e567]  JavaCalls::call_virtual(JavaValue*, Handle, KlassHandle, Symbol*, Symbol*, Thread*)+0x47
+ V  [libjvm.so+0x7254b0]  thread_entry(JavaThread*, Thread*)+0xa0
+ V  [libjvm.so+0xa6b77f]  JavaThread::thread_main_inner()+0xdf
+ V  [libjvm.so+0xa6b8ac]  JavaThread::run()+0x11c
+ V  [libjvm.so+0x91ef78]  java_start(Thread*)+0x108
+ C  [libpthread.so.0+0x6b50]  start_thread+0xd0
+
+
+ Java frames: (J=compiled Java code, j=interpreted, Vv=VM code)
+ J 1165  org.rocksdb.RocksIterator.seek0(J[BI)V (0 bytes) @ 0x00007f5f92b1280c [0x00007f5f92b127c0+0x4c]
+ J 3929 C2 com.mmmyb.index.InvertIndex$$anon$1.load(Ljava/lang/Object;)Ljava/lang/Object; (9 bytes) @ 0x00007f5f92f79a40 [0x00007f5f92f79600+0x440]
+ J 3973 C2 com.google.common.cache.LocalCache$Segment.lockedGetOrLoad(Ljava/lang/Object;ILcom/google/common/cache/CacheLoader;)Ljava/lang/Object; (433 bytes) @ 0x00007f5f93052744 [0x
+ 00007f5f93052080+0x6c4]
+ J 3085 C2 com.google.common.cache.LocalCache$Segment.get(Ljava/lang/Object;ILcom/google/common/cache/CacheLoader;)Ljava/lang/Object; (210 bytes) @ 0x00007f5f92b4f9d8 [0x00007f5f92b4
+ f680+0x358]
+ J 3003 C2 com.google.common.cache.LocalCache.get(Ljava/lang/Object;Lcom/google/common/cache/CacheLoader;)Ljava/lang/Object; (21 bytes) @ 0x00007f5f92f53e18 [0x00007f5f92f53d40+0xd8]
+ J 2823 C2 com.google.common.cache.LocalCache.getAll(Ljava/lang/Iterable;)Lcom/google/common/collect/ImmutableMap; (323 bytes) @ 0x00007f5f92f0557c [0x00007f5f92f03560+0x201c]
+ J 3246 C2 org.apache.thrift.TBaseProcessor.process(Lorg/apache/thrift/protocol/TProtocol;Lorg/apache/thrift/protocol/TProtocol;)Z (131 bytes) @ 0x00007f5f92feabe4 [0x00007f5f92fe812
+ 0+0x2ac4]
+ J 3738 C2 org.apache.thrift.server.TThreadPoolServer$WorkerProcess.run()V (241 bytes) @ 0x00007f5f92993594 [0x00007f5f92992b60+0xa34]
+ J 4072 C1 java.util.concurrent.ThreadPoolExecutor.runWorker(Ljava/util/concurrent/ThreadPoolExecutor$Worker;)V (225 bytes) @ 0x00007f5f92bfb814 [0x00007f5f92bfa880+0xf94]
+ j  java.util.concurrent.ThreadPoolExecutor$Worker.run()V+5
+ j  java.lang.Thread.run()V+11
+ v  ~StubRoutines::call_stub
+```
+
+### The options we use
+
+```
+   private val tableConfig = new BlockBasedTableConfig
+
+   tableConfig.setBlockCacheSize(10 * SizeUnit.GB). //未压缩block的cache, Capacity is split evenly to each of the shards
+     setCacheNumShardBits(10). //1024(2 ** 10)份shard
+     setCacheIndexAndFilterBlocks(true). //cache bloom filter in memory
+     setFilter(new BloomFilter(20, false)). //使用全内存bloom filter模式, full filter mode
+     setIndexType(IndexType.kHashSearch) //It would use 5% more storage space but speed up the random read by 50% compared to normal binary search index
+
+   private val options = new Options().
+     setTableFormatConfig(tableConfig).
+     setCreateIfMissing(true).
+     createStatistics().
+     setAllowOsBuffer(true).
+     setMaxBackgroundCompactions(coreNum).
+     setMaxBackgroundFlushes(if (coreNum = 2) coreNum / 2 else 1).
+     setMaxWriteBufferNumber(5).
+     useFixedLengthPrefixExtractor(preFixLen).
+     setMemtablePrefixBloomBits(10000000).
+     setMemtablePrefixBloomProbes(10).
+     setMemTableConfig(new HashSkipListMemTableConfig()).
+     setAllowMmapReads(true).
+     setAllowMmapWrites(true).
+     setMaxOpenFiles(-1)
+
+   protected val db = TtlDB.open(options, dir, ttl, false)
+```
+
+### it will crash after processing some data
+
+@siying @adamretter 
+we found the bug, it's a concurrency bug, and not fixed in the last release rocksdb 4.9. The root cause of the bug is that two or more threads enter to create the same sstable's index reader with no concurrency control.
+
+#### Bug description:
+
+Suppose two threads, Thread A and Thread B, read the same sstable's prefix index block (BlockBasedTable::NewIndexIterator), but not find the cache_handle in the block_cache. So both of thread A and B enter to create index reader (BlockBasedTable::CreateIndexReader, core code below):
+
+```
+...
+rep_->internal_prefix_transform.reset(
+          new InternalKeySliceTransform(rep_->ioptions.prefix_extractor));
+...
+```
+
+```
+Thread A reset rep_->internal_prefix_transform to Address 1
+Thread B reset rep_->internal_prefix_transform to Address 2, and release Address 1.
+Thread A use rep_->internal_prefix_transform Address 1 to transform, crash!!!
+  uint32_t BlockPrefixIndex::GetBlocks() 
+    Slice prefix = internal_prefix_extractor_->Transform(key); // ##### crash here
+```
+
+#### Fix method:
+
+If we can't find cache_handle in block_cache, there is only one thread can enter to create the index reader, no two threads can create it simultaneously. So, we need a mutex to protect this operation. We will fix this bug and test in our environment. The pseudocode as below:
+
+```
+BlockBasedTable::NewIndexIterator();
+   cache_handle = GetEntryFromCache();
+     if (cache_handle == nullptr)
+       MutexLock cMutex();
+        // after obtain mutex, double check. double-checked locking problem is ok on Intel CPU.
+         cache_handle = GetEntryFromCache();
+            if (cache_handle == nullptr)
+               CreateIndexReader();
+               block_cache.insert();
+      ...
+```
+
+Following is the backtrace before crash.
+
+#### Thread 0x7fa64edf4700
+
+```
+...
+#5  0x00007fa655f795b2 in Create (hash_index_allow_collision=true, index_reader=<optimized out>, meta_index_iter=0x663220, index_handle=..., comparator=<optimized out>, 
+    env=0x7fa6563274a0 <rocksdb::Env::Default()::default_env>, file=0x7fa618003df0, footer=..., hash_key_extractor=0x64a680) at table/block_based_table_reader.cc:264
+#6  rocksdb::BlockBasedTable::CreateIndexReader (this=this@entry=0x7fa618003290, index_reader=index_reader@entry=0x7fa64edf2d38, preloaded_meta_index_iter=preloaded_meta_index_iter@entry=0x0)
+    at table/block_based_table_reader.cc:1432
+#7  0x00007fa655f79f3c in rocksdb::BlockBasedTable::NewIndexIterator (this=this@entry=0x7fa618003290, read_options=..., input_iter=input_iter@entry=0x7fa64edf2ee0)
+    at table/block_based_table_reader.cc:942
+#8  0x00007fa655f7d401 in rocksdb::BlockBasedTable::Get (this=0x7fa618003290, read_options=..., key=..., get_context=0x7fa64edf3280) at table/block_based_table_reader.cc:1229
+#9  0x00007fa655f349d3 in rocksdb::TableCache::Get (this=0x7fa67068a7d0, options=..., internal_comparator=..., fd=..., k=..., get_context=get_context@entry=0x7fa64edf3280, 
+    file_read_hist=0x7fa670684860) at db/table_cache.cc:266
+...
+(gdb) set print object
+(gdb) f 6
+#6  rocksdb::BlockBasedTable::CreateIndexReader (this=this@entry=0x7fa618003290, index_reader=index_reader@entry=0x7fa64edf2d38, preloaded_meta_index_iter=preloaded_meta_index_iter@entry=0x0)
+    at table/block_based_table_reader.cc:1432
+1432    form to make sure it can
+(gdb) p rep_->file
+$31 = std::unique_ptr<rocksdb::RandomAccessFileReader> containing 0x7fa618003df0
+(gdb) p *(rocksdb::RandomAccessFileReader*)0x7fa618003df0
+$32 = {file_ = std::unique_ptr<rocksdb::RandomAccessFile> containing 0x7fa6180031b0, env_ = 0x7fa6563274a0 <rocksdb::Env::Default()::default_env>, stats_ = 0x7fa670679360, hist_type_ = 1, 
+  file_read_hist_ = 0x7fa670684860}
+(gdb) p *(rocksdb::RandomAccessFile*)0x7fa6180031b0
+$33 = (rocksdb::PosixRandomAccessFile) {<rocksdb::RandomAccessFile> = {_vptr.RandomAccessFile = 0x7fa656318930 <vtable for rocksdb::PosixRandomAccessFile+16>}, 
+  filename_ = "/home/***/rocksdb-test/testproject/data/000018.sst", fd_ = 52, use_os_buffer_ = true}
+```
+
+#### Thread 0x7fa64f2f9700
+
+```
+...
+#4  0x00007fa655f799b8 in rocksdb::BlockBasedTable::CreateIndexReader (this=this@entry=0x7fa618003290, index_reader=index_reader@entry=0x7fa64f2f7cb8, 
+    preloaded_meta_index_iter=preloaded_meta_index_iter@entry=0x0) at table/block_based_table_reader.cc:1425
+#5  0x00007fa655f79f3c in rocksdb::BlockBasedTable::NewIndexIterator (this=this@entry=0x7fa618003290, read_options=..., input_iter=input_iter@entry=0x7fa64f2f7e60)
+    at table/block_based_table_reader.cc:942
+#6  0x00007fa655f7d401 in rocksdb::BlockBasedTable::Get (this=0x7fa618003290, read_options=..., key=..., get_context=0x7fa64f2f8200) at table/block_based_table_reader.cc:1229
+#7  0x00007fa655f349d3 in rocksdb::TableCache::Get (this=0x7fa67068a7d0, options=..., internal_comparator=..., fd=..., k=..., get_context=get_context@entry=0x7fa64f2f8200, 
+    file_read_hist=0x7fa670684860) at db/table_cache.cc:266
+...
+(gdb) f 4
+#4  0x00007fa655f799b8 in rocksdb::BlockBasedTable::CreateIndexReader (this=this@entry=0x7fa618003290, index_reader=index_reader@entry=0x7fa64f2f7cb8, 
+    preloaded_meta_index_iter=preloaded_meta_index_iter@entry=0x0) at table/block_based_table_reader.cc:1425
+1425    og,
+(gdb) p rep_->file
+$34 = std::unique_ptr<rocksdb::RandomAccessFileReader> containing 0x7fa618003df0
+(gdb) p *(rocksdb::RandomAccessFileReader*)0x7fa618003df0
+$35 = {file_ = std::unique_ptr<rocksdb::RandomAccessFile> containing 0x7fa6180031b0, env_ = 0x7fa6563274a0 <rocksdb::Env::Default()::default_env>, stats_ = 0x7fa670679360, hist_type_ = 1, 
+  file_read_hist_ = 0x7fa670684860}
+(gdb) p *(rocksdb::RandomAccessFile*)0x7fa6180031b0
+$36 = (rocksdb::PosixRandomAccessFile) {<rocksdb::RandomAccessFile> = {_vptr.RandomAccessFile = 0x7fa656318930 <vtable for rocksdb::PosixRandomAccessFile+16>}, 
+  filename_ = "/home/***/rocksdb-test/testproject/data/000018.sst", fd_ = 52, use_os_buffer_ = true}
+```
+
+Both thread 0x7fa64edf4700 and 0x7fa64f2f9700 are running in index reader create logic, both of them are creating the index reader for sstable /home/***/rocksdb-test/testproject/data/000018.sst. Thread 0x7fa64edf4700 enter first, followed by thread 0x7fa64f2f9700. After thread 0x7fa64f2f9700 finish the creation, Thread 0x7fa64edf4700 has a pointer which released by 0x7fa64f2f9700, cause core dump.
+
+@hedengcheng thank you for reporting it! We'll fix it.
+
+Yes, awesome bug report. Thank you for figuring this out.
+
+Aaron Gao has a diff out for it: https://reviews.facebook.net/D62361
+
+@siying Thanks a lot. 
+It's so quick for fixing this bug, we will try it and deploy it on our production.
+
+@hedengcheng it's not committed yet...
+
+done by commit c75f4faa9d50fa7aa3a15f2bff8df921ea23894e
+

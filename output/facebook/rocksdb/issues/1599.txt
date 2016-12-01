@@ -1,0 +1,13 @@
+Summary:
+This adds the ability for compaction filter to say "drop this key-value, and also drop everything up to key x". This will cause the compaction to seek input iterator to x, without reading the data. This can make compaction much faster when large consecutive chunks of data are filtered out. See the changes in include/rocksdb/compaction_filter.h for the new API.
+
+Along the way this diff also adds ability for compaction filter changing merge operands, similar to how it can change values; we're not going to use this feature, it just seemed easier and cleaner to implement it than to document that it's not implemented :)
+
+The diff is not as big as it may seem, about half of the lines are a test.
+
+Test Plan: ran tests, including the new test
+
+Reviewers: andrewkr
+@al13n321 has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4252092).
+@al13n321 updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1599/files/d9e7ddc95c5fe38dfdb69d5b61502b61699dc7e7..d668de80aabbf5bd3ac59c4224bdf25b7359c174) - [changes since last import](https://github.com/facebook/rocksdb/pull/1599/files/d9e7ddc95c5fe38dfdb69d5b61502b61699dc7e7..d668de80aabbf5bd3ac59c4224bdf25b7359c174)
+Oh also, could you please mention this feature in HISTORY.md?

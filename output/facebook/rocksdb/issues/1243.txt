@@ -1,0 +1,6 @@
+Implemented `RocksDB#setOptions` and associated mutable/immutable options
+
+@siying I just adapted this for your change of `memtable_huge_page_size` and rebased it. Hopefully good to go now :-)
+
+@lightmark Done. Sorry about that, I did try and change them all, but somehow that one slipped through, it is fixed and rebased now.
+

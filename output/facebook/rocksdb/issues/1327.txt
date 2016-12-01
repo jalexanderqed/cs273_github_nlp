@@ -1,0 +1,6 @@
+add C api for set wal_recovery_mode
+
+PTAL @siying 
+
+Thank you!
+

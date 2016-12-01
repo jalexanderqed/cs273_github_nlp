@@ -1,0 +1,20 @@
+i was using vagrind to check my program...
+
+i found
+
+==5172== Thread 1:
+==5172== 8 bytes in 1 blocks are definitely lost in loss record 22 of 6,655
+==5172==    at 0x4C29BFD: malloc (in /usr/lib64/valgrind/vgpreload_memcheck-amd64-linux.so)
+==5172==    by 0x6FC1AC: operator new(unsigned long) (in /share/xxx/loki/build/bin/loki)
+==5172==    by 0x6FBDC8: operator new[](unsigned long) (in /share/xxx/loki/build/bin/loki)
+==5172==    by 0x62A741: rocksdb::VersionStorageInfo::VersionStorageInfo(rocksdb::InternalKeyComparator const_, rocksdb::Comparator const_, int, rocksdb::CompactionStyle, rocksdb::VersionStorageInfo_) (version_set.cc:831)
+==5172==    by 0x62AD49: rocksdb::Version::Version(rocksdb::ColumnFamilyData_, rocksdb::VersionSet_, unsigned long) (version_set.cc:865)
+==5172==    by 0x62ADF2: rocksdb::VersionSet::CreateColumnFamily(rocksdb::ColumnFamilyOptions const&, rocksdb::VersionEdit_) (version_set.cc:3384)
+==5172==    by 0x62DEAC: rocksdb::VersionSet::Recover(std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, bool) (version_set.cc:2387)
+==5172==    by 0x5DB1A3: rocksdb::DBImpl::Recover(std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, bool, bool) (db_impl.cc:973)
+==5172==    by 0x5DC909: rocksdb::DB::Open(rocksdb::DBOptions const&, std::string const&, std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, std::vector<rocksdb::ColumnFamilyHandle*, std::allocator<rocksdb::ColumnFamilyHandle*> >_, rocksdb::DB__) (db_impl.cc:4955)
+==5172==    by 0x5DD8E5: rocksdb::DB::Open(rocksdb::Options const&, std::string const&, rocksdb::DB_*) (db_impl.cc:4885)
+
+when my process run a week 
+there is 5.2G mem using...(nothing work just idle)
+

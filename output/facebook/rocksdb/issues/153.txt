@@ -1,0 +1,113 @@
+During GC the C++ RocksDB object is being deleted twice causing a segfault. Once by the RocksDB finalizer which calls `delete` on the underlying C++ RocksDB object directly and also via `delete` being called via the BackupableDB finalizer.
+
+**RocksDB GC'd**:
+
+```
+C  [librocksdbjni.so+0x89c38]  Java_org_rocksdb_RocksDB_dispose+0x28
+j  org.rocksdb.RocksDB.dispose(J)V+0
+j  org.rocksdb.RocksDB.dispose()V+12
+j  org.rocksdb.RocksDB.close()V+1
+j  org.rocksdb.RocksDB.finalize()V+1
+J 428 C1 java.lang.ref.Finalizer.runFinalizer(Lsun/misc/JavaLangAccess;)V (62 bytes) @ 0x00007fe
+78120d444 [0x00007fe78120cec0+0x584]
+J 366 C1 java.lang.ref.Finalizer.access$100(Ljava/lang/ref/Finalizer;Lsun/misc/JavaLangAccess;)V
+ (6 bytes) @ 0x00007fe7811e189c [0x00007fe7811e1840+0x5c]
+j  java.lang.ref.Finalizer$FinalizerThread.run()V+45
+```
+
+**BackupableDB GC'd:**
+
+```
+C  [librocksdbjni.so+0x12788d]  rocksdb::BackupableDB::~BackupableDB()+0x6d
+C  [librocksdbjni.so+0x1278c1]  rocksdb::BackupableDB::~BackupableDB()+0x11
+j  org.rocksdb.RocksDB.dispose(J)V+0
+j  org.rocksdb.RocksDB.dispose()V+12
+j  org.rocksdb.RocksDB.close()V+1
+j  org.rocksdb.BackupableDB.close()V+8
+j  org.rocksdb.BackupableDB.finalize()V+1
+J 371 C1 java.lang.ref.Finalizer.runFinalizer(Lsun/misc/JavaLangAccess;)V (62 bytes) @ 0x00007f88
+b91e3294 [0x00007f88b91e2d00+0x594]
+J 370 C1 java.lang.ref.Finalizer.access$100(Ljava/lang/ref/Finalizer;Lsun/misc/JavaLangAccess;)V 
+(6 bytes) @ 0x00007f88b91e299c [0x00007f88b91e2940+0x5c]
+j  java.lang.ref.Finalizer$FinalizerThread.run()V+45
+```
+
+It seems like the appropriate behavior would be to have the nested RocksDB (db_ in Backupable.java) instance's finalizer be a no-op but I'm not sure the best way to accomplish this.
+
+Bob, thanks for reporting this!
+One way to get around this problem, is to add a protected method to the java RocksDB class, sth like DisOwnNativeObject(). In BackupbelDB.open, we could call this method before passing the RocksDB object to the BackupableDB object. In RocksDB.dispose, we could simply check whether DisOwnNativeObject has been called and stop deleting the underlying native object if so.
+
+Feel free to go ahead and fix it. Your contribution will be (has already been) greatly appreciated. :)
+
+Thanks a lot Bob for reporting the issue. I looked at the code and this is definitely an issue.
+
+@haoboxu: Like the idea. We just need to set nativeHandle_ to 0 in DisOwnNativeObject method and it will not dispose/close the native object after that.
+
+I think it makes more sense to expose BackupEngine than BackupableDB through Java bindings (same behavior, different API). We found that BackupableDB is hard to use in practice and we don't gain much by using StackableDB framework.
+
+@igorcanadi that seems like a good solution to me, conceptually simpler at least.
+
+Hello Bob.  Thank you for reporting this issue.  But I somehow can't reproduce this issue in the BackupableDBTest, even removing `bdb.dispose();` function call.  The dispose function of RocksDB is implemented as follows, which is supposed to be no-op when being called more than twice:
+
+```
+@Override public synchronized void dispose() {
+  if (isInitialized()) {
+    dispose(nativeHandle_);
+    nativeHandle_ = 0;
+  }
+}
+
+protected boolean isInitialized() {
+  return (nativeHandle_ != 0);
+}
+```
+
+Can someone point me out what I might missing here?  Or would Bob mind pasting the code you have?
+
+And @igorcanadi's proposal sounds a good idea to me :)
+
+@yhchiang: BackupableDB creates a RocksDB instance internally. We have two native objects while using BackupableRocksdb: one for BackupableDB and one for RocksDB. When BackupableRocksdb is GC'd, it deletes pointer for BackupableDB which internally deletes pointer for RocksDB as well (through stackable DB). This happens automatically and is not triggered by Rocksdb JAVA instance. So, nativeHandle_ is still non-zero in Rocksdb JAVA instance. 
+
+When RocksDB JAVA instance is GC'd, it still thinks its native handle is well and alive and calls delete call. This results in deleting a non-existant pointer and thus a seg fault.
+
+You can reverse the GCing process of RocksDB and BackupableDB and seg fault will still exist.
+
+@ankgup87: Got it.  Thank you for explaining this further.  I think a better quick-fix would be set `db_.nativeHandle_ = null;` before `super.close();` in BackupableDB.close():
+
+```
+@Override public synchronized void close() {
+  if (isInitialized()) {
+    db_.nativeHandle_ = 0;  // add this line
+    super.close();
+  }
+}
+```
+
+In this case `db_.isInitialized()` will return `false` after `BackupableDB.close()`, while `db_.isInitialized()` will return `true` the `DisOwnNativeObject()` solution.
+
+@yhchiang cool, I will test that and see if it fixes the issue with my test script this evening
+
+I've attached a change set that fixes the issue for me.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+@ankgup87 added Javadoc and squashed.
+
+LGTM, but will let @yhchiang accept since he owns RocksJava.
+
+Thanks for adding JAVA docs. LGTM
+
+LGTM.  Can we also have some java doc in BackupableDB.open saying that the input RocksDB will dis-own its native resource after this function call and thus should not be used directly?
+
+@yhchiang I may be missing something but it looks like the RocksDB instance that BackupableDB.open creates is always internal. It doesn't seem like something someone using BackupableDB needs to know.
+
+Also, do we still need to keep the reference (`db_`) to the RocksDB object? It doesn't really do anything for us once we zero out the native handle.
+
+Hey @bpot.  BackupableDB keeps this RocksDB to ensure that this RocksDB will have the same life cycle as BackupableDB so that this RocksDB will not be GCed.  But I think with DisOwnNative, there is a chance to redesign this part.
+
+@bpot: in brief, yes.  You can remove that once we have DisOwn stuff :)
+
+@yhchiang Great, I just went ahead and made the change to remove the `db_` field.
+

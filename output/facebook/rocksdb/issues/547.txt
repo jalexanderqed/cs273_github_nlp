@@ -1,0 +1,1803 @@
+Currently trying to switch from LevelDB to RocksDB and get repeated SIGSEGV errors.  When running the same code on OSX I'm not seeing any issues.
+
+I'm currently using
+- RocksDB JAR 3.9.1
+- Java 1.8u40
+- CentOS 6.6 (2.6.32-504.8.1.el6.x86_6)
+
+There doesn't appear to be a full exception, and there is no crash report created with the issue occurs. The following is written to the console and then the JVM is no longer responsive (kill -3 does nothing) and requires a kill -9.
+
+```
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  SIGSEGV (0xb) at pc=0x00000039bea784fd, pid=17576, tid=139650023966464
+#
+# JRE version: Java(TM) SE Runtime Environment (8.0_25-b17) (build 1.8.0_25-b17)
+# Java VM: Java HotSpot(TM) 64-Bit Server VM (25.25-b02 mixed mode linux-amd64 compressed oops)
+# Problematic frame:
+# C  [libc.so.6+0x784fd]
+```
+
+Quite often I'll also receive the following:
+
+```
+[thread 140149493696256 also had an error]
+[thread 140149495801600 also had an error]
+[thread 140149512644352 also had an error]
+[thread 140149506328320 also had an error]
+[thread 140150824347392 also had an error]
+[thread 140150837360384 also had an error]
+[thread 140149503170304 also had an error]
+```
+
+The only features I use from the code at the moment are put, get, delete and iterators.  
+
+Looking for any suggestions on what could be the cause, and how to troubleshoot this.  I have no crash reports to assist.
+
+Thanks
+
+@DerekSchenk can you post a pseudo-code snippet of your implementation with a focus on iterators usage in combination with `db.close()`. `hs_err*.log` would also be nice.
+
+@fryz below is the the code related to opening, iterating and the put & get calls.  The process on startup will create a thread that holds the reference to the RocksDB database "_database".  
+
+This database is held open and in the thread until shutdown, at which time close is called, so there are no close() calls involved as the application dies and I have to do a kill -9.
+
+I don't have any hs_err crash files, that's part of the strange part.  I see the errors in the console, it stops responding, but there is never a crash report created.
+
+In the vast majority of use cases other threads will call "put" and "get".  The complicated case is a DB maint process that will scan the data, cleanup, and write the "State" which includes the number of records & bytes.  This process does an Iterator in an Iterator, followed by deletes.
+
+The original code was based on LevelDB and ran without issues.  It was switched to RocksDB and adjustments made where needed for differences.  
+
+Something else of note is that we do mlock the process using mlockall(MCL_FUTURE) in a boot agent class.  The JVM is initialized with the Min & Max heap sizes set the same, but is it possible that mlockall is blocking the memory allocation causing the SIGSEGV?
+
+The scan process pseudo code is:
+
+```
+    _datastore.forEach("pk.scan", new byte[]{0}, true,
+                    (key, rowData, first, hasMore) -> {
+                                final List<byte[]> rowKeys = new ArrayList<>();
+
+                               _dataStore.forEach("db.compact.key", dataKey, true, (key1, data, isFirst, hasMore1) -> {
+                                        //Don't add the active row
+                                        if (!ArrayUtils.isEquals(activeRow, key1))  rowKeys.add(key1);
+                                        return true;
+                                    }, true, false);   
+
+
+                            //We only keep 5 number of revisions
+                            if (rowKeys.size() > 5) {
+                                //Process the row keys.
+                                for (int x = 0; x < rowKeys.size() - 5; x++) {
+                                    byte[] delKey = rowKeys.get(x);
+                                    _dataStore.delete(delKey);
+                                }
+                            }
+
+                    }   
+```
+
+Startup Thread & Opening
+
+```
+ ColumnFamilyOptions columnFamilyOptions = new ColumnFamilyOptions();
+                    List<ColumnFamilyDescriptor> columnFamilyDescriptors = new ArrayList<>();
+                    List<ColumnFamilyHandle> columnFamilyHandles = new ArrayList<>();
+
+                    DBOptions dbOptions = new DBOptions();
+                    //Add the startup text
+                    try {
+                        //Startup and wait
+                        dbOptions.setCreateIfMissing(true)
+                                .setErrorIfExists(false)
+                                .setCreateMissingColumnFamilies(true)
+                                .createStatistics()
+                                .setMaxBackgroundCompactions(_maxBackgroundCompactions)
+                                .setMaxOpenFiles(_maxOpenFiles);
+
+                        //Column family options
+                        columnFamilyOptions.setWriteBufferSize(_writeBufferSize);
+                        columnFamilyOptions.setMaxWriteBufferNumber(_maxWriteBufferNumber);
+
+                        //Set the compression type
+                        CompressionType compressionType = CompressionType.NO_COMPRESSION;
+                        if (_enableCompression) {
+                            compressionType = CompressionType.SNAPPY_COMPRESSION;
+                            try {
+                                compressionType = CompressionType.valueOf(_compressionType);
+                            } catch (Throwable e) {
+                                Log.warn("Invalid compression type '%s', supplied for db '%s' defaulting to '%s'", _compressionType, _databaseName, compressionType.toString());
+                            }
+                        }
+                        columnFamilyOptions.setCompressionType(compressionType);
+
+                        //Set the compaction style
+                        CompactionStyle compactionStyle = CompactionStyle.UNIVERSAL;
+                        try {
+                            compactionStyle = CompactionStyle.valueOf(_compactionStyle);
+                        } catch (Throwable ex) {
+                            Log.warn("Invalid compaction style '%s', supplied for db '%s' defaulting to '%s'", _compactionStyle, _databaseName, compactionStyle.toString());
+                        }
+                        columnFamilyOptions.setCompactionStyle(compactionStyle);
+
+
+                        //Setup the column families
+                        columnFamilyDescriptors.add(new ColumnFamilyDescriptor("state", columnFamilyOptions));
+                        columnFamilyDescriptors.add(new ColumnFamilyDescriptor(RocksDB.DEFAULT_COLUMN_FAMILY, new ColumnFamilyOptions()));
+
+                        //Open the database
+                        _database = RocksDB.open(dbOptions, _databaseFile.getAbsolutePath(), columnFamilyDescriptors, columnFamilyHandles);
+
+                        //Get the column handles
+                        _stateColumnHandle = columnFamilyHandles.get(0);
+                        _dataColumnHandle = columnFamilyHandles.get(1);
+
+                    } catch (RocksDBException ex) {
+                        throw new IOException(ex);
+                    } finally {
+                        dbOptions.dispose();
+                    }
+                    return true;
+```
+
+Iterator:
+
+```
+   public interface RowVisitor {
+        public boolean processRow(byte[] key, byte[] data, boolean isFirst, boolean hasMore);
+    }
+
+
+   public void forEach(String operationName, byte[] startKey, boolean stopOnKeyChange, RowVisitor visitor, boolean keysOnly, boolean fillCache) {
+         RocksIterator iterator = null;
+        try {
+            iterator = _database.newIterator(_dataColumnHandle);
+
+            if (startKey == null)
+                iterator.seekToFirst();
+            else
+                iterator.seek(startKey);
+
+
+           boolean first = true;
+            for (; iterator.isValid(); iterator.next()) {
+                if (iterator.isValid()) {
+                    byte[] rowKey = iterator.key();
+
+                    if (stopOnKeyChange && startKey != null)
+                        if (rowKey.length < startKey.length || !ArrayUtils.isEquals(startKey, ArrayUtils.subarray(rowKey, 0, startKey.length))) {
+                            //end of seek set
+                            break;
+                        }
+                    byte[] data = keysOnly ? null : iterator.value();
+
+                    try {
+                        if (!visitor.processRow(rowKey, data, first, iterator.isValid())) break;
+                    } catch (Exception e) {
+                        Log.error("Error processing row!", e);
+                    }
+                    first = false;
+                }
+        } finally {
+            try {
+                if (iterator != null) iterator.dispose();
+            } catch (Throwable e) {
+                Log.error("Unable to close the iterator, could result in a memory leak!", e);
+            }
+        }
+```
+
+Operations:
+
+```
+ public byte[] get(byte[] key) {
+        try {
+            byte[] retVal = _database.get(_dataColumnHandle, key);
+            return retVal;
+        } finally {
+            _activeActionCount.decrementAndGet();
+        }
+    }
+
+
+ public void put(byte[] key, byte[] data) {
+        WriteOptions writeOptions = new WriteOptions().setSync(_syncOnPut);
+        try {
+            if (data == null) data = new byte[0];
+            _database.put(_dataColumnHandle, writeOptions, key, data);
+        } finally {
+            _activeActionCount.decrementAndGet();
+            writeOptions.dispose();
+        }
+    }
+```
+
+State:
+
+```
+public void writeState(byte state) {
+        //System.out.println(String.format("%s:writeState(%s)", _databaseName, state));
+        try {
+            _database.put(_stateColumnHandle, SYS_DB_STATE, new byte[]{state});
+            _database.put(_stateColumnHandle, SYS_RECORD_COUNT, ByteHelper.longToBytes(_recordCount.longValue()));
+            _database.put(_stateColumnHandle, SYS_DATA_BYTES, ByteHelper.longToBytes(_recordDataBytes.longValue()));
+            _database.put(_stateColumnHandle, SYS_KEY_BYTES, ByteHelper.longToBytes(_recordKeyBytes.longValue()));
+        } catch (RocksDBException e) {
+            Log.warn("Unable to write the state to the database!", e);
+        }
+    }
+```
+
+The issue happened again (libjvm instead of libc though, and I did get a crash log).  Attached below
+
+``` #
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  SIGSEGV (0xb) at pc=0x00007f0d6df1dc1c, pid=19795, tid=139695387707136
+#
+# JRE version: Java(TM) SE Runtime Environment (8.0_40-b25) (build 1.8.0_40-b25)
+# Java VM: Java HotSpot(TM) 64-Bit Server VM (25.40-b25 mixed mode linux-amd64 compressed oops)
+# Problematic frame:
+# V  [libjvm.so+0x59ec1c]  G1ParCopyClosure<(G1Barrier)0, (G1Mark)0>::do_oop(oopDesc**)+0x2c
+#
+# Failed to write core dump. Core dumps have been disabled. To enable core dumping, try "ulimit -c unlimited" before starting Java again
+#
+# If you would like to submit a bug report, please visit:
+#   http://bugreport.java.com/bugreport/crash.jsp
+#
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x0000000002192800):  GCTaskThread [stack: 0x00007f0d5de60000,0x00007f0d5df61000] [id=19797]
+
+siginfo: si_signo: 11 (SIGSEGV), si_code: 1 (SEGV_MAPERR), si_addr: 0x00001000021a39ff
+
+Registers:
+RAX=0x00000000021a3a00, RBX=0x00000000022c58a0, RCX=0x0000000000000014, RDX=0x00000fffffffffff
+RSP=0x00007f0d5df5b360, RBP=0x00007f0d5df5b370, RSI=0xffffffffffffffff, RDI=0x00007f0d5df5faa0
+R8 =0x000000000218d2d0, R9 =0x00000000ea81ca28, R10=0x00000000ea81c9c0, R11=0x00007f0d6dfc69b0
+R12=0x00007f0d5df5f9d0, R13=0x00000000022c58a0, R14=0x0000000000000000, R15=0x00007f0d5df5b4d0
+RIP=0x00007f0d6df1dc1c, EFLAGS=0x0000000000010a07, CSGSFS=0x0000000000000033, ERR=0x0000000000000004
+  TRAPNO=0x000000000000000e
+
+Top of Stack: (sp=0x00007f0d5df5b360)
+0x00007f0d5df5b360:   0000000000000000 00007f0d5df5faa0
+0x00007f0d5df5b370:   00007f0d5df5b3a0 00007f0d6dde1158
+0x00007f0d5df5b380:   00007f0d5df5b3a0 00000000022c58a0
+0x00007f0d5df5b390:   00007f0d5df5f970 00007f0d5df5f970
+0x00007f0d5df5b3a0:   00007f0d5df5b3d0 00007f0d6dde04d8
+0x00007f0d5df5b3b0:   00007f0d5df5f530 000000000218d2d0
+0x00007f0d5df5b3c0:   00007f0d5df5f970 00007f0d5df5d500
+0x00007f0d5df5b3d0:   00007f0d5df5b450 00007f0d6e3291f4
+0x00007f0d5df5b3e0:   0000000000000001 00007f0d5df5b3f0
+0x00007f0d5df5b3f0:   000000000218d200 000000000218d2d0
+0x00007f0d5df5b400:   00007f0d00000000 00007fff89aaaa47
+0x00007f0d5df5b410:   00007f0d5df5b440 0000003c9e203e46
+0x00007f0d5df5b420:   00007f0d5df5faa0 00007f0d5df5faa0
+0x00007f0d5df5b430:   00007f0d5df5d500 000000000218d2d0
+0x00007f0d5df5b440:   00007f0d5df5b4d0 0000000000000000
+0x00007f0d5df5b450:   00007f0d5df5f5a0 00007f0d6df18efd
+0x00007f0d5df5b460:   00007f0d5df5f970 00007f0d5df5fbc0
+0x00007f0d5df5b470:   3f3bc9eceaf40000 0000000000000000
+0x00007f0d5df5b480:   00007f0d5df5f970 00007f0d5df5f970
+0x00007f0d5df5b490:   00007f0d5df5fb40 00007f0d5df5faa0
+0x00007f0d5df5b4a0:   405093548b7f71f3 0000000000000000
+0x00007f0d5df5b4b0:   40313a6ff43fe98b 3f2a391143a00000
+0x00007f0d5df5b4c0:   40313a7051fbe502 3f2a5e0b5f420000
+0x00007f0d5df5b4d0:   00007f0d6e8b9bf0 0000000000000000
+0x00007f0d5df5b4e0:   000000000347abb0 000000000347abc8
+0x00007f0d5df5b4f0:   000000000347abe0 000000000347abf8
+0x00007f0d5df5b500:   000000000347ac10 000000000347d538
+0x00007f0d5df5b510:   00000000026422c0 000000000342f948
+0x00007f0d5df5b520:   0000000003322c00 00007f0d48003660
+0x00007f0d5df5b530:   00007f0d48004188 0000000003e4a150
+0x00007f0d5df5b540:   00000000024c8b38 00000000030d2b50
+0x00007f0d5df5b550:   0000000002640e38 0000000002967d78 
+
+Instructions: (pc=0x00007f0d6df1dc1c)
+0x00007f0d6df1dbfc:   48 8b 36 48 85 f6 74 26 4c 8b 47 20 48 89 f2 41
+0x00007f0d6df1dc0c:   8b 88 c0 26 00 00 49 8b 80 b0 26 00 00 48 d3 ea
+0x00007f0d6df1dc1c:   0f be 04 10 83 f8 01 74 4b 83 f8 02 74 0e 48 83
+0x00007f0d6df1dc2c:   c4 08 5b c9 c3 0f 1f 80 00 00 00 00 48 8b 05 51 
+
+Register to memory mapping:
+
+RAX=0x00000000021a3a00 is an unknown value
+RBX=0x00000000022c58a0 is an unknown value
+RCX=0x0000000000000014 is an unknown value
+RDX=0x00000fffffffffff is an unknown value
+RSP=0x00007f0d5df5b360 is an unknown value
+RBP=0x00007f0d5df5b370 is an unknown value
+RSI=0xffffffffffffffff is an unknown value
+RDI=0x00007f0d5df5faa0 is an unknown value
+R8 =0x000000000218d2d0 is an unknown value
+R9 =0x00000000ea81ca28 is pointing into object: 0x00000000ea803418
+
+[error occurred during error reporting (printing register info), id 0xb]
+
+Stack: [0x00007f0d5de60000,0x00007f0d5df61000],  sp=0x00007f0d5df5b360,  free space=1004k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+V  [libjvm.so+0x59ec1c]  G1ParCopyClosure<(G1Barrier)0, (G1Mark)0>::do_oop(oopDesc**)+0x2c
+V  [libjvm.so+0x462158]  ClassLoaderData::oops_do(OopClosure*, KlassClosure*, bool)+0x58
+V  [libjvm.so+0x4614d8]  ClassLoaderDataGraph::roots_cld_do(CLDClosure*, CLDClosure*)+0x38
+V  [libjvm.so+0x9aa1f4]  SharedHeap::process_roots(bool, SharedHeap::ScanningOption, OopClosure*, OopClosure*, CLDClosure*, CLDClosure*, CodeBlobClosure*)+0x274
+V  [libjvm.so+0x599efd]  G1CollectedHeap::g1_process_roots(OopClosure*, OopClosure*, OopsInHeapRegionClosure*, CLDClosure*, CLDClosure*, CodeBlobClosure*, unsigned int)+0x12d
+V  [libjvm.so+0x5a390c]  G1ParTask::work(unsigned int)+0x48c
+V  [libjvm.so+0xacc27f]  GangWorker::loop()+0xcf
+V  [libjvm.so+0x910ee8]  java_start(Thread*)+0x108
+
+
+---------------  P R O C E S S  ---------------
+
+Java Threads: ( => current thread )
+  0x00007f0d50186000 JavaThread "APIServer-IndexAPI[Worker]-8-1" [_thread_in_native, id=20226, stack(0x00007f0d08bf5000,0x00007f0d08cf6000)]
+  0x00007f0d54017800 JavaThread "APIServer-IndexAPI[Selector]-7-1" [_thread_in_native, id=20195, stack(0x00007f0cfd938000,0x00007f0cfda39000)]
+  0x00007f0d3871f800 JavaThread "pool-9-thread-1" [_thread_blocked, id=20194, stack(0x00007f0cfda39000,0x00007f0cfdb3a000)]
+  0x00007f0d38759000 JavaThread "LevelDB-MaintTimer-index.local-index-4" daemon [_thread_blocked, id=20193, stack(0x00007f0cfdb3a000,0x00007f0cfdc3b000)]
+  0x00007f0d50184000 JavaThread "io.netty.channel.nio.NioEventLoopGroup-3-1" [_thread_in_native, id=20192, stack(0x00007f0cfdc3b000,0x00007f0cfdd3c000)]
+  0x00007f0d3871b800 JavaThread "Thread-55" daemon [_thread_blocked, id=20191, stack(0x00007f0cfdd3c000,0x00007f0cfde3d000)]
+  0x00007f0d38719800 JavaThread "LevelDB-MaintTimer-index.local-index-3" daemon [_thread_blocked, id=20190, stack(0x00007f0cfde3d000,0x00007f0cfdf3e000)]
+  0x00007f0d38716800 JavaThread "Thread-53" daemon [_thread_blocked, id=20189, stack(0x00007f0cfdf3e000,0x00007f0cfe03f000)]
+  0x00007f0d38714800 JavaThread "LevelDB-MaintTimer-index.local-index-2" daemon [_thread_blocked, id=20188, stack(0x00007f0cfe03f000,0x00007f0cfe140000)]
+  0x00007f0d3801a800 JavaThread "Thread-51" daemon [_thread_blocked, id=20187, stack(0x00007f0cfe140000,0x00007f0cfe241000)]
+  0x00007f0d38018800 JavaThread "LevelDB-MaintTimer-index.local-index-1" daemon [_thread_blocked, id=20186, stack(0x00007f0cfe241000,0x00007f0cfe342000)]
+  0x00007f0d38016800 JavaThread "Thread-49" daemon [_thread_blocked, id=20185, stack(0x00007f0cfe342000,0x00007f0cfe443000)]
+  0x00007f0d38015000 JavaThread "LevelDB-MaintTimer-index.manager" daemon [_thread_blocked, id=20184, stack(0x00007f0cfe443000,0x00007f0cfe544000)]
+  0x00007f0d10a1a000 JavaThread "APIServer-StorageAPI[Worker]-6-1" [_thread_in_native, id=20183, stack(0x00007f0cfe544000,0x00007f0cfe645000)]
+  0x00007f0d58127000 JavaThread "APIServer-StorageAPI[Selector]-5-1" [_thread_in_native, id=20182, stack(0x00007f0cfe645000,0x00007f0cfe746000)]
+  0x00007f0d38012000 JavaThread "Thread-47" daemon [_thread_blocked, id=20181, stack(0x00007f0cfe746000,0x00007f0cfe847000)]
+  0x00007f0d38010800 JavaThread "pool-8-thread-1" [_thread_blocked, id=20180, stack(0x00007f0cfe847000,0x00007f0cfe948000)]
+  0x00007f0d380b2800 JavaThread "LevelDB-MaintTimer-cabinet.hpsf-local-256mb-8" daemon [_thread_blocked, id=20179, stack(0x00007f0cfe948000,0x00007f0cfea49000)]
+  0x00007f0d38d18000 JavaThread "Thread-45" daemon [_thread_blocked, id=20178, stack(0x00007f0cfea49000,0x00007f0cfeb4a000)]
+  0x00007f0d38d16000 JavaThread "LevelDB-MaintTimer-cabinet.hpsf-local-256mb-7" daemon [_thread_blocked, id=20177, stack(0x00007f0cfeb4a000,0x00007f0cfec4b000)]
+  0x00007f0d38d15000 JavaThread "Thread-43" daemon [_thread_blocked, id=20176, stack(0x00007f0cfec4b000,0x00007f0cfed4c000)]
+  0x00007f0d38d13000 JavaThread "LevelDB-MaintTimer-cabinet.hpsf-local-256mb-6" daemon [_thread_blocked, id=20175, stack(0x00007f0cfed4c000,0x00007f0cfee4d000)]
+  0x00007f0d38d12800 JavaThread "Thread-41" daemon [_thread_blocked, id=20174, stack(0x00007f0cfee4d000,0x00007f0cfef4e000)]
+  0x00007f0d38d11800 JavaThread "LevelDB-MaintTimer-cabinet.hpsf-local-256mb-5" daemon [_thread_blocked, id=20173, stack(0x00007f0cfef4e000,0x00007f0cff04f000)]
+  0x00007f0d38cdf000 JavaThread "Thread-39" daemon [_thread_blocked, id=20172, stack(0x00007f0cff04f000,0x00007f0cff150000)]
+  0x00007f0d38ce4000 JavaThread "LevelDB-MaintTimer-cabinet.hpsf-local-256mb-4" daemon [_thread_blocked, id=20171, stack(0x00007f0cff150000,0x00007f0cff251000)]
+  0x00007f0d38cdd000 JavaThread "Thread-37" daemon [_thread_blocked, id=20170, stack(0x00007f0cff251000,0x00007f0cff352000)]
+  0x00007f0d38cdb000 JavaThread "LevelDB-MaintTimer-cabinet.hpsf-local-256mb-3" daemon [_thread_blocked, id=20169, stack(0x00007f0cff352000,0x00007f0cff453000)]
+  0x00007f0d38cd9000 JavaThread "Thread-35" daemon [_thread_blocked, id=20168, stack(0x00007f0cff453000,0x00007f0cff554000)]
+  0x00007f0d38cd7800 JavaThread "LevelDB-MaintTimer-cabinet.hpsf-local-256mb-2" daemon [_thread_blocked, id=20167, stack(0x00007f0cff554000,0x00007f0cff655000)]
+  0x00007f0d38cd5800 JavaThread "Thread-33" daemon [_thread_blocked, id=20166, stack(0x00007f0cff655000,0x00007f0cff756000)]
+  0x00007f0d38cd3000 JavaThread "LevelDB-MaintTimer-cabinet.hpsf-local-256mb-1" daemon [_thread_blocked, id=20165, stack(0x00007f0cff756000,0x00007f0cff857000)]
+  0x00007f0d38cd1800 JavaThread "Thread-31" daemon [_thread_blocked, id=20164, stack(0x00007f0cff857000,0x00007f0cff958000)]
+  0x00007f0d38ccf000 JavaThread "LevelDB-MaintTimer-cabinet.manager" daemon [_thread_blocked, id=20163, stack(0x00007f0cff958000,0x00007f0cffa59000)]
+  0x00007f0d38ccd000 JavaThread "Thread-29" daemon [_thread_blocked, id=20162, stack(0x00007f0cffa59000,0x00007f0cffb5a000)]
+  0x00007f0d10873000 JavaThread "ConnectionMonitor-Timer" daemon [_thread_blocked, id=20161, stack(0x00007f0d0178c000,0x00007f0d0188d000)]
+  0x00007f0d10a0b800 JavaThread "ConnectionMonitor-Timer" daemon [_thread_blocked, id=20160, stack(0x00007f0d01d40000,0x00007f0d01e41000)]
+  0x00007f0d10a07000 JavaThread "ConnectionMonitor-Timer" daemon [_thread_blocked, id=20159, stack(0x00007f0d01e41000,0x00007f0d01f42000)]
+  0x00007f0d10a06000 JavaThread "ConnectionMonitor-Timer" daemon [_thread_blocked, id=20158, stack(0x00007f0d023f5000,0x00007f0d024f6000)]
+  0x00007f0d3827f000 JavaThread "anInnocuousThread" daemon [_thread_in_native, id=20157, stack(0x00007f0d086f2000,0x00007f0d087f3000)]
+  0x0000000003fe5000 JavaThread "MetricsManager-CaptureTimer" daemon [_thread_blocked, id=20156, stack(0x00007f0d089f3000,0x00007f0d08af4000)]
+  0x0000000003fe4800 JavaThread "ThreadManager-MgmtTimer" daemon [_thread_blocked, id=20155, stack(0x00007f0d08af4000,0x00007f0d08bf5000)]
+  0x0000000003fda000 JavaThread "Thread-20" [_thread_blocked, id=20153, stack(0x00007f0d08cf6000,0x00007f0d08df7000)]
+  0x0000000003fa5800 JavaThread "Thread-22" daemon [_thread_in_native, id=20152, stack(0x00007f0d08df7000,0x00007f0d08ef8000)]
+  0x0000000003fd7000 JavaThread "MasterBundleLoader-ReloadTimer" daemon [_thread_blocked, id=20151, stack(0x00007f0d08ef8000,0x00007f0d08ff9000)]
+  0x00000000041ae800 JavaThread "Bundle Manager Sentinel" [_thread_blocked, id=20150, stack(0x00007f0d08ff9000,0x00007f0d090fa000)]
+  0x0000000003e50000 JavaThread "LibraryLoaderMaster-ReloadTimer" daemon [_thread_blocked, id=20148, stack(0x00007f0d090fa000,0x00007f0d091fb000)]
+  0x0000000003e43800 JavaThread "Management Monitor Process" daemon [_thread_in_native, id=20147, stack(0x00007f0d091fb000,0x00007f0d092fc000)]
+  0x0000000002c54800 JavaThread "EventManager-TransferTimer" daemon [_thread_blocked, id=20145, stack(0x00007f0d0c4fc000,0x00007f0d0c5fd000)]
+  0x00000000029b7000 JavaThread "LevelDB-MaintTimer-local.events" daemon [_thread_blocked, id=20144, stack(0x00007f0d0c847000,0x00007f0d0c948000)]
+  0x00000000029b5800 JavaThread "Thread-12" daemon [_thread_blocked, id=20143, stack(0x00007f0d14091000,0x00007f0d14192000)]
+  0x0000000002c0e800 JavaThread "MasterServer-ReloadTimer" daemon [_thread_blocked, id=20142, stack(0x00007f0d14192000,0x00007f0d14293000)]
+  0x0000000002c0b000 JavaThread "LevelDB-MaintTimer-local.repository" daemon [_thread_blocked, id=20141, stack(0x00007f0d14293000,0x00007f0d14394000)]
+  0x0000000002c08000 JavaThread "Thread-9" daemon [_thread_blocked, id=20130, stack(0x00007f0d17eff000,0x00007f0d18000000)]
+  0x00007f0d4800f000 JavaThread "io.netty.channel.nio.NioEventLoopGroup-2-1" [_thread_in_native, id=20129, stack(0x00007f0d24d57000,0x00007f0d24e58000)]
+  0x00007f0d40012000 JavaThread "io.netty.channel.nio.NioEventLoopGroup-4-1" [_thread_in_native, id=20128, stack(0x00007f0d24e58000,0x00007f0d24f59000)]
+  0x0000000002b59800 JavaThread "SystemManager-CollectorTimer" daemon [_thread_blocked, id=20126, stack(0x00007f0d24f59000,0x00007f0d2505a000)]
+  0x0000000002a1a000 JavaThread "SyslogUDP.CollectorThread" [_thread_blocked, id=20125, stack(0x00007f0d2505a000,0x00007f0d2515b000)]
+  0x0000000002b55000 JavaThread "SyslogTCP.CollectorThread" [_thread_blocked, id=20124, stack(0x00007f0d24c56000,0x00007f0d24d57000)]
+  0x00000000029d1000 JavaThread "ConnectionMonitor-Timer" daemon [_thread_blocked, id=19824, stack(0x00007f0d4406f000,0x00007f0d44170000)]
+  0x00000000029d0000 JavaThread "Timer-0" daemon [_thread_blocked, id=19823, stack(0x00007f0d2565e000,0x00007f0d2575f000)]
+  0x00000000029c2000 JavaThread "Thread-3" [_thread_blocked, id=19822, stack(0x00007f0d2535b000,0x00007f0d2545c000)]
+  0x0000000002978000 JavaThread "Thread-5" daemon [_thread_in_native, id=19821, stack(0x00007f0d2545c000,0x00007f0d2555d000)]
+  0x0000000002998800 JavaThread "MasterConfigurationLoader-ReloadTimer" daemon [_thread_blocked, id=19820, stack(0x00007f0d2555d000,0x00007f0d2565e000)]
+  0x000000000257e800 JavaThread "pool-1-thread-1" [_thread_blocked, id=19816, stack(0x00007f0d447cc000,0x00007f0d448cd000)]
+  0x00000000023fb800 JavaThread "Service Thread" daemon [_thread_blocked, id=19812, stack(0x00007f0d44bd7000,0x00007f0d44cd8000)]
+  0x00000000023f7000 JavaThread "C1 CompilerThread1" daemon [_thread_blocked, id=19811, stack(0x00007f0d44cd8000,0x00007f0d44dd9000)]
+  0x00000000023f2000 JavaThread "C2 CompilerThread0" daemon [_thread_blocked, id=19810, stack(0x00007f0d44dd9000,0x00007f0d44eda000)]
+  0x00000000023f0000 JavaThread "Attach Listener" daemon [_thread_blocked, id=19809, stack(0x00007f0d44eda000,0x00007f0d44fdb000)]
+  0x00000000023ee000 JavaThread "Signal Dispatcher" daemon [_thread_blocked, id=19808, stack(0x00007f0d44fdb000,0x00007f0d450dc000)]
+  0x00000000023ec000 JavaThread "Surrogate Locker Thread (Concurrent GC)" daemon [_thread_blocked, id=19807, stack(0x00007f0d450dc000,0x00007f0d451dd000)]
+  0x00000000023bf000 JavaThread "Finalizer" daemon [_thread_blocked, id=19806, stack(0x00007f0d451dd000,0x00007f0d452de000)]
+  0x00000000023bd000 JavaThread "Reference Handler" daemon [_thread_blocked, id=19805, stack(0x00007f0d452de000,0x00007f0d453df000)]
+  0x000000000217c800 JavaThread "main" [_thread_blocked, id=19795, stack(0x00007fff899a6000,0x00007fff89aa6000)]
+
+Other Threads:
+  0x00000000023b8000 VMThread [stack: 0x00007f0d453df000,0x00007f0d454e0000] [id=19804]
+  0x00000000023ff000 WatcherThread [stack: 0x00007f0d44ad6000,0x00007f0d44bd7000] [id=19813]
+
+=>0x0000000002192800 (exited) GCTaskThread [stack: 0x00007f0d5de60000,0x00007f0d5df61000] [id=19797]
+
+VM state:at safepoint (normal execution)
+
+VM Mutex/Monitor currently owned by a thread:  ([mutex/lock_event])
+[0x000000000217ac80] Threads_lock - owner thread: 0x00000000023b8000
+[0x000000000217b180] Heap_lock - owner thread: 0x0000000002c0b000
+
+Heap:
+ garbage-first heap   total 524288K, used 404431K [0x00000000e0000000, 0x00000000e0101000, 0x0000000100000000)
+  region size 1024K, 307 young (314368K), 4 survivors (4096K)
+ Metaspace       used 90586K, capacity 92398K, committed 92516K, reserved 1126400K
+  class space    used 14350K, capacity 14618K, committed 14692K, reserved 1048576K
+
+Heap Regions: (Y=young(eden), SU=young(survivor), HS=humongous(starts), HC=humongous(continues), CS=collection set, F=free, TS=gc time stamp, PTAMS=previous top-at-mark-start, NTAMS=next top-at-mark-start)
+AC   0  O    TS     0 PTAMS 0x00000000e006f2a0 NTAMS 0x00000000e006f2a0 space 1024K,  43% used [0x00000000e0000000, 0x00000000e0100000)
+AC   0  O    TS     0 PTAMS 0x00000000e0200000 NTAMS 0x00000000e0200000 space 1024K, 100% used [0x00000000e0100000, 0x00000000e0200000)
+AC   0  O    TS     0 PTAMS 0x00000000e0300000 NTAMS 0x00000000e0300000 space 1024K, 100% used [0x00000000e0200000, 0x00000000e0300000)
+AC   0  O    TS     5 PTAMS 0x00000000e0300000 NTAMS 0x00000000e0300000 space 1024K, 100% used [0x00000000e0300000, 0x00000000e0400000)
+AC   0  O    TS     0 PTAMS 0x00000000e0500000 NTAMS 0x00000000e0500000 space 1024K, 100% used [0x00000000e0400000, 0x00000000e0500000)
+AC   0  O    TS     0 PTAMS 0x00000000e0600000 NTAMS 0x00000000e0600000 space 1024K, 100% used [0x00000000e0500000, 0x00000000e0600000)
+AC   0  O    TS     0 PTAMS 0x00000000e0700000 NTAMS 0x00000000e0700000 space 1024K, 100% used [0x00000000e0600000, 0x00000000e0700000)
+AC   0  O    TS     0 PTAMS 0x00000000e0800000 NTAMS 0x00000000e0800000 space 1024K, 100% used [0x00000000e0700000, 0x00000000e0800000)
+AC   0  O    TS     0 PTAMS 0x00000000e0900000 NTAMS 0x00000000e0900000 space 1024K, 100% used [0x00000000e0800000, 0x00000000e0900000)
+AC   0 HS    TS     0 PTAMS 0x00000000e09c3510 NTAMS 0x00000000e09c3510 space 1024K,  76% used [0x00000000e0900000, 0x00000000e0a00000)
+AC   0  O    TS     5 PTAMS 0x00000000e0a00000 NTAMS 0x00000000e0a00000 space 1024K, 100% used [0x00000000e0a00000, 0x00000000e0b00000)
+AC   0  O    TS     5 PTAMS 0x00000000e0b00000 NTAMS 0x00000000e0b00000 space 1024K, 100% used [0x00000000e0b00000, 0x00000000e0c00000)
+AC   0  O    TS     5 PTAMS 0x00000000e0c00000 NTAMS 0x00000000e0c00000 space 1024K, 100% used [0x00000000e0c00000, 0x00000000e0d00000)
+AC   0  O    TS     0 PTAMS 0x00000000e0e00000 NTAMS 0x00000000e0e00000 space 1024K, 100% used [0x00000000e0d00000, 0x00000000e0e00000)
+AC   0  O    TS     0 PTAMS 0x00000000e0f00000 NTAMS 0x00000000e0f00000 space 1024K, 100% used [0x00000000e0e00000, 0x00000000e0f00000)
+AC   0  O    TS     0 PTAMS 0x00000000e1000000 NTAMS 0x00000000e1000000 space 1024K, 100% used [0x00000000e0f00000, 0x00000000e1000000)
+AC   0  O    TS     0 PTAMS 0x00000000e1100000 NTAMS 0x00000000e1100000 space 1024K, 100% used [0x00000000e1000000, 0x00000000e1100000)
+AC   0  O    TS     5 PTAMS 0x00000000e1100000 NTAMS 0x00000000e1100000 space 1024K, 100% used [0x00000000e1100000, 0x00000000e1200000)
+AC   0  O    TS     5 PTAMS 0x00000000e1200000 NTAMS 0x00000000e1200000 space 1024K, 100% used [0x00000000e1200000, 0x00000000e1300000)
+AC   0  O    TS     5 PTAMS 0x00000000e1300000 NTAMS 0x00000000e1300000 space 1024K, 100% used [0x00000000e1300000, 0x00000000e1400000)
+AC   0  O    TS     5 PTAMS 0x00000000e1400000 NTAMS 0x00000000e1400000 space 1024K, 100% used [0x00000000e1400000, 0x00000000e1500000)
+AC   0  O    TS     0 PTAMS 0x00000000e1600000 NTAMS 0x00000000e1600000 space 1024K, 100% used [0x00000000e1500000, 0x00000000e1600000)
+AC   0  O    TS     5 PTAMS 0x00000000e1600000 NTAMS 0x00000000e1600000 space 1024K, 100% used [0x00000000e1600000, 0x00000000e1700000)
+AC   0  O    TS     5 PTAMS 0x00000000e1700000 NTAMS 0x00000000e1700000 space 1024K, 100% used [0x00000000e1700000, 0x00000000e1800000)
+AC   0  O    TS     7 PTAMS 0x00000000e1800000 NTAMS 0x00000000e1800000 space 1024K, 100% used [0x00000000e1800000, 0x00000000e1900000)
+AC   0 HS    TS     0 PTAMS 0x00000000e1900000 NTAMS 0x00000000e1900000 space 1024K,  54% used [0x00000000e1900000, 0x00000000e1a00000)
+AC   0 HS    TS     0 PTAMS 0x00000000e1a00000 NTAMS 0x00000000e1a00000 space 1024K,  54% used [0x00000000e1a00000, 0x00000000e1b00000)
+AC   0 HS    TS     0 PTAMS 0x00000000e1b00000 NTAMS 0x00000000e1b00000 space 1024K,  54% used [0x00000000e1b00000, 0x00000000e1c00000)
+AC   0 HS    TS     0 PTAMS 0x00000000e1c00000 NTAMS 0x00000000e1c00000 space 1024K,  54% used [0x00000000e1c00000, 0x00000000e1d00000)
+AC   0 HS    TS     0 PTAMS 0x00000000e1d00000 NTAMS 0x00000000e1d00000 space 1024K,  54% used [0x00000000e1d00000, 0x00000000e1e00000)
+AC   0 HS    TS     0 PTAMS 0x00000000e1e00000 NTAMS 0x00000000e1e00000 space 1024K,  54% used [0x00000000e1e00000, 0x00000000e1f00000)
+AC   0 HS    TS     0 PTAMS 0x00000000e1f00000 NTAMS 0x00000000e1f00000 space 1024K,  53% used [0x00000000e1f00000, 0x00000000e2000000)
+AC   0 HS    TS     0 PTAMS 0x00000000e2000000 NTAMS 0x00000000e2000000 space 1024K,  53% used [0x00000000e2000000, 0x00000000e2100000)
+AC   0 HS    TS     0 PTAMS 0x00000000e2100000 NTAMS 0x00000000e2100000 space 1024K,  53% used [0x00000000e2100000, 0x00000000e2200000)
+AC   0 HS    TS     0 PTAMS 0x00000000e2200000 NTAMS 0x00000000e2200000 space 1024K,  53% used [0x00000000e2200000, 0x00000000e2300000)
+AC   0 HS    TS     0 PTAMS 0x00000000e2300000 NTAMS 0x00000000e2300000 space 1024K,  53% used [0x00000000e2300000, 0x00000000e2400000)
+AC   0 HS    TS     0 PTAMS 0x00000000e2400000 NTAMS 0x00000000e2400000 space 1024K,  53% used [0x00000000e2400000, 0x00000000e2500000)
+AC   0  O    TS     7 PTAMS 0x00000000e2500000 NTAMS 0x00000000e2500000 space 1024K, 100% used [0x00000000e2500000, 0x00000000e2600000)
+AC   0  O    TS     7 PTAMS 0x00000000e2600000 NTAMS 0x00000000e2600000 space 1024K, 100% used [0x00000000e2600000, 0x00000000e2700000)
+AC   0  O    TS     7 PTAMS 0x00000000e2700000 NTAMS 0x00000000e2700000 space 1024K, 100% used [0x00000000e2700000, 0x00000000e2800000)
+AC   0  O    TS     7 PTAMS 0x00000000e2800000 NTAMS 0x00000000e2800000 space 1024K, 100% used [0x00000000e2800000, 0x00000000e2900000)
+AC   0  O    TS     7 PTAMS 0x00000000e2900000 NTAMS 0x00000000e2900000 space 1024K, 100% used [0x00000000e2900000, 0x00000000e2a00000)
+AC   0  O    TS     7 PTAMS 0x00000000e2a00000 NTAMS 0x00000000e2a00000 space 1024K, 100% used [0x00000000e2a00000, 0x00000000e2b00000)
+AC   0  O    TS     7 PTAMS 0x00000000e2b00000 NTAMS 0x00000000e2b00000 space 1024K, 100% used [0x00000000e2b00000, 0x00000000e2c00000)
+AC   0  O    TS     7 PTAMS 0x00000000e2c00000 NTAMS 0x00000000e2c00000 space 1024K, 100% used [0x00000000e2c00000, 0x00000000e2d00000)
+AC   0  O    TS     7 PTAMS 0x00000000e2d00000 NTAMS 0x00000000e2d00000 space 1024K, 100% used [0x00000000e2d00000, 0x00000000e2e00000)
+AC   0  O    TS     7 PTAMS 0x00000000e2e00000 NTAMS 0x00000000e2e00000 space 1024K, 100% used [0x00000000e2e00000, 0x00000000e2f00000)
+AC   0  O    TS     7 PTAMS 0x00000000e2f00000 NTAMS 0x00000000e2f00000 space 1024K, 100% used [0x00000000e2f00000, 0x00000000e3000000)
+AC   0 HS    TS     0 PTAMS 0x00000000e3000000 NTAMS 0x00000000e3000000 space 1024K,  53% used [0x00000000e3000000, 0x00000000e3100000)
+AC   0 HS    TS     0 PTAMS 0x00000000e3100000 NTAMS 0x00000000e3100000 space 1024K,  53% used [0x00000000e3100000, 0x00000000e3200000)
+AC   0 HS    TS     0 PTAMS 0x00000000e3200000 NTAMS 0x00000000e3200000 space 1024K,  53% used [0x00000000e3200000, 0x00000000e3300000)
+AC   0 HS    TS     0 PTAMS 0x00000000e3300000 NTAMS 0x00000000e3300000 space 1024K,  53% used [0x00000000e3300000, 0x00000000e3400000)
+AC   0 HS    TS     0 PTAMS 0x00000000e3400000 NTAMS 0x00000000e3400000 space 1024K,  53% used [0x00000000e3400000, 0x00000000e3500000)
+AC   0 HS    TS     0 PTAMS 0x00000000e3500000 NTAMS 0x00000000e3500000 space 1024K,  53% used [0x00000000e3500000, 0x00000000e3600000)
+AC   0 HS    TS     0 PTAMS 0x00000000e3600000 NTAMS 0x00000000e3600000 space 1024K,  50% used [0x00000000e3600000, 0x00000000e3700000)
+AC   0 HS    TS     0 PTAMS 0x00000000e3700000 NTAMS 0x00000000e3700000 space 1024K,  50% used [0x00000000e3700000, 0x00000000e3800000)
+AC   0 HS    TS     0 PTAMS 0x00000000e3800000 NTAMS 0x00000000e3800000 space 1024K,  50% used [0x00000000e3800000, 0x00000000e3900000)
+AC   0 HS    TS     0 PTAMS 0x00000000e3900000 NTAMS 0x00000000e3900000 space 1024K,  50% used [0x00000000e3900000, 0x00000000e3a00000)
+AC   0 HS    TS     0 PTAMS 0x00000000e3a00000 NTAMS 0x00000000e3a00000 space 1024K,  50% used [0x00000000e3a00000, 0x00000000e3b00000)
+AC   0 HS    TS     0 PTAMS 0x00000000e3b00000 NTAMS 0x00000000e3b00000 space 1024K,  50% used [0x00000000e3b00000, 0x00000000e3c00000)
+AC   0  O    TS     9 PTAMS 0x00000000e3c00000 NTAMS 0x00000000e3c00000 space 1024K, 100% used [0x00000000e3c00000, 0x00000000e3d00000)
+AC   0  O    TS     9 PTAMS 0x00000000e3d00000 NTAMS 0x00000000e3d00000 space 1024K, 100% used [0x00000000e3d00000, 0x00000000e3e00000)
+AC   0  F    TS     0 PTAMS 0x00000000e3e00000 NTAMS 0x00000000e3e00000 space 1024K,   0% used [0x00000000e3e00000, 0x00000000e3f00000)
+AC   0  F    TS     0 PTAMS 0x00000000e3f00000 NTAMS 0x00000000e3f00000 space 1024K,   0% used [0x00000000e3f00000, 0x00000000e4000000)
+AC   0  F    TS     0 PTAMS 0x00000000e4000000 NTAMS 0x00000000e4000000 space 1024K,   0% used [0x00000000e4000000, 0x00000000e4100000)
+AC   0  F    TS     0 PTAMS 0x00000000e4100000 NTAMS 0x00000000e4100000 space 1024K,   0% used [0x00000000e4100000, 0x00000000e4200000)
+AC   0  F    TS     0 PTAMS 0x00000000e4200000 NTAMS 0x00000000e4200000 space 1024K,   0% used [0x00000000e4200000, 0x00000000e4300000)
+AC   0  F    TS     0 PTAMS 0x00000000e4300000 NTAMS 0x00000000e4300000 space 1024K,   0% used [0x00000000e4300000, 0x00000000e4400000)
+AC   0  F    TS     0 PTAMS 0x00000000e4400000 NTAMS 0x00000000e4400000 space 1024K,   0% used [0x00000000e4400000, 0x00000000e4500000)
+AC   0  F    TS     0 PTAMS 0x00000000e4500000 NTAMS 0x00000000e4500000 space 1024K,   0% used [0x00000000e4500000, 0x00000000e4600000)
+AC   0  F    TS     0 PTAMS 0x00000000e4600000 NTAMS 0x00000000e4600000 space 1024K,   0% used [0x00000000e4600000, 0x00000000e4700000)
+AC   0  F    TS     0 PTAMS 0x00000000e4700000 NTAMS 0x00000000e4700000 space 1024K,   0% used [0x00000000e4700000, 0x00000000e4800000)
+AC   0  F    TS     0 PTAMS 0x00000000e4800000 NTAMS 0x00000000e4800000 space 1024K,   0% used [0x00000000e4800000, 0x00000000e4900000)
+AC   0  F    TS     0 PTAMS 0x00000000e4900000 NTAMS 0x00000000e4900000 space 1024K,   0% used [0x00000000e4900000, 0x00000000e4a00000)
+AC   0  F    TS     0 PTAMS 0x00000000e4a00000 NTAMS 0x00000000e4a00000 space 1024K,   0% used [0x00000000e4a00000, 0x00000000e4b00000)
+AC   0  F    TS     0 PTAMS 0x00000000e4b00000 NTAMS 0x00000000e4b00000 space 1024K,   0% used [0x00000000e4b00000, 0x00000000e4c00000)
+AC   0  F    TS     0 PTAMS 0x00000000e4c00000 NTAMS 0x00000000e4c00000 space 1024K,   0% used [0x00000000e4c00000, 0x00000000e4d00000)
+AC   0  F    TS     0 PTAMS 0x00000000e4d00000 NTAMS 0x00000000e4d00000 space 1024K,   0% used [0x00000000e4d00000, 0x00000000e4e00000)
+AC   0  F    TS     0 PTAMS 0x00000000e4e00000 NTAMS 0x00000000e4e00000 space 1024K,   0% used [0x00000000e4e00000, 0x00000000e4f00000)
+AC   0  F    TS     0 PTAMS 0x00000000e4f00000 NTAMS 0x00000000e4f00000 space 1024K,   0% used [0x00000000e4f00000, 0x00000000e5000000)
+AC   0  F    TS     0 PTAMS 0x00000000e5000000 NTAMS 0x00000000e5000000 space 1024K,   0% used [0x00000000e5000000, 0x00000000e5100000)
+AC   0  F    TS     0 PTAMS 0x00000000e5100000 NTAMS 0x00000000e5100000 space 1024K,   0% used [0x00000000e5100000, 0x00000000e5200000)
+AC   0  F    TS     0 PTAMS 0x00000000e5200000 NTAMS 0x00000000e5200000 space 1024K,   0% used [0x00000000e5200000, 0x00000000e5300000)
+AC   0  F    TS     0 PTAMS 0x00000000e5300000 NTAMS 0x00000000e5300000 space 1024K,   0% used [0x00000000e5300000, 0x00000000e5400000)
+AC   0  F    TS     0 PTAMS 0x00000000e5400000 NTAMS 0x00000000e5400000 space 1024K,   0% used [0x00000000e5400000, 0x00000000e5500000)
+AC   0  F    TS     0 PTAMS 0x00000000e5500000 NTAMS 0x00000000e5500000 space 1024K,   0% used [0x00000000e5500000, 0x00000000e5600000)
+AC   0  F    TS     0 PTAMS 0x00000000e5600000 NTAMS 0x00000000e5600000 space 1024K,   0% used [0x00000000e5600000, 0x00000000e5700000)
+AC   0  F    TS     0 PTAMS 0x00000000e5700000 NTAMS 0x00000000e5700000 space 1024K,   0% used [0x00000000e5700000, 0x00000000e5800000)
+AC   0  F    TS     0 PTAMS 0x00000000e5800000 NTAMS 0x00000000e5800000 space 1024K,   0% used [0x00000000e5800000, 0x00000000e5900000)
+AC   0  F    TS     0 PTAMS 0x00000000e5900000 NTAMS 0x00000000e5900000 space 1024K,   0% used [0x00000000e5900000, 0x00000000e5a00000)
+AC   0  F    TS     0 PTAMS 0x00000000e5a00000 NTAMS 0x00000000e5a00000 space 1024K,   0% used [0x00000000e5a00000, 0x00000000e5b00000)
+AC   0  F    TS     0 PTAMS 0x00000000e5b00000 NTAMS 0x00000000e5b00000 space 1024K,   0% used [0x00000000e5b00000, 0x00000000e5c00000)
+AC   0  F    TS     0 PTAMS 0x00000000e5c00000 NTAMS 0x00000000e5c00000 space 1024K,   0% used [0x00000000e5c00000, 0x00000000e5d00000)
+AC   0  F    TS     0 PTAMS 0x00000000e5d00000 NTAMS 0x00000000e5d00000 space 1024K,   0% used [0x00000000e5d00000, 0x00000000e5e00000)
+AC   0  F    TS     0 PTAMS 0x00000000e5e00000 NTAMS 0x00000000e5e00000 space 1024K,   0% used [0x00000000e5e00000, 0x00000000e5f00000)
+AC   0  F    TS     0 PTAMS 0x00000000e5f00000 NTAMS 0x00000000e5f00000 space 1024K,   0% used [0x00000000e5f00000, 0x00000000e6000000)
+AC   0  F    TS     0 PTAMS 0x00000000e6000000 NTAMS 0x00000000e6000000 space 1024K,   0% used [0x00000000e6000000, 0x00000000e6100000)
+AC   0  F    TS     0 PTAMS 0x00000000e6100000 NTAMS 0x00000000e6100000 space 1024K,   0% used [0x00000000e6100000, 0x00000000e6200000)
+AC   0  F    TS     0 PTAMS 0x00000000e6200000 NTAMS 0x00000000e6200000 space 1024K,   0% used [0x00000000e6200000, 0x00000000e6300000)
+AC   0  F    TS     0 PTAMS 0x00000000e6300000 NTAMS 0x00000000e6300000 space 1024K,   0% used [0x00000000e6300000, 0x00000000e6400000)
+AC   0  F    TS     0 PTAMS 0x00000000e6400000 NTAMS 0x00000000e6400000 space 1024K,   0% used [0x00000000e6400000, 0x00000000e6500000)
+AC   0  F    TS     0 PTAMS 0x00000000e6500000 NTAMS 0x00000000e6500000 space 1024K,   0% used [0x00000000e6500000, 0x00000000e6600000)
+AC   0  F    TS     0 PTAMS 0x00000000e6600000 NTAMS 0x00000000e6600000 space 1024K,   0% used [0x00000000e6600000, 0x00000000e6700000)
+AC   0  F    TS     0 PTAMS 0x00000000e6700000 NTAMS 0x00000000e6700000 space 1024K,   0% used [0x00000000e6700000, 0x00000000e6800000)
+AC   0  F    TS     0 PTAMS 0x00000000e6800000 NTAMS 0x00000000e6800000 space 1024K,   0% used [0x00000000e6800000, 0x00000000e6900000)
+AC   0  F    TS     0 PTAMS 0x00000000e6900000 NTAMS 0x00000000e6900000 space 1024K,   0% used [0x00000000e6900000, 0x00000000e6a00000)
+AC   0  F    TS     0 PTAMS 0x00000000e6a00000 NTAMS 0x00000000e6a00000 space 1024K,   0% used [0x00000000e6a00000, 0x00000000e6b00000)
+AC   0  F    TS     0 PTAMS 0x00000000e6b00000 NTAMS 0x00000000e6b00000 space 1024K,   0% used [0x00000000e6b00000, 0x00000000e6c00000)
+AC   0  F    TS     0 PTAMS 0x00000000e6c00000 NTAMS 0x00000000e6c00000 space 1024K,   0% used [0x00000000e6c00000, 0x00000000e6d00000)
+AC   0  F    TS     0 PTAMS 0x00000000e6d00000 NTAMS 0x00000000e6d00000 space 1024K,   0% used [0x00000000e6d00000, 0x00000000e6e00000)
+AC   0  F    TS     0 PTAMS 0x00000000e6e00000 NTAMS 0x00000000e6e00000 space 1024K,   0% used [0x00000000e6e00000, 0x00000000e6f00000)
+AC   0  F    TS     0 PTAMS 0x00000000e6f00000 NTAMS 0x00000000e6f00000 space 1024K,   0% used [0x00000000e6f00000, 0x00000000e7000000)
+AC   0  F    TS     0 PTAMS 0x00000000e7000000 NTAMS 0x00000000e7000000 space 1024K,   0% used [0x00000000e7000000, 0x00000000e7100000)
+AC   0  F    TS     0 PTAMS 0x00000000e7100000 NTAMS 0x00000000e7100000 space 1024K,   0% used [0x00000000e7100000, 0x00000000e7200000)
+AC   0  F    TS     0 PTAMS 0x00000000e7200000 NTAMS 0x00000000e7200000 space 1024K,   0% used [0x00000000e7200000, 0x00000000e7300000)
+AC   0  F    TS     0 PTAMS 0x00000000e7300000 NTAMS 0x00000000e7300000 space 1024K,   0% used [0x00000000e7300000, 0x00000000e7400000)
+AC   0  F    TS     0 PTAMS 0x00000000e7400000 NTAMS 0x00000000e7400000 space 1024K,   0% used [0x00000000e7400000, 0x00000000e7500000)
+AC   0  F    TS     0 PTAMS 0x00000000e7500000 NTAMS 0x00000000e7500000 space 1024K,   0% used [0x00000000e7500000, 0x00000000e7600000)
+AC   0  F    TS     0 PTAMS 0x00000000e7600000 NTAMS 0x00000000e7600000 space 1024K,   0% used [0x00000000e7600000, 0x00000000e7700000)
+AC   0  F    TS     0 PTAMS 0x00000000e7700000 NTAMS 0x00000000e7700000 space 1024K,   0% used [0x00000000e7700000, 0x00000000e7800000)
+AC   0  F    TS     0 PTAMS 0x00000000e7800000 NTAMS 0x00000000e7800000 space 1024K,   0% used [0x00000000e7800000, 0x00000000e7900000)
+AC   0  F    TS     0 PTAMS 0x00000000e7900000 NTAMS 0x00000000e7900000 space 1024K,   0% used [0x00000000e7900000, 0x00000000e7a00000)
+AC   0  F    TS     0 PTAMS 0x00000000e7a00000 NTAMS 0x00000000e7a00000 space 1024K,   0% used [0x00000000e7a00000, 0x00000000e7b00000)
+AC   0  F    TS     0 PTAMS 0x00000000e7b00000 NTAMS 0x00000000e7b00000 space 1024K,   0% used [0x00000000e7b00000, 0x00000000e7c00000)
+AC   0  O    TS     3 PTAMS 0x00000000e7c00000 NTAMS 0x00000000e7c00000 space 1024K, 100% used [0x00000000e7c00000, 0x00000000e7d00000)
+AC   0  O    TS     5 PTAMS 0x00000000e7d00000 NTAMS 0x00000000e7d00000 space 1024K, 100% used [0x00000000e7d00000, 0x00000000e7e00000)
+AC   0  F    TS     0 PTAMS 0x00000000e7e00000 NTAMS 0x00000000e7e00000 space 1024K,   0% used [0x00000000e7e00000, 0x00000000e7f00000)
+AC   0  F    TS     0 PTAMS 0x00000000e7f00000 NTAMS 0x00000000e7f00000 space 1024K,   0% used [0x00000000e7f00000, 0x00000000e8000000)
+AC   0  F    TS     0 PTAMS 0x00000000e8000000 NTAMS 0x00000000e8000000 space 1024K,   0% used [0x00000000e8000000, 0x00000000e8100000)
+AC   0  F    TS     0 PTAMS 0x00000000e8100000 NTAMS 0x00000000e8100000 space 1024K,   0% used [0x00000000e8100000, 0x00000000e8200000)
+AC   0  F    TS     0 PTAMS 0x00000000e8200000 NTAMS 0x00000000e8200000 space 1024K,   0% used [0x00000000e8200000, 0x00000000e8300000)
+AC   0  F    TS     0 PTAMS 0x00000000e8300000 NTAMS 0x00000000e8300000 space 1024K,   0% used [0x00000000e8300000, 0x00000000e8400000)
+AC   0  F    TS     0 PTAMS 0x00000000e8400000 NTAMS 0x00000000e8400000 space 1024K,   0% used [0x00000000e8400000, 0x00000000e8500000)
+AC   0  F    TS     0 PTAMS 0x00000000e8500000 NTAMS 0x00000000e8500000 space 1024K,   0% used [0x00000000e8500000, 0x00000000e8600000)
+AC   0  F    TS     0 PTAMS 0x00000000e8600000 NTAMS 0x00000000e8600000 space 1024K,   0% used [0x00000000e8600000, 0x00000000e8700000)
+AC   0  F    TS     0 PTAMS 0x00000000e8700000 NTAMS 0x00000000e8700000 space 1024K,   0% used [0x00000000e8700000, 0x00000000e8800000)
+AC   0  F    TS     0 PTAMS 0x00000000e8800000 NTAMS 0x00000000e8800000 space 1024K,   0% used [0x00000000e8800000, 0x00000000e8900000)
+AC   0  F    TS     0 PTAMS 0x00000000e8900000 NTAMS 0x00000000e8900000 space 1024K,   0% used [0x00000000e8900000, 0x00000000e8a00000)
+AC   0  F    TS     0 PTAMS 0x00000000e8a00000 NTAMS 0x00000000e8a00000 space 1024K,   0% used [0x00000000e8a00000, 0x00000000e8b00000)
+AC   0  F    TS     0 PTAMS 0x00000000e8b00000 NTAMS 0x00000000e8b00000 space 1024K,   0% used [0x00000000e8b00000, 0x00000000e8c00000)
+AC   0  F    TS     0 PTAMS 0x00000000e8c00000 NTAMS 0x00000000e8c00000 space 1024K,   0% used [0x00000000e8c00000, 0x00000000e8d00000)
+AC   0  F    TS     0 PTAMS 0x00000000e8d00000 NTAMS 0x00000000e8d00000 space 1024K,   0% used [0x00000000e8d00000, 0x00000000e8e00000)
+AC   0  F    TS     0 PTAMS 0x00000000e8e00000 NTAMS 0x00000000e8e00000 space 1024K,   0% used [0x00000000e8e00000, 0x00000000e8f00000)
+AC   0  F    TS     0 PTAMS 0x00000000e8f00000 NTAMS 0x00000000e8f00000 space 1024K,   0% used [0x00000000e8f00000, 0x00000000e9000000)
+AC   0  F    TS     0 PTAMS 0x00000000e9000000 NTAMS 0x00000000e9000000 space 1024K,   0% used [0x00000000e9000000, 0x00000000e9100000)
+AC   0  F    TS     0 PTAMS 0x00000000e9100000 NTAMS 0x00000000e9100000 space 1024K,   0% used [0x00000000e9100000, 0x00000000e9200000)
+AC   0  F    TS     0 PTAMS 0x00000000e9200000 NTAMS 0x00000000e9200000 space 1024K,   0% used [0x00000000e9200000, 0x00000000e9300000)
+AC   0  F    TS     0 PTAMS 0x00000000e9300000 NTAMS 0x00000000e9300000 space 1024K,   0% used [0x00000000e9300000, 0x00000000e9400000)
+AC   0  F    TS     0 PTAMS 0x00000000e9400000 NTAMS 0x00000000e9400000 space 1024K,   0% used [0x00000000e9400000, 0x00000000e9500000)
+AC   0  F    TS     0 PTAMS 0x00000000e9500000 NTAMS 0x00000000e9500000 space 1024K,   0% used [0x00000000e9500000, 0x00000000e9600000)
+AC   0  F    TS     0 PTAMS 0x00000000e9600000 NTAMS 0x00000000e9600000 space 1024K,   0% used [0x00000000e9600000, 0x00000000e9700000)
+AC   0  F    TS     0 PTAMS 0x00000000e9700000 NTAMS 0x00000000e9700000 space 1024K,   0% used [0x00000000e9700000, 0x00000000e9800000)
+AC   0  F    TS     0 PTAMS 0x00000000e9800000 NTAMS 0x00000000e9800000 space 1024K,   0% used [0x00000000e9800000, 0x00000000e9900000)
+AC   0  F    TS     0 PTAMS 0x00000000e9900000 NTAMS 0x00000000e9900000 space 1024K,   0% used [0x00000000e9900000, 0x00000000e9a00000)
+AC   0  F    TS     0 PTAMS 0x00000000e9a00000 NTAMS 0x00000000e9a00000 space 1024K,   0% used [0x00000000e9a00000, 0x00000000e9b00000)
+AC   0  F    TS     0 PTAMS 0x00000000e9b00000 NTAMS 0x00000000e9b00000 space 1024K,   0% used [0x00000000e9b00000, 0x00000000e9c00000)
+AC   0  F    TS     0 PTAMS 0x00000000e9c00000 NTAMS 0x00000000e9c00000 space 1024K,   0% used [0x00000000e9c00000, 0x00000000e9d00000)
+AC   0  F    TS     0 PTAMS 0x00000000e9d00000 NTAMS 0x00000000e9d00000 space 1024K,   0% used [0x00000000e9d00000, 0x00000000e9e00000)
+AC   0  F    TS     0 PTAMS 0x00000000e9e00000 NTAMS 0x00000000e9e00000 space 1024K,   0% used [0x00000000e9e00000, 0x00000000e9f00000)
+AC   0  F    TS     0 PTAMS 0x00000000e9f00000 NTAMS 0x00000000e9f00000 space 1024K,   0% used [0x00000000e9f00000, 0x00000000ea000000)
+AC   0  F    TS     0 PTAMS 0x00000000ea000000 NTAMS 0x00000000ea000000 space 1024K,   0% used [0x00000000ea000000, 0x00000000ea100000)
+AC   0  F    TS     0 PTAMS 0x00000000ea100000 NTAMS 0x00000000ea100000 space 1024K,   0% used [0x00000000ea100000, 0x00000000ea200000)
+AC   0  F    TS     0 PTAMS 0x00000000ea200000 NTAMS 0x00000000ea200000 space 1024K,   0% used [0x00000000ea200000, 0x00000000ea300000)
+AC   0  F    TS     0 PTAMS 0x00000000ea300000 NTAMS 0x00000000ea300000 space 1024K,   0% used [0x00000000ea300000, 0x00000000ea400000)
+AC   0  F    TS     0 PTAMS 0x00000000ea400000 NTAMS 0x00000000ea400000 space 1024K,   0% used [0x00000000ea400000, 0x00000000ea500000)
+AC   0  F    TS     0 PTAMS 0x00000000ea500000 NTAMS 0x00000000ea500000 space 1024K,   0% used [0x00000000ea500000, 0x00000000ea600000)
+AC   0  F    TS     0 PTAMS 0x00000000ea600000 NTAMS 0x00000000ea600000 space 1024K,   0% used [0x00000000ea600000, 0x00000000ea700000)
+AC   0  F    TS     0 PTAMS 0x00000000ea700000 NTAMS 0x00000000ea700000 space 1024K,   0% used [0x00000000ea700000, 0x00000000ea800000)
+AC   0  S    TS    11 PTAMS 0x00000000ea800000 NTAMS 0x00000000ea800000 space 1024K,  99% used [0x00000000ea800000, 0x00000000ea900000)
+AC   0  E CS TS     0 PTAMS 0x00000000ea900000 NTAMS 0x00000000ea900000 space 1024K, 100% used [0x00000000ea900000, 0x00000000eaa00000)
+AC   0  E CS TS     0 PTAMS 0x00000000eaa00000 NTAMS 0x00000000eaa00000 space 1024K, 100% used [0x00000000eaa00000, 0x00000000eab00000)
+AC   0  E CS TS     0 PTAMS 0x00000000eab00000 NTAMS 0x00000000eab00000 space 1024K, 100% used [0x00000000eab00000, 0x00000000eac00000)
+AC   0  E CS TS     0 PTAMS 0x00000000eac00000 NTAMS 0x00000000eac00000 space 1024K, 100% used [0x00000000eac00000, 0x00000000ead00000)
+AC   0  E CS TS     0 PTAMS 0x00000000ead00000 NTAMS 0x00000000ead00000 space 1024K, 100% used [0x00000000ead00000, 0x00000000eae00000)
+AC   0  E CS TS     0 PTAMS 0x00000000eae00000 NTAMS 0x00000000eae00000 space 1024K, 100% used [0x00000000eae00000, 0x00000000eaf00000)
+AC   0  E CS TS     0 PTAMS 0x00000000eaf00000 NTAMS 0x00000000eaf00000 space 1024K, 100% used [0x00000000eaf00000, 0x00000000eb000000)
+AC   0  E CS TS     0 PTAMS 0x00000000eb000000 NTAMS 0x00000000eb000000 space 1024K, 100% used [0x00000000eb000000, 0x00000000eb100000)
+AC   0  E CS TS     0 PTAMS 0x00000000eb100000 NTAMS 0x00000000eb100000 space 1024K, 100% used [0x00000000eb100000, 0x00000000eb200000)
+AC   0  E CS TS     0 PTAMS 0x00000000eb200000 NTAMS 0x00000000eb200000 space 1024K, 100% used [0x00000000eb200000, 0x00000000eb300000)
+AC   0  E CS TS     0 PTAMS 0x00000000eb300000 NTAMS 0x00000000eb300000 space 1024K, 100% used [0x00000000eb300000, 0x00000000eb400000)
+AC   0  E CS TS     0 PTAMS 0x00000000eb400000 NTAMS 0x00000000eb400000 space 1024K, 100% used [0x00000000eb400000, 0x00000000eb500000)
+AC   0  E CS TS     0 PTAMS 0x00000000eb500000 NTAMS 0x00000000eb500000 space 1024K, 100% used [0x00000000eb500000, 0x00000000eb600000)
+AC   0  E CS TS     0 PTAMS 0x00000000eb600000 NTAMS 0x00000000eb600000 space 1024K, 100% used [0x00000000eb600000, 0x00000000eb700000)
+AC   0  E CS TS     0 PTAMS 0x00000000eb700000 NTAMS 0x00000000eb700000 space 1024K, 100% used [0x00000000eb700000, 0x00000000eb800000)
+AC   0  E CS TS     0 PTAMS 0x00000000eb800000 NTAMS 0x00000000eb800000 space 1024K, 100% used [0x00000000eb800000, 0x00000000eb900000)
+AC   0  E CS TS     0 PTAMS 0x00000000eb900000 NTAMS 0x00000000eb900000 space 1024K, 100% used [0x00000000eb900000, 0x00000000eba00000)
+AC   0  E CS TS     0 PTAMS 0x00000000eba00000 NTAMS 0x00000000eba00000 space 1024K, 100% used [0x00000000eba00000, 0x00000000ebb00000)
+AC   0  E CS TS     0 PTAMS 0x00000000ebb00000 NTAMS 0x00000000ebb00000 space 1024K, 100% used [0x00000000ebb00000, 0x00000000ebc00000)
+AC   0  E CS TS     0 PTAMS 0x00000000ebc00000 NTAMS 0x00000000ebc00000 space 1024K, 100% used [0x00000000ebc00000, 0x00000000ebd00000)
+AC   0  E CS TS     0 PTAMS 0x00000000ebd00000 NTAMS 0x00000000ebd00000 space 1024K, 100% used [0x00000000ebd00000, 0x00000000ebe00000)
+AC   0  E CS TS     0 PTAMS 0x00000000ebe00000 NTAMS 0x00000000ebe00000 space 1024K, 100% used [0x00000000ebe00000, 0x00000000ebf00000)
+AC   0  E CS TS     0 PTAMS 0x00000000ebf00000 NTAMS 0x00000000ebf00000 space 1024K, 100% used [0x00000000ebf00000, 0x00000000ec000000)
+AC   0  E CS TS     0 PTAMS 0x00000000ec000000 NTAMS 0x00000000ec000000 space 1024K, 100% used [0x00000000ec000000, 0x00000000ec100000)
+AC   0  E CS TS     0 PTAMS 0x00000000ec100000 NTAMS 0x00000000ec100000 space 1024K, 100% used [0x00000000ec100000, 0x00000000ec200000)
+AC   0  E CS TS     0 PTAMS 0x00000000ec200000 NTAMS 0x00000000ec200000 space 1024K, 100% used [0x00000000ec200000, 0x00000000ec300000)
+AC   0  E CS TS     0 PTAMS 0x00000000ec300000 NTAMS 0x00000000ec300000 space 1024K, 100% used [0x00000000ec300000, 0x00000000ec400000)
+AC   0  E CS TS     0 PTAMS 0x00000000ec400000 NTAMS 0x00000000ec400000 space 1024K, 100% used [0x00000000ec400000, 0x00000000ec500000)
+AC   0  E CS TS     0 PTAMS 0x00000000ec500000 NTAMS 0x00000000ec500000 space 1024K, 100% used [0x00000000ec500000, 0x00000000ec600000)
+AC   0  E CS TS     0 PTAMS 0x00000000ec600000 NTAMS 0x00000000ec600000 space 1024K, 100% used [0x00000000ec600000, 0x00000000ec700000)
+AC   0  E CS TS     0 PTAMS 0x00000000ec700000 NTAMS 0x00000000ec700000 space 1024K, 100% used [0x00000000ec700000, 0x00000000ec800000)
+AC   0  E CS TS     0 PTAMS 0x00000000ec800000 NTAMS 0x00000000ec800000 space 1024K, 100% used [0x00000000ec800000, 0x00000000ec900000)
+AC   0  E CS TS     0 PTAMS 0x00000000ec900000 NTAMS 0x00000000ec900000 space 1024K, 100% used [0x00000000ec900000, 0x00000000eca00000)
+AC   0  E CS TS     0 PTAMS 0x00000000eca00000 NTAMS 0x00000000eca00000 space 1024K, 100% used [0x00000000eca00000, 0x00000000ecb00000)
+AC   0  E CS TS     0 PTAMS 0x00000000ecb00000 NTAMS 0x00000000ecb00000 space 1024K, 100% used [0x00000000ecb00000, 0x00000000ecc00000)
+AC   0  E CS TS     0 PTAMS 0x00000000ecc00000 NTAMS 0x00000000ecc00000 space 1024K, 100% used [0x00000000ecc00000, 0x00000000ecd00000)
+AC   0  E CS TS     0 PTAMS 0x00000000ecd00000 NTAMS 0x00000000ecd00000 space 1024K, 100% used [0x00000000ecd00000, 0x00000000ece00000)
+AC   0  E CS TS     0 PTAMS 0x00000000ece00000 NTAMS 0x00000000ece00000 space 1024K, 100% used [0x00000000ece00000, 0x00000000ecf00000)
+AC   0  E CS TS     0 PTAMS 0x00000000ecf00000 NTAMS 0x00000000ecf00000 space 1024K, 100% used [0x00000000ecf00000, 0x00000000ed000000)
+AC   0  E CS TS     0 PTAMS 0x00000000ed000000 NTAMS 0x00000000ed000000 space 1024K, 100% used [0x00000000ed000000, 0x00000000ed100000)
+AC   0  E CS TS     0 PTAMS 0x00000000ed100000 NTAMS 0x00000000ed100000 space 1024K, 100% used [0x00000000ed100000, 0x00000000ed200000)
+AC   0  E CS TS     0 PTAMS 0x00000000ed200000 NTAMS 0x00000000ed200000 space 1024K, 100% used [0x00000000ed200000, 0x00000000ed300000)
+AC   0  E CS TS     0 PTAMS 0x00000000ed300000 NTAMS 0x00000000ed300000 space 1024K, 100% used [0x00000000ed300000, 0x00000000ed400000)
+AC   0  E CS TS     0 PTAMS 0x00000000ed400000 NTAMS 0x00000000ed400000 space 1024K, 100% used [0x00000000ed400000, 0x00000000ed500000)
+AC   0  E CS TS     0 PTAMS 0x00000000ed500000 NTAMS 0x00000000ed500000 space 1024K, 100% used [0x00000000ed500000, 0x00000000ed600000)
+AC   0  E CS TS     0 PTAMS 0x00000000ed600000 NTAMS 0x00000000ed600000 space 1024K, 100% used [0x00000000ed600000, 0x00000000ed700000)
+AC   0  E CS TS     0 PTAMS 0x00000000ed700000 NTAMS 0x00000000ed700000 space 1024K, 100% used [0x00000000ed700000, 0x00000000ed800000)
+AC   0  E CS TS     0 PTAMS 0x00000000ed800000 NTAMS 0x00000000ed800000 space 1024K, 100% used [0x00000000ed800000, 0x00000000ed900000)
+AC   0  E CS TS     0 PTAMS 0x00000000ed900000 NTAMS 0x00000000ed900000 space 1024K, 100% used [0x00000000ed900000, 0x00000000eda00000)
+AC   0  E CS TS     0 PTAMS 0x00000000eda00000 NTAMS 0x00000000eda00000 space 1024K, 100% used [0x00000000eda00000, 0x00000000edb00000)
+AC   0  E CS TS     0 PTAMS 0x00000000edb00000 NTAMS 0x00000000edb00000 space 1024K, 100% used [0x00000000edb00000, 0x00000000edc00000)
+AC   0  E CS TS     0 PTAMS 0x00000000edc00000 NTAMS 0x00000000edc00000 space 1024K, 100% used [0x00000000edc00000, 0x00000000edd00000)
+AC   0  E CS TS     0 PTAMS 0x00000000edd00000 NTAMS 0x00000000edd00000 space 1024K, 100% used [0x00000000edd00000, 0x00000000ede00000)
+AC   0  E CS TS     0 PTAMS 0x00000000ede00000 NTAMS 0x00000000ede00000 space 1024K, 100% used [0x00000000ede00000, 0x00000000edf00000)
+AC   0  E CS TS     0 PTAMS 0x00000000edf00000 NTAMS 0x00000000edf00000 space 1024K, 100% used [0x00000000edf00000, 0x00000000ee000000)
+AC   0  E CS TS     0 PTAMS 0x00000000ee000000 NTAMS 0x00000000ee000000 space 1024K, 100% used [0x00000000ee000000, 0x00000000ee100000)
+AC   0  E CS TS     0 PTAMS 0x00000000ee100000 NTAMS 0x00000000ee100000 space 1024K, 100% used [0x00000000ee100000, 0x00000000ee200000)
+AC   0  E CS TS     0 PTAMS 0x00000000ee200000 NTAMS 0x00000000ee200000 space 1024K, 100% used [0x00000000ee200000, 0x00000000ee300000)
+AC   0  E CS TS     0 PTAMS 0x00000000ee300000 NTAMS 0x00000000ee300000 space 1024K, 100% used [0x00000000ee300000, 0x00000000ee400000)
+AC   0  E CS TS     0 PTAMS 0x00000000ee400000 NTAMS 0x00000000ee400000 space 1024K, 100% used [0x00000000ee400000, 0x00000000ee500000)
+AC   0  E CS TS     0 PTAMS 0x00000000ee500000 NTAMS 0x00000000ee500000 space 1024K, 100% used [0x00000000ee500000, 0x00000000ee600000)
+AC   0  E CS TS     0 PTAMS 0x00000000ee600000 NTAMS 0x00000000ee600000 space 1024K, 100% used [0x00000000ee600000, 0x00000000ee700000)
+AC   0  E CS TS     0 PTAMS 0x00000000ee700000 NTAMS 0x00000000ee700000 space 1024K, 100% used [0x00000000ee700000, 0x00000000ee800000)
+AC   0  E CS TS     0 PTAMS 0x00000000ee800000 NTAMS 0x00000000ee800000 space 1024K, 100% used [0x00000000ee800000, 0x00000000ee900000)
+AC   0  E CS TS     0 PTAMS 0x00000000ee900000 NTAMS 0x00000000ee900000 space 1024K, 100% used [0x00000000ee900000, 0x00000000eea00000)
+AC   0  E CS TS     0 PTAMS 0x00000000eea00000 NTAMS 0x00000000eea00000 space 1024K, 100% used [0x00000000eea00000, 0x00000000eeb00000)
+AC   0  E CS TS     0 PTAMS 0x00000000eeb00000 NTAMS 0x00000000eeb00000 space 1024K, 100% used [0x00000000eeb00000, 0x00000000eec00000)
+AC   0  E CS TS     0 PTAMS 0x00000000eec00000 NTAMS 0x00000000eec00000 space 1024K, 100% used [0x00000000eec00000, 0x00000000eed00000)
+AC   0  E CS TS     0 PTAMS 0x00000000eed00000 NTAMS 0x00000000eed00000 space 1024K, 100% used [0x00000000eed00000, 0x00000000eee00000)
+AC   0  E CS TS     0 PTAMS 0x00000000eee00000 NTAMS 0x00000000eee00000 space 1024K, 100% used [0x00000000eee00000, 0x00000000eef00000)
+AC   0  E CS TS     0 PTAMS 0x00000000eef00000 NTAMS 0x00000000eef00000 space 1024K, 100% used [0x00000000eef00000, 0x00000000ef000000)
+AC   0  E CS TS     0 PTAMS 0x00000000ef000000 NTAMS 0x00000000ef000000 space 1024K, 100% used [0x00000000ef000000, 0x00000000ef100000)
+AC   0  E CS TS     0 PTAMS 0x00000000ef100000 NTAMS 0x00000000ef100000 space 1024K, 100% used [0x00000000ef100000, 0x00000000ef200000)
+AC   0  E CS TS     0 PTAMS 0x00000000ef200000 NTAMS 0x00000000ef200000 space 1024K, 100% used [0x00000000ef200000, 0x00000000ef300000)
+AC   0  E CS TS     0 PTAMS 0x00000000ef300000 NTAMS 0x00000000ef300000 space 1024K, 100% used [0x00000000ef300000, 0x00000000ef400000)
+AC   0  E CS TS     0 PTAMS 0x00000000ef400000 NTAMS 0x00000000ef400000 space 1024K, 100% used [0x00000000ef400000, 0x00000000ef500000)
+AC   0  E CS TS     0 PTAMS 0x00000000ef500000 NTAMS 0x00000000ef500000 space 1024K, 100% used [0x00000000ef500000, 0x00000000ef600000)
+AC   0  E CS TS     0 PTAMS 0x00000000ef600000 NTAMS 0x00000000ef600000 space 1024K, 100% used [0x00000000ef600000, 0x00000000ef700000)
+AC   0  E CS TS     0 PTAMS 0x00000000ef700000 NTAMS 0x00000000ef700000 space 1024K, 100% used [0x00000000ef700000, 0x00000000ef800000)
+AC   0  E CS TS     0 PTAMS 0x00000000ef800000 NTAMS 0x00000000ef800000 space 1024K, 100% used [0x00000000ef800000, 0x00000000ef900000)
+AC   0  E CS TS     0 PTAMS 0x00000000ef900000 NTAMS 0x00000000ef900000 space 1024K, 100% used [0x00000000ef900000, 0x00000000efa00000)
+AC   0  E CS TS     0 PTAMS 0x00000000efa00000 NTAMS 0x00000000efa00000 space 1024K, 100% used [0x00000000efa00000, 0x00000000efb00000)
+AC   0  E CS TS     0 PTAMS 0x00000000efb00000 NTAMS 0x00000000efb00000 space 1024K, 100% used [0x00000000efb00000, 0x00000000efc00000)
+AC   0  E CS TS     0 PTAMS 0x00000000efc00000 NTAMS 0x00000000efc00000 space 1024K, 100% used [0x00000000efc00000, 0x00000000efd00000)
+AC   0  E CS TS     0 PTAMS 0x00000000efd00000 NTAMS 0x00000000efd00000 space 1024K, 100% used [0x00000000efd00000, 0x00000000efe00000)
+AC   0  E CS TS     0 PTAMS 0x00000000efe00000 NTAMS 0x00000000efe00000 space 1024K, 100% used [0x00000000efe00000, 0x00000000eff00000)
+AC   0  E CS TS     0 PTAMS 0x00000000eff00000 NTAMS 0x00000000eff00000 space 1024K, 100% used [0x00000000eff00000, 0x00000000f0000000)
+AC   0  E CS TS     0 PTAMS 0x00000000f0000000 NTAMS 0x00000000f0000000 space 1024K, 100% used [0x00000000f0000000, 0x00000000f0100000)
+AC   0  E CS TS     0 PTAMS 0x00000000f0100000 NTAMS 0x00000000f0100000 space 1024K, 100% used [0x00000000f0100000, 0x00000000f0200000)
+AC   0  E CS TS     0 PTAMS 0x00000000f0200000 NTAMS 0x00000000f0200000 space 1024K, 100% used [0x00000000f0200000, 0x00000000f0300000)
+AC   0  E CS TS     0 PTAMS 0x00000000f0300000 NTAMS 0x00000000f0300000 space 1024K, 100% used [0x00000000f0300000, 0x00000000f0400000)
+AC   0  E CS TS     0 PTAMS 0x00000000f0400000 NTAMS 0x00000000f0400000 space 1024K, 100% used [0x00000000f0400000, 0x00000000f0500000)
+AC   0  E CS TS     0 PTAMS 0x00000000f0500000 NTAMS 0x00000000f0500000 space 1024K, 100% used [0x00000000f0500000, 0x00000000f0600000)
+AC   0  E CS TS     0 PTAMS 0x00000000f0600000 NTAMS 0x00000000f0600000 space 1024K, 100% used [0x00000000f0600000, 0x00000000f0700000)
+AC   0  E CS TS     0 PTAMS 0x00000000f0700000 NTAMS 0x00000000f0700000 space 1024K, 100% used [0x00000000f0700000, 0x00000000f0800000)
+AC   0  E CS TS     0 PTAMS 0x00000000f0800000 NTAMS 0x00000000f0800000 space 1024K, 100% used [0x00000000f0800000, 0x00000000f0900000)
+AC   0  E CS TS     0 PTAMS 0x00000000f0900000 NTAMS 0x00000000f0900000 space 1024K, 100% used [0x00000000f0900000, 0x00000000f0a00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f0a00000 NTAMS 0x00000000f0a00000 space 1024K, 100% used [0x00000000f0a00000, 0x00000000f0b00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f0b00000 NTAMS 0x00000000f0b00000 space 1024K, 100% used [0x00000000f0b00000, 0x00000000f0c00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f0c00000 NTAMS 0x00000000f0c00000 space 1024K, 100% used [0x00000000f0c00000, 0x00000000f0d00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f0d00000 NTAMS 0x00000000f0d00000 space 1024K, 100% used [0x00000000f0d00000, 0x00000000f0e00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f0e00000 NTAMS 0x00000000f0e00000 space 1024K, 100% used [0x00000000f0e00000, 0x00000000f0f00000)
+AC   0  E CS TS     1 PTAMS 0x00000000f0f00000 NTAMS 0x00000000f0f00000 space 1024K, 100% used [0x00000000f0f00000, 0x00000000f1000000)
+AC   0  E CS TS     0 PTAMS 0x00000000f1000000 NTAMS 0x00000000f1000000 space 1024K, 100% used [0x00000000f1000000, 0x00000000f1100000)
+AC   0  E CS TS     0 PTAMS 0x00000000f1100000 NTAMS 0x00000000f1100000 space 1024K, 100% used [0x00000000f1100000, 0x00000000f1200000)
+AC   0  E CS TS     1 PTAMS 0x00000000f1200000 NTAMS 0x00000000f1200000 space 1024K, 100% used [0x00000000f1200000, 0x00000000f1300000)
+AC   0  E CS TS     0 PTAMS 0x00000000f1300000 NTAMS 0x00000000f1300000 space 1024K, 100% used [0x00000000f1300000, 0x00000000f1400000)
+AC   0  E CS TS     0 PTAMS 0x00000000f1400000 NTAMS 0x00000000f1400000 space 1024K, 100% used [0x00000000f1400000, 0x00000000f1500000)
+AC   0  E CS TS     0 PTAMS 0x00000000f1500000 NTAMS 0x00000000f1500000 space 1024K, 100% used [0x00000000f1500000, 0x00000000f1600000)
+AC   0  E CS TS     0 PTAMS 0x00000000f1600000 NTAMS 0x00000000f1600000 space 1024K, 100% used [0x00000000f1600000, 0x00000000f1700000)
+AC   0  E CS TS     0 PTAMS 0x00000000f1700000 NTAMS 0x00000000f1700000 space 1024K, 100% used [0x00000000f1700000, 0x00000000f1800000)
+AC   0  E CS TS     0 PTAMS 0x00000000f1800000 NTAMS 0x00000000f1800000 space 1024K, 100% used [0x00000000f1800000, 0x00000000f1900000)
+AC   0  E CS TS     0 PTAMS 0x00000000f1900000 NTAMS 0x00000000f1900000 space 1024K, 100% used [0x00000000f1900000, 0x00000000f1a00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f1a00000 NTAMS 0x00000000f1a00000 space 1024K, 100% used [0x00000000f1a00000, 0x00000000f1b00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f1b00000 NTAMS 0x00000000f1b00000 space 1024K, 100% used [0x00000000f1b00000, 0x00000000f1c00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f1c00000 NTAMS 0x00000000f1c00000 space 1024K, 100% used [0x00000000f1c00000, 0x00000000f1d00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f1d00000 NTAMS 0x00000000f1d00000 space 1024K, 100% used [0x00000000f1d00000, 0x00000000f1e00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f1e00000 NTAMS 0x00000000f1e00000 space 1024K, 100% used [0x00000000f1e00000, 0x00000000f1f00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f1f00000 NTAMS 0x00000000f1f00000 space 1024K, 100% used [0x00000000f1f00000, 0x00000000f2000000)
+AC   0  E CS TS     0 PTAMS 0x00000000f2000000 NTAMS 0x00000000f2000000 space 1024K, 100% used [0x00000000f2000000, 0x00000000f2100000)
+AC   0  E CS TS     0 PTAMS 0x00000000f2100000 NTAMS 0x00000000f2100000 space 1024K, 100% used [0x00000000f2100000, 0x00000000f2200000)
+AC   0  E CS TS     0 PTAMS 0x00000000f2200000 NTAMS 0x00000000f2200000 space 1024K, 100% used [0x00000000f2200000, 0x00000000f2300000)
+AC   0  E CS TS     0 PTAMS 0x00000000f2300000 NTAMS 0x00000000f2300000 space 1024K, 100% used [0x00000000f2300000, 0x00000000f2400000)
+AC   0  E CS TS     0 PTAMS 0x00000000f2400000 NTAMS 0x00000000f2400000 space 1024K, 100% used [0x00000000f2400000, 0x00000000f2500000)
+AC   0  E CS TS     0 PTAMS 0x00000000f2500000 NTAMS 0x00000000f2500000 space 1024K, 100% used [0x00000000f2500000, 0x00000000f2600000)
+AC   0  E CS TS     0 PTAMS 0x00000000f2600000 NTAMS 0x00000000f2600000 space 1024K, 100% used [0x00000000f2600000, 0x00000000f2700000)
+AC   0  E CS TS     0 PTAMS 0x00000000f2700000 NTAMS 0x00000000f2700000 space 1024K, 100% used [0x00000000f2700000, 0x00000000f2800000)
+AC   0  E CS TS     0 PTAMS 0x00000000f2800000 NTAMS 0x00000000f2800000 space 1024K, 100% used [0x00000000f2800000, 0x00000000f2900000)
+AC   0  E CS TS     0 PTAMS 0x00000000f2900000 NTAMS 0x00000000f2900000 space 1024K, 100% used [0x00000000f2900000, 0x00000000f2a00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f2a00000 NTAMS 0x00000000f2a00000 space 1024K, 100% used [0x00000000f2a00000, 0x00000000f2b00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f2b00000 NTAMS 0x00000000f2b00000 space 1024K, 100% used [0x00000000f2b00000, 0x00000000f2c00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f2c00000 NTAMS 0x00000000f2c00000 space 1024K, 100% used [0x00000000f2c00000, 0x00000000f2d00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f2d00000 NTAMS 0x00000000f2d00000 space 1024K, 100% used [0x00000000f2d00000, 0x00000000f2e00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f2e00000 NTAMS 0x00000000f2e00000 space 1024K, 100% used [0x00000000f2e00000, 0x00000000f2f00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f2f00000 NTAMS 0x00000000f2f00000 space 1024K, 100% used [0x00000000f2f00000, 0x00000000f3000000)
+AC   0  E CS TS     0 PTAMS 0x00000000f3000000 NTAMS 0x00000000f3000000 space 1024K, 100% used [0x00000000f3000000, 0x00000000f3100000)
+AC   0  E CS TS     0 PTAMS 0x00000000f3100000 NTAMS 0x00000000f3100000 space 1024K, 100% used [0x00000000f3100000, 0x00000000f3200000)
+AC   0  E CS TS     0 PTAMS 0x00000000f3200000 NTAMS 0x00000000f3200000 space 1024K, 100% used [0x00000000f3200000, 0x00000000f3300000)
+AC   0  E CS TS     0 PTAMS 0x00000000f3300000 NTAMS 0x00000000f3300000 space 1024K, 100% used [0x00000000f3300000, 0x00000000f3400000)
+AC   0  E CS TS     0 PTAMS 0x00000000f3400000 NTAMS 0x00000000f3400000 space 1024K, 100% used [0x00000000f3400000, 0x00000000f3500000)
+AC   0  E CS TS     0 PTAMS 0x00000000f3500000 NTAMS 0x00000000f3500000 space 1024K, 100% used [0x00000000f3500000, 0x00000000f3600000)
+AC   0  E CS TS     0 PTAMS 0x00000000f3600000 NTAMS 0x00000000f3600000 space 1024K, 100% used [0x00000000f3600000, 0x00000000f3700000)
+AC   0  E CS TS     0 PTAMS 0x00000000f3700000 NTAMS 0x00000000f3700000 space 1024K, 100% used [0x00000000f3700000, 0x00000000f3800000)
+AC   0  E CS TS     0 PTAMS 0x00000000f3800000 NTAMS 0x00000000f3800000 space 1024K, 100% used [0x00000000f3800000, 0x00000000f3900000)
+AC   0  E CS TS     0 PTAMS 0x00000000f3900000 NTAMS 0x00000000f3900000 space 1024K, 100% used [0x00000000f3900000, 0x00000000f3a00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f3a00000 NTAMS 0x00000000f3a00000 space 1024K, 100% used [0x00000000f3a00000, 0x00000000f3b00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f3b00000 NTAMS 0x00000000f3b00000 space 1024K, 100% used [0x00000000f3b00000, 0x00000000f3c00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f3c00000 NTAMS 0x00000000f3c00000 space 1024K, 100% used [0x00000000f3c00000, 0x00000000f3d00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f3d00000 NTAMS 0x00000000f3d00000 space 1024K, 100% used [0x00000000f3d00000, 0x00000000f3e00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f3e00000 NTAMS 0x00000000f3e00000 space 1024K, 100% used [0x00000000f3e00000, 0x00000000f3f00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f3f00000 NTAMS 0x00000000f3f00000 space 1024K, 100% used [0x00000000f3f00000, 0x00000000f4000000)
+AC   0  E CS TS     0 PTAMS 0x00000000f4000000 NTAMS 0x00000000f4000000 space 1024K, 100% used [0x00000000f4000000, 0x00000000f4100000)
+AC   0  E CS TS     0 PTAMS 0x00000000f4100000 NTAMS 0x00000000f4100000 space 1024K, 100% used [0x00000000f4100000, 0x00000000f4200000)
+AC   0  E CS TS     0 PTAMS 0x00000000f4200000 NTAMS 0x00000000f4200000 space 1024K, 100% used [0x00000000f4200000, 0x00000000f4300000)
+AC   0  O    TS     0 PTAMS 0x00000000f4400000 NTAMS 0x00000000f4400000 space 1024K, 100% used [0x00000000f4300000, 0x00000000f4400000)
+AC   0  O    TS     0 PTAMS 0x00000000f4500000 NTAMS 0x00000000f4500000 space 1024K, 100% used [0x00000000f4400000, 0x00000000f4500000)
+AC   0  O    TS     0 PTAMS 0x00000000f4600000 NTAMS 0x00000000f4600000 space 1024K, 100% used [0x00000000f4500000, 0x00000000f4600000)
+AC   0  E CS TS     0 PTAMS 0x00000000f4600000 NTAMS 0x00000000f4600000 space 1024K, 100% used [0x00000000f4600000, 0x00000000f4700000)
+AC   0  E CS TS     0 PTAMS 0x00000000f4700000 NTAMS 0x00000000f4700000 space 1024K, 100% used [0x00000000f4700000, 0x00000000f4800000)
+AC   0  E CS TS     0 PTAMS 0x00000000f4800000 NTAMS 0x00000000f4800000 space 1024K, 100% used [0x00000000f4800000, 0x00000000f4900000)
+AC   0  E CS TS     0 PTAMS 0x00000000f4900000 NTAMS 0x00000000f4900000 space 1024K, 100% used [0x00000000f4900000, 0x00000000f4a00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f4a00000 NTAMS 0x00000000f4a00000 space 1024K, 100% used [0x00000000f4a00000, 0x00000000f4b00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f4b00000 NTAMS 0x00000000f4b00000 space 1024K, 100% used [0x00000000f4b00000, 0x00000000f4c00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f4c00000 NTAMS 0x00000000f4c00000 space 1024K, 100% used [0x00000000f4c00000, 0x00000000f4d00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f4d00000 NTAMS 0x00000000f4d00000 space 1024K, 100% used [0x00000000f4d00000, 0x00000000f4e00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f4e00000 NTAMS 0x00000000f4e00000 space 1024K, 100% used [0x00000000f4e00000, 0x00000000f4f00000)
+AC   0  E CS TS     3 PTAMS 0x00000000f4f00000 NTAMS 0x00000000f4f00000 space 1024K, 100% used [0x00000000f4f00000, 0x00000000f5000000)
+AC   0  E CS TS     3 PTAMS 0x00000000f5000000 NTAMS 0x00000000f5000000 space 1024K, 100% used [0x00000000f5000000, 0x00000000f5100000)
+AC   0  E CS TS     0 PTAMS 0x00000000f5100000 NTAMS 0x00000000f5100000 space 1024K, 100% used [0x00000000f5100000, 0x00000000f5200000)
+AC   0  E CS TS     0 PTAMS 0x00000000f5200000 NTAMS 0x00000000f5200000 space 1024K, 100% used [0x00000000f5200000, 0x00000000f5300000)
+AC   0  E CS TS     0 PTAMS 0x00000000f5300000 NTAMS 0x00000000f5300000 space 1024K, 100% used [0x00000000f5300000, 0x00000000f5400000)
+AC   0  E CS TS     0 PTAMS 0x00000000f5400000 NTAMS 0x00000000f5400000 space 1024K, 100% used [0x00000000f5400000, 0x00000000f5500000)
+AC   0  E CS TS     0 PTAMS 0x00000000f5500000 NTAMS 0x00000000f5500000 space 1024K, 100% used [0x00000000f5500000, 0x00000000f5600000)
+AC   0  E CS TS     0 PTAMS 0x00000000f5600000 NTAMS 0x00000000f5600000 space 1024K, 100% used [0x00000000f5600000, 0x00000000f5700000)
+AC   0  E CS TS     0 PTAMS 0x00000000f5700000 NTAMS 0x00000000f5700000 space 1024K, 100% used [0x00000000f5700000, 0x00000000f5800000)
+AC   0  E CS TS     0 PTAMS 0x00000000f5800000 NTAMS 0x00000000f5800000 space 1024K, 100% used [0x00000000f5800000, 0x00000000f5900000)
+AC   0  E CS TS     0 PTAMS 0x00000000f5900000 NTAMS 0x00000000f5900000 space 1024K, 100% used [0x00000000f5900000, 0x00000000f5a00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f5a00000 NTAMS 0x00000000f5a00000 space 1024K, 100% used [0x00000000f5a00000, 0x00000000f5b00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f5b00000 NTAMS 0x00000000f5b00000 space 1024K, 100% used [0x00000000f5b00000, 0x00000000f5c00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f5c00000 NTAMS 0x00000000f5c00000 space 1024K, 100% used [0x00000000f5c00000, 0x00000000f5d00000)
+AC   0  E CS TS     5 PTAMS 0x00000000f5d00000 NTAMS 0x00000000f5d00000 space 1024K, 100% used [0x00000000f5d00000, 0x00000000f5e00000)
+AC   0  E CS TS     5 PTAMS 0x00000000f5e00000 NTAMS 0x00000000f5e00000 space 1024K, 100% used [0x00000000f5e00000, 0x00000000f5f00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f5f00000 NTAMS 0x00000000f5f00000 space 1024K, 100% used [0x00000000f5f00000, 0x00000000f6000000)
+AC   0  E CS TS     0 PTAMS 0x00000000f6000000 NTAMS 0x00000000f6000000 space 1024K, 100% used [0x00000000f6000000, 0x00000000f6100000)
+AC   0  E CS TS     0 PTAMS 0x00000000f6100000 NTAMS 0x00000000f6100000 space 1024K, 100% used [0x00000000f6100000, 0x00000000f6200000)
+AC   0  E CS TS     0 PTAMS 0x00000000f6200000 NTAMS 0x00000000f6200000 space 1024K, 100% used [0x00000000f6200000, 0x00000000f6300000)
+AC   0  E CS TS     0 PTAMS 0x00000000f6300000 NTAMS 0x00000000f6300000 space 1024K, 100% used [0x00000000f6300000, 0x00000000f6400000)
+AC   0  E CS TS     0 PTAMS 0x00000000f6400000 NTAMS 0x00000000f6400000 space 1024K, 100% used [0x00000000f6400000, 0x00000000f6500000)
+AC   0  O    TS     0 PTAMS 0x00000000f6600000 NTAMS 0x00000000f6600000 space 1024K, 100% used [0x00000000f6500000, 0x00000000f6600000)
+AC   0  O    TS     0 PTAMS 0x00000000f6700000 NTAMS 0x00000000f6700000 space 1024K, 100% used [0x00000000f6600000, 0x00000000f6700000)
+AC   0  O    TS     0 PTAMS 0x00000000f6800000 NTAMS 0x00000000f6800000 space 1024K, 100% used [0x00000000f6700000, 0x00000000f6800000)
+AC   0  O    TS     0 PTAMS 0x00000000f6900000 NTAMS 0x00000000f6900000 space 1024K, 100% used [0x00000000f6800000, 0x00000000f6900000)
+AC   0  O    TS     0 PTAMS 0x00000000f6a00000 NTAMS 0x00000000f6a00000 space 1024K, 100% used [0x00000000f6900000, 0x00000000f6a00000)
+AC   0  O    TS     0 PTAMS 0x00000000f6b00000 NTAMS 0x00000000f6b00000 space 1024K, 100% used [0x00000000f6a00000, 0x00000000f6b00000)
+AC   0  O    TS     0 PTAMS 0x00000000f6c00000 NTAMS 0x00000000f6c00000 space 1024K, 100% used [0x00000000f6b00000, 0x00000000f6c00000)
+AC   0  O    TS     0 PTAMS 0x00000000f6d00000 NTAMS 0x00000000f6d00000 space 1024K, 100% used [0x00000000f6c00000, 0x00000000f6d00000)
+AC   0  O    TS     0 PTAMS 0x00000000f6e00000 NTAMS 0x00000000f6e00000 space 1024K, 100% used [0x00000000f6d00000, 0x00000000f6e00000)
+AC   0  O    TS     0 PTAMS 0x00000000f6f00000 NTAMS 0x00000000f6f00000 space 1024K, 100% used [0x00000000f6e00000, 0x00000000f6f00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f6f00000 NTAMS 0x00000000f6f00000 space 1024K, 100% used [0x00000000f6f00000, 0x00000000f7000000)
+AC   0  E CS TS     0 PTAMS 0x00000000f7000000 NTAMS 0x00000000f7000000 space 1024K, 100% used [0x00000000f7000000, 0x00000000f7100000)
+AC   0  E CS TS     0 PTAMS 0x00000000f7100000 NTAMS 0x00000000f7100000 space 1024K, 100% used [0x00000000f7100000, 0x00000000f7200000)
+AC   0  E CS TS     0 PTAMS 0x00000000f7200000 NTAMS 0x00000000f7200000 space 1024K, 100% used [0x00000000f7200000, 0x00000000f7300000)
+AC   0  E CS TS     0 PTAMS 0x00000000f7300000 NTAMS 0x00000000f7300000 space 1024K, 100% used [0x00000000f7300000, 0x00000000f7400000)
+AC   0  E CS TS     0 PTAMS 0x00000000f7400000 NTAMS 0x00000000f7400000 space 1024K, 100% used [0x00000000f7400000, 0x00000000f7500000)
+AC   0  E CS TS     0 PTAMS 0x00000000f7500000 NTAMS 0x00000000f7500000 space 1024K, 100% used [0x00000000f7500000, 0x00000000f7600000)
+AC   0  E CS TS     0 PTAMS 0x00000000f7600000 NTAMS 0x00000000f7600000 space 1024K, 100% used [0x00000000f7600000, 0x00000000f7700000)
+AC   0  E CS TS     0 PTAMS 0x00000000f7700000 NTAMS 0x00000000f7700000 space 1024K, 100% used [0x00000000f7700000, 0x00000000f7800000)
+AC   0  E CS TS     0 PTAMS 0x00000000f7800000 NTAMS 0x00000000f7800000 space 1024K, 100% used [0x00000000f7800000, 0x00000000f7900000)
+AC   0  E CS TS     0 PTAMS 0x00000000f7900000 NTAMS 0x00000000f7900000 space 1024K, 100% used [0x00000000f7900000, 0x00000000f7a00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f7a00000 NTAMS 0x00000000f7a00000 space 1024K, 100% used [0x00000000f7a00000, 0x00000000f7b00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f7b00000 NTAMS 0x00000000f7b00000 space 1024K, 100% used [0x00000000f7b00000, 0x00000000f7c00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f7c00000 NTAMS 0x00000000f7c00000 space 1024K, 100% used [0x00000000f7c00000, 0x00000000f7d00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f7d00000 NTAMS 0x00000000f7d00000 space 1024K, 100% used [0x00000000f7d00000, 0x00000000f7e00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f7e00000 NTAMS 0x00000000f7e00000 space 1024K, 100% used [0x00000000f7e00000, 0x00000000f7f00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f7f00000 NTAMS 0x00000000f7f00000 space 1024K, 100% used [0x00000000f7f00000, 0x00000000f8000000)
+AC   0  E CS TS     0 PTAMS 0x00000000f8000000 NTAMS 0x00000000f8000000 space 1024K, 100% used [0x00000000f8000000, 0x00000000f8100000)
+AC   0  E CS TS     0 PTAMS 0x00000000f8100000 NTAMS 0x00000000f8100000 space 1024K, 100% used [0x00000000f8100000, 0x00000000f8200000)
+AC   0  E CS TS     0 PTAMS 0x00000000f8200000 NTAMS 0x00000000f8200000 space 1024K, 100% used [0x00000000f8200000, 0x00000000f8300000)
+AC   0  E CS TS     0 PTAMS 0x00000000f8300000 NTAMS 0x00000000f8300000 space 1024K, 100% used [0x00000000f8300000, 0x00000000f8400000)
+AC   0  E CS TS     0 PTAMS 0x00000000f8400000 NTAMS 0x00000000f8400000 space 1024K, 100% used [0x00000000f8400000, 0x00000000f8500000)
+AC   0  E CS TS     0 PTAMS 0x00000000f8500000 NTAMS 0x00000000f8500000 space 1024K, 100% used [0x00000000f8500000, 0x00000000f8600000)
+AC   0  E CS TS     0 PTAMS 0x00000000f8600000 NTAMS 0x00000000f8600000 space 1024K, 100% used [0x00000000f8600000, 0x00000000f8700000)
+AC   0  E CS TS     0 PTAMS 0x00000000f8700000 NTAMS 0x00000000f8700000 space 1024K, 100% used [0x00000000f8700000, 0x00000000f8800000)
+AC   0  O    TS     0 PTAMS 0x00000000f8900000 NTAMS 0x00000000f8900000 space 1024K, 100% used [0x00000000f8800000, 0x00000000f8900000)
+AC   0  E CS TS     0 PTAMS 0x00000000f8900000 NTAMS 0x00000000f8900000 space 1024K, 100% used [0x00000000f8900000, 0x00000000f8a00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f8a00000 NTAMS 0x00000000f8a00000 space 1024K, 100% used [0x00000000f8a00000, 0x00000000f8b00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f8b00000 NTAMS 0x00000000f8b00000 space 1024K, 100% used [0x00000000f8b00000, 0x00000000f8c00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f8c00000 NTAMS 0x00000000f8c00000 space 1024K, 100% used [0x00000000f8c00000, 0x00000000f8d00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f8d00000 NTAMS 0x00000000f8d00000 space 1024K, 100% used [0x00000000f8d00000, 0x00000000f8e00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f8e00000 NTAMS 0x00000000f8e00000 space 1024K, 100% used [0x00000000f8e00000, 0x00000000f8f00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f8f00000 NTAMS 0x00000000f8f00000 space 1024K, 100% used [0x00000000f8f00000, 0x00000000f9000000)
+AC   0  E CS TS     0 PTAMS 0x00000000f9000000 NTAMS 0x00000000f9000000 space 1024K, 100% used [0x00000000f9000000, 0x00000000f9100000)
+AC   0  E CS TS     0 PTAMS 0x00000000f9100000 NTAMS 0x00000000f9100000 space 1024K, 100% used [0x00000000f9100000, 0x00000000f9200000)
+AC   0  E CS TS     0 PTAMS 0x00000000f9200000 NTAMS 0x00000000f9200000 space 1024K, 100% used [0x00000000f9200000, 0x00000000f9300000)
+AC   0  E CS TS     0 PTAMS 0x00000000f9300000 NTAMS 0x00000000f9300000 space 1024K, 100% used [0x00000000f9300000, 0x00000000f9400000)
+AC   0  E CS TS     0 PTAMS 0x00000000f9400000 NTAMS 0x00000000f9400000 space 1024K, 100% used [0x00000000f9400000, 0x00000000f9500000)
+AC   0  E CS TS     0 PTAMS 0x00000000f9500000 NTAMS 0x00000000f9500000 space 1024K, 100% used [0x00000000f9500000, 0x00000000f9600000)
+AC   0  E CS TS     0 PTAMS 0x00000000f9600000 NTAMS 0x00000000f9600000 space 1024K, 100% used [0x00000000f9600000, 0x00000000f9700000)
+AC   0  E CS TS     0 PTAMS 0x00000000f9700000 NTAMS 0x00000000f9700000 space 1024K, 100% used [0x00000000f9700000, 0x00000000f9800000)
+AC   0  E CS TS     0 PTAMS 0x00000000f9800000 NTAMS 0x00000000f9800000 space 1024K, 100% used [0x00000000f9800000, 0x00000000f9900000)
+AC   0  E CS TS     0 PTAMS 0x00000000f9900000 NTAMS 0x00000000f9900000 space 1024K, 100% used [0x00000000f9900000, 0x00000000f9a00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f9a00000 NTAMS 0x00000000f9a00000 space 1024K, 100% used [0x00000000f9a00000, 0x00000000f9b00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f9b00000 NTAMS 0x00000000f9b00000 space 1024K, 100% used [0x00000000f9b00000, 0x00000000f9c00000)
+AC   0  O    TS     0 PTAMS 0x00000000f9d00000 NTAMS 0x00000000f9d00000 space 1024K, 100% used [0x00000000f9c00000, 0x00000000f9d00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f9d00000 NTAMS 0x00000000f9d00000 space 1024K, 100% used [0x00000000f9d00000, 0x00000000f9e00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f9e00000 NTAMS 0x00000000f9e00000 space 1024K, 100% used [0x00000000f9e00000, 0x00000000f9f00000)
+AC   0  E CS TS     0 PTAMS 0x00000000f9f00000 NTAMS 0x00000000f9f00000 space 1024K, 100% used [0x00000000f9f00000, 0x00000000fa000000)
+AC   0  E CS TS     0 PTAMS 0x00000000fa000000 NTAMS 0x00000000fa000000 space 1024K, 100% used [0x00000000fa000000, 0x00000000fa100000)
+AC   0  E CS TS     0 PTAMS 0x00000000fa100000 NTAMS 0x00000000fa100000 space 1024K, 100% used [0x00000000fa100000, 0x00000000fa200000)
+AC   0  E CS TS     0 PTAMS 0x00000000fa200000 NTAMS 0x00000000fa200000 space 1024K, 100% used [0x00000000fa200000, 0x00000000fa300000)
+AC   0  E CS TS     0 PTAMS 0x00000000fa300000 NTAMS 0x00000000fa300000 space 1024K, 100% used [0x00000000fa300000, 0x00000000fa400000)
+AC   0  E CS TS     0 PTAMS 0x00000000fa400000 NTAMS 0x00000000fa400000 space 1024K, 100% used [0x00000000fa400000, 0x00000000fa500000)
+AC   0  E CS TS     0 PTAMS 0x00000000fa500000 NTAMS 0x00000000fa500000 space 1024K, 100% used [0x00000000fa500000, 0x00000000fa600000)
+AC   0  E CS TS     0 PTAMS 0x00000000fa600000 NTAMS 0x00000000fa600000 space 1024K, 100% used [0x00000000fa600000, 0x00000000fa700000)
+AC   0  E CS TS     0 PTAMS 0x00000000fa700000 NTAMS 0x00000000fa700000 space 1024K, 100% used [0x00000000fa700000, 0x00000000fa800000)
+AC   0  E CS TS     0 PTAMS 0x00000000fa800000 NTAMS 0x00000000fa800000 space 1024K, 100% used [0x00000000fa800000, 0x00000000fa900000)
+AC   0  O    TS     0 PTAMS 0x00000000faa00000 NTAMS 0x00000000faa00000 space 1024K, 100% used [0x00000000fa900000, 0x00000000faa00000)
+AC   0  E CS TS     0 PTAMS 0x00000000faa00000 NTAMS 0x00000000faa00000 space 1024K, 100% used [0x00000000faa00000, 0x00000000fab00000)
+AC   0  O    TS     0 PTAMS 0x00000000fac00000 NTAMS 0x00000000fac00000 space 1024K, 100% used [0x00000000fab00000, 0x00000000fac00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fac00000 NTAMS 0x00000000fac00000 space 1024K, 100% used [0x00000000fac00000, 0x00000000fad00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fad00000 NTAMS 0x00000000fad00000 space 1024K, 100% used [0x00000000fad00000, 0x00000000fae00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fae00000 NTAMS 0x00000000fae00000 space 1024K, 100% used [0x00000000fae00000, 0x00000000faf00000)
+AC   0  O    TS     0 PTAMS 0x00000000fb000000 NTAMS 0x00000000fb000000 space 1024K, 100% used [0x00000000faf00000, 0x00000000fb000000)
+AC   0  E CS TS     0 PTAMS 0x00000000fb000000 NTAMS 0x00000000fb000000 space 1024K, 100% used [0x00000000fb000000, 0x00000000fb100000)
+AC   0  E CS TS     0 PTAMS 0x00000000fb100000 NTAMS 0x00000000fb100000 space 1024K, 100% used [0x00000000fb100000, 0x00000000fb200000)
+AC   0  O    TS     0 PTAMS 0x00000000fb300000 NTAMS 0x00000000fb300000 space 1024K, 100% used [0x00000000fb200000, 0x00000000fb300000)
+AC   0  O    TS     0 PTAMS 0x00000000fb400000 NTAMS 0x00000000fb400000 space 1024K, 100% used [0x00000000fb300000, 0x00000000fb400000)
+AC   0  O    TS     0 PTAMS 0x00000000fb500000 NTAMS 0x00000000fb500000 space 1024K, 100% used [0x00000000fb400000, 0x00000000fb500000)
+AC   0  O    TS     0 PTAMS 0x00000000fb600000 NTAMS 0x00000000fb600000 space 1024K, 100% used [0x00000000fb500000, 0x00000000fb600000)
+AC   0  E CS TS     0 PTAMS 0x00000000fb600000 NTAMS 0x00000000fb600000 space 1024K, 100% used [0x00000000fb600000, 0x00000000fb700000)
+AC   0  E CS TS     0 PTAMS 0x00000000fb700000 NTAMS 0x00000000fb700000 space 1024K, 100% used [0x00000000fb700000, 0x00000000fb800000)
+AC   0  E CS TS     7 PTAMS 0x00000000fb800000 NTAMS 0x00000000fb800000 space 1024K, 100% used [0x00000000fb800000, 0x00000000fb900000)
+AC   0  E CS TS     7 PTAMS 0x00000000fb900000 NTAMS 0x00000000fb900000 space 1024K, 100% used [0x00000000fb900000, 0x00000000fba00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fba00000 NTAMS 0x00000000fba00000 space 1024K, 100% used [0x00000000fba00000, 0x00000000fbb00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fbb00000 NTAMS 0x00000000fbb00000 space 1024K, 100% used [0x00000000fbb00000, 0x00000000fbc00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fbc00000 NTAMS 0x00000000fbc00000 space 1024K, 100% used [0x00000000fbc00000, 0x00000000fbd00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fbd00000 NTAMS 0x00000000fbd00000 space 1024K, 100% used [0x00000000fbd00000, 0x00000000fbe00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fbe00000 NTAMS 0x00000000fbe00000 space 1024K, 100% used [0x00000000fbe00000, 0x00000000fbf00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fbf00000 NTAMS 0x00000000fbf00000 space 1024K, 100% used [0x00000000fbf00000, 0x00000000fc000000)
+AC   0  E CS TS     0 PTAMS 0x00000000fc000000 NTAMS 0x00000000fc000000 space 1024K, 100% used [0x00000000fc000000, 0x00000000fc100000)
+AC   0  E CS TS     0 PTAMS 0x00000000fc100000 NTAMS 0x00000000fc100000 space 1024K, 100% used [0x00000000fc100000, 0x00000000fc200000)
+AC   0  E CS TS     0 PTAMS 0x00000000fc200000 NTAMS 0x00000000fc200000 space 1024K, 100% used [0x00000000fc200000, 0x00000000fc300000)
+AC   0  E CS TS     0 PTAMS 0x00000000fc300000 NTAMS 0x00000000fc300000 space 1024K, 100% used [0x00000000fc300000, 0x00000000fc400000)
+AC   0  E CS TS     0 PTAMS 0x00000000fc400000 NTAMS 0x00000000fc400000 space 1024K, 100% used [0x00000000fc400000, 0x00000000fc500000)
+AC   0  E CS TS     0 PTAMS 0x00000000fc500000 NTAMS 0x00000000fc500000 space 1024K, 100% used [0x00000000fc500000, 0x00000000fc600000)
+AC   0  E CS TS     0 PTAMS 0x00000000fc600000 NTAMS 0x00000000fc600000 space 1024K, 100% used [0x00000000fc600000, 0x00000000fc700000)
+AC   0  E CS TS     0 PTAMS 0x00000000fc700000 NTAMS 0x00000000fc700000 space 1024K, 100% used [0x00000000fc700000, 0x00000000fc800000)
+AC   0  E CS TS     0 PTAMS 0x00000000fc800000 NTAMS 0x00000000fc800000 space 1024K, 100% used [0x00000000fc800000, 0x00000000fc900000)
+AC   0  E CS TS     0 PTAMS 0x00000000fc900000 NTAMS 0x00000000fc900000 space 1024K, 100% used [0x00000000fc900000, 0x00000000fca00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fca00000 NTAMS 0x00000000fca00000 space 1024K, 100% used [0x00000000fca00000, 0x00000000fcb00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fcb00000 NTAMS 0x00000000fcb00000 space 1024K, 100% used [0x00000000fcb00000, 0x00000000fcc00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fcc00000 NTAMS 0x00000000fcc00000 space 1024K, 100% used [0x00000000fcc00000, 0x00000000fcd00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fcd00000 NTAMS 0x00000000fcd00000 space 1024K, 100% used [0x00000000fcd00000, 0x00000000fce00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fce00000 NTAMS 0x00000000fce00000 space 1024K, 100% used [0x00000000fce00000, 0x00000000fcf00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fcf00000 NTAMS 0x00000000fcf00000 space 1024K, 100% used [0x00000000fcf00000, 0x00000000fd000000)
+AC   0  E CS TS     0 PTAMS 0x00000000fd000000 NTAMS 0x00000000fd000000 space 1024K, 100% used [0x00000000fd000000, 0x00000000fd100000)
+AC   0  E CS TS     0 PTAMS 0x00000000fd100000 NTAMS 0x00000000fd100000 space 1024K, 100% used [0x00000000fd100000, 0x00000000fd200000)
+AC   0  E CS TS     0 PTAMS 0x00000000fd200000 NTAMS 0x00000000fd200000 space 1024K, 100% used [0x00000000fd200000, 0x00000000fd300000)
+AC   0  E CS TS     0 PTAMS 0x00000000fd300000 NTAMS 0x00000000fd300000 space 1024K, 100% used [0x00000000fd300000, 0x00000000fd400000)
+AC   0  E CS TS     0 PTAMS 0x00000000fd400000 NTAMS 0x00000000fd400000 space 1024K, 100% used [0x00000000fd400000, 0x00000000fd500000)
+AC   0  O    TS     0 PTAMS 0x00000000fd600000 NTAMS 0x00000000fd600000 space 1024K, 100% used [0x00000000fd500000, 0x00000000fd600000)
+AC   0  E CS TS     0 PTAMS 0x00000000fd600000 NTAMS 0x00000000fd600000 space 1024K, 100% used [0x00000000fd600000, 0x00000000fd700000)
+AC   0  E CS TS     9 PTAMS 0x00000000fd700000 NTAMS 0x00000000fd700000 space 1024K,  99% used [0x00000000fd700000, 0x00000000fd800000)
+AC   0  E CS TS     9 PTAMS 0x00000000fd800000 NTAMS 0x00000000fd800000 space 1024K, 100% used [0x00000000fd800000, 0x00000000fd900000)
+AC   0  E CS TS     9 PTAMS 0x00000000fd900000 NTAMS 0x00000000fd900000 space 1024K, 100% used [0x00000000fd900000, 0x00000000fda00000)
+AC   0  E CS TS     9 PTAMS 0x00000000fda00000 NTAMS 0x00000000fda00000 space 1024K, 100% used [0x00000000fda00000, 0x00000000fdb00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fdb00000 NTAMS 0x00000000fdb00000 space 1024K, 100% used [0x00000000fdb00000, 0x00000000fdc00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fdc00000 NTAMS 0x00000000fdc00000 space 1024K, 100% used [0x00000000fdc00000, 0x00000000fdd00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fdd00000 NTAMS 0x00000000fdd00000 space 1024K, 100% used [0x00000000fdd00000, 0x00000000fde00000)
+AC   0  O    TS     0 PTAMS 0x00000000fdf00000 NTAMS 0x00000000fdf00000 space 1024K, 100% used [0x00000000fde00000, 0x00000000fdf00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fdf00000 NTAMS 0x00000000fdf00000 space 1024K, 100% used [0x00000000fdf00000, 0x00000000fe000000)
+AC   0  O    TS     0 PTAMS 0x00000000fe100000 NTAMS 0x00000000fe100000 space 1024K, 100% used [0x00000000fe000000, 0x00000000fe100000)
+AC   0  E CS TS     0 PTAMS 0x00000000fe100000 NTAMS 0x00000000fe100000 space 1024K, 100% used [0x00000000fe100000, 0x00000000fe200000)
+AC   0  O    TS     0 PTAMS 0x00000000fe300000 NTAMS 0x00000000fe300000 space 1024K, 100% used [0x00000000fe200000, 0x00000000fe300000)
+AC   0  E CS TS     0 PTAMS 0x00000000fe300000 NTAMS 0x00000000fe300000 space 1024K, 100% used [0x00000000fe300000, 0x00000000fe400000)
+AC   0  E CS TS     0 PTAMS 0x00000000fe400000 NTAMS 0x00000000fe400000 space 1024K, 100% used [0x00000000fe400000, 0x00000000fe500000)
+AC   0  E CS TS     0 PTAMS 0x00000000fe500000 NTAMS 0x00000000fe500000 space 1024K, 100% used [0x00000000fe500000, 0x00000000fe600000)
+AC   0  E CS TS     0 PTAMS 0x00000000fe600000 NTAMS 0x00000000fe600000 space 1024K, 100% used [0x00000000fe600000, 0x00000000fe700000)
+AC   0  E CS TS     0 PTAMS 0x00000000fe700000 NTAMS 0x00000000fe700000 space 1024K, 100% used [0x00000000fe700000, 0x00000000fe800000)
+AC   0  E CS TS     0 PTAMS 0x00000000fe800000 NTAMS 0x00000000fe800000 space 1024K, 100% used [0x00000000fe800000, 0x00000000fe900000)
+AC   0  E CS TS     0 PTAMS 0x00000000fe900000 NTAMS 0x00000000fe900000 space 1024K, 100% used [0x00000000fe900000, 0x00000000fea00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fea00000 NTAMS 0x00000000fea00000 space 1024K, 100% used [0x00000000fea00000, 0x00000000feb00000)
+AC   0  E CS TS     0 PTAMS 0x00000000feb00000 NTAMS 0x00000000feb00000 space 1024K, 100% used [0x00000000feb00000, 0x00000000fec00000)
+AC   0  O    TS     0 PTAMS 0x00000000fed00000 NTAMS 0x00000000fed00000 space 1024K, 100% used [0x00000000fec00000, 0x00000000fed00000)
+AC   0  O    TS     0 PTAMS 0x00000000fee00000 NTAMS 0x00000000fee00000 space 1024K, 100% used [0x00000000fed00000, 0x00000000fee00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fee00000 NTAMS 0x00000000fee00000 space 1024K, 100% used [0x00000000fee00000, 0x00000000fef00000)
+AC   0  O    TS     0 PTAMS 0x00000000ff000000 NTAMS 0x00000000ff000000 space 1024K, 100% used [0x00000000fef00000, 0x00000000ff000000)
+AC   0  O    TS     0 PTAMS 0x00000000ff100000 NTAMS 0x00000000ff100000 space 1024K, 100% used [0x00000000ff000000, 0x00000000ff100000)
+AC   0  E CS TS     0 PTAMS 0x00000000ff100000 NTAMS 0x00000000ff100000 space 1024K, 100% used [0x00000000ff100000, 0x00000000ff200000)
+AC   0  O    TS     0 PTAMS 0x00000000ff300000 NTAMS 0x00000000ff300000 space 1024K, 100% used [0x00000000ff200000, 0x00000000ff300000)
+AC   0  E CS TS     0 PTAMS 0x00000000ff300000 NTAMS 0x00000000ff300000 space 1024K, 100% used [0x00000000ff300000, 0x00000000ff400000)
+AC   0  O    TS     0 PTAMS 0x00000000ff500000 NTAMS 0x00000000ff500000 space 1024K, 100% used [0x00000000ff400000, 0x00000000ff500000)
+AC   0  E CS TS     0 PTAMS 0x00000000ff500000 NTAMS 0x00000000ff500000 space 1024K, 100% used [0x00000000ff500000, 0x00000000ff600000)
+AC   0  E CS TS     0 PTAMS 0x00000000ff600000 NTAMS 0x00000000ff600000 space 1024K, 100% used [0x00000000ff600000, 0x00000000ff700000)
+AC   0  E CS TS     0 PTAMS 0x00000000ff700000 NTAMS 0x00000000ff700000 space 1024K, 100% used [0x00000000ff700000, 0x00000000ff800000)
+AC   0  E CS TS     0 PTAMS 0x00000000ff800000 NTAMS 0x00000000ff800000 space 1024K, 100% used [0x00000000ff800000, 0x00000000ff900000)
+AC   0  E CS TS     0 PTAMS 0x00000000ff900000 NTAMS 0x00000000ff900000 space 1024K, 100% used [0x00000000ff900000, 0x00000000ffa00000)
+AC   0  O    TS     0 PTAMS 0x00000000ffb00000 NTAMS 0x00000000ffb00000 space 1024K, 100% used [0x00000000ffa00000, 0x00000000ffb00000)
+AC   0  E CS TS     0 PTAMS 0x00000000ffb00000 NTAMS 0x00000000ffb00000 space 1024K, 100% used [0x00000000ffb00000, 0x00000000ffc00000)
+AC   0  O    TS     0 PTAMS 0x00000000ffd00000 NTAMS 0x00000000ffd00000 space 1024K, 100% used [0x00000000ffc00000, 0x00000000ffd00000)
+AC   0  O    TS     0 PTAMS 0x00000000ffe00000 NTAMS 0x00000000ffe00000 space 1024K, 100% used [0x00000000ffd00000, 0x00000000ffe00000)
+AC   0  O    TS     0 PTAMS 0x00000000fff00000 NTAMS 0x00000000fff00000 space 1024K, 100% used [0x00000000ffe00000, 0x00000000fff00000)
+AC   0  E CS TS     0 PTAMS 0x00000000fff00000 NTAMS 0x00000000fff00000 space 1024K, 100% used [0x00000000fff00000, 0x0000000100000000)
+
+Card table byte_map: [0x00007f0d5d65a000,0x00007f0d5d75a000] byte_map_base: 0x00007f0d5cf5a000
+
+Marking Bits (Prev, Next): (CMBitMap*) 0x00000000021a4d28, (CMBitMap*) 0x00000000021a4d80
+ Prev Bits: [0x00007f0d5cd5a000, 0x00007f0d5d55a000)
+ Next Bits: [0x00007f0d5c55a000, 0x00007f0d5cd5a000)
+
+Polling page: 0x00007f0d6eb5f000
+
+CodeCache: size=245760Kb used=13883Kb max_used=13911Kb free=231876Kb
+ bounds [0x00007f0d5e321000, 0x00007f0d5f0d1000, 0x00007f0d6d321000]
+ total_blobs=4715 nmethods=3995 adapters=632
+ compilation: enabled
+
+Compilation events (10 events):
+Event: 65.909 Thread 0x00000000023f2000 5090       4       java.util.concurrent.locks.ReentrantLock$Sync::tryRelease (45 bytes)
+Event: 65.911 Thread 0x00000000023f2000 nmethod 5090 0x00007f0d5f0b9090 code [0x00007f0d5f0b91e0, 0x00007f0d5f0b92d8]
+Event: 65.911 Thread 0x00000000023f2000 5091       4       java.util.concurrent.locks.ReentrantLock::lock (8 bytes)
+Event: 65.911 Thread 0x00000000023f7000 5094       3       org.apache.commons.pool.impl.GenericObjectPool$Latch::access$100 (5 bytes)
+Event: 65.912 Thread 0x00000000023f7000 nmethod 5094 0x00007f0d5f0bbb50 code [0x00007f0d5f0bbcc0, 0x00007f0d5f0bbf90]
+Event: 65.913 Thread 0x00000000023f2000 nmethod 5091 0x00007f0d5f0ba290 code [0x00007f0d5f0ba3e0, 0x00007f0d5f0ba588]
+Event: 65.913 Thread 0x00000000023f2000 5093       4       java.util.concurrent.locks.ReentrantLock::unlock (10 bytes)
+Event: 65.915 Thread 0x00000000023f2000 nmethod 5093 0x00007f0d5f0b9ed0 code [0x00007f0d5f0ba020, 0x00007f0d5f0ba188]
+Event: 65.915 Thread 0x00000000023f2000 5092       4       java.util.concurrent.locks.ReentrantLock$NonfairSync::lock (25 bytes)
+Event: 65.917 Thread 0x00000000023f2000 nmethod 5092 0x00007f0d5f0b9b50 code [0x00007f0d5f0b9ca0, 0x00007f0d5f0b9e28]
+
+GC Heap History (10 events):
+Event: 15.385 GC heap after
+Heap after GC invocations=15 (full 1):
+ garbage-first heap   total 524288K, used 220892K [0x00000000e0000000, 0x00000000e0101000, 0x0000000100000000)
+  region size 1024K, 2 young (2048K), 2 survivors (2048K)
+ Metaspace       used 83550K, capacity 84510K, committed 84836K, reserved 1120256K
+  class space    used 13501K, capacity 13668K, committed 13668K, reserved 1048576K
+}
+Event: 15.623 GC heap before
+{Heap before GC invocations=15 (full 1):
+ garbage-first heap   total 524288K, used 330878K [0x00000000e0000000, 0x00000000e0101000, 0x0000000100000000)
+  region size 1024K, 25 young (25600K), 2 survivors (2048K)
+ Metaspace       used 83565K, capacity 84514K, committed 84836K, reserved 1120256K
+  class space    used 13501K, capacity 13668K, committed 13668K, reserved 1048576K
+Event: 15.630 GC heap after
+Heap after GC invocations=16 (full 1):
+ garbage-first heap   total 524288K, used 163886K [0x00000000e0000000, 0x00000000e0101000, 0x0000000100000000)
+  region size 1024K, 2 young (2048K), 2 survivors (2048K)
+ Metaspace       used 83565K, capacity 84514K, committed 84836K, reserved 1120256K
+  class space    used 13501K, capacity 13668K, committed 13668K, reserved 1048576K
+}
+Event: 15.974 GC heap before
+{Heap before GC invocations=16 (full 1):
+ garbage-first heap   total 524288K, used 187438K [0x00000000e0000000, 0x00000000e0101000, 0x0000000100000000)
+  region size 1024K, 25 young (25600K), 2 survivors (2048K)
+ Metaspace       used 83951K, capacity 85038K, committed 85220K, reserved 1120256K
+  class space    used 13545K, capacity 13740K, committed 13796K, reserved 1048576K
+Event: 15.996 GC heap after
+Heap after GC invocations=17 (full 1):
+ garbage-first heap   total 524288K, used 120830K [0x00000000e0000000, 0x00000000e0101000, 0x0000000100000000)
+  region size 1024K, 2 young (2048K), 2 survivors (2048K)
+ Metaspace       used 83951K, capacity 85038K, committed 85220K, reserved 1120256K
+  class space    used 13545K, capacity 13740K, committed 13796K, reserved 1048576K
+}
+Event: 16.212 GC heap before
+{Heap before GC invocations=17 (full 1):
+ garbage-first heap   total 524288K, used 154812K [0x00000000e0000000, 0x00000000e0101000, 0x0000000100000000)
+  region size 1024K, 25 young (25600K), 2 survivors (2048K)
+ Metaspace       used 83971K, capacity 85126K, committed 85476K, reserved 1120256K
+  class space    used 13546K, capacity 13742K, committed 13796K, reserved 1048576K
+Event: 16.234 GC heap after
+Heap after GC invocations=18 (full 1):
+ garbage-first heap   total 524288K, used 79817K [0x00000000e0000000, 0x00000000e0101000, 0x0000000100000000)
+  region size 1024K, 2 young (2048K), 2 survivors (2048K)
+ Metaspace       used 83971K, capacity 85126K, committed 85476K, reserved 1120256K
+  class space    used 13546K, capacity 13742K, committed 13796K, reserved 1048576K
+}
+Event: 17.224 GC heap before
+{Heap before GC invocations=18 (full 1):
+ garbage-first heap   total 524288K, used 122143K [0x00000000e0000000, 0x00000000e0101000, 0x0000000100000000)
+  region size 1024K, 25 young (25600K), 2 survivors (2048K)
+ Metaspace       used 84439K, capacity 85682K, committed 85860K, reserved 1122304K
+  class space    used 13605K, capacity 13818K, committed 13924K, reserved 1048576K
+Event: 17.243 GC heap after
+Heap after GC invocations=19 (full 1):
+ garbage-first heap   total 524288K, used 81097K [0x00000000e0000000, 0x00000000e0101000, 0x0000000100000000)
+  region size 1024K, 4 young (4096K), 4 survivors (4096K)
+ Metaspace       used 84439K, capacity 85682K, committed 85860K, reserved 1122304K
+  class space    used 13605K, capacity 13818K, committed 13924K, reserved 1048576K
+}
+Event: 66.302 GC heap before
+{Heap before GC invocations=19 (full 1):
+ garbage-first heap   total 524288K, used 404431K [0x00000000e0000000, 0x00000000e0101000, 0x0000000100000000)
+  region size 1024K, 307 young (314368K), 4 survivors (4096K)
+ Metaspace       used 90586K, capacity 92398K, committed 92516K, reserved 1126400K
+  class space    used 14350K, capacity 14618K, committed 14692K, reserved 1048576K
+
+Deoptimization events (10 events):
+Event: 44.247 Thread 0x00007f0d38cd7800 Uncommon trap: reason=unstable_if action=reinterpret pc=0x00007f0d5e43e6b0 method=java.io.ExpiringCache.entryFor(Ljava/lang/String;)Ljava/io/ExpiringCache$Entry; @ 39
+Event: 64.950 Thread 0x0000000002b59800 Uncommon trap: reason=bimorphic action=maybe_recompile pc=0x00007f0d5e5b5ed8 method=java.util.LinkedHashMap.afterNodeInsertion(Z)V @ 15
+Event: 64.951 Thread 0x0000000002b59800 Uncommon trap: reason=bimorphic action=maybe_recompile pc=0x00007f0d5e5b5ed8 method=java.util.LinkedHashMap.afterNodeInsertion(Z)V @ 15
+Event: 64.951 Thread 0x0000000002b59800 Uncommon trap: reason=bimorphic action=maybe_recompile pc=0x00007f0d5e5b5ed8 method=java.util.LinkedHashMap.afterNodeInsertion(Z)V @ 15
+Event: 64.951 Thread 0x0000000002b59800 Uncommon trap: reason=bimorphic action=maybe_recompile pc=0x00007f0d5e5b5ed8 method=java.util.LinkedHashMap.afterNodeInsertion(Z)V @ 15
+Event: 65.012 Thread 0x0000000002b59800 Uncommon trap: reason=bimorphic action=maybe_recompile pc=0x00007f0d5e9be644 method=java.util.regex.Pattern$Branch.match(Ljava/util/regex/Matcher;ILjava/lang/CharSequence;)Z @ 32
+Event: 65.012 Thread 0x0000000002b59800 Uncommon trap: reason=bimorphic action=maybe_recompile pc=0x00007f0d5e9be644 method=java.util.regex.Pattern$Branch.match(Ljava/util/regex/Matcher;ILjava/lang/CharSequence;)Z @ 32
+Event: 65.012 Thread 0x0000000002b59800 Uncommon trap: reason=bimorphic action=maybe_recompile pc=0x00007f0d5e9be644 method=java.util.regex.Pattern$Branch.match(Ljava/util/regex/Matcher;ILjava/lang/CharSequence;)Z @ 32
+Event: 65.012 Thread 0x0000000002b59800 Uncommon trap: reason=bimorphic action=maybe_recompile pc=0x00007f0d5e9be644 method=java.util.regex.Pattern$Branch.match(Ljava/util/regex/Matcher;ILjava/lang/CharSequence;)Z @ 32
+Event: 65.019 Thread 0x0000000002b59800 Uncommon trap: reason=unstable_if action=reinterpret pc=0x00007f0d5eae5a50 method=ca.datex.nexus.core.system.monitor.MonitorHandlerHelper.handleProcessMethods(Ljava/lang/String;Ljava/lang/Object;Lca/datex/nexus/core/system/monitor/MonitorHandlerCollection
+
+Internal exceptions (10 events):
+Event: 19.863 Thread 0x00000000041ae800 Exception <a 'java/lang/ClassNotFoundException': ca/datex/vault/store/index/impl/disk/LocalDiskIndexCustomizer> (0x00000000f3b34fd0) thrown at [/HUDSON/workspace/8-2-build-linux-amd64/jdk8u40/2855/hotspot/src/share/vm/classfile/systemDictionary.cpp, line 
+Event: 20.381 Thread 0x0000000002c0e800 Exception <a 'java/lang/ClassNotFoundException': Script1BeanInfo> (0x00000000f38929d0) thrown at [/HUDSON/workspace/8-2-build-linux-amd64/jdk8u40/2855/hotspot/src/share/vm/classfile/systemDictionary.cpp, line 210]
+Event: 20.381 Thread 0x0000000002c0e800 Exception <a 'java/lang/ClassNotFoundException': Script1Customizer> (0x00000000f3895ce8) thrown at [/HUDSON/workspace/8-2-build-linux-amd64/jdk8u40/2855/hotspot/src/share/vm/classfile/systemDictionary.cpp, line 210]
+Event: 20.388 Thread 0x0000000002c0e800 Exception <a 'java/lang/ClassNotFoundException': ca/datex/nexus/core/repository/master/MasterServerPoolBeanInfo> (0x00000000f370e6b8) thrown at [/HUDSON/workspace/8-2-build-linux-amd64/jdk8u40/2855/hotspot/src/share/vm/classfile/systemDictionary.cpp, line
+Event: 20.389 Thread 0x0000000002c0e800 Exception <a 'java/lang/ClassNotFoundException': ca/datex/nexus/core/repository/master/MasterServerPoolCustomizer> (0x00000000f3717ce0) thrown at [/HUDSON/workspace/8-2-build-linux-amd64/jdk8u40/2855/hotspot/src/share/vm/classfile/systemDictionary.cpp, li
+Event: 29.057 Thread 0x00000000041ae800 Exception <a 'java/lang/NoClassDefFoundError': org/apache/tomcat/jni/SSL> (0x00000000f2347ab8) thrown at [/HUDSON/workspace/8-2-build-linux-amd64/jdk8u40/2855/hotspot/src/share/vm/classfile/systemDictionary.cpp, line 199]
+Event: 64.866 Thread 0x0000000002b59800 Exception <a 'java/lang/ClassNotFoundException': Script1BeanInfo> (0x00000000ebd3da18) thrown at [/HUDSON/workspace/8-2-build-linux-amd64/jdk8u40/2855/hotspot/src/share/vm/classfile/systemDictionary.cpp, line 210]
+Event: 64.867 Thread 0x0000000002b59800 Exception <a 'java/lang/ClassNotFoundException': Script1Customizer> (0x00000000ebd40d30) thrown at [/HUDSON/workspace/8-2-build-linux-amd64/jdk8u40/2855/hotspot/src/share/vm/classfile/systemDictionary.cpp, line 210]
+Event: 64.884 Thread 0x0000000002b59800 Exception <a 'java/lang/ClassNotFoundException': ca/datex/nexus/core/system/impl/zabbix/ZabbixCollectorConfigBeanInfo> (0x00000000ebda95e8) thrown at [/HUDSON/workspace/8-2-build-linux-amd64/jdk8u40/2855/hotspot/src/share/vm/classfile/systemDictionary.cpp
+Event: 64.885 Thread 0x0000000002b59800 Exception <a 'java/lang/ClassNotFoundException': ca/datex/nexus/core/system/impl/zabbix/ZabbixCollectorConfigCustomizer> (0x00000000ebdb2e68) thrown at [/HUDSON/workspace/8-2-build-linux-amd64/jdk8u40/2855/hotspot/src/share/vm/classfile/systemDictionary.c
+
+Events (10 events):
+Event: 65.080 Thread 0x00000000023f2000 flushing nmethod 0x00007f0d5ec19250
+Event: 65.080 Thread 0x00000000023f2000 flushing nmethod 0x00007f0d5ec20290
+Event: 65.080 Thread 0x00000000023f2000 flushing nmethod 0x00007f0d5ec26990
+Event: 65.080 Thread 0x00000000023f2000 flushing nmethod 0x00007f0d5ec27250
+Event: 65.087 Thread 0x00000000023f7000 flushing nmethod 0x00007f0d5f052c10
+Event: 65.421 loading class ca/datex/nexus/core/bundle/DeployedBundle
+Event: 65.421 loading class ca/datex/nexus/core/bundle/DeployedBundle done
+Event: 65.421 loading class ca/datex/nexus/core/bundle/DeployedBundle
+Event: 65.421 loading class ca/datex/nexus/core/bundle/DeployedBundle done
+Event: 66.302 Executing VM operation: G1IncCollectionPause
+
+
+Dynamic libraries:
+00400000-0040b000 r-xp 00000000 08:11 131075                             /datex/nexus/jsvc
+0060a000-0060b000 rw-p 0000a000 08:11 131075                             /datex/nexus/jsvc
+02170000-02191000 rw-p 00000000 00:00 0 
+02191000-04e18000 rw-p 00000000 00:00 0 
+e0000000-100e59000 rw-p 00000000 00:00 0 
+100e59000-140000000 ---p 00000000 00:00 0 
+3c9d200000-3c9d220000 r-xp 00000000 fd:00 16752                          /lib64/ld-2.12.so
+3c9d41f000-3c9d420000 r--p 0001f000 fd:00 16752                          /lib64/ld-2.12.so
+3c9d420000-3c9d421000 rw-p 00020000 fd:00 16752                          /lib64/ld-2.12.so
+3c9d421000-3c9d422000 rw-p 00000000 00:00 0 
+3c9d600000-3c9d78a000 r-xp 00000000 fd:00 17957                          /lib64/libc-2.12.so
+3c9d78a000-3c9d98a000 ---p 0018a000 fd:00 17957                          /lib64/libc-2.12.so
+3c9d98a000-3c9d98e000 r--p 0018a000 fd:00 17957                          /lib64/libc-2.12.so
+3c9d98e000-3c9d98f000 rw-p 0018e000 fd:00 17957                          /lib64/libc-2.12.so
+3c9d98f000-3c9d994000 rw-p 00000000 00:00 0 
+3c9da00000-3c9da17000 r-xp 00000000 fd:00 18100                          /lib64/libpthread-2.12.so
+3c9da17000-3c9dc17000 ---p 00017000 fd:00 18100                          /lib64/libpthread-2.12.so
+3c9dc17000-3c9dc18000 r--p 00017000 fd:00 18100                          /lib64/libpthread-2.12.so
+3c9dc18000-3c9dc19000 rw-p 00018000 fd:00 18100                          /lib64/libpthread-2.12.so
+3c9dc19000-3c9dc1d000 rw-p 00000000 00:00 0 
+3c9de00000-3c9de02000 r-xp 00000000 fd:00 18110                          /lib64/libdl-2.12.so
+3c9de02000-3c9e002000 ---p 00002000 fd:00 18110                          /lib64/libdl-2.12.so
+3c9e002000-3c9e003000 r--p 00002000 fd:00 18110                          /lib64/libdl-2.12.so
+3c9e003000-3c9e004000 rw-p 00003000 fd:00 18110                          /lib64/libdl-2.12.so
+3c9e200000-3c9e207000 r-xp 00000000 fd:00 3832                           /lib64/librt-2.12.so
+3c9e207000-3c9e406000 ---p 00007000 fd:00 3832                           /lib64/librt-2.12.so
+3c9e406000-3c9e407000 r--p 00006000 fd:00 3832                           /lib64/librt-2.12.so
+3c9e407000-3c9e408000 rw-p 00007000 fd:00 3832                           /lib64/librt-2.12.so
+3c9e600000-3c9e683000 r-xp 00000000 fd:00 2274                           /lib64/libm-2.12.so
+3c9e683000-3c9e882000 ---p 00083000 fd:00 2274                           /lib64/libm-2.12.so
+3c9e882000-3c9e883000 r--p 00082000 fd:00 2274                           /lib64/libm-2.12.so
+3c9e883000-3c9e884000 rw-p 00083000 fd:00 2274                           /lib64/libm-2.12.so
+3c9f600000-3c9f616000 r-xp 00000000 fd:00 18112                          /lib64/libresolv-2.12.so
+3c9f616000-3c9f816000 ---p 00016000 fd:00 18112                          /lib64/libresolv-2.12.so
+3c9f816000-3c9f817000 r--p 00016000 fd:00 18112                          /lib64/libresolv-2.12.so
+3c9f817000-3c9f818000 rw-p 00017000 fd:00 18112                          /lib64/libresolv-2.12.so
+3c9f818000-3c9f81a000 rw-p 00000000 00:00 0 
+3c9fe00000-3c9fe16000 r-xp 00000000 fd:00 18102                          /lib64/libgcc_s-4.4.7-20120601.so.1
+3c9fe16000-3ca0015000 ---p 00016000 fd:00 18102                          /lib64/libgcc_s-4.4.7-20120601.so.1
+3ca0015000-3ca0016000 rw-p 00015000 fd:00 18102                          /lib64/libgcc_s-4.4.7-20120601.so.1
+3ca0600000-3ca06e8000 r-xp 00000000 fd:00 18103                          /usr/lib64/libstdc++.so.6.0.13
+3ca06e8000-3ca08e8000 ---p 000e8000 fd:00 18103                          /usr/lib64/libstdc++.so.6.0.13
+3ca08e8000-3ca08ef000 r--p 000e8000 fd:00 18103                          /usr/lib64/libstdc++.so.6.0.13
+3ca08ef000-3ca08f1000 rw-p 000ef000 fd:00 18103                          /usr/lib64/libstdc++.so.6.0.13
+3ca08f1000-3ca0906000 rw-p 00000000 00:00 0 
+7f0cfd938000-7f0cfd93b000 ---p 00000000 00:00 0 
+7f0cfd93b000-7f0cfda39000 rw-p 00000000 00:00 0 
+7f0cfda39000-7f0cfda3c000 ---p 00000000 00:00 0 
+7f0cfda3c000-7f0cfdb3a000 rw-p 00000000 00:00 0 
+7f0cfdb3a000-7f0cfdb3d000 ---p 00000000 00:00 0 
+7f0cfdb3d000-7f0cfdc3b000 rw-p 00000000 00:00 0 
+7f0cfdc3b000-7f0cfdc3e000 ---p 00000000 00:00 0 
+7f0cfdc3e000-7f0cfdd3c000 rw-p 00000000 00:00 0 
+7f0cfdd3c000-7f0cfdd3f000 ---p 00000000 00:00 0 
+7f0cfdd3f000-7f0cfde3d000 rw-p 00000000 00:00 0 
+7f0cfde3d000-7f0cfde40000 ---p 00000000 00:00 0 
+7f0cfde40000-7f0cfdf3e000 rw-p 00000000 00:00 0 
+7f0cfdf3e000-7f0cfdf41000 ---p 00000000 00:00 0 
+7f0cfdf41000-7f0cfe03f000 rw-p 00000000 00:00 0 
+7f0cfe03f000-7f0cfe042000 ---p 00000000 00:00 0 
+7f0cfe042000-7f0cfe140000 rw-p 00000000 00:00 0 
+7f0cfe140000-7f0cfe143000 ---p 00000000 00:00 0 
+7f0cfe143000-7f0cfe241000 rw-p 00000000 00:00 0 
+7f0cfe241000-7f0cfe244000 ---p 00000000 00:00 0 
+7f0cfe244000-7f0cfe342000 rw-p 00000000 00:00 0 
+7f0cfe342000-7f0cfe345000 ---p 00000000 00:00 0 
+7f0cfe345000-7f0cfe443000 rw-p 00000000 00:00 0 
+7f0cfe443000-7f0cfe446000 ---p 00000000 00:00 0 
+7f0cfe446000-7f0cfe544000 rw-p 00000000 00:00 0 
+7f0cfe544000-7f0cfe547000 ---p 00000000 00:00 0 
+7f0cfe547000-7f0cfe645000 rw-p 00000000 00:00 0 
+7f0cfe645000-7f0cfe648000 ---p 00000000 00:00 0 
+7f0cfe648000-7f0cfe746000 rw-p 00000000 00:00 0 
+7f0cfe746000-7f0cfe749000 ---p 00000000 00:00 0 
+7f0cfe749000-7f0cfe847000 rw-p 00000000 00:00 0 
+7f0cfe847000-7f0cfe84a000 ---p 00000000 00:00 0 
+7f0cfe84a000-7f0cfe948000 rw-p 00000000 00:00 0 
+7f0cfe948000-7f0cfe94b000 ---p 00000000 00:00 0 
+7f0cfe94b000-7f0cfea49000 rw-p 00000000 00:00 0 
+7f0cfea49000-7f0cfea4c000 ---p 00000000 00:00 0 
+7f0cfea4c000-7f0cfeb4a000 rw-p 00000000 00:00 0 
+7f0cfeb4a000-7f0cfeb4d000 ---p 00000000 00:00 0 
+7f0cfeb4d000-7f0cfec4b000 rw-p 00000000 00:00 0 
+7f0cfec4b000-7f0cfec4e000 ---p 00000000 00:00 0 
+7f0cfec4e000-7f0cfed4c000 rw-p 00000000 00:00 0 
+7f0cfed4c000-7f0cfed4f000 ---p 00000000 00:00 0 
+7f0cfed4f000-7f0cfee4d000 rw-p 00000000 00:00 0 
+7f0cfee4d000-7f0cfee50000 ---p 00000000 00:00 0 
+7f0cfee50000-7f0cfef4e000 rw-p 00000000 00:00 0 
+7f0cfef4e000-7f0cfef51000 ---p 00000000 00:00 0 
+7f0cfef51000-7f0cff04f000 rw-p 00000000 00:00 0 
+7f0cff04f000-7f0cff052000 ---p 00000000 00:00 0 
+7f0cff052000-7f0cff150000 rw-p 00000000 00:00 0 
+7f0cff150000-7f0cff153000 ---p 00000000 00:00 0 
+7f0cff153000-7f0cff251000 rw-p 00000000 00:00 0 
+7f0cff251000-7f0cff254000 ---p 00000000 00:00 0 
+7f0cff254000-7f0cff352000 rw-p 00000000 00:00 0 
+7f0cff352000-7f0cff355000 ---p 00000000 00:00 0 
+7f0cff355000-7f0cff453000 rw-p 00000000 00:00 0 
+7f0cff453000-7f0cff456000 ---p 00000000 00:00 0 
+7f0cff456000-7f0cff554000 rw-p 00000000 00:00 0 
+7f0cff554000-7f0cff557000 ---p 00000000 00:00 0 
+7f0cff557000-7f0cff655000 rw-p 00000000 00:00 0 
+7f0cff655000-7f0cff658000 ---p 00000000 00:00 0 
+7f0cff658000-7f0cff756000 rw-p 00000000 00:00 0 
+7f0cff756000-7f0cff759000 ---p 00000000 00:00 0 
+7f0cff759000-7f0cff857000 rw-p 00000000 00:00 0 
+7f0cff857000-7f0cff85a000 ---p 00000000 00:00 0 
+7f0cff85a000-7f0cff958000 rw-p 00000000 00:00 0 
+7f0cff958000-7f0cff95b000 ---p 00000000 00:00 0 
+7f0cff95b000-7f0cffa59000 rw-p 00000000 00:00 0 
+7f0cffa59000-7f0cffa5c000 ---p 00000000 00:00 0 
+7f0cffa5c000-7f0cffb5a000 rw-p 00000000 00:00 0 
+7f0cffb5a000-7f0cffdfa000 r-xp 00000000 08:11 132943                     /datex/nexus/tmp/librocksdbjni1090592694972539420..so
+7f0cffdfa000-7f0cffff9000 ---p 002a0000 08:11 132943                     /datex/nexus/tmp/librocksdbjni1090592694972539420..so
+7f0cffff9000-7f0d0000a000 rw-p 0029f000 08:11 132943                     /datex/nexus/tmp/librocksdbjni1090592694972539420..so
+7f0d0000a000-7f0d0000d000 rw-p 00000000 00:00 0 
+7f0d0000d000-7f0d002ad000 r-xp 00000000 08:11 132942                     /datex/nexus/tmp/librocksdbjni3580559393930610391..so
+7f0d002ad000-7f0d004ac000 ---p 002a0000 08:11 132942                     /datex/nexus/tmp/librocksdbjni3580559393930610391..so
+7f0d004ac000-7f0d004bd000 rw-p 0029f000 08:11 132942                     /datex/nexus/tmp/librocksdbjni3580559393930610391..so
+7f0d004bd000-7f0d004c0000 rw-p 00000000 00:00 0 
+7f0d004c0000-7f0d00760000 r-xp 00000000 08:11 132941                     /datex/nexus/tmp/librocksdbjni2245893661754774881..so
+7f0d00760000-7f0d0095f000 ---p 002a0000 08:11 132941                     /datex/nexus/tmp/librocksdbjni2245893661754774881..so
+7f0d0095f000-7f0d00970000 rw-p 0029f000 08:11 132941                     /datex/nexus/tmp/librocksdbjni2245893661754774881..so
+7f0d00970000-7f0d00973000 rw-p 00000000 00:00 0 
+7f0d00973000-7f0d00c13000 r-xp 00000000 08:11 132940                     /datex/nexus/tmp/librocksdbjni4482501033160447998..so
+7f0d00c13000-7f0d00e12000 ---p 002a0000 08:11 132940                     /datex/nexus/tmp/librocksdbjni4482501033160447998..so
+7f0d00e12000-7f0d00e23000 rw-p 0029f000 08:11 132940                     /datex/nexus/tmp/librocksdbjni4482501033160447998..so
+7f0d00e23000-7f0d00e26000 rw-p 00000000 00:00 0 
+7f0d00e26000-7f0d010c6000 r-xp 00000000 08:11 132939                     /datex/nexus/tmp/librocksdbjni2737018644448093743..so
+7f0d010c6000-7f0d012c5000 ---p 002a0000 08:11 132939                     /datex/nexus/tmp/librocksdbjni2737018644448093743..so
+7f0d012c5000-7f0d012d6000 rw-p 0029f000 08:11 132939                     /datex/nexus/tmp/librocksdbjni2737018644448093743..so
+7f0d012d6000-7f0d012d9000 rw-p 00000000 00:00 0 
+7f0d012d9000-7f0d01579000 r-xp 00000000 08:11 132938                     /datex/nexus/tmp/librocksdbjni6544635730980189653..so
+7f0d01579000-7f0d01778000 ---p 002a0000 08:11 132938                     /datex/nexus/tmp/librocksdbjni6544635730980189653..so
+7f0d01778000-7f0d01789000 rw-p 0029f000 08:11 132938                     /datex/nexus/tmp/librocksdbjni6544635730980189653..so
+7f0d01789000-7f0d0178c000 rw-p 00000000 00:00 0 
+7f0d0178c000-7f0d0178f000 ---p 00000000 00:00 0 
+7f0d0178f000-7f0d0188d000 rw-p 00000000 00:00 0 
+7f0d0188d000-7f0d01b2d000 r-xp 00000000 08:11 132937                     /datex/nexus/tmp/librocksdbjni3257029279685401321..so
+7f0d01b2d000-7f0d01d2c000 ---p 002a0000 08:11 132937                     /datex/nexus/tmp/librocksdbjni3257029279685401321..so
+7f0d01d2c000-7f0d01d3d000 rw-p 0029f000 08:11 132937                     /datex/nexus/tmp/librocksdbjni3257029279685401321..so
+7f0d01d3d000-7f0d01d40000 rw-p 00000000 00:00 0 
+7f0d01d40000-7f0d01d43000 ---p 00000000 00:00 0 
+7f0d01d43000-7f0d01e41000 rw-p 00000000 00:00 0 
+7f0d01e41000-7f0d01e44000 ---p 00000000 00:00 0 
+7f0d01e44000-7f0d01f42000 rw-p 00000000 00:00 0 
+7f0d01f42000-7f0d021e2000 r-xp 00000000 08:11 132936                     /datex/nexus/tmp/librocksdbjni7735853042036205328..so
+7f0d021e2000-7f0d023e1000 ---p 002a0000 08:11 132936                     /datex/nexus/tmp/librocksdbjni7735853042036205328..so
+7f0d023e1000-7f0d023f2000 rw-p 0029f000 08:11 132936                     /datex/nexus/tmp/librocksdbjni7735853042036205328..so
+7f0d023f2000-7f0d023f5000 rw-p 00000000 00:00 0 
+7f0d023f5000-7f0d023f8000 ---p 00000000 00:00 0 
+7f0d023f8000-7f0d024f6000 rw-p 00000000 00:00 0 
+7f0d024f6000-7f0d02796000 r-xp 00000000 08:11 132935                     /datex/nexus/tmp/librocksdbjni2302762465153682260..so
+7f0d02796000-7f0d02995000 ---p 002a0000 08:11 132935                     /datex/nexus/tmp/librocksdbjni2302762465153682260..so
+7f0d02995000-7f0d029a6000 rw-p 0029f000 08:11 132935                     /datex/nexus/tmp/librocksdbjni2302762465153682260..so
+7f0d029a6000-7f0d029a9000 rw-p 00000000 00:00 0 
+7f0d029a9000-7f0d02c49000 r-xp 00000000 08:11 132934                     /datex/nexus/tmp/librocksdbjni8309040186343345063..so
+7f0d02c49000-7f0d02e48000 ---p 002a0000 08:11 132934                     /datex/nexus/tmp/librocksdbjni8309040186343345063..so
+7f0d02e48000-7f0d02e59000 rw-p 0029f000 08:11 132934                     /datex/nexus/tmp/librocksdbjni8309040186343345063..so
+7f0d02e59000-7f0d02e5c000 rw-p 00000000 00:00 0 
+7f0d02e5c000-7f0d030fc000 r-xp 00000000 08:11 132933                     /datex/nexus/tmp/librocksdbjni6052120714381442359..so
+7f0d030fc000-7f0d032fb000 ---p 002a0000 08:11 132933                     /datex/nexus/tmp/librocksdbjni6052120714381442359..so
+7f0d032fb000-7f0d0330c000 rw-p 0029f000 08:11 132933                     /datex/nexus/tmp/librocksdbjni6052120714381442359..so
+7f0d0330c000-7f0d0330f000 rw-p 00000000 00:00 0 
+7f0d0330f000-7f0d035af000 r-xp 00000000 08:11 132932                     /datex/nexus/tmp/librocksdbjni8522957619689529934..so
+7f0d035af000-7f0d037ae000 ---p 002a0000 08:11 132932                     /datex/nexus/tmp/librocksdbjni8522957619689529934..so
+7f0d037ae000-7f0d037bf000 rw-p 0029f000 08:11 132932                     /datex/nexus/tmp/librocksdbjni8522957619689529934..so
+7f0d037bf000-7f0d037c2000 rw-p 00000000 00:00 0 
+7f0d037c2000-7f0d03a62000 r-xp 00000000 08:11 132930                     /datex/nexus/tmp/librocksdbjni8794369615526598297..so
+7f0d03a62000-7f0d03c61000 ---p 002a0000 08:11 132930                     /datex/nexus/tmp/librocksdbjni8794369615526598297..so
+7f0d03c61000-7f0d03c72000 rw-p 0029f000 08:11 132930                     /datex/nexus/tmp/librocksdbjni8794369615526598297..so
+7f0d03c72000-7f0d03c75000 rw-p 00000000 00:00 0 
+7f0d03c75000-7f0d03f15000 r-xp 00000000 08:11 132929                     /datex/nexus/tmp/librocksdbjni6705041412031480591..so
+7f0d03f15000-7f0d04114000 ---p 002a0000 08:11 132929                     /datex/nexus/tmp/librocksdbjni6705041412031480591..so
+7f0d04114000-7f0d04125000 rw-p 0029f000 08:11 132929                     /datex/nexus/tmp/librocksdbjni6705041412031480591..so
+7f0d04125000-7f0d04128000 rw-p 00000000 00:00 0 
+7f0d04128000-7f0d043c8000 r-xp 00000000 08:11 132928                     /datex/nexus/tmp/librocksdbjni711333442079001203..so
+7f0d043c8000-7f0d045c7000 ---p 002a0000 08:11 132928                     /datex/nexus/tmp/librocksdbjni711333442079001203..so
+7f0d045c7000-7f0d045d8000 rw-p 0029f000 08:11 132928                     /datex/nexus/tmp/librocksdbjni711333442079001203..so
+7f0d045d8000-7f0d045db000 rw-p 00000000 00:00 0 
+7f0d045db000-7f0d0487b000 r-xp 00000000 08:11 132927                     /datex/nexus/tmp/librocksdbjni2216815332553986767..so
+7f0d0487b000-7f0d04a7a000 ---p 002a0000 08:11 132927                     /datex/nexus/tmp/librocksdbjni2216815332553986767..so
+7f0d04a7a000-7f0d04a8b000 rw-p 0029f000 08:11 132927                     /datex/nexus/tmp/librocksdbjni2216815332553986767..so
+7f0d04a8b000-7f0d04a8e000 rw-p 00000000 00:00 0 
+7f0d04a8e000-7f0d04d2e000 r-xp 00000000 08:11 132926                     /datex/nexus/tmp/librocksdbjni6771997559480208491..so
+7f0d04d2e000-7f0d04f2d000 ---p 002a0000 08:11 132926                     /datex/nexus/tmp/librocksdbjni6771997559480208491..so
+7f0d04f2d000-7f0d04f3e000 rw-p 0029f000 08:11 132926                     /datex/nexus/tmp/librocksdbjni6771997559480208491..so
+7f0d04f3e000-7f0d04f41000 rw-p 00000000 00:00 0 
+7f0d04f41000-7f0d051e1000 r-xp 00000000 08:11 132925                     /datex/nexus/tmp/librocksdbjni7607264190108637674..so
+7f0d051e1000-7f0d053e0000 ---p 002a0000 08:11 132925                     /datex/nexus/tmp/librocksdbjni7607264190108637674..so
+7f0d053e0000-7f0d053f1000 rw-p 0029f000 08:11 132925                     /datex/nexus/tmp/librocksdbjni7607264190108637674..so
+7f0d053f1000-7f0d053f4000 rw-p 00000000 00:00 0 
+7f0d053f4000-7f0d05694000 r-xp 00000000 08:11 132924                     /datex/nexus/tmp/librocksdbjni2962014569728893741..so
+7f0d05694000-7f0d05893000 ---p 002a0000 08:11 132924                     /datex/nexus/tmp/librocksdbjni2962014569728893741..so
+7f0d05893000-7f0d058a4000 rw-p 0029f000 08:11 132924                     /datex/nexus/tmp/librocksdbjni2962014569728893741..so
+7f0d058a4000-7f0d058a7000 rw-p 00000000 00:00 0 
+7f0d058a7000-7f0d05b47000 r-xp 00000000 08:11 132923                     /datex/nexus/tmp/librocksdbjni3297347120193090312..so
+7f0d05b47000-7f0d05d46000 ---p 002a0000 08:11 132923                     /datex/nexus/tmp/librocksdbjni3297347120193090312..so
+7f0d05d46000-7f0d05d57000 rw-p 0029f000 08:11 132923                     /datex/nexus/tmp/librocksdbjni3297347120193090312..so
+7f0d05d57000-7f0d05d5a000 rw-p 00000000 00:00 0 
+7f0d05d5a000-7f0d05ffa000 r-xp 00000000 08:11 132922                     /datex/nexus/tmp/librocksdbjni6037693198476582599..so
+7f0d05ffa000-7f0d061f9000 ---p 002a0000 08:11 132922                     /datex/nexus/tmp/librocksdbjni6037693198476582599..so
+7f0d061f9000-7f0d0620a000 rw-p 0029f000 08:11 132922                     /datex/nexus/tmp/librocksdbjni6037693198476582599..so
+7f0d0620a000-7f0d0620d000 rw-p 00000000 00:00 0 
+7f0d0620d000-7f0d064ad000 r-xp 00000000 08:11 132921                     /datex/nexus/tmp/librocksdbjni8974782281004711095..so
+7f0d064ad000-7f0d066ac000 ---p 002a0000 08:11 132921                     /datex/nexus/tmp/librocksdbjni8974782281004711095..so
+7f0d066ac000-7f0d066bd000 rw-p 0029f000 08:11 132921                     /datex/nexus/tmp/librocksdbjni8974782281004711095..so
+7f0d066bd000-7f0d066c0000 rw-p 00000000 00:00 0 
+7f0d066c0000-7f0d06960000 r-xp 00000000 08:11 132920                     /datex/nexus/tmp/librocksdbjni927955428784624590..so
+7f0d06960000-7f0d06b5f000 ---p 002a0000 08:11 132920                     /datex/nexus/tmp/librocksdbjni927955428784624590..so
+7f0d06b5f000-7f0d06b70000 rw-p 0029f000 08:11 132920                     /datex/nexus/tmp/librocksdbjni927955428784624590..so
+7f0d06b70000-7f0d06b73000 rw-p 00000000 00:00 0 
+7f0d06b73000-7f0d06e13000 r-xp 00000000 08:11 132919                     /datex/nexus/tmp/librocksdbjni1782928377322039670..so
+7f0d06e13000-7f0d07012000 ---p 002a0000 08:11 132919                     /datex/nexus/tmp/librocksdbjni1782928377322039670..so
+7f0d07012000-7f0d07023000 rw-p 0029f000 08:11 132919                     /datex/nexus/tmp/librocksdbjni1782928377322039670..so
+7f0d07023000-7f0d07026000 rw-p 00000000 00:00 0 
+7f0d07026000-7f0d072c6000 r-xp 00000000 08:11 132918                     /datex/nexus/tmp/librocksdbjni358244644417504835..so
+7f0d072c6000-7f0d074c5000 ---p 002a0000 08:11 132918                     /datex/nexus/tmp/librocksdbjni358244644417504835..so
+7f0d074c5000-7f0d074d6000 rw-p 0029f000 08:11 132918                     /datex/nexus/tmp/librocksdbjni358244644417504835..so
+7f0d074d6000-7f0d074d9000 rw-p 00000000 00:00 0 
+7f0d074d9000-7f0d07779000 r-xp 00000000 08:11 132917                     /datex/nexus/tmp/librocksdbjni137332168221310210..so
+7f0d07779000-7f0d07978000 ---p 002a0000 08:11 132917                     /datex/nexus/tmp/librocksdbjni137332168221310210..so
+7f0d07978000-7f0d07989000 rw-p 0029f000 08:11 132917                     /datex/nexus/tmp/librocksdbjni137332168221310210..so
+7f0d07989000-7f0d0798c000 rw-p 00000000 00:00 0 
+7f0d0798c000-7f0d07c2c000 r-xp 00000000 08:11 132577                     /datex/nexus/tmp/librocksdbjni1769839037897000816..so
+7f0d07c2c000-7f0d07e2b000 ---p 002a0000 08:11 132577                     /datex/nexus/tmp/librocksdbjni1769839037897000816..so
+7f0d07e2b000-7f0d07e3c000 rw-p 0029f000 08:11 132577                     /datex/nexus/tmp/librocksdbjni1769839037897000816..so
+7f0d07e3c000-7f0d07e3f000 rw-p 00000000 00:00 0 
+7f0d07e3f000-7f0d080df000 r-xp 00000000 08:11 132263                     /datex/nexus/tmp/librocksdbjni5382282106027798805..so
+7f0d080df000-7f0d082de000 ---p 002a0000 08:11 132263                     /datex/nexus/tmp/librocksdbjni5382282106027798805..so
+7f0d082de000-7f0d082ef000 rw-p 0029f000 08:11 132263                     /datex/nexus/tmp/librocksdbjni5382282106027798805..so
+7f0d082ef000-7f0d084f2000 rw-p 00000000 00:00 0 
+7f0d084f2000-7f0d086f2000 rw-p 00000000 00:00 0 
+7f0d086f2000-7f0d086f5000 ---p 00000000 00:00 0 
+7f0d086f5000-7f0d089f3000 rw-p 00000000 00:00 0 
+7f0d089f3000-7f0d089f6000 ---p 00000000 00:00 0 
+7f0d089f6000-7f0d08af4000 rw-p 00000000 00:00 0 
+7f0d08af4000-7f0d08af7000 ---p 00000000 00:00 0 
+7f0d08af7000-7f0d08bf5000 rw-p 00000000 00:00 0 
+7f0d08bf5000-7f0d08bf8000 ---p 00000000 00:00 0 
+7f0d08bf8000-7f0d08cf6000 rw-p 00000000 00:00 0 
+7f0d08cf6000-7f0d08cf9000 ---p 00000000 00:00 0 
+7f0d08cf9000-7f0d08df7000 rw-p 00000000 00:00 0 
+7f0d08df7000-7f0d08dfa000 ---p 00000000 00:00 0 
+7f0d08dfa000-7f0d08ef8000 rw-p 00000000 00:00 0 
+7f0d08ef8000-7f0d08efb000 ---p 00000000 00:00 0 
+7f0d08efb000-7f0d08ff9000 rw-p 00000000 00:00 0 
+7f0d08ff9000-7f0d08ffc000 ---p 00000000 00:00 0 
+7f0d08ffc000-7f0d090fa000 rw-p 00000000 00:00 0 
+7f0d090fa000-7f0d090fd000 ---p 00000000 00:00 0 
+7f0d090fd000-7f0d091fb000 rw-p 00000000 00:00 0 
+7f0d091fb000-7f0d091fe000 ---p 00000000 00:00 0 
+7f0d091fe000-7f0d094fc000 rw-p 00000000 00:00 0 
+7f0d094fc000-7f0d096fc000 rw-p 00000000 00:00 0 
+7f0d096fc000-7f0d098fc000 rw-p 00000000 00:00 0 
+7f0d098fc000-7f0d09afc000 rw-p 00000000 00:00 0 
+7f0d09afc000-7f0d09cfc000 rw-p 00000000 00:00 0 
+7f0d09cfc000-7f0d09efc000 rw-p 00000000 00:00 0 
+7f0d09efc000-7f0d0a0fc000 rw-p 00000000 00:00 0 
+7f0d0a0fc000-7f0d0a2fc000 rw-p 00000000 00:00 0 
+7f0d0a2fc000-7f0d0a4fc000 rw-p 00000000 00:00 0 
+7f0d0a4fc000-7f0d0a6fc000 rw-p 00000000 00:00 0 
+7f0d0a6fc000-7f0d0a8fc000 rw-p 00000000 00:00 0 
+7f0d0a8fc000-7f0d0aafc000 rw-p 00000000 00:00 0 
+7f0d0aafc000-7f0d0acfc000 rw-p 00000000 00:00 0 
+7f0d0acfc000-7f0d0aefc000 rw-p 00000000 00:00 0 
+7f0d0aefc000-7f0d0b0fc000 rw-p 00000000 00:00 0 
+7f0d0b0fc000-7f0d0b2fc000 rw-p 00000000 00:00 0 
+7f0d0b2fc000-7f0d0b4fc000 rw-p 00000000 00:00 0 
+7f0d0b4fc000-7f0d0b6fc000 rw-p 00000000 00:00 0 
+7f0d0b6fc000-7f0d0b8fc000 rw-p 00000000 00:00 0 
+7f0d0b8fc000-7f0d0bafc000 rw-p 00000000 00:00 0 
+7f0d0bafc000-7f0d0bcfc000 rw-p 00000000 00:00 0 
+7f0d0bcfc000-7f0d0befc000 rw-p 00000000 00:00 0 
+7f0d0befc000-7f0d0c0fc000 rw-p 00000000 00:00 0 
+7f0d0c0fc000-7f0d0c2fc000 rw-p 00000000 00:00 0 
+7f0d0c2fc000-7f0d0c4fc000 rw-p 00000000 00:00 0 
+7f0d0c4fc000-7f0d0c4ff000 ---p 00000000 00:00 0 
+7f0d0c4ff000-7f0d0c5fd000 rw-p 00000000 00:00 0 
+7f0d0c5fd000-7f0d0c62f000 r-xp 00000000 08:11 419                        /datex/nexus/jre/1.8.0_40/lib/amd64/libsunec.so
+7f0d0c62f000-7f0d0c82e000 ---p 00032000 08:11 419                        /datex/nexus/jre/1.8.0_40/lib/amd64/libsunec.so
+7f0d0c82e000-7f0d0c834000 rw-p 00031000 08:11 419                        /datex/nexus/jre/1.8.0_40/lib/amd64/libsunec.so
+7f0d0c834000-7f0d0c844000 rw-p 00000000 00:00 0 
+7f0d0c844000-7f0d0c847000 r--s 0001a000 08:11 478                        /datex/nexus/jre/1.8.0_40/lib/jce.jar
+7f0d0c847000-7f0d0c84a000 ---p 00000000 00:00 0 
+7f0d0c84a000-7f0d0c948000 rw-p 00000000 00:00 0 
+7f0d0c948000-7f0d0cbe8000 r-xp 00000000 08:11 132430                     /datex/nexus/tmp/librocksdbjni5345640405948164882..so
+7f0d0cbe8000-7f0d0cde7000 ---p 002a0000 08:11 132430                     /datex/nexus/tmp/librocksdbjni5345640405948164882..so
+7f0d0cde7000-7f0d0cdf8000 rw-p 0029f000 08:11 132430                     /datex/nexus/tmp/librocksdbjni5345640405948164882..so
+7f0d0cdf8000-7f0d0cdfb000 rw-p 00000000 00:00 0 
+7f0d0cdfb000-7f0d0cdfc000 ---p 00000000 00:00 0 
+7f0d0cdfc000-7f0d0d7fc000 rw-p 00000000 00:00 0 
+7f0d0d7fc000-7f0d0d7fd000 ---p 00000000 00:00 0 
+7f0d0d7fd000-7f0d0e1fd000 rw-p 00000000 00:00 0 
+7f0d0e1fd000-7f0d0e1fe000 ---p 00000000 00:00 0 
+7f0d0e1fe000-7f0d0ebfe000 rw-p 00000000 00:00 0 
+7f0d0ebfe000-7f0d0ebff000 ---p 00000000 00:00 0 
+7f0d0ebff000-7f0d0f5ff000 rw-p 00000000 00:00 0 
+7f0d0f5ff000-7f0d0f600000 ---p 00000000 00:00 0 
+7f0d0f600000-7f0d10000000 rw-p 00000000 00:00 0 
+7f0d10000000-7f0d10c59000 rw-p 00000000 00:00 0 
+7f0d10c59000-7f0d14000000 ---p 00000000 00:00 0 
+7f0d14091000-7f0d14094000 ---p 00000000 00:00 0 
+7f0d14094000-7f0d14192000 rw-p 00000000 00:00 0 
+7f0d14192000-7f0d14195000 ---p 00000000 00:00 0 
+7f0d14195000-7f0d14293000 rw-p 00000000 00:00 0 
+7f0d14293000-7f0d14296000 ---p 00000000 00:00 0 
+7f0d14296000-7f0d14394000 rw-p 00000000 00:00 0 
+7f0d14394000-7f0d14395000 ---p 00000000 00:00 0 
+7f0d14395000-7f0d14d95000 rw-p 00000000 00:00 0 
+7f0d14d95000-7f0d14d96000 ---p 00000000 00:00 0 
+7f0d14d96000-7f0d15796000 rw-p 00000000 00:00 0 
+7f0d15796000-7f0d15797000 ---p 00000000 00:00 0 
+7f0d15797000-7f0d16197000 rw-p 00000000 00:00 0 
+7f0d16197000-7f0d16198000 ---p 00000000 00:00 0 
+7f0d16198000-7f0d16b98000 rw-p 00000000 00:00 0 
+7f0d16b98000-7f0d16b99000 ---p 00000000 00:00 0 
+7f0d16b99000-7f0d17599000 rw-p 00000000 00:00 0 
+7f0d17599000-7f0d17839000 r-xp 00000000 08:11 132907                     /datex/nexus/tmp/librocksdbjni6102821735052696893..so
+7f0d17839000-7f0d17a38000 ---p 002a0000 08:11 132907                     /datex/nexus/tmp/librocksdbjni6102821735052696893..so
+7f0d17a38000-7f0d17a49000 rw-p 0029f000 08:11 132907                     /datex/nexus/tmp/librocksdbjni6102821735052696893..so
+7f0d17a49000-7f0d17a4c000 rw-p 00000000 00:00 0 
+7f0d17a4c000-7f0d17cec000 r-xp 00000000 08:11 132905                     /datex/nexus/tmp/librocksdbjni3655837502439875554..so
+7f0d17cec000-7f0d17eeb000 ---p 002a0000 08:11 132905                     /datex/nexus/tmp/librocksdbjni3655837502439875554..so
+7f0d17eeb000-7f0d17efc000 rw-p 0029f000 08:11 132905                     /datex/nexus/tmp/librocksdbjni3655837502439875554..so
+7f0d17efc000-7f0d17eff000 rw-p 00000000 00:00 0 
+7f0d17eff000-7f0d17f02000 ---p 00000000 00:00 0 
+7f0d17f02000-7f0d18000000 rw-p 00000000 00:00 0 
+7f0d18000000-7f0d180aa000 rw-p 00000000 00:00 0 
+7f0d180aa000-7f0d1c000000 ---p 00000000 00:00 0 
+7f0d1c000000-7f0d1d606000 rw-p 00000000 00:00 0 
+7f0d1d606000-7f0d20000000 ---p 00000000 00:00 0 
+7f0d20000000-7f0d2015d000 rw-p 00000000 00:00 0 
+7f0d2015d000-7f0d24000000 ---p 00000000 00:00 0 
+7f0d240f0000-7f0d24390000 r-xp 00000000 08:11 132889                     /datex/nexus/tmp/librocksdbjni6240432533665703775..so
+7f0d24390000-7f0d2458f000 ---p 002a0000 08:11 132889                     /datex/nexus/tmp/librocksdbjni6240432533665703775..so
+7f0d2458f000-7f0d245a0000 rw-p 0029f000 08:11 132889                     /datex/nexus/tmp/librocksdbjni6240432533665703775..so
+7f0d245a0000-7f0d245a3000 rw-p 00000000 00:00 0 
+7f0d245a3000-7f0d24843000 r-xp 00000000 08:11 132778                     /datex/nexus/tmp/librocksdbjni4378217341358045032..so
+7f0d24843000-7f0d24a42000 ---p 002a0000 08:11 132778                     /datex/nexus/tmp/librocksdbjni4378217341358045032..so
+7f0d24a42000-7f0d24a53000 rw-p 0029f000 08:11 132778                     /datex/nexus/tmp/librocksdbjni4378217341358045032..so
+7f0d24a53000-7f0d24c56000 rw-p 00000000 00:00 0 
+7f0d24c56000-7f0d24c59000 ---p 00000000 00:00 0 
+7f0d24c59000-7f0d24d57000 rw-p 00000000 00:00 0 
+7f0d24d57000-7f0d24d5a000 ---p 00000000 00:00 0 
+7f0d24d5a000-7f0d24e58000 rw-p 00000000 00:00 0 
+7f0d24e58000-7f0d24e5b000 ---p 00000000 00:00 0 
+7f0d24e5b000-7f0d24f59000 rw-p 00000000 00:00 0 
+7f0d24f59000-7f0d24f5c000 ---p 00000000 00:00 0 
+7f0d24f5c000-7f0d2505a000 rw-p 00000000 00:00 0 
+7f0d2505a000-7f0d2505d000 ---p 00000000 00:00 0 
+7f0d2505d000-7f0d2535b000 rw-p 00000000 00:00 0 
+7f0d2535b000-7f0d2535e000 ---p 00000000 00:00 0 
+7f0d2535e000-7f0d2545c000 rw-p 00000000 00:00 0 
+7f0d2545c000-7f0d2545f000 ---p 00000000 00:00 0 
+7f0d2545f000-7f0d2555d000 rw-p 00000000 00:00 0 
+7f0d2555d000-7f0d25560000 ---p 00000000 00:00 0 
+7f0d25560000-7f0d2565e000 rw-p 00000000 00:00 0 
+7f0d2565e000-7f0d25661000 ---p 00000000 00:00 0 
+7f0d25661000-7f0d2595f000 rw-p 00000000 00:00 0 
+7f0d2595f000-7f0d25b5f000 rw-p 00000000 00:00 0 
+7f0d25b5f000-7f0d25d5f000 rw-p 00000000 00:00 0 
+7f0d25d5f000-7f0d25f5f000 rw-p 00000000 00:00 0 
+7f0d25f5f000-7f0d25f70000 r-xp 00000000 08:11 465                        /datex/nexus/jre/1.8.0_40/lib/amd64/libnio.so
+7f0d25f70000-7f0d2616f000 ---p 00011000 08:11 465                        /datex/nexus/jre/1.8.0_40/lib/amd64/libnio.so
+7f0d2616f000-7f0d26170000 rw-p 00010000 08:11 465                        /datex/nexus/jre/1.8.0_40/lib/amd64/libnio.so
+7f0d26170000-7f0d2c000000 r--p 00000000 fd:00 17610                      /usr/lib/locale/locale-archive
+7f0d2c000000-7f0d2c1a5000 rw-p 00000000 00:00 0 
+7f0d2c1a5000-7f0d30000000 ---p 00000000 00:00 0 
+7f0d30000000-7f0d3006d000 rw-p 00000000 00:00 0 
+7f0d3006d000-7f0d34000000 ---p 00000000 00:00 0 
+7f0d34000000-7f0d34149000 rw-p 00000000 00:00 0 
+7f0d34149000-7f0d38000000 ---p 00000000 00:00 0 
+7f0d38000000-7f0d38d91000 rw-p 00000000 00:00 0 
+7f0d38d91000-7f0d3c000000 ---p 00000000 00:00 0 
+7f0d3c000000-7f0d3c08f000 rw-p 00000000 00:00 0 
+7f0d3c08f000-7f0d40000000 ---p 00000000 00:00 0 
+7f0d40000000-7f0d40066000 rw-p 00000000 00:00 0 
+7f0d40066000-7f0d44000000 ---p 00000000 00:00 0 
+7f0d44036000-7f0d44039000 ---p 00000000 00:00 0 
+7f0d44039000-7f0d4406f000 rw-p 00000000 00:00 0 
+7f0d4406f000-7f0d44072000 ---p 00000000 00:00 0 
+7f0d44072000-7f0d44170000 rw-p 00000000 00:00 0 
+7f0d44170000-7f0d441ae000 r--s 0030f000 08:11 131596                     /datex/nexus/libs/groovy-2.2.1.jar
+7f0d441ae000-7f0d441af000 r-xp 00000000 08:11 450                        /datex/nexus/jre/1.8.0_40/lib/amd64/libjaas_unix.so
+7f0d441af000-7f0d443ae000 ---p 00001000 08:11 450                        /datex/nexus/jre/1.8.0_40/lib/amd64/libjaas_unix.so
+7f0d443ae000-7f0d443af000 rw-p 00000000 08:11 450                        /datex/nexus/jre/1.8.0_40/lib/amd64/libjaas_unix.so
+7f0d443af000-7f0d443b4000 r-xp 00000000 fd:00 13406                      /lib64/libnss_dns-2.12.so
+7f0d443b4000-7f0d445b3000 ---p 00005000 fd:00 13406                      /lib64/libnss_dns-2.12.so
+7f0d445b3000-7f0d445b4000 r--p 00004000 fd:00 13406                      /lib64/libnss_dns-2.12.so
+7f0d445b4000-7f0d445b5000 rw-p 00005000 fd:00 13406                      /lib64/libnss_dns-2.12.so
+7f0d445b5000-7f0d445cb000 r-xp 00000000 08:11 462                        /datex/nexus/jre/1.8.0_40/lib/amd64/libnet.so
+7f0d445cb000-7f0d447cb000 ---p 00016000 08:11 462                        /datex/nexus/jre/1.8.0_40/lib/amd64/libnet.so
+7f0d447cb000-7f0d447cc000 rw-p 00016000 08:11 462                        /datex/nexus/jre/1.8.0_40/lib/amd64/libnet.so
+7f0d447cc000-7f0d447cf000 ---p 00000000 00:00 0 
+7f0d447cf000-7f0d448cd000 rw-p 00000000 00:00 0 
+7f0d448cd000-7f0d448d5000 r-xp 00000000 08:11 470                        /datex/nexus/jre/1.8.0_40/lib/amd64/libmanagement.so
+7f0d448d5000-7f0d44ad5000 ---p 00008000 08:11 470                        /datex/nexus/jre/1.8.0_40/lib/amd64/libmanagement.so
+7f0d44ad5000-7f0d44ad6000 rw-p 00008000 08:11 470                        /datex/nexus/jre/1.8.0_40/lib/amd64/libmanagement.so
+7f0d44ad6000-7f0d44ad7000 ---p 00000000 00:00 0 
+7f0d44ad7000-7f0d44bd7000 rw-p 00000000 00:00 0 
+7f0d44bd7000-7f0d44bda000 ---p 00000000 00:00 0 
+7f0d44bda000-7f0d44cd8000 rw-p 00000000 00:00 0 
+7f0d44cd8000-7f0d44cdb000 ---p 00000000 00:00 0 
+7f0d44cdb000-7f0d44dd9000 rw-p 00000000 00:00 0 
+7f0d44dd9000-7f0d44ddc000 ---p 00000000 00:00 0 
+7f0d44ddc000-7f0d44eda000 rw-p 00000000 00:00 0 
+7f0d44eda000-7f0d44edd000 ---p 00000000 00:00 0 
+7f0d44edd000-7f0d44fdb000 rw-p 00000000 00:00 0 
+7f0d44fdb000-7f0d44fde000 ---p 00000000 00:00 0 
+7f0d44fde000-7f0d450dc000 rw-p 00000000 00:00 0 
+7f0d450dc000-7f0d450df000 ---p 00000000 00:00 0 
+7f0d450df000-7f0d451dd000 rw-p 00000000 00:00 0 
+7f0d451dd000-7f0d451e0000 ---p 00000000 00:00 0 
+7f0d451e0000-7f0d452de000 rw-p 00000000 00:00 0 
+7f0d452de000-7f0d452e1000 ---p 00000000 00:00 0 
+7f0d452e1000-7f0d453df000 rw-p 00000000 00:00 0 
+7f0d453df000-7f0d453e0000 ---p 00000000 00:00 0 
+7f0d453e0000-7f0d4552f000 rw-p 00000000 00:00 0 
+7f0d4552f000-7f0d45707000 r--s 03d09000 08:11 261                        /datex/nexus/jre/1.8.0_40/lib/rt.jar
+7f0d45707000-7f0d48000000 rw-p 00000000 00:00 0 
+7f0d48000000-7f0d4804b000 rw-p 00000000 00:00 0 
+7f0d4804b000-7f0d4c000000 ---p 00000000 00:00 0 
+7f0d4c000000-7f0d4c292000 rw-p 00000000 00:00 0 
+7f0d4c292000-7f0d50000000 ---p 00000000 00:00 0 
+7f0d50000000-7f0d501ad000 rw-p 00000000 00:00 0 
+7f0d501ad000-7f0d54000000 ---p 00000000 00:00 0 
+7f0d54000000-7f0d555ca000 rw-p 00000000 00:00 0 
+7f0d555ca000-7f0d58000000 ---p 00000000 00:00 0 
+7f0d58000000-7f0d59893000 rw-p 00000000 00:00 0 
+7f0d59893000-7f0d5c000000 ---p 00000000 00:00 0 
+7f0d5c00c000-7f0d5c01a000 rw-p 00000000 00:00 0 
+7f0d5c01a000-7f0d5c025000 r--s 00067000 08:11 131112                     /datex/nexus/tmp/deploy/cyyz_00_sto_001/default/sshd-core-0_9_0_jar-14271362162352625646427544068363.jar
+7f0d5c025000-7f0d5c02a000 r--s 0003f000 08:11 322                        /datex/nexus/jre/1.8.0_40/lib/ext/sunjce_provider.jar
+7f0d5c02a000-7f0d5c02b000 r--s 00009000 08:11 313                        /datex/nexus/jre/1.8.0_40/lib/ext/sunec.jar
+7f0d5c02b000-7f0d5c02e000 r--s 0003a000 08:11 319                        /datex/nexus/jre/1.8.0_40/lib/ext/sunpkcs11.jar
+7f0d5c02e000-7f0d5c035000 r--s 00000000 fd:00 9633                       /usr/lib64/gconv/gconv-modules.cache
+7f0d5c035000-7f0d5c038000 r--s 00337000 08:11 131082                     /datex/nexus/libs/rocksdbjni-3.9.1.jar
+7f0d5c038000-7f0d5c03d000 r--s 00094000 08:11 311                        /datex/nexus/jre/1.8.0_40/lib/jsse.jar
+7f0d5c03d000-7f0d5c040000 ---p 00000000 00:00 0 
+7f0d5c040000-7f0d5c076000 rw-p 00000000 00:00 0 
+7f0d5c076000-7f0d5c089000 r--s 00344000 08:11 297                        /datex/nexus/jre/1.8.0_40/lib/resources.jar
+7f0d5c089000-7f0d5c094000 r--s 00116000 08:11 321                        /datex/nexus/jre/1.8.0_40/lib/ext/localedata.jar
+7f0d5c094000-7f0d5c0b0000 r--s 00393000 08:11 315                        /datex/nexus/jre/1.8.0_40/lib/ext/cldrdata.jar
+7f0d5c0b0000-7f0d5c0b1000 r--s 00004000 08:11 131471                     /datex/nexus/boot/nexus-bootstrap-1.0.0.jar
+7f0d5c0b1000-7f0d5c0b5000 r--s 000dc000 08:11 131469                     /datex/nexus/boot/jna-4.1.0.jar
+7f0d5c0b5000-7f0d5c0f3000 r--s 0025e000 08:11 131465                     /datex/nexus/boot/bcprov-jdk15on-1.50.jar
+7f0d5c0f3000-7f0d5c337000 rw-p 00000000 00:00 0 
+7f0d5c337000-7f0d5c338000 ---p 00000000 00:00 0 
+7f0d5c338000-7f0d5c438000 rw-p 00000000 00:00 0 
+7f0d5c438000-7f0d5c439000 ---p 00000000 00:00 0 
+7f0d5c439000-7f0d5d65a000 rw-p 00000000 00:00 0 
+7f0d5d65a000-7f0d5d85a000 rw-p 00000000 00:00 0 
+7f0d5d85a000-7f0d5d85b000 ---p 00000000 00:00 0 
+7f0d5d85b000-7f0d5d95b000 rw-p 00000000 00:00 0 
+7f0d5d95b000-7f0d5d95c000 ---p 00000000 00:00 0 
+7f0d5d95c000-7f0d5da5c000 rw-p 00000000 00:00 0 
+7f0d5da5c000-7f0d5da5d000 ---p 00000000 00:00 0 
+7f0d5da5d000-7f0d5dd5f000 rw-p 00000000 00:00 0 
+7f0d5dd5f000-7f0d5dd60000 ---p 00000000 00:00 0 
+7f0d5dd60000-7f0d5de60000 rw-p 00000000 00:00 0 
+7f0d5de60000-7f0d5de61000 ---p 00000000 00:00 0 
+7f0d5de61000-7f0d5df98000 rw-p 00000000 00:00 0 
+7f0d5df98000-7f0d5e321000 ---p 00000000 00:00 0 
+7f0d5e321000-7f0d5f0d1000 rwxp 00000000 00:00 0 
+7f0d5f0d1000-7f0d6d321000 ---p 00000000 00:00 0 
+7f0d6d321000-7f0d6d33b000 r-xp 00000000 08:11 458                        /datex/nexus/jre/1.8.0_40/lib/amd64/libzip.so
+7f0d6d33b000-7f0d6d53b000 ---p 0001a000 08:11 458                        /datex/nexus/jre/1.8.0_40/lib/amd64/libzip.so
+7f0d6d53b000-7f0d6d53c000 rw-p 0001a000 08:11 458                        /datex/nexus/jre/1.8.0_40/lib/amd64/libzip.so
+7f0d6d53c000-7f0d6d544000 rw-s 00000000 fd:06 55                         /tmp/hsperfdata_datex/19795
+7f0d6d544000-7f0d6d56e000 r-xp 00000000 08:11 453                        /datex/nexus/jre/1.8.0_40/lib/amd64/libjava.so
+7f0d6d56e000-7f0d6d76e000 ---p 0002a000 08:11 453                        /datex/nexus/jre/1.8.0_40/lib/amd64/libjava.so
+7f0d6d76e000-7f0d6d770000 rw-p 0002a000 08:11 453                        /datex/nexus/jre/1.8.0_40/lib/amd64/libjava.so
+7f0d6d770000-7f0d6d77d000 r-xp 00000000 08:11 457                        /datex/nexus/jre/1.8.0_40/lib/amd64/libverify.so
+7f0d6d77d000-7f0d6d97d000 ---p 0000d000 08:11 457                        /datex/nexus/jre/1.8.0_40/lib/amd64/libverify.so
+7f0d6d97d000-7f0d6d97f000 rw-p 0000d000 08:11 457                        /datex/nexus/jre/1.8.0_40/lib/amd64/libverify.so
+7f0d6d97f000-7f0d6e62d000 r-xp 00000000 08:11 438                        /datex/nexus/jre/1.8.0_40/lib/amd64/server/libjvm.so
+7f0d6e62d000-7f0d6e82c000 ---p 00cae000 08:11 438                        /datex/nexus/jre/1.8.0_40/lib/amd64/server/libjvm.so
+7f0d6e82c000-7f0d6e903000 rw-p 00cad000 08:11 438                        /datex/nexus/jre/1.8.0_40/lib/amd64/server/libjvm.so
+7f0d6e903000-7f0d6e947000 rw-p 00000000 00:00 0 
+7f0d6e947000-7f0d6e953000 r-xp 00000000 fd:00 16629                      /lib64/libnss_files-2.12.so
+7f0d6e953000-7f0d6eb53000 ---p 0000c000 fd:00 16629                      /lib64/libnss_files-2.12.so
+7f0d6eb53000-7f0d6eb54000 r--p 0000c000 fd:00 16629                      /lib64/libnss_files-2.12.so
+7f0d6eb54000-7f0d6eb55000 rw-p 0000d000 fd:00 16629                      /lib64/libnss_files-2.12.so
+7f0d6eb55000-7f0d6eb59000 rw-p 00000000 00:00 0 
+7f0d6eb59000-7f0d6eb5c000 rw-p 00000000 00:00 0 
+7f0d6eb5c000-7f0d6eb5d000 r--p 00000000 00:00 0 
+7f0d6eb5d000-7f0d6eb5e000 r--s 00005000 08:11 131466                     /datex/nexus/boot/commons-daemon-1.0.15.jar
+7f0d6eb5e000-7f0d6eb5f000 rw-p 00000000 00:00 0 
+7f0d6eb5f000-7f0d6eb60000 ---p 00000000 00:00 0 
+7f0d6eb60000-7f0d6eb61000 rw-p 00000000 00:00 0 
+7f0d6eb61000-7f0d6eb63000 rw-p 00000000 00:00 0 
+7fff899a6000-7fff899a9000 ---p 00000000 00:00 0 
+7fff899aa000-7fff89aa6000 rw-p 00000000 00:00 0                          [stack]
+7fff89aaa000-7fff89aab000 r-xp 00000000 00:00 0                          [vdso]
+ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [vsyscall]
+
+VM Arguments:
+jvm_args: -Xms512m -Xmx512m -XX:+UseG1GC -Dfile.encoding=iso-8859-1 -Duser.country=en -Duser.language=en -Djava.net.preferIPv4Stack=true -Xverify:none -XX:+StartAttachListener -Djna.tmpdir=/datex/nexus/tmp -Djava.io.tmpdir=/datex/nexus/tmp -Dmain.jar=boot/nexus-os-1.0.0.jar -Dcommons.daemon.process.id=19795 -Dcommons.daemon.process.parent=19794 -Dcommons.daemon.version=1.0.15-dev abort 
+java_command: <unknown>
+java_class_path (initial): ./boot/commons-daemon-1.0.15.jar:./boot/bcprov-jdk15on-1.50.jar:./boot/jna-4.1.0.jar:./boot/nexus-bootstrap-1.0.0.jar
+Launcher Type: generic
+
+Environment Variables:
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+LD_LIBRARY_PATH=/datex/nexus/jre/1.8.0_40//lib/amd64/server:/datex/nexus/jre/1.8.0_40//lib/amd64
+
+Signal Handlers:
+SIGSEGV: [libjvm.so+0xaad2e0], sa_mask[0]=11111111011111111101111111111110, sa_flags=SA_RESTART|SA_SIGINFO
+SIGBUS: [libjvm.so+0xaad2e0], sa_mask[0]=11111111011111111101111111111110, sa_flags=SA_RESTART|SA_SIGINFO
+SIGFPE: [libjvm.so+0x90b550], sa_mask[0]=11111111011111111101111111111110, sa_flags=SA_RESTART|SA_SIGINFO
+SIGPIPE: [libjvm.so+0x90b550], sa_mask[0]=11111111011111111101111111111110, sa_flags=SA_RESTART|SA_SIGINFO
+SIGXFSZ: [libjvm.so+0x90b550], sa_mask[0]=11111111011111111101111111111110, sa_flags=SA_RESTART|SA_SIGINFO
+SIGILL: [libjvm.so+0x90b550], sa_mask[0]=11111111011111111101111111111110, sa_flags=SA_RESTART|SA_SIGINFO
+SIGUSR1: SIG_DFL, sa_mask[0]=00000000000000000000000000000000, sa_flags=none
+SIGUSR2: [libjvm.so+0x90cb90], sa_mask[0]=00000000000000000000000000000000, sa_flags=SA_RESTART|SA_SIGINFO
+SIGHUP: [libjvm.so+0x90dee0], sa_mask[0]=11111111011111111101111111111110, sa_flags=SA_RESTART|SA_SIGINFO
+SIGINT: [libjvm.so+0x90dee0], sa_mask[0]=11111111011111111101111111111110, sa_flags=SA_RESTART|SA_SIGINFO
+SIGTERM: [libjvm.so+0x90dee0], sa_mask[0]=11111111011111111101111111111110, sa_flags=SA_RESTART|SA_SIGINFO
+SIGQUIT: [libjvm.so+0x90dee0], sa_mask[0]=11111111011111111101111111111110, sa_flags=SA_RESTART|SA_SIGINFO
+
+
+---------------  S Y S T E M  ---------------
+
+OS:CentOS release 6.6 (Final)
+
+uname:Linux 2.6.32-504.12.2.el6.x86_64 #1 SMP Wed Mar 11 22:03:14 UTC 2015 x86_64
+libc:glibc 2.12 NPTL 2.12 
+rlimit: STACK 10240k, CORE 0k, NPROC 14782, NOFILE 8192, AS infinity
+load average:0.52 0.86 0.73
+
+/proc/meminfo:
+MemTotal:        1914712 kB
+MemFree:          246664 kB
+Buffers:           21176 kB
+Cached:           693788 kB
+SwapCached:            0 kB
+Active:          1200592 kB
+Inactive:         333660 kB
+Active(anon):     771600 kB
+Inactive(anon):    48088 kB
+Active(file):     428992 kB
+Inactive(file):   285572 kB
+Unevictable:           0 kB
+Mlocked:               0 kB
+SwapTotal:       1675260 kB
+SwapFree:        1675260 kB
+Dirty:               264 kB
+Writeback:             0 kB
+AnonPages:        819500 kB
+Mapped:            63148 kB
+Shmem:               360 kB
+Slab:              95348 kB
+SReclaimable:      34004 kB
+SUnreclaim:        61344 kB
+KernelStack:        1912 kB
+PageTables:         7012 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:     2632616 kB
+Committed_AS:    1163824 kB
+VmallocTotal:   34359738367 kB
+VmallocUsed:      149932 kB
+VmallocChunk:   34359576136 kB
+HardwareCorrupted:     0 kB
+AnonHugePages:    559104 kB
+HugePages_Total:       0
+HugePages_Free:        0
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+DirectMap4k:        8192 kB
+DirectMap2M:     2088960 kB
+
+
+CPU:total 2 (1 cores per cpu, 1 threads per core) family 6 model 45 stepping 7, cmov, cx8, fxsr, mmx, sse, sse2, sse3, ssse3, sse4.1, sse4.2, popcnt, avx, aes, clmul, tsc, tscinvbit, tscinv
+
+/proc/cpuinfo:
+processor   : 0
+vendor_id   : GenuineIntel
+cpu family  : 6
+model       : 45
+model name  : Intel(R) Xeon(R) CPU E5-2420 0 @ 1.90GHz
+stepping    : 7
+microcode   : 1803
+cpu MHz     : 1900.000
+cache size  : 15360 KB
+physical id : 0
+siblings    : 1
+core id     : 0
+cpu cores   : 1
+apicid      : 0
+initial apicid  : 0
+fpu     : yes
+fpu_exception   : yes
+cpuid level : 13
+wp      : yes
+flags       : fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts mmx fxsr sse sse2 ss syscall nx rdtscp lm constant_tsc arch_perfmon pebs bts xtopology tsc_reliable nonstop_tsc aperfmperf unfair_spinlock pni pclmulqdq ssse3 cx16 pcid sse4_1 sse4_2 x2apic popcnt aes xsave avx hypervisor lahf_lm ida arat pln pts dts
+bogomips    : 3800.00
+clflush size    : 64
+cache_alignment : 64
+address sizes   : 40 bits physical, 48 bits virtual
+power management:
+
+processor   : 1
+vendor_id   : GenuineIntel
+cpu family  : 6
+model       : 45
+model name  : Intel(R) Xeon(R) CPU E5-2420 0 @ 1.90GHz
+stepping    : 7
+microcode   : 1803
+cpu MHz     : 1900.000
+cache size  : 15360 KB
+physical id : 2
+siblings    : 1
+core id     : 0
+cpu cores   : 1
+apicid      : 2
+initial apicid  : 2
+fpu     : yes
+fpu_exception   : yes
+cpuid level : 13
+wp      : yes
+flags       : fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts mmx fxsr sse sse2 ss syscall nx rdtscp lm constant_tsc arch_perfmon pebs bts xtopology tsc_reliable nonstop_tsc aperfmperf unfair_spinlock pni pclmulqdq ssse3 cx16 pcid sse4_1 sse4_2 x2apic popcnt aes xsave avx hypervisor lahf_lm ida arat pln pts dts
+bogomips    : 3800.00
+clflush size    : 64
+cache_alignment : 64
+address sizes   : 40 bits physical, 48 bits virtual
+power management:
+
+
+
+Memory: 4k page, physical 1914712k(246664k free), swap 1675260k(1675260k free)
+
+vm_info: Java HotSpot(TM) 64-Bit Server VM (25.40-b25) for linux-amd64 JRE (1.8.0_40-b25), built on Feb 10 2015 21:29:53 by "java_re" with gcc 4.3.0 20080428 (Red Hat 4.3.0-8)
+
+time: Mon Mar 23 18:44:26 2015
+elapsed time: 66 seconds (0d 0h 1m 6s)
+```
+
+@DerekSchenk: Thanks for reporting this issue.  Not exactly sure what might go wrong.  Is it possible to have a minimum code that can reproduce this error?  If min & max heap sizes could trigger mlockall causing SIGSEGV, we should be able to verify it by setting a smaller min & max heap sizes and see whether the error occurs earlier when running RocksJava with same database.
+
+@yhchiang I'm trying to put together a working test case the reproduces the issue.  I also tried a number of different heap sizes from 256MB to 2GB and it had no effect on the issue.  The error doesn't seem to be affected by available memory (heap).  Sometimes it will crash within minutes, other times it will run for a few hours, all regardless of the memory settings.  I also tried removing the boot agent, which eliminates the use of mlockall.  In that case I set the heap to 2GB and the SIGSEGV happened within 60 seconds.
+
+Our use case has us creating a number of RocksDB databases, where the configuration controls the number of DB's.  Is there any issue with a single JVM instance having 10-20 DB's open and in use at any time?
+
+@yhchiang I've been trying, unsuccessfully, to get a working test case.  I think ( unconfirmed ) that the issue is related to an Iterator (B) inside an Iterator (A) where the inner iterator (B) deletes the key currently being pointed to by A.  The use case is a compaction process that iterates revision pointers (A), processing the targeted keys (B) and removing old revisions.  I restructured the code to track and delete outside of the iterator and have not seen the SIGSEGV.   I've been able to run for 24hrs without any issues so fingers crossed that this was the issue.
+
+After running this in a test lab for a few weeks with no issues I promoted it to production to 6 machines.  Within 12hrs I've had 6 crashes due to a SIGSEGV.  All of the machines produce the same error, which is a partial dump written to console with the following
+
+```
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  SIGSEGV (0xb) at pc=0x00007fcd94190ef5, pid=13423, tid=140515637503744
+#
+# JRE version: Java(TM) SE Runtime Environment (8.0_40-b25) (build 1.8.0_40-b25)
+# Java VM: Java HotSpot(TM) 64-Bit Server VM (25.40-b25 mixed mode linux-amd64 compressed oops)
+# Problematic frame:
+# C  [libc.so.6+0x75ef5]
+```
+
+The rest of the dump is never written, however the error location is always the same.  
+All machines are running the same OS patches on Centos.
+
+```
+Linux cyyz-01-mtr-001.dpw.io 2.6.32-504.16.2.el6.x86_64 #1 SMP Wed Apr 22 06:48:29 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux
+```
+
+ I believe that this is the same issue as https://github.com/facebook/rocksdb/issues/599.
+
+Prior to seeing the other issue (599) my focus for investigation was on the finalize() method in RocksObject.  The code that causes this was original written with a LevelDB implementation (leveldbjni 1.8), and this code runs fine.  Going over the details it seems a difference is that the leveldbjni library did not attempt to cleanup objects with a finalize method and you had to explicitly call dispose() or leak memory.
+
+My theory (unconfirmed but testing) is that the JVM is calling finalize() while my code is calling dispose(), leading to a possible race condition.  This seems to be more evident when using CMS, as well as on a busy server.  My initial reaction as that this would not be possible because the dispose() method is synchronized, however I have read some articles that imply that it may be possible that the finalize() is in fact called.  
+
+I've patched a local copy to remove the finalize() call and updated 3 of the machines, and will monitor them.  If they remain stable and the 3 un-patched crash again I'll know it was in fact the finalize().  I recognize that removing the finalize() is not ideal (given the intent), so if the test is successful I'll implement a better solution that keeps the finalize() doing cleanup.
+
+For reference this is my GC settings:
+
+```
+-Xms1024m -Xmx1024m -Xmn256m -XX:MaxDirectMemorySize=256m -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=80 -XX:+UseCMSInitiatingOccupancyOnly -XX:+UseParNewGC -XX:+CMSParallelRemarkEnabled -XX:+DisableExplicitGC -XX:SurvivorRatio=5 -XX:TargetSurvivorRatio=90 -XX:+AggressiveOpts -XX:+UseFastAccessorMethods -XX:+UseBiasedLocking
+```
+
+The finalize() method appears to be a red herring.  Running the updated library with the finalize() in RocksObject removed did not resolve the issue.  Over the last 7 hours since updating one of the patched and one of the un-patched boxes both died.
+
+I see that there is a fix in 3.10.1 for a SIGSEGV in compaction, so I want to try it next, however the version in maven does not work on Centos due to the error "clock_gettime: symbol not found".  I'll log a different issue for this.
+
+Would greatly appreciate any ideas that anyone might have to troubleshoot this.  
+
+I am interested to see that you have ruled out the issue of `finalize` as there was some concern between the interaction of `dispose` and `finalize` previously. I am afraid that I cannot help with in-depth C/C++ related issues, but perhaps someone else here can?
+
+@adamretter we should give the garbage collection related resource removal high priority.
+
+@fyrz You mean switching from finalize/dispose to implementing Closable so we can do ARM?
+
+@adamretter yep.
+
+The current version of RocksDBJNI 3.10.1 in Maven does not work on Centos (undefined symbol: clock_gettime).  I used the workaround defined in issue 606 using LD_EXPORT and was able to update one of the machines.
+
+I had to add a cron job to run every minute to check the console output for SEGV and kill/restart the process.  For some reason when this issue happens the JVM does not die, but hangs and doesn't respond to anything.
+
+The machine I selected is one that SEGV'd 356 times in the last 48 hours, so I'm hoping it's a good candidate.  I'll let it run over the weekend and report back next week if it stayed running.
+
+Having run the 3.10 version over the weekend I haven't seen any SEGV's.  I'll be updating 3 more machines and will continue to monitor.  Crossing fingers...
+
+@DerekSchenk any news ?
+
+@fyrz As far as I can tell it's resolved the issue. I've not had any SEGV's since updating it.  It appears that 3.10 fixes the issue.  I was hoping to make it to the end of the week clean, and if so then I think this is resolved.
+
+Hey @fyrz, I've got a similar, though not exact, issue on my JVM instance. The error line is:
+
+Problematic frame:
+C  [librocksdbjni3669584487950246590..so+0xce15d]  Java_org_rocksdb_DBOptions_disposeInternal+0x1d
+
+This is happening during the db.open(), I believe. My OS is CentOS version 6.6. And my RocksDBJNI version is 3.10.1. The only option I'm passing the DB is setCreateIfMissing(true).
+
+I've not added the entire code as it is a part of a MapReduce job and there would be unwanted page scrolls due to it. 
+
+Inviting replies.
+
+@agnibha Are you explicitly calling DBOptions.dispose(),  are you able to recreate the issue every time, or is it inconsistent, and what GC options are you using.
+
+No @DerekSchenk. I'm never calling the dipose() explicitly. 
+
+But, I'm making a few changes to the job. Let me see if the problem is consistent. I'll update with results.
+
+Seems like it was a file permissions issue. Ignore my comments on this thread plz.
+
+@fryz I've been running for a while now with no issues, so it appears that 3.10.1 fixes my problem.  At the moment I'm running with a workaround using 3.10.1 and have statistics turned off due to issue 606.  Once 3.11.1 gets pushed to Maven and I can update I think I'd be good to close off this issue.
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

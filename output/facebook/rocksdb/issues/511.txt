@@ -1,0 +1,25 @@
+In NativeLibraryLoader.java on line 85 will always throw an exception if we pass a temp directory since that file is not present.
+
+@jombie can you please outline the problem a little more ?
+
+See.: https://github.com/facebook/rocksdb/commit/9fcf1a7b0063d1b022d8038f8cdcf8675fa5bfdb as reference. We introduced a testcase covering the topic as described here. This compiles and runs fine on Ubuntu 14.10.
+
+Please reopen if thats still the case, I close that for now.
+
+@fyrz If in given test case reference  we comment out the line 
+
+`public static final RocksMemoryResource rocksMemoryResource = new RocksMemoryResource();`  
+
+Since that class is internally using RocksDB.loadLibrary(); 
+the NativeLibraryLoader.initialized is set to true and due to this later test case passes.
+
+In NativeLibraryLoader class line 82 a reference to file is created but not the actual file and in line 85 it is checking for existence which is not present that is why it throws an exception.
+
+I used temp.createNewFile(); on line 84 for the fix.
+
+@jombie ok i missed that implicit loading procedure. I will raise the pull-request this evening and care for a fast fix.
+
+@jombie should be now available in trunk.
+
+@fyrz Thanks, saw that.
+

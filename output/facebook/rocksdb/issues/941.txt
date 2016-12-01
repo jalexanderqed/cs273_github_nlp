@@ -1,0 +1,8 @@
+I want to do a benchmark test on write speed, and don't wanna it saturate my hard disk , so how can I set a space limit on rocksDB?
+
+This is a useful feature to have, but it is not currently implemented.
+
+You can try this: https://github.com/facebook/rocksdb/blob/v4.9/include/rocksdb/options.h#L881-L895
+
+You would have to write some code to implement this feature, but as Siying points out, the core APIs that you need from rocksdb is available.
+

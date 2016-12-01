@@ -1,0 +1,251 @@
+Once the ongoing RocksDB JNI work is committed (https://github.com/facebook/rocksdb/pull/235), I'm looking at publishing RocksDB's JNI libraries to Maven central so that the work can be consumed by other Java projects.
+
+My proposal is to use [Sonatype](http://www.sonatype.org/)'s open source Maven repo as the host for RocksDB JARs. This repo gets mirrored into Maven central. The artifacts will be published under the 'org.rocksdb' group.
+
+Does this sound OK with everyone?
+
+Publishing artifacts under the name 'org.rocksdb' sound good to me.
+
+If someone can publishing the Java binding for RocksDB to Maven, that would be great.  The name 'org.rocksdb' sounds good to me :)
+
++1 for org.rocksdb
+
+To provide some level of safety, can at least one committer please go and sign up for accounts at https://issues.sonatype.org and provide me with your JIRA username? This will allow me to add you to the project as publishers.
+
+@criccomini I have signed up on sonatype. User name: ankgup87
+
+Please let me know if any other thing is required.
+
+Waiting for approval:
+
+https://issues.sonatype.org/browse/OSSRH-11674
+
+I will start working on figuring out how to release the JAR locally now.
+
+Great!  Thanks for working on this, @criccomini and @ankgup87.
+
+Considering switching the RocksDB java build system from Make to Gradle (or Maven). Does anyone have an issue with that?
+
+For all of RocksDB or just Java parts?
+
+On Thu, Sep 25, 2014 at 7:39 AM, Chris Riccomini notifications@github.com
+wrote:
+
+> Considering switching the RocksDB build system from Make to Gradle (or
+> Maven). Does anyone have an issue with that?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/308#issuecomment-56828206.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Just the Java part.
+
+NM, going to leave the build alone for Java. Will just try and create a simple wrapper build script in Maven/Gradle that uses the make to do the builds for the JNI JARs across linux32, linux64, and OSX. The Maven/Gradle script will then fat jar them, and publish.
+
+my vote would be to _not_ remove the  existing Makefile support for building rocksdvjava
+
++1
+
+> my vote would be to not remove the existing Makefile support for building rocksdvjava
+
+Sounds good. I will leave as is. I _will_ introduce a basic Gradle file in order to generate a fat jar (with linux32, linux64, and osx jni libs rolled in), and also facilitate maven publication, though.
+
+Actually, let me experiment. Might be able to get away with nothing but Make.
+
+I have published an initial [pull request](https://github.com/facebook/rocksdb/pull/318). Looking for feedback.
+- I opted not to use autoconf/autotools for cross building. 
+- I didn't introduce any Gradle/Maven dependencies.
+- Current pull request doesn't publish to Maven. That's the next step.
+- Current pull request doesn't version the JARs. How are versions handled in RocksDB? I need to publish the JARs with something like rocksdbjni-3.5.2-all.jar. Where can I get the current version for a build?
+- I'm planning to use [manual Maven publication](http://central.sonatype.org/pages/manual-staging-bundle-creation-and-deployment.html) for the JARs that are built.
+
+Any feedback on this? I have run the fat JAR that's produced on Mac OSX 64-bit, Linux 32-bit Ubuntu Trusty, Linux 32-bit CentOS 5.6, Linux 64-bit CentOS 5.6, and Linux 64-bit RHEL 6.4.
+
+If all is well, I work on Sonatype publication now.
+
+The builds and the pull request looks good to me.  Have left a comment under the request regarding RocksDB version.
+
+Published a new pull request that versions the JARs using the version.h file as its source.  Also updated the root Makefile to do the same (rather than having to update the version in multiple spots).
+
+I chose to version the JARs with major/minor/micro rather than just major/minor.
+
+Working on Maven publication now.
+
+@criccomini do you integrate also coveralls.io ?
+
+No.
+
+Latest pull request now can publish to Maven. I've got artifacts staged in Sonatype right now. Waiting for some testing from @naveenatceg.
+
+I have successfully built and published all JARs to a staging directory in Sonatype with:
+
+```
+make jclean clean rocksdbjavastaticrelease rocksdbjavastaticpublish
+```
+
+For the work I am doing here I need Maven artifacts. Also I find the current build system a pain as it is rather limiting in terms of Tests. Ideally I would like to create a Maven build for RocksDB Java and enable testing dependencies such as JUnit and EasyMock etc. With a Maven build I could also generate Jars that contain signed artifacts, metadata and also source and javadoc jars. 
+
+I would also plan to use the Maven NAR target to create a NAR that can be published on Maven central which contains the native library for use in Java projects.
+
+Is there any appetite for this?
+
+@adamretter I proposed a similar solution (Maven or Gradle for Java builds), which was soundly rejected by others.
+
+@adamretter Also note that the patch that was merged in just now (https://github.com/facebook/rocksdb/pull/318) creates Maven artifacts (including a cross platform fat jar for Linux/Mac), publishes to Sonatype, and builds source and javadoc jars.
+
+... but perhaps if there are a few of us Java developers who want this, then perhaps we can all raise the profile of this requirement together?
+
+i would also raise this request. It must not be another build system for me but at least we should introduce Test-NG or JUnit to to coveralls integration and to write proper tests. Without test framework its impossible to get any coverage tool working in an appropriate timeframe.
+
+@fyrz Ideally I would integrate coverage into the Maven build ;-)
+
+@adamretter preferable solution if we get a build-system. But i would vote for gradle if it comes to that decision.
+
+I don't have a strong preference for either approach.
+
+@dhruba @yhchiang: As you had raised concerns about moving away from Makefile earlier, can you please comment what are these concerns?
+
+Assuming that the build system changes. Can we do a major refactoring of the packaging structure and the folder structure ? I mean while the Java code evolves it would be nice to have some packages to move away code related to that packages analogous(must not be the same) to the c++ directory structure.
+
+Other than that there is also the major advantage that in a "standard" Java project structure there is some folder structure like:
+
+```
+src/main/java
+src/test/java
+```
+
+which allows in both folders the same packages. This leads to the possibility to access package private methods from Tests without poisoning the codebase by storing them within the "real" source. As done currently with `WriteBatchTest`.
+
+@adamretter any additions ?
+
+I am fine with using publishing artifacts by Maven, re-structure source code file organization, getting test-coverage, etc.
+
+I would still vote to keep the Makefile so that I can build keep building the required libraries. 
+
+I have backported @naveenatceg's patch, as well as mine, to the rocksdb-3.5 tag, and released a RocksDB 3.5 JNI binding to Sonatype's Maven OSS repo. This should get mirrored into Maven Central soon.
+- The Sonatype release is [here](https://oss.sonatype.org/content/groups/public/org/rocksdb/rocksdbjni/).
+- I had to use snappy-1.1.1.tgz from [here](http://pkgs.fedoraproject.org/repo/pkgs/snappy/snappy-1.1.1.tar.gz/8887e3b7253b22a31f5486bca3cbc1c2/) because googlecode.com's download links are 50X'ing right now, which was causing the build to fail.
+- I will run a 3.6 publication whenever 3.6 is released.
+- I have updated [OSSRH-11674](https://issues.sonatype.org/browse/OSSRH-11674) to notify Sonatype that we've done our first promotion.
+- Ran a local build of Apache Samza with [SAMZA-236](https://issues.apache.org/jira/browse/SAMZA-236) applied against the 3.5 artifacts using the Sonatype repo. Build passed.
+
+@criccomini That's great news Chris! Thanks a lot for all your help to get this JAR on maven.
+
+@fyrz +1 for splitting out tests in its own directory. This will help us in easily getting jacoco reports on unit-tests. Also, we can add plugins to generate javadocs during build time. It will be great if 'arc lint' can be integrated in maven so that it can fail the build when there are code formatting issues.
+
+Also, we can integrate findbugs [1] in maven to capture any known bugs during compile time itself. Build should also fail if there are any issues reported by findbugs
+
+[1] - http://findbugs.sourceforge.net/
+
+@ankgup87 i think a good point to invent such changes would be after (big) pull requests are merged. 
+
+Hey All,
+
+Several updates.
+
+Maven Central syncing has been activated. RocksDB publications will now automatically appear in Maven Central [here](http://search.maven.org/#search%7Cga%7C1%7Crocksdb).
+
+The 3.5.0 Java release had an issue with Mac OSX cross-platform support. The OSX jni lib was built on a Mac 10.8 laptop with a MacPorts G++ 4.8 install. Apparently the MacPorts G++ 4.8 version used a non-standard libc/libc++ version. This caused "symbol not found" errors when used on some other OSX machines. I've published a 3.5.1 release to Sonatype (should mirror to Maven soon). The 3.5.1 release was built on an OSX Mavericks 10.9.3 box with the following information:
+
+```
+Chriss-MacBook-Pro:rocksdb criccomini$ g++ --version
+Configured with: --prefix=/Applications/Xcode.app/Contents/Developer/usr --with-gxx-include-dir=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk/usr/include/c++/4.2.1
+Apple LLVM version 5.1 (clang-503.0.40) (based on LLVM 3.4svn)
+Target: x86_64-apple-darwin13.2.0
+Thread model: posix
+Chriss-MacBook-Pro:rocksdb criccomini$ gcc --version
+Configured with: --prefix=/Applications/Xcode.app/Contents/Developer/usr --with-gxx-include-dir=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk/usr/include/c++/4.2.1
+Apple LLVM version 5.1 (clang-503.0.40) (based on LLVM 3.4svn)
+Target: x86_64-apple-darwin13.2.0
+Thread model: posix
+```
+
+I've tested it against OSX 10.9.5, 10.9.3, and 10.8.5 boxes, all with XCode installed.
+
+@criccomini: that's a great news.  Awesome work!
+
+Thanks! Closed off this issue.
+
+@igorcanadi any update on the 3.6 release?
+
+We have released it internally together with 3.6.1. It's been running fine for a while, so I think we're ready to release publicly. I just need to put together some release notes :)
+
+Awesome! Thanks. When 3.6 is released, I'll publish to Maven.
+
+For the record, we're now using the 3.5.1 JNI release for Apache Samza. Seems to be working. :)
+
+Awesome! :)
+
+@criccomini do you publish 3.7.0 ? 
+
+@fyrz nope, will give that a shot tomorrow. If you don't hear back, ping.
+
+@fyrz 3.7.0 has been published. Built with JDK 6.
+
+@criccomini I think future builds will need JDK 7, as there is now Java 7 code in the codebase.
+
+I'm trying to use RocksDb in a Scala project with SBT, but I can't seem to download the native libraries.
+- When compiling rocksdb locally, and adding the osx-jar and .jnilib accordingly, everything works.
+- I remove these libraries, add `,"org.rocksdb" % "rocksdbjni" % "3.8.0" classifier "osx"` to build.sbt, reload, and recompile
+- When I run, I get an error `java.lang.NoClassDefFoundError: Could not initialize class org.rocksdb.Options`.
+
+I believe I'm not downloading the native dependencies correctly. Has anyone had success with this? 
+
+@mhamrah can you try without the classifier? I have successfully used the base artifact (no classifier) on both OS X and linux.
+
+I tried that too, no luck. It's as if the sbt runner can't find the native library within the jar in the classpath. Was hoping something "jumped out". 
+
+@mhamrah The OSX jar from Maven i.e. rocksdbjni-3.8.0-osx.jar contains the native jnilib within it. When you instantiate Rocks, it is meant to extract that to a temporary location and load it into the JVM for you, see the class `org.rocksdb.NativeLibraryLoader`. It sounds like something is not working correctly there, there have been issues on Mac with this in the past that I addressed, but perhaps there is also something else. Perhaps if you could step through what is happening in NativeLibraryLoader with a debugger from SBT then that could help shed some light on the issue.
+
+I went to run this under a debugger but couldn't reproduce the problem. I went back to SBT, and decided to try 
+
+```
+fork := true
+```
+
+which runs the app and tests in a separate jvm. Everything works normally. So my guess is there's some weirdness with how sbt does class loading by default which effects the `NativeLibraryLoader` but as there's a simple fix, no need to investigate further.
+
+Thanks,
+
+Mike
+
+Hey all, when is the next version of RocksDB going to be released? Last release was 3.9.1. Thanks!
+
+We are hoping to release 3.10 later this week. We are working through the last few issues.
+Thanks,
+-Venky
+
+From: Chris Riccomini <notifications@github.com<mailto:notifications@github.com>>
+Reply-To: facebook/rocksdb <reply@reply.github.com<mailto:reply@reply.github.com>>
+Date: Tuesday, March 24, 2015 at 3:42 PM
+To: facebook/rocksdb <rocksdb@noreply.github.com<mailto:rocksdb@noreply.github.com>>
+Subject: Re: [rocksdb] RocksDB JNI Maven publication (#308)
+
+Hey all, when is the next version of RocksDB going to be released? Last release was 3.9.1. Thanks!
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/308#issuecomment-85722408.
+
+Hi, all,  when will the next version of jar be released to maven? thanks!
+
+@criccomini any plans yet ?
+
+Hey guys, I am working on the release, some changes in the Makefile has broken the release process. Should be out sometime next week.
+
+@naveenatceg if you encounter any problems feel free, i`ll would help to get things correct.
+
+Thanks @fyrz. I have released 3.10.0 jars to maven.
+https://oss.sonatype.org/content/repositories/releases/org/rocksdb/rocksdbjni/3.10.0/
+
+Also, the Makefile was broken for the release and did not work 32 bit linux without this [patch](https://reviews.facebook.net/rROCKSDBbcd8a71a28fcee41dffe4de552f3a7bfc733423c). @dhruba It would be really useful if you guys can also run "rocksdbjavastaticrelease" target as a part of the certification process. This will make sure that the release works with all architectures and java build is working! :)
+
+RB here for changes in the Makefile:
+https://reviews.facebook.net/D37263
+
+thanks @naveenatceg @fyrz 
+

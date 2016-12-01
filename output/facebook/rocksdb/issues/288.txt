@@ -1,0 +1,7 @@
+Java needs a pom and for this to be in public maven repo.
+Example how to do this is at: https://github.com/fusesource/rocksdbjni/blob/master/pom.xml
+
+Yes, we do need a pom for RocksDB Java, but we are currently short in resource on the Java part.  It would be great if someone can contribute on this.
+
+Closing this issue as RocksJava can now be published in maven: https://github.com/facebook/rocksdb/issues/308
+

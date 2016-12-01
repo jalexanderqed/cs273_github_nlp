@@ -1,0 +1,12 @@
+In Stats class of DbBenchmark.java, the start time(start_) and finish time(finish_) are captured with "System.nanoTime()" which is in nanoseconds range. But elapsed time with second as unit in "report" function is calculated as " double elapsed = (finish_ - start_) \* 1e-6;" . I think this is erroneous as it should be calculated as " double elapsed = (finish_ - start_) \* 1e-9;"
+
+I guess it got mistakenly copied from db_bench.cc which start and finish time are both defined in microseconds range. 
+
+anyone could help to response. It should be simple fix otherwise the java microbenchmark is incorrect
+
+@feng-tao Yes I think you are correct. It looks like this mistake is repeated in several places in `DbBenchmark.java`. I will prepare a patch...
+
+@feng-tao Hopefully this one nails it - https://github.com/facebook/rocksdb/pull/601. Please do check my conversions...
+
+@feng-tao i close this one (see: https://github.com/facebook/rocksdb/commit/37bbd31856099b9621dda197a0c3226efa2f2d3a). If any problems remain please feel free to reopen.
+

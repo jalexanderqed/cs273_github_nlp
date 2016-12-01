@@ -1,0 +1,58 @@
+==== Test BackupableDBTest.CorruptionsTest
+Created bg thread 0x2b414669c700
+utilities/backupable/backupable_db_test.cc:588: Assertion failure file_manager_->FileExists(backupdir_ + "/meta/2")
+#0   ./backupable_db_test() [0x41b38b] ~basic_string    /usr/include/c++/4.8/bits/basic_string.h:539
+#1   ./backupable_db_test() [0x41bff4] ~_Test_CorruptionsTest   /home/jfan/dev/offlinedb/rocksdb/utilities/backupable/backupable_db_test.cc:522
+#2   ./backupable_db_test() [0x4be6eb] rocksdb::test::RunAllTests() /home/jfan/dev/offlinedb/rocksdb/util/testharness.cc:46
+#3   /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf5) [0x2b41460f6ed5] ??    ??:0
+#4   ./backupable_db_test() [0x4132fe] _start   ??:?
+
+make: **\* [check] Error 1
+
+on Ubuntu 13.10 after resolved dependencies following instructions of INSTALL.md.  Built successfully but unit test failed in above test.
+
+The unit test code seems not self contained.  Failure due to backupdir_+/meta/2 does not exist when assertion checked by unit test code.
+
+Did you run the test on the latest checkout?
+
+Yes.  It was check out two days ago. - Jerry
+
+From: Lei Jin [mailto:notifications@github.com]
+Sent: Thursday, January 30, 2014 12:29 PM
+To: facebook/rocksdb
+Cc: Jerry Fan
+Subject: Re: [rocksdb] BackupableDBTest.CorruptionsTest failed (#66)
+
+Did you run the test on the latest checkout?
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/66#issuecomment-33710998.
+
+Can you rebase and try it again. There was an issue in the test that did not cover a case well. But that got fixed on Tuesday. So I guess you checked out the code before.
+
+Sure.  I will rebase and try it again.
+
+Sent from my iPhone
+
+On Jan 30, 2014, at 10:07 AM, "Lei Jin" <notifications@github.com<mailto:notifications@github.com>> wrote:
+
+Can you rebase and try it again. There was an issue in the test that did not cover a case well. But that got fixed on Tuesday. So I guess you checked out the code before.
+
+—
+Reply to this email directly or view it on GitHubhttps://urldefense.proofpoint.com/v1/url?u=https://github.com/facebook/rocksdb/issues/66%23issuecomment-33714996&k=ZVNjlDMF0FElm4dQtryO4A%3D%3D%0A&r=D2aV7l4utNljq%2BUxgovK2w%3D%3D%0A&m=LfKO%2FLeU0fXUxZdVb8xRqmErgHbQtugqJSiD5UvEvNk%3D%0A&s=698d1de663f784d59350b40dd4016913b883b760547b5647457b14ccdf9f3390.
+
+I will rebase and try it again.
+
+From: Lei Jin [mailto:notifications@github.com]
+Sent: Thursday, January 30, 2014 1:07 PM
+To: facebook/rocksdb
+Cc: Jerry Fan
+Subject: Re: [rocksdb] BackupableDBTest.CorruptionsTest failed (#66)
+
+Can you rebase and try it again. There was an issue in the test that did not cover a case well. But that got fixed on Tuesday. So I guess you checked out the code before.
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/66#issuecomment-33714996.
+
+After rebased, it works now.  Issue closed.
+

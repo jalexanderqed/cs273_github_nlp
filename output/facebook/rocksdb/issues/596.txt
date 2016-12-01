@@ -1,0 +1,61 @@
+Hi guys, 
+
+I need a bit of support. In my application code there is this line
+
+``` c++
+this->db->CompactRange(this->cf_handle, NULL, NULL, true);
+```
+
+Unfortunately the program aborts with a segfault. I already attached gdb to it having the following back-trace
+
+```
+#0  rocksdb::SomeFileOverlapsRange (icmp=..., disjoint_sorted_files=<optimized out>, file_level=..., smallest_user_key=0x0, largest_user_key=0x0) at db/version_set.cc:398
+#1  0x00007ffff5e80d74 in rocksdb::DBImpl::CompactRange (this=0x1088750, column_family=<optimized out>, begin=0x0, end=0x0, reduce_level=true, target_level=-1, target_path_id=0)
+    at db/db_impl.cc:1158
+#2  0x00007ffff5e3cab5 in DataStore::compact (this=0xde2598) at cpp/data_store.cpp:151
+```
+
+I investigated the rocksdb code a bit and the following two parts puzzle me how they interact with 'level_files_brief_'
+
+``` c++
+/* Part one. */
+Status DBImpl::CompactRange(C.....
+    for (int level = 1; level < cfd->NumberLevels(); level++) {
+      if (base->storage_info()->OverlapInLevel(level, begin, end)) {
+
+bool VersionStorageInfo::OverlapInLevel(int level,
+                                        const Slice* smallest_user_key,
+                                        const Slice* largest_user_key) {
+  return SomeFileOverlapsRange(*internal_comparator_, (level > 0),
+                               level_files_brief_[level], smallest_user_key,
+                               largest_user_key);
+}
+```
+
+In my case NumberLevels() is 10.
+
+``` c++
+/* Part two. */
+void VersionStorageInfo::GenerateLevelFilesBrief() {
+  level_files_brief_.resize(num_non_empty_levels_);
+  for (int level = 0; level < num_non_empty_levels_; level++) {
+
+
+```
+
+In my case num_non_empty_levels_ is 2.
+
+From my point of view OverlapInLevel is called with level=0,1,2,3,4,5...9 however level_files_brief_ has only size 2. So there is an 'out of range' access. I'm using 3.9.fb, but the code in question is also in master.
+
+If you need more input from my side feel free to ask. It is easy to reproduce and the environment is under full control.
+
+Thanks for a great bug report!
+
+Wow I'm not sure how we never caught this before. Fix here: https://reviews.facebook.net/D37779
+
+(BTW to test it out, you can do `arc patch D37779` on the repository. You'll need to install arcanist -- https://secure.phabricator.com/book/phabricator/article/arcanist/) 
+
+Hi the patch works in my scenario. Thanks for the quick response.
+
+Glad to help @stephan-hof !
+

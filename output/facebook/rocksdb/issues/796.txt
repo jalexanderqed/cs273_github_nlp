@@ -1,0 +1,9 @@
+Summary: This patch fixes the issues introduced when splitting the posix
+storage backend between environment and IO functions.
+
+Test Plan: make all
+
+Isn't this already done with https://github.com/facebook/rocksdb/commit/47414c6cd6593d8220519d8539a8a76a6c705078
+
+Only the headers path are changed, not the actual header in itself.
+

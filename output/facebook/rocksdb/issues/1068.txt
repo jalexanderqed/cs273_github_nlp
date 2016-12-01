@@ -1,0 +1,6 @@
+Exposing `PurgeOldBackups` for C libraries.
+
+Looks good, thanks!
+
+The appveyor failure is unrelated (it's because your branch doesn't include https://reviews.facebook.net/rROCKSDB8e0e22f76b98c5894c3cfc46e11b65a3187e5213 yet).
+

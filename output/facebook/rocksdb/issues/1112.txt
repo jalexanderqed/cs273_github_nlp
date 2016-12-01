@@ -1,0 +1,13 @@
+Using explicit 64-bit type in conditional in platforms above 32-bits
+
+std::conditional does not appear to short circuit before evaluating the third template arg which results in an error because the constant value does not fit in a 32-bit size_t.  This is a warning in a linux environment but an error in Mac OSX
+
+The solution is to just make the third argument type explicitly 64-bit.  The entire expression then either becomes a 32-bit constant or a 64-bit constant holding a 32-bit value, but in either case is assignable to a 32-bit size_t.
+
+This works correctly in the following cases:
+32-bit: a 32-bit value will be assigned to a 32-bit size_t.
+64-bit: size_t and uint64_t are the same size so the assignment is fine.
+>64-bit: size_t is larger than uint64_t so the assignment is fine.
+
+Thanks @warrenfalk !
+

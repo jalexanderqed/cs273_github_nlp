@@ -1,0 +1,12 @@
+The error was:
+
+util/logging.cc: In function 'int rocksdb::AppendHumanMicros(uint64_t, char*, int)':
+error: util/logging.cc:41:39: integer overflow in expression [-Werror=overflow]
+} else if (micros < 1000000l \* 60 \* 60) {
+^
+error: util/logging.cc:41:39: comparison between signed and unsigned integer expressions [-Werror=sign-compare]
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+

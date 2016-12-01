@@ -1,0 +1,287 @@
+Hi
+
+I use RocksDB in my NoSQL to store data, but meet a strange problem when I try to optimize get performance. 
+
+First, I insert 200000 4KB data into RocksDB.
+
+The Get performance for RocksDB is very high in my benchmark. The code using Go like below:
+
+```
+var tt time.Duration = 0
+n := 200000
+for i := 0; i < n; i++ {
+    t1 := time.Now()
+    db.Get([]byte(fmt.Sprintf("%d", i+1)))
+    tt += time.Now().Sub(t1)
+}
+
+fmt.Printf("gt:%s\n", tt.String())
+```
+
+For 200000 Get, it will cost about 2.78s (70K RPS) in my node, this is very fast. But when I benchmark it with network, the performance reduces too much. The service flow may like this:
+
+```
+var tt time.Duration = 0
+for {
+    //read key from socket
+
+    t1 := time.Now()
+    v := db.Get(key)
+    tt += time.Now().Sub(t1)
+
+    //write value to socket
+}
+//println total Get time after socket closed
+fmt.Printf("gt:%s\n", tt.String())
+
+//in another shell, I do the benchmark, using 1 client and 200000 request number, like this:
+ledis-benchmark -c=1 -n=200000 -t=get 
+```
+
+I hope the total get time may be same as the first, but to my surprise, it increases 30% time, about 3.6s.
+
+Maybe the network handling influences the get performance, but I don't know. 
+
+Then I do another benchmark, sleep little time after every get, like this:
+
+```
+var tt time.Duration = 0
+n := 200000
+for i := 0; i < n; i++ {
+    t1 := time.Now()
+    db.Get([]byte(fmt.Sprintf("%d", i+1)))
+    tt += time.Now().Sub(t1)
+    time.Sleep(10 * time.Microsecond)
+}
+
+fmt.Printf("gt:%s\n", tt.String())
+```
+
+The total time increases too, about 11% (3.0s). 
+
+This result confuses me very much, and I let @presbrey and @aredlich help me do the same benchmark and they get the same result, the performance degrades too much even in @aredlich machine.
+
+My rocksdb configuration:
+
+```
+background_threads = 4
+high_priority_background_threads = 1
+max_background_compactions = 3
+max_background_flushes = 1
+block_size = 64 KB
+write_buffer_size = 64 MB
+max_write_buffer_num = 2
+MaxBytesForLevelBase = 512 MB
+target_file_size_base = 64 MB
+cache_size = 512 MB
+enable_statistics = true
+stats_dump_period_sec = 5
+level0_file_num_compaction_trigger = 8
+max_bytes_for_level_multiplier = 8
+```
+
+RocksDB: 3.5 version
+System: Linux 
+CPU: 4x i5 3.10GHz
+Mem: 16GB
+Disk: HDD 
+
+Anyone meets this problem? Thank you very much. 
+
+Hm, this is interesting problem. Nothing comes as an obvious explanation on the top of my head.
+
+Can you send us RocksDB's statistics for different scenarios? That might give us additional information needed to figure this out.
+
+cc @ljinfb could this be because of more superversion changes?
+
+Hi @igorcanadi , I print the statistics after every 200000 operations. 
+
+```
+** Compaction Stats [default] **
+Level   Files   Size(MB) Score Read(GB)  Rn(GB) Rnp1(GB) Write(GB) Wnew(GB) RW-Amp W-Amp Rd(MB/s) Wr(MB/s)  Rn(cnt) Rnp1(cnt) Wnp1(cnt) Wnew(cnt)  Comp(sec) Comp(cnt) Avg(sec) Stall(sec) Stall(cnt) Avg(ms) RecordIn RecordDrop
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  L0    12/8        746   0.5      0.0     0.0      0.0       0.7      0.7    0.0   0.0      0.0     44.6        0         0         0         0         17        12    1.395       0.00          6    0.00       0          0
+ Sum    12/8        746   0.0      0.0     0.0      0.0       0.7      0.7    1.0   1.0      0.0     44.6        0         0         0         0         17        12    1.395       0.00          6    0.00       0          0
+ Int     0/0          0   0.0      0.0     0.0      0.0       0.2      0.2    1.0   1.0      0.0     31.7        0         0         0         0          8         4    1.959       0.00          2    0.00       0          0
+Flush(GB): accumulative 0.729, interval 0.243
+Stalls(secs): 0.000 level0_slowdown, 0.000 level0_numfiles, 0.000 memtable_compaction, 0.000 leveln_slowdown_soft, 0.000 leveln_slowdown_hard
+Stalls(count): 0 level0_slowdown, 0 level0_numfiles, 6 memtable_compaction, 0 leveln_slowdown_soft, 0 leveln_slowdown_hard
+
+** DB Stats **
+Uptime(secs): 29.2 total, 10.3 interval
+Cumulative writes: 199999 writes, 199999 batches, 1.0 writes per batch, 0.77 GB user ingest
+Cumulative WAL: 199999 writes, 199999 syncs, 1.00 writes per sync, 0.77 GB written
+Interval writes: 73392 writes, 73392 batches, 1.0 writes per batch, 288.4 MB user ingest
+Interval WAL: 73392 writes, 73393 syncs, 1.00 writes per sync, 0.28 MB written
+
+set 200000 4k time:15.53708323s
+---------------------------------------------------------------------------
+
+** Compaction Stats [default] **
+Level   Files   Size(MB) Score Read(GB)  Rn(GB) Rnp1(GB) Write(GB) Wnew(GB) RW-Amp W-Amp Rd(MB/s) Wr(MB/s)  Rn(cnt) Rnp1(cnt) Wnp1(cnt) Wnew(cnt)  Comp(sec) Comp(cnt) Avg(sec) Stall(sec) Stall(cnt) Avg(ms) RecordIn RecordDrop
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  L0    12/8        746   0.5      0.0     0.0      0.0       0.7      0.7    0.0   0.0      0.0     44.6        0         0         0         0         17        12    1.395       0.00          6    0.00       0          0
+ Sum    12/8        746   0.0      0.0     0.0      0.0       0.7      0.7    1.0   1.0      0.0     44.6        0         0         0         0         17        12    1.395       0.00          6    0.00       0          0
+ Int     0/0          0   0.0      0.0     0.0      0.0       0.0      0.0    0.0   0.0      0.0      0.0        0         0         0         0          0         0    0.000       0.00          0    0.00       0          0
+Flush(GB): accumulative 0.729, interval 0.000
+Stalls(secs): 0.000 level0_slowdown, 0.000 level0_numfiles, 0.000 memtable_compaction, 0.000 leveln_slowdown_soft, 0.000 leveln_slowdown_hard
+Stalls(count): 0 level0_slowdown, 0 level0_numfiles, 6 memtable_compaction, 0 leveln_slowdown_soft, 0 leveln_slowdown_hard
+
+** DB Stats **
+Uptime(secs): 31.5 total, 2.3 interval
+Cumulative writes: 200000 writes, 200000 batches, 1.0 writes per batch, 0.77 GB user ingest
+Cumulative WAL: 200000 writes, 200000 syncs, 1.00 writes per sync, 0.77 GB written
+Interval writes: 1 writes, 1 batches, 0.5 writes per batch, 0.0 MB user ingest
+Interval WAL: 1 writes, 1 syncs, 0.50 writes per sync, 0.00 MB written
+
+get 200000 4k time:2.195488807s
+---------------------------------------------------------------------------
+
+
+** Compaction Stats [default] **
+Level   Files   Size(MB) Score Read(GB)  Rn(GB) Rnp1(GB) Write(GB) Wnew(GB) RW-Amp W-Amp Rd(MB/s) Wr(MB/s)  Rn(cnt) Rnp1(cnt) Wnp1(cnt) Wnew(cnt)  Comp(sec) Comp(cnt) Avg(sec) Stall(sec) Stall(cnt) Avg(ms) RecordIn RecordDrop
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  L0     4/0        249   0.5      0.0     0.0      0.0       0.7      0.7    0.0   0.0      0.0     44.6        0         0         0         0         17        12    1.395       0.00          6    0.00       0          0
+  L1     8/0        498   1.0      0.5     0.5      0.0       0.5      0.5    2.0   1.0     38.2     38.2        8         0         8         8         13         1   13.021       0.00          0    0.00  126606          0
+ Sum    12/0        746   0.0      0.5     0.5      0.0       1.2      1.2    2.3   1.7     16.7     41.8        8         0         8         8         30        13    2.290       0.00          6    0.00  126606          0
+ Int     0/0          0   0.0      0.5     0.5      0.0       0.5      0.5 1043653302.0 521820943.0     38.2     38.2        8         0         8         8         13         1   13.021       0.00          0    0.00  126606          0
+Flush(GB): accumulative 0.729, interval 0.000
+Stalls(secs): 0.000 level0_slowdown, 0.000 level0_numfiles, 0.000 memtable_compaction, 0.000 leveln_slowdown_soft, 0.000 leveln_slowdown_hard
+Stalls(count): 0 level0_slowdown, 0 level0_numfiles, 6 memtable_compaction, 0 leveln_slowdown_soft, 0 leveln_slowdown_hard
+
+** DB Stats **
+Uptime(secs): 36.1 total, 4.7 interval
+Cumulative writes: 200000 writes, 200000 batches, 1.0 writes per batch, 0.77 GB user ingest
+Cumulative WAL: 200000 writes, 200000 syncs, 1.00 writes per sync, 0.77 GB written
+Interval writes: 0 writes, 0 batches, 0.0 writes per batch, 0.0 MB user ingest
+Interval WAL: 0 writes, 0 syncs, 0.00 writes per sync, 0.00 MB written
+
+get 200000 4k time with 1 micro second sleep: 2.581354441s
+---------------------------------------------------------------------------
+
+
+** Compaction Stats [default] **
+Level   Files   Size(MB) Score Read(GB)  Rn(GB) Rnp1(GB) Write(GB) Wnew(GB) RW-Amp W-Amp Rd(MB/s) Wr(MB/s)  Rn(cnt) Rnp1(cnt) Wnp1(cnt) Wnew(cnt)  Comp(sec) Comp(cnt) Avg(sec) Stall(sec) Stall(cnt) Avg(ms) RecordIn RecordDrop
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  L0     4/0        249   0.5      0.0     0.0      0.0       0.7      0.7    0.0   0.0      0.0     44.6        0         0         0         0         17        12    1.395       0.00          6    0.00       0          0
+  L1     8/0        498   1.0      0.5     0.5      0.0       0.5      0.5    2.0   1.0     38.2     38.2        8         0         8         8         13         1   13.021       0.00          0    0.00  126606          0
+ Sum    12/0        746   0.0      0.5     0.5      0.0       1.2      1.2    2.3   1.7     16.7     41.8        8         0         8         8         30        13    2.290       0.00          6    0.00  126606          0
+ Int     0/0          0   0.0      0.0     0.0      0.0       0.0      0.0    0.0   0.0      0.0      0.0        0         0         0         0          0         0    0.000       0.00          0    0.00       0          0
+Flush(GB): accumulative 0.729, interval 0.000
+Stalls(secs): 0.000 level0_slowdown, 0.000 level0_numfiles, 0.000 memtable_compaction, 0.000 leveln_slowdown_soft, 0.000 leveln_slowdown_hard
+Stalls(count): 0 level0_slowdown, 0 level0_numfiles, 6 memtable_compaction, 0 leveln_slowdown_soft, 0 leveln_slowdown_hard
+
+** DB Stats **
+Uptime(secs): 52.1 total, 16.0 interval
+Cumulative writes: 200000 writes, 200000 batches, 1.0 writes per batch, 0.77 GB user ingest
+Cumulative WAL: 200000 writes, 200000 syncs, 1.00 writes per sync, 0.77 GB written
+Interval writes: 0 writes, 0 batches, 0.0 writes per batch, 0.0 MB user ingest
+Interval WAL: 0 writes, 0 syncs, 0.00 writes per sync, 0.00 MB written
+
+get 200000 4k time with network: 3.088103937s
+---------------------------------------------------------------------------
+
+
+** Compaction Stats [default] **
+Level   Files   Size(MB) Score Read(GB)  Rn(GB) Rnp1(GB) Write(GB) Wnew(GB) RW-Amp W-Amp Rd(MB/s) Wr(MB/s)  Rn(cnt) Rnp1(cnt) Wnp1(cnt) Wnew(cnt)  Comp(sec) Comp(cnt) Avg(sec) Stall(sec) Stall(cnt) Avg(ms) RecordIn RecordDrop
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  L0     4/0        249   0.5      0.0     0.0      0.0       0.7      0.7    0.0   0.0      0.0     44.6        0         0         0         0         17        12    1.395       0.00          6    0.00       0          0
+  L1     8/0        498   1.0      0.5     0.5      0.0       0.5      0.5    2.0   1.0     38.2     38.2        8         0         8         8         13         1   13.021       0.00          0    0.00  126606          0
+ Sum    12/0        746   0.0      0.5     0.5      0.0       1.2      1.2    2.3   1.7     16.7     41.8        8         0         8         8         30        13    2.290       0.00          6    0.00  126606          0
+ Int     0/0          0   0.0      0.0     0.0      0.0       0.0      0.0    0.0   0.0      0.0      0.0        0         0         0         0          0         0    0.000       0.00          0    0.00       0          0
+Flush(GB): accumulative 0.729, interval 0.000
+Stalls(secs): 0.000 level0_slowdown, 0.000 level0_numfiles, 0.000 memtable_compaction, 0.000 leveln_slowdown_soft, 0.000 leveln_slowdown_hard
+Stalls(count): 0 level0_slowdown, 0 level0_numfiles, 6 memtable_compaction, 0 leveln_slowdown_soft, 0 leveln_slowdown_hard
+
+** DB Stats **
+Uptime(secs): 54.4 total, 2.2 interval
+Cumulative writes: 200000 writes, 200000 batches, 1.0 writes per batch, 0.77 GB user ingest
+Cumulative WAL: 200000 writes, 200000 syncs, 1.00 writes per sync, 0.77 GB written
+Interval writes: 0 writes, 0 batches, 0.0 writes per batch, 0.0 MB user ingest
+Interval WAL: 0 writes, 0 syncs, 0.00 writes per sync, 0.00 MB written
+
+get 200000 4k time: 2.164889177s
+---------------------------------------------------------------------------
+
+** Compaction Stats [default] **
+Level   Files   Size(MB) Score Read(GB)  Rn(GB) Rnp1(GB) Write(GB) Wnew(GB) RW-Amp W-Amp Rd(MB/s) Wr(MB/s)  Rn(cnt) Rnp1(cnt) Wnp1(cnt) Wnew(cnt)  Comp(sec) Comp(cnt) Avg(sec) Stall(sec) Stall(cnt) Avg(ms) RecordIn RecordDrop
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  L0     4/0        249   0.5      0.0     0.0      0.0       0.7      0.7    0.0   0.0      0.0     44.6        0         0         0         0         17        12    1.395       0.00          6    0.00       0          0
+  L1     8/0        498   1.0      0.5     0.5      0.0       0.5      0.5    2.0   1.0     38.2     38.2        8         0         8         8         13         1   13.021       0.00          0    0.00  126606          0
+ Sum    12/0        746   0.0      0.5     0.5      0.0       1.2      1.2    2.3   1.7     16.7     41.8        8         0         8         8         30        13    2.290       0.00          6    0.00  126606          0
+ Int     0/0          0   0.0      0.0     0.0      0.0       0.0      0.0    0.0   0.0      0.0      0.0        0         0         0         0          0         0    0.000       0.00          0    0.00       0          0
+Flush(GB): accumulative 0.729, interval 0.000
+Stalls(secs): 0.000 level0_slowdown, 0.000 level0_numfiles, 0.000 memtable_compaction, 0.000 leveln_slowdown_soft, 0.000 leveln_slowdown_hard
+Stalls(count): 0 level0_slowdown, 0 level0_numfiles, 6 memtable_compaction, 0 leveln_slowdown_soft, 0 leveln_slowdown_hard
+
+** DB Stats **
+Uptime(secs): 59.1 total, 4.7 interval
+Cumulative writes: 200000 writes, 200000 batches, 1.0 writes per batch, 0.77 GB user ingest
+Cumulative WAL: 200000 writes, 200000 syncs, 1.00 writes per sync, 0.77 GB written
+Interval writes: 0 writes, 0 batches, 0.0 writes per batch, 0.0 MB user ingest
+Interval WAL: 0 writes, 0 syncs, 0.00 writes per sync, 0.00 MB written
+
+get 200000 4k time with 1 micro second sleep: 2.66718764s
+---------------------------------------------------------------------------
+```
+
+I suspect that there is an external factor that is causing the degradation. Can you pl take "vmstat 2" output when the test is running and see if CPU is maxed out for the second test case?
+
+Thanks @dhruba, I use vmstat to check again.
+
+For network handling + get, like this:
+
+```
+ procs -----------memory---------- ---swap-- -----io---- --system-- -----cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+ 1  0      0 2236072  53104 4013556    0    0     0     0 19925 257065 16 16 68  0  0   
+ 2  0      0 2236072  53112 4013552    0    0     0    32 19991 258410 16 16 67  1  0   
+ 1  0      0 2236196  53112 4013560    0    0     0     0 20091 259819 16 16 69  0  0   
+ 1  0      0 2236196  53112 4013560    0    0     0     0 20033 257613 16 15 68  0  0   
+ 1  0      0 2236692  53120 4013560    0    0     0    12 20104 258239 17 16 67  1  0   
+ 2  0      0 2235824  53120 4013560    0    0     0     0 20230 259694 15 16 69  0  0   
+ 3  0      0 2236320  53120 4013560    0    0     0     2 20425 261998 16 16 68  0  0       
+```
+
+for sleep + get, like this:
+
+```
+1  0      0 2222412  53136 4013572    0    0     0     0 6509 400260 18 11 71  0  0 
+ 2  0      0 2218320  53144 4013572    0    0     0     6 3218 427659 19 11 70  1  0    
+ 2  0      0 2218196  53144 4013576    0    0     0     0 3865 420076 19 11 71  0  0    
+ 1  0      0 2218196  53144 4013576    0    0     0    44 2969 419838 18 11 71  0  0    
+ 1  0      0 2218196  53152 4013576    0    0     0     8 3187 423357 19 11 70  0  0    
+ 2  0      0 2218320  53152 4013576    0    0     0     0 10431 563417 18 13 69  0  0   
+```
+
+for only get, like this:
+
+```
+ 1  0      0 2224132  53128 4013564    0    0     0     2 1320 2386 23  2 67  7  0  
+ 1  0      0 2222280  53128 4013564    0    0     0     0 1227 2873 24  2 75  0  0  
+ 1  0      0 2222288  53136 4013572    0    0     0    12 1995 53723 24  2 74  0  0 
+```
+
+You can see that network handling and sleep cause high cpu context switch and interrupt, this may hit the get performance. 
+
+But if this is true, another problem is when using rocksdb in a web service for storage, the network issue is unavoidable, how to optimize?. 
+
+Thank you.  
+
+I am confused too. I think it has something to do with the Go-language implementation or the networking code, both of which I am not too familiar with. If you get to the bottom of that problem, I am curious to know what caused it.
+
+BTW, the ledisdb is good-stuff!
+
+Thanks @dhruba 
+
+At the beginning, I suspected Go causes this, so I write a pure c++ test https://gist.github.com/siddontang/4008663f5776bc6ffc58 and find the total get time with sleep also increases,  but I am still  not sure whether Go can affect. 
+
+This problem troubles me for some time, but I have no idea too. :-)  
+
+Hey @siddontang. I just quickly chatted with a coworker and he suggested that this slowdown might be due to instruction cache misses. With bunch of sleeps, your instruction cache might be cleared and needed to be reloaded when the process wakes up. You might be able to verify this theory using perf events -- https://perf.wiki.kernel.org/index.php/Tutorial
+
+Thanks @igorcanadi , I will do more benchmark and test using perf and other tools. :-) 
+Hope I can find some useful tips for this problem at the end of this week.  
+
+:cry:  no progress, close. 
+

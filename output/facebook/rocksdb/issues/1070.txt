@@ -1,0 +1,177 @@
+Hello,
+
+There is already the matter of the environment not being destroyed on termination of the program, we solved that with an `Env::UnsafeDeallocate()` function that we call right before exiting the application.
+
+But there is a tougher problem with the usage tracking of RocksDB (thread_local.cc).
+
+The problem is that it's extremly POSIXey on one side and leaks memory on exit on the other side. I'm aware that the leaked memory isn't problematic in itself, except that it adds noise when you are tracking memory usage in your application.
+
+Currently in RocksDB we have [linker directives](https://github.com/facebook/rocksdb/blob/master/util/thread_local.cc#L83) to place hooks on thread termination, but there are two problems:
+- The main thread exit isn't captured
+- If the code is within a library, the linker directives will be ignored because it's not invoked in the first place. The user has to add the /INCLUDE manually when linking the library to an exe or a dll (I tested this on Visual Studio 2015 update 2, I might have done something wrong)
+
+I think the best would be to have a facade for threads that allows the addition of an "on_exit" functor, not unlike Boost.Thread. That would also solve a lot of issues regarding deletion order with the StaticMeta object.
+
+What do you think?
+
+@edouarda The first bullet is intentional but you can change it, not an issue. Just add a case on Library unloading.
+Please, elaborate on the second bullet. I am not seeing any issues. Linker directives are not ignored. Are you saying that unit tests that are linked to the static library (or DLL) are not firing the cleanup code?
+
+The problem I have is that if I compile rocksdb into a library and then link the library, the pragma are ignored. I have this problem with VS 2015 Update 2.
+
+The logic is that the linker directives are ignored when you compile the library and the linker doesn't know you have these pragmas inside the cpp of your library.
+
+The other problem is that other libraries are using similar mechanisms and it can conflict with your hook. On the other hand a facade is as simple as 
+
+``` cpp
+template <typename F, typename OnExit>
+std::thread spawn_thread(F f, OnExit on_exit)
+{
+   return std::thread([](void){ f(); on_exit(); });
+}
+```
+
+(granted you'd probably want to pass a pointer or something)
+
+I realize it can have a big impact on the rest of the code, it's just an idea.
+
+@edouarda I wil take a look at it
+
+Thanks, as a note we're using CMake it might be a CMake related problem.
+
+@edouarda I am seeing this both in Debug and Release executables built with Jemalloc (should not matter). VS 15 Update 2
+
+c:\dev\RocksDb\repo.RocksDB\build\Release>dumpbin /TLS rocksdb_je.dll
+Microsoft (R) COFF/PE Dumper Version 14.00.23918.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+Dump of file rocksdb_je.dll
+
+File Type: DLL
+
+  Section contains the following TLS directory:
+
+```
+000000018045D000 Start of raw data
+000000018045D1E8 End of raw data
+0000000180430A2C Address of index
+0000000180317838 Address of callbacks
+               0 Size of zero fill
+        00500000 Characteristics
+                   16 byte align
+
+TLS Callbacks
+
+      Address
+      ----------------
+      00000001801F4B80  ?WinOnThreadExit@wintlscleanup@rocksdb@@YAXPEAXK0@Z (void __cdecl rocksdb::wintlscleanup::WinOnThreadExit(void *,unsigned long,void *))
+      000000018028B280
+      0000000000000000
+```
+
+  Summary
+
+```
+   14000 .data
+    1000 .gfids
+   2A000 .pdata
+  10A000 .rdata
+    4000 .reloc
+    1000 .rsrc
+  314000 .text
+    1000 .tls
+```
+
+c:\dev\RocksDb\repo.RocksDB\build\Release>dumpbin /TLS db_test_je.exe
+Microsoft (R) COFF/PE Dumper Version 14.00.23918.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+Dump of file db_test_je.exe
+LINK : fatal error LNK1181: cannot open input file 'db_test_je.exe'
+
+c:\dev\RocksDb\repo.RocksDB\build\Release>
+c:\dev\RocksDb\repo.RocksDB\build\Release>
+c:\dev\RocksDb\repo.RocksDB\build\Release>dumpbin /TLS db_bench_je.exe
+Microsoft (R) COFF/PE Dumper Version 14.00.23918.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+Dump of file db_bench_je.exe
+
+File Type: EXECUTABLE IMAGE
+
+  Section contains the following TLS directory:
+
+```
+000000014033D000 Start of raw data
+000000014033D1E4 End of raw data
+000000014031C914 Address of index
+000000014024F0C0 Address of callbacks
+               0 Size of zero fill
+        00500000 Characteristics
+                   16 byte align
+
+TLS Callbacks
+
+      Address
+      ----------------
+      00000001401A5F10  ?WinOnThreadExit@wintlscleanup@rocksdb@@YAXPEAXK0@Z (void __cdecl rocksdb::wintlscleanup::WinOnThreadExit(void *,unsigned long,void *))
+      0000000140204250
+      0000000000000000
+```
+
+  Summary
+
+```
+    F000 .data
+    1000 .gfids
+   1F000 .pdata
+   C2000 .rdata
+    3000 .reloc
+    1000 .rsrc
+  24C000 .text
+    1000 .tls
+```
+
+c:\dev\RocksDb\repo.RocksDB\build\Release>
+
+Yes but we don't build RocksDB as a dll, we build it as a lib.
+
+@edouarda We are using CMake the same CMake build as on GitHub, no changes.
+The conflict that you are referring to should not be a problem otherwise `__declspec(thread)` would not work properly. The linker takes care of it.
+The reason why this solution was preferred it avoids any changes in the code so they are not necessary.
+The fact that you are building RocksDB as a lib is fine too. All of the unit tests (except c_test) and db_bench are linked to the static version of the rocksdb and as you can see above the executables retain the TLS callback entry inherited from the library.
+
+Did you put a breakpoint on the callback and see if it was called? On my case it didn't work. What would have been the cause?
+
+To fix the problem we added a /INCLUDE directive in the executable linking with rocksdb.
+
+@edouarda  I did not do it recently. There might be an issue so that's why I wanted to know the manifestation. The linker directives are there.
+
+Yes I didn't check that they were there I just had the symptom that the breakpoint wasn't triggered.
+
+@edouarda Just tried that with thread_local_test which is linked to the static library build with CMake. The callback is being called.
+![callback](https://cloud.githubusercontent.com/assets/11303988/14443387/c395c4de-fff3-11e5-8351-d96b957d5c1c.PNG)
+
+@edouarda You can still do whatever you intended. For example, you can create your own env with your own thread pool and your own way to start threads and then use it with your database and pass cleanup there.
+The above callback mechanism works for a specific thread local storage class and does not do anything else.
+
+My point was it would be better to have a mechanism that works on all platforms the same way rather than a variation per platform, I know the current mechanism "works" (although here for some unknown reason it doesn't, I guess we must have something interfering with it, anyway we found a work around).
+
+I will submit an issue for cleaning up on exit the main thread, thanks for the answers and looking into this.
+
+I get your point and I do agree. It's just there is not such a mechanism on the language level and the OS facilities differ.
+
+Your approach though seem to require a similar code. on_exit() routing must be shared among the all the threads and among the all the thread local storage indexes so every thread now and in there future would attempt to clean up all the possible thread local storage that are operated on now and in future.
+
+Anyone adding a new TLS index must add it to that cleanup routing and not to forget. For that same reason, on_exit() argument should not be exposed to the public because anyone could supply his own routine that does cleanup TLS known at that time or even a routine that does nothing.
+
+The current approach requires nothing of the kind. The cleanup is automatic as long as you simply use the class that was provided for that very purpose.
+
+As a side note, TLS does not make friends with async programming because every request during processing is potentially handled by a number of threads from a thread-pool during its lifetime.
+
+I will open an issue for the unloading, I will try to reproduce the problem we had with the breakpoint. I submit it is related to linking options. NB: I was in debug mode. Maybe is it related?
+
+Your comment on the on_exit is spot on, but you don't need to expose it in the higher level library. The only purpose is to have a portable hook
+
+We're working on a release on our side, but when it's done I will tinker a bit and see if I can come up with something nice.
+

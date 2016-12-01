@@ -1,0 +1,20 @@
+Maven repository 3.9.1 jar was built with version 52.0 java class file format (jdk8) while 3.9.0 uses version 51.0. I understand java 7 will be eol'd soon, but it will help users if target build format remains java 7 for the time being.
+
+http://mvnrepository.com/artifact/org.rocksdb/rocksdbjni
+
+@jteagles thx for reporting
+
+Not all artifacts in maven are build with Java-8 so at least the linux jars seem to be compiled correctly. But you are right and there is a inconsistency. It seems as the `javac` compiler used on the OSX platform was a `Java-8` binary.
+
+@criccomini can you look into this ? Currently we are building with Java-7 so class files shall have a major version `51`
+
+@fpiccinini , I also met this problem.
+
+My environment is JDK 6, I am using 3.10.1 from Maven repository . it report "org/rocksdb/RocksDB : Unsupported major.minor version 51.0"
+
+I am going to build one jar under JDK6 by myself. But I wonder whether it works fine or not under JDK 6?
+
+@longdafeng compiling RocksJava will not be possible with standard JDK 6 tooling, because we are using diamond operator syntax and other Java 7 related stuff.
+
+Latest RocksDB Jar's on Maven Central are built with JDK 7.
+

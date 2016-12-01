@@ -1,0 +1,34 @@
+On a freshly cloned copy of rocksdb, on a Mac:
+
+==15626== Memcheck, a memory error detector
+==15626== Copyright (C) 2002-2015, and GNU GPL'd, by Julian Seward et al.
+==15626== Using Valgrind-3.11.0 and LibVEX; rerun with -h for copyright info
+==15626== Command: ./db_test
+==15626== 
+--15626-- run: /usr/bin/dsymutil "./db_test"
+[==========] Running 251 tests from 5 test cases.
+[----------] Global test environment set-up.
+[----------] 175 tests from DBTest
+[ RUN      ] DBTest.MockEnvTest
+--15626-- UNKNOWN mach_msg unhandled MACH_SEND_TRAILER option
+--15626-- UNKNOWN mach_msg unhandled MACH_SEND_TRAILER option (repeated 2 times)
+--15626-- UNKNOWN mach_msg unhandled MACH_SEND_TRAILER option (repeated 4 times)
+[       OK ] DBTest.MockEnvTest (1257 ms)
+[ RUN      ] DBTest.MemEnvTest
+[       OK ] DBTest.MemEnvTest (150 ms)
+[ RUN      ] DBTest.WriteEmptyBatch
+==15626== Conditional jump or move depends on uninitialised value(s)
+==15626==    at 0x1002C152F: rocksdb::BlockBasedTableBuilder::BlockBasedTableBuilder(rocksdb::ImmutableCFOptions const&, rocksdb::BlockBasedTableOptions const&, rocksdb::InternalKeyComparator const&, std::__1::vector<std::__1::unique_ptr<rocksdb::IntTblPropCollectorFactory, std::__1::default_delete<rocksdb::IntTblPropCollectorFactory> >, std::__1::allocator<std::__1::unique_ptr<rocksdb::IntTblPropCollectorFactory, std::__1::default_delete<rocksdb::IntTblPropCollectorFactory> > > > const_, unsigned int, rocksdb::WritableFileWriter_, rocksdb::CompressionType, rocksdb::CompressionOptions const&, bool) (block_based_table_builder.cc:525)
+==15626==    by 0x1002C16ED: rocksdb::BlockBasedTableBuilder::BlockBasedTableBuilder(rocksdb::ImmutableCFOptions const&, rocksdb::BlockBasedTableOptions const&, rocksdb::InternalKeyComparator const&, std::__1::vector<std::__1::unique_ptr<rocksdb::IntTblPropCollectorFactory, std::__1::default_delete<rocksdb::IntTblPropCollectorFactory> >, std::__1::allocator<std::__1::unique_ptr<rocksdb::IntTblPropCollectorFactory, std::__1::default_delete<rocksdb::IntTblPropCollectorFactory> > > > const_, unsigned int, rocksdb::WritableFileWriter_, rocksdb::CompressionType, rocksdb::CompressionOptions const&, bool) (block_based_table_builder.cc:523)
+==15626==    by 0x1002C77A0: rocksdb::BlockBasedTableFactory::NewTableBuilder(rocksdb::TableBuilderOptions const&, unsigned int, rocksdb::WritableFileWriter_) const (block_based_table_factory.cc:73)
+==15626==    by 0x1001A13E0: rocksdb::BuildTable(std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > const&, rocksdb::Env_, rocksdb::ImmutableCFOptions const&, rocksdb::EnvOptions const&, rocksdb::TableCache_, rocksdb::InternalIterator_, rocksdb::FileMetaData_, rocksdb::InternalKeyComparator const&, std::__1::vector<std::__1::unique_ptr<rocksdb::IntTblPropCollectorFactory, std::__1::default_delete<rocksdb::IntTblPropCollectorFactory> >, std::__1::allocator<std::__1::unique_ptr<rocksdb::IntTblPropCollectorFactory, std::__1::default_delete<rocksdb::IntTblPropCollectorFactory> > > > const_, unsigned int, std::__1::vector<unsigned long long, std::__1::allocator<unsigned long long> >, unsigned long long, rocksdb::CompressionType, rocksdb::CompressionOptions const&, bool, rocksdb::InternalStats_, rocksdb::Env::IOPriority, rocksdb::TableProperties_) (builder.cc:47)
+==15626==    by 0x1001F7BBD: rocksdb::DBImpl::WriteLevel0TableForRecovery(int, rocksdb::ColumnFamilyData_, rocksdb::MemTable_, rocksdb::VersionEdit_) (db_impl.cc:1414)
+==15626==    by 0x1001F713F: rocksdb::DBImpl::RecoverLogFiles(std::__1::vector<unsigned long long, std::__1::allocator<unsigned long long> > const&, unsigned long long_, bool) (db_impl.cc:1347)
+==15626==    by 0x1001F5C2E: rocksdb::DBImpl::Recover(std::__1::vector<rocksdb::ColumnFamilyDescriptor, std::__1::allocator<rocksdb::ColumnFamilyDescriptor> > const&, bool, bool) (db_impl.cc:1036)
+==15626==    by 0x10021021C: rocksdb::DB::Open(rocksdb::DBOptions const&, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > const&, std::__1::vector<rocksdb::ColumnFamilyDescriptor, std::__1::allocator<rocksdb::ColumnFamilyDescriptor> > const&, std::__1::vector<rocksdb::ColumnFamilyHandle*, std::__1::allocator<rocksdb::ColumnFamilyHandle*> >_, rocksdb::DB__) (db_impl.cc:5387)
+==15626==    by 0x100190BEB: rocksdb::DBTestBase::TryReopenWithColumnFamilies(std::__1::vector<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >, std::__1::allocator<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > > > const&, std::__1::vector<rocksdb::Options, std::__1::allocator<rocksdb::Options> > const&) (db_test_util.cc:428)
+==15626==    by 0x1001910D2: rocksdb::DBTestBase::TryReopenWithColumnFamilies(std::__1::vector<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >, std::__1::allocator<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > > > const&, rocksdb::Options const&) (db_test_util.cc:435)
+==15626==    by 0x1000056BA: rocksdb::DBTest_WriteEmptyBatch_Test::TestBody() (db_test.cc:245)
+==15626==    by 0x10041BDCB: void testing::internal::HandleExceptionsInMethodIfSupported<testing::Test, void>(testing::Test_, void (testing::Test::_)(), char const_) (gtest-all.cc:3822)
+==15626== 
+

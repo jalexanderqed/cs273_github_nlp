@@ -1,0 +1,38 @@
+I have a custom merge operator, which I use to delete specific things from the value. If the part of the value I intend to delete, is the only thing in the value, I will end up with an empty value after applying my merge operator.
+
+These empty values are a pain as subsequent bloom filter (KeyMayExist) queries will succeed for the key, even though the value is empty. I am interested in deleting any keys that end up with an empty value when apply my RMW merge operator. Any ideas on how I could do this from within my merge operator implementation such that overall the operation remains atomic? (I could do a subsequent Get() after Merge() and then issue a subsequent Delete() if the value was found to be empty, but this would not be failure atomic).
+
+@atishbits can you use compaction filter to drop them? I can't think of a better way of doing it.
+
+@siying I am not sure of how to use compaction filters for this.
+
+Looking at rocksdb/db/db_test.cc, I found the following to be relevant to extend the default filter:
+
+```
+class ChangeFilter : public CompactionFilter {
+ public:
+  explicit ChangeFilter() {}
+
+  virtual bool Filter(int level, const Slice& key, const Slice& value,
+                      std::string* new_value, bool* value_changed) const
+      override {
+    assert(new_value != nullptr);
+    *new_value = NEW_VALUE;
+    *value_changed = true;
+    return false;
+  }
+
+  virtual const char* Name() const override { return "ChangeFilter"; }
+};
+```
+
+Clearly the above filter allows me to modify the value of the key, however how can I delete the key itself (in my case, if the value is empty, I would want to delete the key). Moreover the `virtual bool Filter()` function prototype looks very similar to the the `virtual bool FullMerge()` prototype. So I should be able to do similar modifications using either of them?
+
+Please clarify. Thanks!
+
+Spoke too soon. Found what I was looking for in rocksdb/db/c_test.c. Will dig deeper and get back here. Your suggestion works, thanks @siying 
+
+Thanks @siying! @atishbits can we close this issue?
+
+Sure @igorcanadi. Marking closed.
+

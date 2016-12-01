@@ -1,0 +1,53 @@
+I have a problem with RocksDB version: 4.6.1. The crash breaktrace as blow:
+
+```
+#0  rocksdb::Compaction::ShouldStopBefore(rocksdb::Slice const&) () at db/compaction.cc:300
+#1  0x00000000005b128a in rocksdb::CompactionJob::ProcessKeyValueCompaction(rocksdb::CompactionJob::SubcompactionState*) () at db/compaction_job.cc:672
+#2  0x00000000006d4d40 in execute_native_thread_routine () at ../../../../../libstdc++-v3/src/c++11/thread.cc:84
+#3  0x000000335fa07a51 in start_thread () from /lib64/libpthread.so.0
+#4  0x000000335f6e896d in clone () from /lib64/libc.so.6
+```
+
+Strace to source code. Only such useful info as blow:
+
+```
+(gdb) f 1
+#1  0x00000000005b128a in rocksdb::CompactionJob::ProcessKeyValueCompaction(rocksdb::CompactionJob::SubcompactionState*) () at db/compaction_job.cc:672
+672         } else if (sub_compact->compaction->ShouldStopBefore(key) &&
+(gdb) p key
+$1 = 0
+(gdb) f 0
+#0  rocksdb::Compaction::ShouldStopBefore(rocksdb::Slice const&) () at db/compaction.cc:300
+300           overlapped_bytes_ += grandparents_[grandparent_index_]->fd.GetFileSize();
+(gdb) p grandparent_index_
+No symbol "grandparent_index_" in current context.
+(gdb) p grandparents_
+```
+
+Is anybody can help me? Thanks.
+
+In RocksDB 4.6 there is a possible data race that was fixed with this commit
+https://github.com/facebook/rocksdb/commit/be9816b3d970e0eceb931c2643a976dbea068da2
+
+The fix is available in RocksDB 4.8
+
+Thank you for your reply. I will upgrade rocksDB to 4.8.
+BTW, why multi compact thread seem didn't work simultaneously? From my observation, when rocksDB schedule one compact job ( the same as flush job), it will wake up one thread to work. And this thread will try to pick most compactions (or most imms) to deal, so when another  compact or flush job wake up another thread, there is little thing to feed.
+The log like: 
+`"2016/08/19-15:24:32.972161 7f55c8e9b700 (Original Log Time 2016/08/19-15:24:32.972144) Compaction nothing to do"`  
+or  one flush job too much imm.
+
+And then, in order to improve compact speed, I have to improve multi-subcompact. But, another question trouble me. Sub-compaction seems didn't work too. 
+The log like:
+`"num_subcompactions": 1`
+
+Thanks very much, hope you tell me how to really improve compact speed as disk I/O is not limitation in my case.
+
+@yuwenlong123, I am sorry I did not fully understand the issue. Can you please clarify more ?
+What do you mean by that the log says `"num_subcompactions": 1` did you set the option to be Options::max_subcompactions to be something other than 1 but the LOG is reporting 1 ?
+
+Yes, I am set Options::max_subcompactions bigger than 1 (For example 3), but the log print shown there was so many `"num_subcompactions" : 1(or 2)` which less than max_subcompactions.
+Of course, sometimes there are accuratelly max_subcompactions task work together.
+
+@IslamAbdelRahman 
+

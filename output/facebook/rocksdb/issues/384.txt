@@ -1,0 +1,25 @@
+If a compaction filter implementation is simply filtering values, then
+allocating the "changed values" bitmap is an extra memory allocation
+that adds no value. Additionally, the compaction implementation has to
+do marginally more work to calculate the offset into the bitmap
+(vector<bool> specialization) for each record the filter did not mark
+for deletion.
+
+Explicitly handle the case where compact_->value_changed_buf_ is empty.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Hello @msb-at-yahoo.  Thank you for your contribution!  In case you haven't signed the CLA (Contributor License Agreement), please sign up the CLA and then we can process your pull request.
+
+I've signed the CLA, as well as gotten approval from my company.Is there something I need to configure on my github account?
+See attached:
+
+```
+ On Wednesday, November 5, 2014 3:15 AM, Yueh-Hsuan Chiang <notifications@github.com> wrote:
+```
+
+ Hello @msb-at-yahoo. Thank you for your contribution! In case you haven't signed the CLA (Contributor License Agreement), please sign up the CLA and then we can process your pull request.—
+Reply to this email directly or view it on GitHub.   
+
+Tnx @msb-at-yahoo !
+

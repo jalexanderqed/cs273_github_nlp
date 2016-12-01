@@ -1,0 +1,9 @@
+This fixes a correctness issue where ranges with same begin key would overwrite each other.
+
+This diff uses InternalKey as TombstoneMap's key such that all tombstones have unique keys even when their start keys overlap. We also update TombstoneMap to use an internal key comparator.
+
+End-to-end tests pass and are here (https://gist.github.com/ajkr/851ffe4c1b8a15a68d33025be190a7d9) but cannot be included yet since the DeleteRange() API is yet to be checked in. Note both tests failed before this fix.
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4155248).
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1484/files/04304fb7e5378c597f9fe4863d97c181941ccd93..686a3b4e67d5a6ef834939549182fa71c85a42d8) - [changes since last import](https://github.com/facebook/rocksdb/pull/1484/files/04304fb7e5378c597f9fe4863d97c181941ccd93..686a3b4e67d5a6ef834939549182fa71c85a42d8)
+

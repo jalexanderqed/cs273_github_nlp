@@ -1,0 +1,12 @@
+Summary: First commit for rdb shell
+
+Test Plan: unit_test.js does simple assertions on most of the main functionality; will update with rest of tests
+
+Reviewers: igor, rven, lijn, yhciang, sdong
+
+Subscribers: dhruba, leveldb
+
+Differential Revision: https://reviews.facebook.net/D28749
+
+Ok, let's get this in. @ljinfb, @yhchiang feel free to comment more and @saghmrossi can address in separate pull requests.
+

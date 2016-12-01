@@ -1,0 +1,33 @@
+[Travis CI](https://travis-ci.org/) is a free continuous integration system used by many public GitHub projects, particularly useful for testing pull requests automatically (as well as all pushes to the repo). I came up with this script to tell Travis how to run RocksDB's `make check`. [Example build on my fork](https://travis-ci.org/mlin/rocksdb)
+
+NB, this commit is necessary but not sufficient for Travis to work on your repo. An admin of the facebook GitHub org would also need to follow the Travis [Getting started instructions](http://docs.travis-ci.com/user/getting-started/) and flip the switch for the rocksdb repo. There are some security considerations there.
+
+Interestingly, `fallocate` within Travis' OpenVZ containers don't seem to behave exactly as one of RocksDB's test cases expects. I'm not sure what file system is being used underneath, but going by Docker's example it might be somewhat exotic like AUFS or btrfs. I put in a lousy hack to disable use and testing of fallocate in Travis.
+
+1. Integration with Travis does not mean that it gets write-access to the repo, am I reading it right? 
+2. Anything else we need to be careful about?
+3. Would you be able to setup auto-testing for pull requests (even before they are committed to the repo)?
+4. Do existing unit tests run successfully on Travis (other than the fallocate usage)?
+
+I think integrating with Travis would be great! We had some pull requests break unit tests before :)
+
+HHVM is using travis to test the build (https://github.com/facebook/hhvm) so I believe we should be fine.
+
+I don't have admin access to the repository. cc @jamesgpearce could you help with setting this up?
+
+@mlin Instead of your hack, can we do something like `OPT="-DTRAVISCI" make check` and then somewhere with fallocate you can do:
+
+```
+#ifdef TRAVISCI
+#undef HAVE_FALLOCATE
+#endif 
+```
+
+That way we'll be able to support new unit tests that might be failing on travis in the future. How does that sound?
+
+@dhruba:
+1. They have nicely documented how they use Github API and what permissions they need: http://docs.travis-ci.com/user/github-oauth-scopes/
+2. Since this is not precedence for Facebook (hhvm) I think it's fine
+3. Yes, that's what's Travis is most useful for. Here's an example: https://github.com/facebook/hhvm/pull/2668
+4. This build shows they are: https://travis-ci.org/mlin/rocksdb/builds/24900020
+

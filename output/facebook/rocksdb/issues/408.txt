@@ -1,0 +1,5 @@
+While building RocksJava the build fails on
+CentOS because of the missing stdexcept header.
+
+Edit: can be reproduced using the crossbuild-image with `make rocksdbjava`
+

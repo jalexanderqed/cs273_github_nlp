@@ -1,0 +1,4 @@
+Recent change break Windows build for warning C4351. Disable the warning temporarily.
+
+Did not trigger Appveyor build. Close it.
+

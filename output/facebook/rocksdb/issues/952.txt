@@ -1,0 +1,21 @@
+VWO, the flagship product of Wingify, uses RocksDB to populate the list of URLs where clients can run A/B test campaigns. It is also used to provide a way for the clients to see if VWO's Smart Code is installed on a specific URL of their account.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Hi Ankit, thanks for the patch. Can you pl sign the CLA at  https://code.facebook.com/cla  so that I can merge your patch?
+
+Hi @dhruba, I have signed the CLA.
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+> This branch has conflicts that must be resolved
+
+Can you please resolve the conflicts?
+
+@igorcanadi Seems to be a build failure [here](https://travis-ci.org/facebook/rocksdb/jobs/103160689) which does not seem to be related to the change done by me in USERS.md
+
+> /bin/sh: line 1: 12526 Segmentation fault: 11  ./$t
+> make: **\* [check] Error 1
+
+@ankneo don't worry about the build failure. The problem is with merge conflicts because of https://github.com/facebook/rocksdb/commit/2e9fae3f2a00e38dfef58f7778d5321d5bd07bfd
+

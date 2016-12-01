@@ -1,0 +1,33 @@
+Hello!
+
+Noticed an interesting situation for max_open_files can specify the number of open files larger than allowed by the system. For ubuntu default 1024 (ulimit-n).
+
+Appears quite unexpectedly. For FIFO style, you can choose options max_size = 200Gb write_buffer = 100Mb, 100Gb will be recorded when an error "Too many open files".
+
+Hey @Rustam12345, we expect the client will configure max_open_files correctly, with respect to the limit of open files imposed by the system. That limit can always be increased, right?
+
+Did that answer your question?
+
+Yes :)
+
+I got this problem by chance and could not to noticing it at all (as noticed with Level and Universal).
+I think it would be good to add a reference in options.h mention about the system's constraint.
+Now it reads:
+
+```
+  / / Number of open files that can be used by the DB. You may need to
+  / / Increase this if your database has a large working set. Value -1 means
+  / / Files opened are always kept open. You can estimate number of files based
+  / / On target_file_size_base and target_file_size_multiplier for level-based
+  / / Compaction. For universal-style compaction, you can usually set it to -1.
+  / / Default: 5000
+```
+
+Different styles (Universal, Level) can have very many files open in the general case it is not clear how many of them may be required. Specifying -1 only allows rocksdb maximum available system, and when it is achieved, an error occurs.
+
+I decided to(hopefully) the issue of increasing the limit to 10,000 open files.
+
+i think nothing needs to be done in rocksdb code
+
+@Rustam12345 specifying -1 is used as performance optimization because it avoids using TableCache (which keeps a cache of open files). I hope system administrators are aware of their systems' open file limit.
+

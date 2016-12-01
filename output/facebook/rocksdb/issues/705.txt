@@ -1,0 +1,23 @@
+  Previous change for the function
+  https://github.com/facebook/rocksdb/commit/555ca3e7b7f06bd01dfd5e04dbb2cef5360f7917#diff-bdc04e0404c2db4fd3ac5118a63eaa4a
+  made use of the QueryPerformanceCounter to return microseconds values that do not repeat
+  as std::chrono::system_clock returned values that made auto_roll_logger_test fail.
+
+ The interface documentation does not state that we need to return
+ system time describing the return value as a number of microsecs since some
+ moment in time. However, because on Linux it is implemented using gettimeofday
+ various pieces of code (such as GenericRateLimiter) took advantage of that
+ and make use of NowMicros() as a system timestamp. Thus the previous change
+ broke rate_limiter_test on Windows.
+
+ In addition, the interface name NowMicros() suggests that it is actually
+ a timestamp so people use it as such.
+
+ This change makes use of the new system call on Windows that returns
+ system time with required precision. This change preserves the fix
+ for  auto_roll_logger_test and fixes rate_limiter_test.
+
+ Note that DBTest.RateLimitingTest still fails due to a separately reported issue.
+
+Thank you for fixing it.
+

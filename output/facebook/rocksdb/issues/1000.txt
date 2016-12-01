@@ -1,0 +1,13 @@
+Is the column family model in rocksdb intended to be similar to the one in HBase? In Hbase every "cell" is identified by a row key, a column family name and a cell key ([HBase Documentation here](http://hbase.apache.org/book.html#conceptual.view)). Whereas in RocksDB, I can only find a way to represent a cell by the column family name, and a cell key. Multiple families do not seem to be tied together with a row key. 
+
+Is there any way I can get the same behavior HBase provides offers with RocksDB?
+
+Thanks!
+
+You can get the same behaviour with RocksDB as you can get with HBase.  Suppose, you have the following schema in HBase (rowkey=r1, cfname=cf1, cellkey=k1). 
+If you want the same schema in RocksDB, you would use (cfname=cf1, cellkey=r1+k1), i.e. prefix the rowkey to each and every cellkey before storing into rocksdb.
+
+Please reopen this task if my explanation  is not clear.
+
+Thanks, Dhruba. That helps! 
+

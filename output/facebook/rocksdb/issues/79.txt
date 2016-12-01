@@ -1,0 +1,6 @@
+https://github.com/facebook/rocksdb/blob/master/include/rocksdb/db.h says that GetLiveFiles is deprecated and that GetTableMetaData should be used instead, but I can't find a function by this name?
+
+Maybe it's just supposed to be GetLiveFilesMetaData?
+
+Fixed with https://github.com/facebook/rocksdb/commit/bc2ff597b8ef10148827c4ca9c72a7343b33e81b
+

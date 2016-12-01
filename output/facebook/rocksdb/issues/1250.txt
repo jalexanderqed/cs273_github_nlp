@@ -1,0 +1,16 @@
+The Java API does not expose information from the Status class which makes it difficult to diagnose the result of functions that can return an error status or an information status such as `Transaction::Get` with `Status::MergeInProgress`.
+
+At the moment the Java API simply throws the checked exception `RocksDBException` when `!status.isOk()`.
+
+In addition the current use of Checked Exceptions also mean that it is difficult/cumbersome to use the Java API with functional paradigms in Java 8.
+
+I see 4 possible options for improving the error handling in RocksJava:
+1. Add a `Status` class field to the `RocksDBException`, so that the caller has more information about the resultant state from a function call.
+2. Change `RocksDBException` to be an unchecked exception and (1).
+3. Remove exceptions entirely (Approach A) - Change the functions in RocksJava that can throw a `RocksDBException` to instead return a `Tuple<Status, T>`. All successful function calls will have a `Status::kOk` as the first argument and a non-null value as the second tuple argument. Function calls that fail, would have a null value as the second tuple argument, We could go further, and then in Java 8 use an `Optional<T>` as the second argument.
+4. Remove exceptions entirely (Approach B) - Change the functions in RocksJava that can throw a RocksDBException to instead return an `Either<Status, T>`. All successful function calls will return an `Either.Right<T>`, whilst function calls that fail would return an `Either.Left<Status>`. Working with a disjunction type (_Either<L, R>_) would be easier in Java 8.
+
+At present all except (1) would require API changes in RocksJava. As such I think we should aim for (1), and then when we consider the move to Java 8, we could look at (4) possibly.
+
+I vote for (1) as well.
+

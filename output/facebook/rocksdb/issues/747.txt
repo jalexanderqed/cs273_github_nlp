@@ -1,0 +1,38 @@
+When call > cmake -G "Visual Studio 14 Win64" .. < on the downloaded zip project an error occures on this line:
+
+string(REGEX REPLACE "[^0-9a-f]+" "" GIT_SHA ${GIT_SHA})
+
+The former call of git fails and the variable GIT_SHA is not set.
+
+Got the same error (CMake Error at CMakeLists.txt:35 (string):
+string sub-command REGEX, mode REPLACE needs at least 6 arguments total to
+command.)  on CMake 3.0.0
+
+my fix: change line 34 of CMakeLists.txt on
+
+```
+execute_process(COMMAND $ENV{COMSPEC} " /C git -C ${CMAKE_CURRENT_SOURCE_DIR} rev-parse HEAD" OUTPUT_VARIABLE GIT_SHA)
+```
+
+@Vaisman Pull request?
+
+@yuslepukhin pull request #770
+
+@DoktorSeltsam close issue?
+
+With the call of `cmake -G "Visual Studio 14 Win64"  ..` (using cmake 3.3.2.) i still get an error:
+
+...
+-- LZ4 library is disabled
+-- ZLIB library is disabled
+-- JEMALLOC library is disabled
+fatal: Not a git repository (or any of the parent directories): .git
+CMake Error at CMakeLists.txt:35 (string):
+  string sub-command REGEX, mode REPLACE needs at least 6 arguments total to
+  command.
+
+pull request #778
+check is git installed and check is .git folder exists in project
+
+It seems to be all right now. Thanks for your effort. So it's time to close the issure...
+

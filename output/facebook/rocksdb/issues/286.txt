@@ -1,0 +1,60 @@
+I got a crash with RocksDB3.5 which enabled the rate limiter by 50MB.
+The crash stack trace is here, I think it's a bug  at line 63 of util/rate_limiter.cc
+
+```
+     assert(bytes < refill_bytes_per_period_);  //maybe "assert(bytes <= refill_bytes_per_period_)"?
+```
+
+(gdb) bt
+#0  0x00007f446d3e63e9 in raise () from /home/opt/compiler/gcc-4.8.2.09/lib64/libc-2.18.so
+#1  0x00007f446d3e77e8 in abort () from /home/opt/compiler/gcc-4.8.2.09/lib64/libc-2.18.so
+#2  0x00007f446d3df516 in __assert_fail_base () from /home/opt/compiler/gcc-4.8.2.09/lib64/libc-2.18.so
+#3  0x00007f446d3df5c2 in __assert_fail () from /home/opt/compiler/gcc-4.8.2.09/lib64/libc-2.18.so
+#4  0x00000000005b0477 in rocksdb::GenericRateLimiter::Request (this=0x7f446c8f2780, bytes=5242880, pri=rocksdb::Env::IO_HIGH) at util/rate_limiter.cc:63
+#5  0x00000000005a6809 in RequestToken (this=0x7f4444819080, this=0x7f4444819080, bytes=5242880) at util/env_posix.cc:860
+#6  rocksdb::(anonymous namespace)::PosixWritableFile::Append (this=0x7f4444819080, data=...) at util/env_posix.cc:707
+#7  0x00000000005c53a8 in rocksdb::BlockBasedTableBuilder::WriteRawBlock (this=this@entry=0x7f44448100a0, block_contents=..., type=<optimized out>, handle=handle@entry=0x7f44457fdb40)
+
+```
+at table/block_based_table_builder.cc:563
+```
+#8  0x00000000005c5781 in rocksdb::BlockBasedTableBuilder::WriteBlock (this=this@entry=0x7f44448100a0, raw_block_contents=..., handle=handle@entry=0x7f44457fdb40) at table/block_based_table_builder.cc:551
+#9  0x00000000005c8207 in rocksdb::BlockBasedTableBuilder::Finish (this=0x7f44448100a0) at table/block_based_table_builder.cc:740
+#10 0x00000000005b3e5c in rocksdb::BuildTable (dbname=..., env=0x8f4360 rocksdb::Env::Default()::default_env, options=..., soptions=..., table_cache=0x7f446c865fc0, iter=iter@entry=0x7f4444814140,
+
+```
+meta=meta@entry=0x7f44457fe000, internal_comparator=..., newest_snapshot=newest_snapshot@entry=0, earliest_seqno_in_memtable=earliest_seqno_in_memtable@entry=1, compression=rocksdb::kNoCompression, 
+io_priority=io_priority@entry=rocksdb::Env::IO_HIGH) at db/builder.cc:188
+```
+#11 0x00000000005288b3 in rocksdb::DBImpl::WriteLevel0Table (this=this@entry=0x7f446cabf400, cfd=cfd@entry=0x7f446c817f00, mems=..., edit=0x7f446cae90c0, filenumber=filenumber@entry=0x7f44457fe118,
+
+```
+log_buffer=log_buffer@entry=0x7f44457fe470) at db/db_impl.cc:1498
+```
+#12 0x000000000052acb0 in rocksdb::DBImpl::FlushMemTableToOutputFile (this=this@entry=0x7f446cabf400, cfd=cfd@entry=0x7f446c817f00, madeProgress=madeProgress@entry=0x7f44457fe2ef, deletion_state=...,
+
+```
+log_buffer=log_buffer@entry=0x7f44457fe470) at db/db_impl.cc:1588
+```
+#13 0x000000000052b2b5 in rocksdb::DBImpl::BackgroundFlush (this=this@entry=0x7f446cabf400, madeProgress=madeProgress@entry=0x7f44457fe2ef, deletion_state=..., log_buffer=log_buffer@entry=0x7f44457fe470)
+
+```
+at db/db_impl.cc:2033
+```
+#14 0x0000000000537377 in rocksdb::DBImpl::BackgroundCallFlush (this=0x7f446cabf400) at db/db_impl.cc:2056
+#15 0x00000000005a1e19 in BGThread (thread_id=0, this=0x7f446ca93290) at util/env_posix.cc:1616
+#16 rocksdb::(anonymous namespace)::PosixEnv::ThreadPool::BGThreadWrapper (arg=<optimized out>) at util/env_posix.cc:1633
+#17 0x00007f446e5b21c1 in start_thread () from /home/opt/compiler/gcc-4.8.2.09/lib64/libpthread-2.18.so
+#18 0x00007f446d4980ad in clone () from /home/opt/compiler/gcc-4.8.2.09/lib64/libc-2.18.so
+
+(gdb) f 4
+#4  0x00000000005b0477 in rocksdb::GenericRateLimiter::Request (this=0x7f446c8f2780, bytes=5242880, pri=rocksdb::Env::IO_HIGH) at util/rate_limiter.cc:63
+
+63      util/rate_limiter.cc: No such file or directory.
+(gdb) p refill_bytes_per_period_
+$1 = 5242880
+(gdb) p bytes
+$2 = 5242880
+
+you are right. bytes can be equal to refill_bytes_per_period_
+

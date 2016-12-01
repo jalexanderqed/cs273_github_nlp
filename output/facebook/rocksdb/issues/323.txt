@@ -1,0 +1,25 @@
+Changes:
+- new Method: RocksDB openReadOnly(String path)
+- new Method: RocksDB openReadOnly(Options options, String path)
+
+Missing:
+- Column family support is blocked by #319
+
+I did not realise that someone else was already working on this. Previously I had created this branch: https://github.com/adamretter/rocksdb/tree/open-read-only
+
+Being cheeky, may I suggest my own branch over this one as it contains the necessary test cases as well?
+
+@adamretter didnt push tests yet because i want to refactor them using JUnit4. However i wanted to cross check with yhchiang first if they also want to have JUnit in.
+
+Thanks a lot guys for the contribution! I don't have any opinion on which pull request to merge :)
+
+@fyrz Is it fine if we merge @adamretter change as his pull request contains test cases as well.
+
+@ankgup87 :-) i dont really mind either. Is it possible for you to join also IRC to discuss JUnit4 usage ?
+
+Ok i close this one to prefer @adamretter solution.
+
+Is there an official IRC channel?
+
+Anyway, I will send the pull-request after the comparator one get's merged (hopefully in the next couple of days). This is only for my convenience as I built one atop the rebase of the other as I needed them both in my local project here.
+

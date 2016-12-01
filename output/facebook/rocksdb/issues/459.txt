@@ -1,0 +1,70 @@
+Hey the team,
+
+I use C API to set some parameters to tune performance.  However it seems the values I gave aren't used by the DB.   What's shown in the LOG file differs from the values I assign.
+
+For example, I set write_buffer_size and max_write_buffer_number like below:
+rocksdb_options_set_write_buffer_size(db->options, 1024L \* 1024);
+rocksdb_options_set_max_write_buffer_number(db->options, 32);
+
+but LOG file still shows the old config value (64K, 6).
+
+I'm wondering if C API is deprecated? If so I can switch to C++.  Just want a definitive statement from your team.  Thanks!
+
+No, we will never deprecate C API because it's used by bunch of bindings for other languages (python, go, php, etc)
+
+Can you send us the whole code
+
+Thanks for quick reply Igor!    Here is the code:
+
+typedef struct RocksDB  RocksDB;
+struct  RocksDB {
+    rocksdb_t *db;
+    rocksdb_options_t *options;
+    rocksdb_writeoptions_t *write_options;
+    rocksdb_readoptions_t *read_options;
+};
+
+code to set the config:
+  RocksDB *db = malloc(sizeof(RocksDB));
+  memset(db, 0, sizeof(RocksDB));
+
+  // step 1: prepare DB options.
+  db->options = rocksdb_options_create();
+  rocksdb_options_set_create_if_missing(db->options, 1); 
+
+  // 0 to disable compression
+  rocksdb_options_set_compression(db->options, 0); 
+
+  // Allow DB to open up to this many files
+  rocksdb_options_set_max_open_files(db->options, 4000);
+
+  // config write buffer.
+  rocksdb_options_set_write_buffer_size(db->options, 1024L \* 1024);
+  rocksdb_options_set_max_write_buffer_number(db->options, 32);
+
+  long cpus = sysconf(_SC_NPROCESSORS_ONLN);
+  rocksdb_options_increase_parallelism(db->options, (int)(cpus));
+
+  // compaction style.
+  rocksdb_options_optimize_level_style_compaction(db->options, 0); 
+
+  // step 2: prepare write options.
+  db->write_options = rocksdb_writeoptions_create();
+
+  // Disable WAL log
+  rocksdb_writeoptions_disable_WAL(db->write_options, 1); 
+
+  // step 3: prepare read options.
+  db->read_options = rocksdb_readoptions_create();
+
+ // open DB
+ char\* err = NULL;
+ db->db = rocksdb_open(db->options, dbpath, &err);
+ assert(!err);
+
+@neutronsharc,
+
+when you call rocksdb_options_optimize_level_style_compaction() you are causing options that you set previously to be modified. More specifically, write_buffer_size and max_write_buffer_number will be changed. See options.cc ColumnFamilyOptions::OptimizeLevelStyleCompaction for the full list. Also passing in 0 to rocksdb_options_optimize_level_style_compaction, will not use the default specified in the ColumnFamilyOptions constructor in options.h.
+
+I hope this helps.
+

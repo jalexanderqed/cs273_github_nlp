@@ -1,0 +1,57 @@
+It's currently fixed to 1, parallelism can only be increased for compaction:
+
+``` cpp
+...
+DBOptions* DBOptions::IncreaseParallelism(int total_threads) {
+  max_background_compactions = total_threads - 1;
+  max_background_flushes = 1;
+  env->SetBackgroundThreads(total_threads, Env::LOW);
+  env->SetBackgroundThreads(1, Env::HIGH);
+  return this;
+}
+...
+```
+
+But according to the [RocksDB tuning guide](https://github.com/facebook/rocksdb/wiki/RocksDB-Tuning-Guide#parallelism-options) states that both can be executed concurrently and thus may benefit from increasing parallelism.
+
+It looks like `env->SetBackgroundThreads(1, Env::HIGH);` can be safely removed and an additional method could be introduced to increase flush parallelism.
+
+@clumsy So are you asking that we add `increaseParallelism` to the Java API? It seems to me that it is already there: https://github.com/facebook/rocksdb/blob/master/java/src/main/java/org/rocksdb/DBOptions.java#L75
+
+Can you please check the description that I've wrote? :)
+It does mention "flush" operation in particular.
+The description also has the link for the feature spec.
+
+TL;DR
+There are two thread pools: Env::LOW and Env::HIGH.
+if max_background_flushes > 0 then the Env::HIGH thread pool is used for "flush" operations
+in RocksDB JNI it's set to 1 regardless of the parallelism value.
+
+@clumsy Sorry, it is not clear to me why you claim this:
+
+> in RocksDB JNI it's set to 1 regardless of the parallelism value
+
+@adamretter it's in the snippet in the first message:
+
+``` cpp
+...
+DBOptions* DBOptions::IncreaseParallelism(int total_threads) {
+  ...
+  max_background_flushes = 1;
+  ...
+  env->SetBackgroundThreads(1, Env::HIGH);
+  return this;
+}
+...
+```
+
+The value for parallelism in Env::HIGH thread pool is 1 regardless of `total_threads`.
+I've explained how it's being used, there's also a link containing more details.
+
+@clumsy Okay but that snippet is from Rocks and not RocksJava if I am not mistaken; Which file (and line numbers) is that snippet from?
+
+@adamretter Right, the snippet is from Rocks [options.cc](https://github.com/facebook/rocksdb/blob/e5b5f12b819e7c31946b4a11ee3cec92916e11d7/util/options.cc#L792)
+This is how RocksJava sets it in `Options` class. There might be a way of doing it more fine-grained using other Rocks API.
+
+@clumsy If the Rocks C++ API doesn't expose it, then I don't want to add it to RocksJava
+

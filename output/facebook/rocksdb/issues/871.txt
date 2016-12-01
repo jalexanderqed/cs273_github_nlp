@@ -1,0 +1,62 @@
+`compile 'org.rocksdb:rocksdbjni:4.1'`
+`java.lang.UnsatisfiedLinkError 1): Library not loaded: /usr/local/lib/libgflags.2.dylib`
+
+`compile 'org.rocksdb:rocksdbjni:4.0'`
+work fine
+
+seems like a bug
+
+Thanks for reporting this issue.   We will try to rebuild and republish the 4.1 package soon.
+
++1 thanks!
+
+Hello @Barlog-M and @zackb, I have republished the 4.1 package.  Let me know if the new package fix the existing issue or not.
+https://oss.sonatype.org/#nexus-search;quick~rocksdb
+
+```
+gradle run                 ~/projects/java/db/rocksdb/hello/
+:compileJava
+Download https://oss.sonatype.org/content/repositories/releases/org/rocksdb/rocksdbjni/4.1/rocksdbjni-4.1.pom
+Download https://oss.sonatype.org/content/repositories/releases/org/rocksdb/rocksdbjni/4.1/rocksdbjni-4.1.jar
+:processResources UP-TO-DATE
+:classes
+:run
+Exception in thread "main" java.lang.UnsatisfiedLinkError: /private/var/folders/2g/b56wdft17h1fx35rl6bbcml80000gn/T/librocksdbjni1975054551977281102..jnilib: dlopen(/private/var/folders/2g/b56wdft17h1fx35rl6bbcml80000gn/T/librocksdbjni1975054551977281102..jnilib, 1): Library not loaded: /usr/local/lib/libgflags.2.dylib
+  Referenced from: /private/var/folders/2g/b56wdft17h1fx35rl6bbcml80000gn/T/librocksdbjni1975054551977281102..jnilib
+  Reason: image not found
+    at java.lang.ClassLoader$NativeLibrary.load(Native Method)
+    at java.lang.ClassLoader.loadLibrary0(ClassLoader.java:1938)
+    at java.lang.ClassLoader.loadLibrary(ClassLoader.java:1821)
+    at java.lang.Runtime.load0(Runtime.java:809)
+    at java.lang.System.load(System.java:1086)
+    at org.rocksdb.NativeLibraryLoader.loadLibraryFromJar(NativeLibraryLoader.java:105)
+    at org.rocksdb.NativeLibraryLoader.loadLibrary(NativeLibraryLoader.java:56)
+    at org.rocksdb.RocksDB.loadLibrary(RocksDB.java:47)
+    at org.rocksdb.RocksDB.<clinit>(RocksDB.java:23)
+    at li.barlog.App.main(App.java:13)
+:run FAILED
+```
+
+I still see the same behavior on mac and linux
+Exception in thread "main" java.lang.UnsatisfiedLinkError: /tmp/librocksdbjni221976702200869786..so: libgflags.so.2: cannot open shared object file: No such file or directory
+
+Thanks for reporting.  I thought I have cherry-pick all the previous fix in 4.1 but seems not, let me double check if I miss something.
+
+@zackb, @Barlog-M: Oops, the new package is called 4.1.0 instead of 4.1.  Do you mind trying 4.1.0 instead?  I downloaded the 4.1.0 package and the dependency of the binary looks fine to me:
+
+```
+otool -L librocksdbjni-osx.jnilib
+librocksdbjni-osx.jnilib:
+    ./java/target/librocksdbjni-osx.jnilib (compatibility version 0.0.0, current version 0.0.0)
+    /usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 120.0.0)
+    /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1213.0.0)
+```
+
+4.1.0 works correctly. Thank you!
+
+Works here too with 4.1.0. Thanks!
+
+Awesome!
+
+Good Job :+1: 
+

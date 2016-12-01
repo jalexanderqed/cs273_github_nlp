@@ -1,0 +1,14 @@
+rocksdb supports prefix_extractor, namely supports range queries, but there is no get_range() like interface for us to call? so, how do I perform range scan? using Get()?
+
+You can do it through iterators. Create a iterator by using DB::NewIterator(), Seek to the smaller boundary of your range, keep doing next() and read key() until either you reach the larger boundary of your range or Valid() becomes false.
+
+Does any way to get the count of total data? Or, is it possible?
+
+@yuchi518 RocksDB doesn't know number of all live keys. But we recently add a feature to estimate total number of keys: https://github.com/facebook/rocksdb/commit/f6784766db165188613f581afd40ba8fb90aa2cd if you just want an estimation.
+
+@siying 
+
+Thank you for the information.
+
+Close the issue for now, feel free to reopen if the issue is not resolved.
+

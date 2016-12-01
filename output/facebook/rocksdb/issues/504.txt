@@ -1,0 +1,4 @@
+`SetWaitForFlush` did not set `WaitForFlush` properly.
+
+@adamretter can you look into this ?
+

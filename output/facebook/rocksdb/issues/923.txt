@@ -1,0 +1,23 @@
+PrefixMayMatch previously seeked in the prefix index using an internal
+key with a sequence number of 0. This would cause the prefix index seek
+to fall off the end if the last key in the index had a user-key greater
+than or equal to the key being looked for. Falling off the end of the
+index in turn results in PrefixMayMatch returning false if the index is
+in memory.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+Wow, nice catch, thanks for the report+PR.
+
+And this is why we open source :) Thanks a lot @petermattis !
+
+@igorcanadi can you guys cut a bugfix release containing this change?
+
+@tamird Sure, how urgent is this for you? We're currently in the process of releasing 4.2.1, it would probably easiest to merge it there.
+
+@igorcanadi It isn't urgent (we can apply the change to our vendored version of rocksdb). If it can make it into the 4.2.1 release we'd be happy.
+
+What he said :)
+

@@ -1,0 +1,5 @@
+G++ 4.7 does not include  __STDC_FORMAT_MACROS if including "inttypes.h"
+therefore RocksDB cannot be build. A solution to this is either defining the macros or including <cinttypes>. This pull request includes the second option.
+
+Tnx, but fixed with https://github.com/facebook/rocksdb/commit/bcdb9671c06e99f89319baa078a6163bd3969be2
+

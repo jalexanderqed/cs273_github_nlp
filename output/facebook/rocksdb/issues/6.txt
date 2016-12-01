@@ -1,0 +1,63 @@
+Ran "make" and then "make check"
+I am using Ubuntu 12.10
+
+My repo is at:
+commit 75df72f2a5e829299ee5881641cfa403bd0a0bee
+Author: Kai Liu hfevers@gmail.com
+Date:   Sat Nov 16 22:59:22 2013 -0800
+
+```
+Change the logic in KeyMayExist()
+```
+
+---
+
+==== Test DBTest.CompressedCache
+db/db_test.cc:1890: failed: 0 > 0
+Created bg thread 0x2ada30469700
+make: **\* [check] Error 1
+
+---
+
+The ASSERT_GT fails
+
+   1885       case 1:
+   1886         // no block cache, only compressed cache
+   1887         ASSERT_EQ(options.statistics.get()->getTickerCount(BLOCK_CACHE_MISS),
+   1888                   0);
+   1889         ASSERT_GT(options.statistics.get()->getTickerCount
+   1890                   (BLOCK_CACHE_COMPRESSED_MISS), 0);
+   1891         break;
+
+Do you have bz2 and snappy libs installed?
+
+RocksDB includes snappy and libs were built during make. However, I don't see how snappy or zlib or bz2 were linked. They aren't mentioned in make output and bzip2 is installed for sure. I think the makefile needs help. Will start a separate issue for that.
+
+I just pulled in everything in build_tools/build_detect_platform (https://github.com/facebook/rocksdb/blob/master/build_tools/build_detect_platform#L186) and the tests now run fine for me.
+
+The point of having build_tools/build_detect_platform is for things to run
+fine when everything isn't there. That isn't the case right now.
+
+On Sun, Nov 17, 2013 at 8:50 AM, jkeys089 notifications@github.com wrote:
+
+> I just pulled in everything in build_tools/build_detect_platform (
+> https://github.com/facebook/rocksdb/blob/master/build_tools/build_detect_platform#L186)
+> and the tests now run fine for me.
+> 
+> —
+> Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/6#issuecomment-28652273
+> .
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Does this test need checks to avoid compression tests when -DSNAPPY and other compression options were not compiled? "make check" passes when snappy, bzip2 and zlib have been installed.
+
+I think we should just require all three libraries (snappy, bzip2 and zlib) to be installed. They are all standard libraries and can be easily installed on all linux platforms.
+
+Added requirements on all three compression libraries in https://github.com/facebook/rocksdb/blob/master/INSTALL.md
+
+It would be good for `build_detect_platform` to work even if only a subset of them is installed, but they are so easy to install it doesn't make much sense to worry about it.
+

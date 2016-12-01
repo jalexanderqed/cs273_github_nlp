@@ -1,0 +1,16 @@
+When compiling on RH5 with g++4.7.4 I have got an error:
+
+[maa@srv2-nskb-devg2 rocksdb-master]$ CXX=/usr/local/CC/gcc-4.7.4/bin/g++ EXTRA_CXXFLAGS=-std=c++11 DISABLE_WARNING_AS_ERROR=1  make db_bench
+  CC       db/db_bench.o
+db/db_bench.cc: In member function 'rocksdb::Slice rocksdb::Benchmark::AllocateKey(std::unique_ptr<const char []>_)':
+db/db_bench.cc:1434:41: error: use of deleted function 'void std::unique_ptr<_Tp [], _Dp>::reset(_Up) [with _Up = char_; _Tp = const char; _Dp = std::default_delete<const char []>]'
+In file included from /usr/local/CC/gcc-4.7.4/lib/gcc/x86_64-unknown-linux-gnu/4.7.4/../../../../include/c++/4.7.4/memory:86:0,
+                 from ./include/rocksdb/db.h:14,
+                 from ./db/dbformat.h:14,
+                 from ./db/db_impl.h:21,
+                 from db/db_bench.cc:33:
+
+That's the same issue as #284, so I just made the similar fix.
+
+Tnx for fixing this!
+

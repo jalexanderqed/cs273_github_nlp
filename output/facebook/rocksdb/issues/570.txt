@@ -1,0 +1,68 @@
+You can ignore this. I need to open the pull-request so Travis runs it.
+
+Requires resolution of at least:
+
+https://github.com/travis-ci/travis-ci/issues/3609
+https://github.com/travis-ci/travis-ci/issues/3610
+https://github.com/travis-ci/travis-ci/issues/3611
+
+Great!
+
+@adamretter actually we should be able to run `make check` correctly even without any of those packages you listed (jemalloc, snappy and gflags).
+
+@igorcanadi As we don't have access to `sudo update-alternatives` in Travis Containerized builds, I need a mechanism to set the path to GCC 4.9 in Travis, I attempted that here - https://github.com/adamretter/rocksdb/commit/d128bc2c6b24a4959892ae910e8397bc2afccd5d but I can't seem to get it to work. Any ideas?
+
+Is nobody else using C++11 project with Travis?
+
+@igorcanadi I am sure they are but maybe not yet with Containerized builds which are relatively new. I think what I tried _should_ work though, any idea why it might not correctly set the path for CC and CXX?
+
+What is the error?
+
+@igorcanadi The error is here - https://travis-ci.org/facebook/rocksdb/builds/58489246#L231
+
+@igorcanadi Could you take a look at my last comment and suggest why `export CC` and `export CXX` don't work?
+...Otherwise I am waiting for Travis to solve issues https://github.com/travis-ci/travis-ci/issues/3609 and https://github.com/travis-ci/travis-ci/issues/3668
+
+> @igorcanadi Could you take a look at my last comment and suggest why export CC and export CXX don't work?
+
+Just reproed locally. It gets overridden by build_tools/build_detect_platform here:  https://github.com/facebook/rocksdb/blob/master/Makefile#L113
+
+You need to set `CXX=$(CXX)` before invoking this script (environment variables don't get passed there)
+
+@igorcanadi Okay I fixed that, but it looks like we have a `segfault` issue - https://travis-ci.org/facebook/rocksdb/builds/71232761
+
+```
+[       OK ] DBTest.RecoverDuringMemtableCompaction (3041 ms)
+[ RUN      ] DBTest.FlushSchedule
+
+Received signal 11 (Segmentation fault)
+#0   /usr/lib/libjemalloc.so.1(+0x6496) [0x7f798e863496] ?? ??:0    
+#1   /usr/lib/libjemalloc.so.1(+0x789c) [0x7f798e86489c] ?? ??:0    
+#2   /usr/lib/libjemalloc.so.1(+0x7b9b) [0x7f798e864b9b] ?? ??:0    
+#3   /usr/lib/libjemalloc.so.1(free+0x382) [0x7f798e861132] ??  ??:0    
+#4   ./db_test() [0x45b473] operator()  /home/travis/build/facebook/rocksdb/db/db_test.cc:2323  
+#5   /usr/lib/x86_64-linux-gnu/libstdc++.so.6(+0xb8490) [0x7f798e598490] ?? ??:0    
+#6   /lib/x86_64-linux-gnu/libpthread.so.0(+0x7e9a) [0x7f798f2b3e9a] ?? ??:0    
+#7   /lib/x86_64-linux-gnu/libc.so.6(clone+0x6d) [0x7f798dd022ed] ??    ??:0    
+/home/travis/build.sh: line 41:  8172 Segmentation fault      (core dumped) ./db_test
+```
+
+My guess is that it's because jemalloc is built using a different platform than rocksdb :( Changing a platform is unfortunately not as easy as just changing the compiler binary.
+
+@igorcanadi Ah okay, so I will apply this https://github.com/facebook/rocksdb/commit/3d1af4ae6fb91accc9c627b8b67e2a0d28651099
+
+@igorcanadi Okay so I have had one system hang and now one intermittent test failing - https://travis-ci.org/facebook/rocksdb/builds/71260380. I guess there must be an issue somewhere?
+
+```
+... stopping thread 8 after 14564 ops
+[       OK ] MultiThreaded/MultiThreadedDBTest.MultiThreaded/26 (10143 ms)
+[----------] 27 tests from MultiThreaded/MultiThreadedDBTest (273945 ms total)
+[----------] Global test environment tear-down
+[==========] 215 tests from 2 test cases ran. (490000 ms total)
+[  PASSED  ] 214 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] DBTest.DynamicMemtableOptions
+```
+
+Yay, we now have Travis running under new architecture!
+

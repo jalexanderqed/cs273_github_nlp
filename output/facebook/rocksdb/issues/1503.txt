@@ -1,0 +1,7 @@
+Expose DeleteRange() interface since we think the implementation is functionally correct now.
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4171921).
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1503/files/c66ac8b4d0e7a15bfd6dd1756eedf3e431d0010a..edc81ff19b0f9522b1f1baa0f2e927f84f9373c8) - [changes since last import](https://github.com/facebook/rocksdb/pull/1503/files/c66ac8b4d0e7a15bfd6dd1756eedf3e431d0010a..edc81ff19b0f9522b1f1baa0f2e927f84f9373c8)
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1503/files/edc81ff19b0f9522b1f1baa0f2e927f84f9373c8..729f1ea83f9c71b579d245ab2e0c711e01f32ff5) - [changes since last import](https://github.com/facebook/rocksdb/pull/1503/files/edc81ff19b0f9522b1f1baa0f2e927f84f9373c8..729f1ea83f9c71b579d245ab2e0c711e01f32ff5)
+

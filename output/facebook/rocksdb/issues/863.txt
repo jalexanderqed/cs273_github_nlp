@@ -1,0 +1,85 @@
+- include `util/string_util.h` which contains `ToString` macro in `env_hdfs.cc` to fix ToString not declared error
+- implement `LinkFile` function by returning a NotSupported status to avoid LinkFile undefined reference error, because HdfsEnv class defines LinkFile function without implementing it and actually, HDFS does not provide such API in c.
+
+Thanks @zhangyybuaa, What build error are you trying to fix ?
+
+@IslamAbdelRahman, I followed the instructions in `hdfs/README` and set up environment variables. And I changed `DEBUG_LEVEL` to 0 in Makefile. Then I run `make db_bench` and got the flollowing errors:
+
+```
+In file included from util/env_hdfs.cc:7:0:
+./include/rocksdb/env.h: At global scope:
+./include/rocksdb/env.h:666:16: warning: ‘virtual void rocksdb::Logger::Logv(rocksdb::InfoLogLevel, const char*, __va_list_tag*)’ was hidden [-Woverloaded-virtual]
+   virtual void Logv(const InfoLogLevel log_level, const char* format, va_list ap);
+                ^
+util/env_hdfs.cc:299:16: warning:   by ‘virtual void rocksdb::{anonymous}::HdfsLogger::Logv(const char*, __va_list_tag*)’ [-Woverloaded-virtual]
+   virtual void Logv(const char* format, va_list ap) {
+                ^
+util/env_hdfs.cc: In member function ‘virtual rocksdb::Status rocksdb::HdfsEnv::NewDirectory(const string&, std::unique_ptr<rocksdb::Directory>*)’:
+util/env_hdfs.cc:442:46: error: ‘ToString’ was not declared in this scope
+                                ToString(value) + " on path " + name +
+                                              ^
+util/env_hdfs.cc: In member function ‘virtual rocksdb::Status rocksdb::HdfsEnv::FileExists(const string&)’:
+util/env_hdfs.cc:458:44: error: ‘ToString’ was not declared in this scope
+                              ToString(value) + " on path " + fname + ".\n");
+                                            ^
+util/env_hdfs.cc: In member function ‘virtual rocksdb::Status rocksdb::HdfsEnv::GetChildren(const string&, std::vector<std::basic_string<char> >*)’:
+util/env_hdfs.cc:496:44: error: ‘ToString’ was not declared in this scope
+                              ToString(value) + ".\n");
+                                            ^
+util/env_hdfs.cc: In member function ‘virtual rocksdb::Status rocksdb::HdfsEnv::CreateDirIfMissing(const string&)’:
+util/env_hdfs.cc:527:46: error: ‘ToString’ was not declared in this scope
+                                ToString(value) + ".\n");
+                                              ^
+util/env_hdfs.cc: In member function ‘virtual rocksdb::Status rocksdb::HdfsEnv::NewDirectory(const string&, std::unique_ptr<rocksdb::Directory>*)’:
+util/env_hdfs.cc:445:1: warning: control reaches end of non-void function [-Wreturn-type]
+ }
+ ^
+util/env_hdfs.cc: In member function ‘virtual rocksdb::Status rocksdb::HdfsEnv::FileExists(const string&)’:
+util/env_hdfs.cc:460:1: warning: control reaches end of non-void function [-Wreturn-type]
+ }
+ ^
+util/env_hdfs.cc: In member function ‘virtual rocksdb::Status rocksdb::HdfsEnv::CreateDirIfMissing(const string&)’:
+util/env_hdfs.cc:529:1: warning: control reaches end of non-void function [-Wreturn-type]
+ };
+ ^
+```
+
+I fixed this by 4687ced. And then I got another error:
+
+```
+util/env_hdfs.o:(.rodata._ZTVN7rocksdb7HdfsEnvE[_ZTVN7rocksdb7HdfsEnvE]+0x90)： undefined reference to ‘rocksdb::HdfsEnv::LinkFile(std::string const&, std::string const&)’
+collect2: error: ld returned 1 exit status
+Makefile:671: recipe for target 'db_bench' failed
+```
+
+I fixed it by be006d2. Then build succeeded.
+
+Hey @zhangyybuaa , is your fix merged?  I see the same error as yours
+
+@IslamAbdelRahman we are trying to compile rocksDB + hdfs flag but got the same issue. Is it a known issue? Is this fix planned to be merged?
+
+I wouldn't recommend using our hdfs_env without careful review. We use a different one internally, so we don't run this one in production. It is only meant to be an example.
+
+@igorcanadi hmm, that's interesting. I read through this doc https://github.com/facebook/rocksdb/wiki/How-to-backup-RocksDB%3F and it showed the possibility to use HDFS as the backup environment. So is compiling with USE_HDFS=1 the correct way to enable HDFS backup? Or there is another correct way to do so? 
+
+Another question: Although compiled with hdfs_env, the header file is not copied to /usr/local/include, also the dependeicies like port/sys_time.h is also not copied to sys dir. Is it a bug? Should I manually do a copy? 
+
+@shuzhang1989 I agree that this HDFS dependency thing is a mess. We should have defined a factory class under include/rocksdb/
+
+Are you willing to contribute to the code base? Just add a
+    Env\* NewHdfsEnv();
+Or
+    Status NewHdfsEnv(Env**);
+declaration in files like env.h, and implement it in env_hdfs.cc. Make sure if USE_HDFS is not set, return an error message.
+
+@siying yeah with pleasure, let me see what i can help. 
+Because it is a blocker on our project, if I merge it this month, will it be included in next release?
+
+@shuzhang1989 I met the same problem before. I have a quick fix in my fork and it works for me.
+FYI 07fe3720a6fbb2de68216c73324b9c0126b8d45f . I hope it can help you.
+I just prefer treating db name as a URI to get the corresponding ENV pointer but it might damage to code base.
+It will be great if you add NewHdfsEnv() method and get it merged.
+
+@siying I have this pending PR , mind taking a look? 
+https://github.com/facebook/rocksdb/pull/900
+

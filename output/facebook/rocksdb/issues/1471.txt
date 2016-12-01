@@ -1,0 +1,5 @@
+When there are a lot of tombstone keys, we will benefit a lot from iterator's upper bound when run forward scan operation. Is there any plan to support lower bound for iterator, it is useful when doing reverse scan.
+We don't have such a plan. But you are welcome to implement something. Maybe reuse the same option.
+
+OK
+

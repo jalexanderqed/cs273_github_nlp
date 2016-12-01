@@ -1,0 +1,26 @@
+https://ci.appveyor.com/project/Facebook/rocksdb/build/1.0.389
+
+It passes though it shows a test failure:
+
+DBTest.HardLimit State: Completed
+Note: Google Test filter = DBTest.HardLimit
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from DBTest
+[ RUN      ] DBTest.HardLimit
+c:\projects\rocksdb\db\db_test.cc(9153): error: Expected: (callback_count.load()) >= (1), actual: 0 vs 1
+[  FAILED  ] DBTest.HardLimit (3719 ms)
+[----------] 1 test from DBTest (3719 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (3719 ms total)
+[  PASSED  ] 0 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] DBTest.HardLimit
+
+ 1 FAILED TEST
+
+@yuslepukhin any idea why?
+
+@siying Will take a look. Will check warnings commits first.
+

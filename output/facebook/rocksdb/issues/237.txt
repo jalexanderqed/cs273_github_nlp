@@ -1,0 +1,12 @@
+...hardware
+
+Thanks for reporting the issue.  Does any number greater than 3 work in your case such as 50? The ideal timeout for this test would be smaller than the time needed for flush but greater than the time to process a normal write w/o flush.
+
+First line of the commit message exceeds 60 chars
+
+@yhchiang Updated to use 50ms. It works just fine :)
+
+A friendly poke at @yhchiang and maybe @igorcanadi that this has been updated with a 50ms timeout and it still works.
+
+Sure let's do this.
+

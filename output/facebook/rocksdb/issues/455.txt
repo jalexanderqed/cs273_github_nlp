@@ -1,0 +1,16 @@
+I got a build failure on linux with clang 3.5:
+
+ /usr/local/bin/clang++   -DCLANG_INCLUDEPATH=/usr/local/lib/clang/3.5.0/include/ -DOS_Linux -DRCT_DB_USE_ROCKSDB -DRCT_HAVE_ZLIB -DROCKSDB_PLATFORM_POSIX -DRTAGS_BIN=\"/home/jhanssen/dev/rtags/bin/\" -Wextra -Wall -Wall -fstack-protector-all -Wstack-protector -std=c++0x -fpic -stdlib=libc++ -std=c++0x -fpic -stdlib=libc++ -O3 -DNDEBUG -I/usr/local/include -isystem src/rct/3rdparty/rocksdb -isystem src/rct/3rdparty/rocksdb/include -Isrc/rct -Isrc/include/rct -Isrc/include/rct/.. -Isrc -Isrc/rct/include -Isrc/rct/include/rct    -fcolor-diagnostics -Wall -MMD -MT src/CMakeFiles/rct.dir/rct/3rdparty/rocksdb/util/thread_local.cc.o -MF "src/CMakeFiles/rct.dir/rct/3rdparty/rocksdb/util/thread_local.cc.o.d" -o src/CMakeFiles/rct.dir/rct/3rdparty/rocksdb/util/thread_local.cc.o -c src/rct/3rdparty/rocksdb/util/thread_local.cc
+src/rct/3rdparty/rocksdb/util/thread_local.cc:54:5: error: use of undeclared identifier 'abort'
+   abort();
+   ^
+src/rct/3rdparty/rocksdb/util/thread_local.cc:101:7: error: use of undeclared identifier 'abort'
+     abort();
+     ^
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+Thanks!
+

@@ -1,0 +1,11 @@
+This makes it easier to implement future optimizations like range collapsing.
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4172214).
+
+Yep, I think inclusive-exclusive instead of inclusive-inclusive makes a lot more sense.  Btw, shouldn't somewhere in the comments of db/range_del_aggregator.h need to be updated?
+
+I define what range deletion means in db.h, which is up-to-date in this PR: https://github.com/facebook/rocksdb/pull/1503
+
+range_del_aggregator.h refers to "covered by range deletion" but doesn't define it.
+
+edit: fyi I updated the range_del_aggregator.h comment in https://github.com/facebook/rocksdb/pull/1501 to describe the exclusive-inclusive nature of the ranges
+

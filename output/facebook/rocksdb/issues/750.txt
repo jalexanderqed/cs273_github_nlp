@@ -1,0 +1,4 @@
+Add shared_linked `DEBUG` flag, remove port from among the include directories.
+
+@igorcanadi Pls, consider merging this
+

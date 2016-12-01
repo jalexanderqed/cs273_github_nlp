@@ -1,0 +1,12 @@
+The bug was introduced from fix build bug from the recent commit: https://github.com/facebook/rocksdb/commit/43c386b72ee834c88a1a22500ce1fc36a8208277
+
+Bumping this. https://github.com/facebook/rocksdb/commit/43c386b72ee834c88a1a22500ce1fc36a8208277 from @jamesgolick breaks the build on Linux when `fallocate` is actually present. The right fix would be as follows:
+
+```
+COMMON_FLAGS="$COMMON_FLAGS -DROCKSDB_FALLOCATE_PRESENT"
+```
+
+@vmg's fix is the correct one.
+
+Thanks for the fix :+1:  I was about to open a pull request on the same :)
+

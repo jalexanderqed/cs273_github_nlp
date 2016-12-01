@@ -1,0 +1,11 @@
+Adjusted AddToBuilder() to take lower_bound and upper_bound, which serve two purposes: (1) only range deletions overlapping with the interval [lower_bound, upper_bound) will be added to the output file, and (2) the output file's boundaries will not be extended before lower_bound or after upper_bound. Our computation of lower_bound/upper_bound consider both subcompaction boundaries and previous/next files within the subcompaction.
+
+Test cases are here (level subcompactions: https://gist.github.com/ajkr/63c7eae3e9667c5ebdc0a7efb74ac332, and universal subcompactions: https://gist.github.com/ajkr/5a62af77c4ebe4052a1955c496d51fdb) but can't be included in this diff as they depend on committing the API first. They fail before this change and pass after.
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4171685).
+
+Good work!  LGTM.  Only some mior comments on the Phabricator.  Should be good to go!
+
+And don't forget to also commit the tests once the API PR is landed :)
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1501/files/b881559ff74606b17178952ed0a53a2e0feacf7d..5a1e4c38d71b0d11f7a14cb87dae333c66d84eba) - [changes since last import](https://github.com/facebook/rocksdb/pull/1501/files/b881559ff74606b17178952ed0a53a2e0feacf7d..5a1e4c38d71b0d11f7a14cb87dae333c66d84eba)
+

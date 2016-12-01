@@ -1,0 +1,43 @@
+Currently, deadlock cycles are held in std::unordered_map. The problem with it is that it allocates/deallocates memory on every insertion/deletion. This limits throughput since we're doing this expensive operation while holding a global mutex. Fix this by using a vector which caches memory instead.
+
+Running the deadlock stress test, this change increased throughput from 39k txns/s -> 49k txns/s. The effect is more noticeable in MyRocks.
+@lth has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4205662).
+
+@lth updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1545/files/91175ba846806e28eb5d99834c187be096bd87bd..2c4518b95766f3e2384ed989ca55e3d03d12e101) - [changes since last import](https://github.com/facebook/rocksdb/pull/1545/files/91175ba846806e28eb5d99834c187be096bd87bd..2c4518b95766f3e2384ed989ca55e3d03d12e101)
+
+That's cool, can we achieve the same perf improvements by using unordered_map::reserve ?
+What is the bottle neck in the perf report between the 2 approaches 
+
+They do different things. `unordered_map::reserve` will reserve memory for the buckets, but not for nodes in buckets (I believe they formed a linked list, but not 100% sure). In this approach, I'm reserving memory for nodes in a bucket.
+
+The bottleneck is when we allocate memory for every node that gets added/removed.
+
+Apparently, this restriction is from the fact that map iterators must stay valid even with inserts: http://stackoverflow.com/a/31102576
+
+In this implementation, reallocating the vector during an insertion would invalidate your iterator. I don't need iterators though.
+
+@lth updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1545/files/2c4518b95766f3e2384ed989ca55e3d03d12e101..f4d12f9cdc1d209e7b3d4091b652269c368e116a) - [changes since last import](https://github.com/facebook/rocksdb/pull/1545/files/91175ba846806e28eb5d99834c187be096bd87bd..f4d12f9cdc1d209e7b3d4091b652269c368e116a)
+
+Is it possible to do HashMap::Get() while doing HashMap::Insert or HashMap::Delete from different thread ?
+
+I think that would be unsafe thing HashMap::Get() is getting the item by reference and the underlying container (std::vector) could be changed by Insert/Delete
+
+mybad, you protect these operations using a lock
+
+Yes, and even std::unordered_map is not thread safe :)
+
+@lth updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1545/files/f4d12f9cdc1d209e7b3d4091b652269c368e116a..e518fbf79c94e1939d66bbdea066842f0132e07a) - [changes since last import](https://github.com/facebook/rocksdb/pull/1545/files/91175ba846806e28eb5d99834c187be096bd87bd..e518fbf79c94e1939d66bbdea066842f0132e07a)
+
+@lth can you please look at the test failures ?
+
+@lth updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1545/files/e518fbf79c94e1939d66bbdea066842f0132e07a..bc8cf9fd626ffa20e9e809695511433368ed9f30) - [changes since last import](https://github.com/facebook/rocksdb/pull/1545/files/e518fbf79c94e1939d66bbdea066842f0132e07a..bc8cf9fd626ffa20e9e809695511433368ed9f30)
+
+@lth updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1545/files/bc8cf9fd626ffa20e9e809695511433368ed9f30..370ce0b0ef9ff66c2ae75da14a1804a346d2fffd) - [changes since last import](https://github.com/facebook/rocksdb/pull/1545/files/bc8cf9fd626ffa20e9e809695511433368ed9f30..370ce0b0ef9ff66c2ae75da14a1804a346d2fffd)
+
+With autovector, I get 60k txns / s now.
+
+Awesome!
+LGTM, please land after tests pass
+
+@lth updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1545/files/370ce0b0ef9ff66c2ae75da14a1804a346d2fffd..f7bc6e642ed71766ce15b3c25c4ce4b6e1be27f9) - [changes since last import](https://github.com/facebook/rocksdb/pull/1545/files/370ce0b0ef9ff66c2ae75da14a1804a346d2fffd..f7bc6e642ed71766ce15b3c25c4ce4b6e1be27f9)
+

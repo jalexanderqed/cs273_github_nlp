@@ -1,0 +1,36 @@
+(gdb) bt
+#0  0x00007f34a4a3a425 in raise () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x00007f34a4a3db8b in abort () from /lib/x86_64-linux-gnu/libc.so.6
+#2  0x00007f34a1112a05 in __gnu_cxx::__verbose_terminate_handler () at ../../../../gcc-4.8.0/libstdc++-v3/libsupc++/vterminate.cc:95
+#3  0x00007f34a1110b76 in __cxxabiv1::__terminate (handler=<optimized out>) at ../../../../gcc-4.8.0/libstdc++-v3/libsupc++/eh_terminate.cc:38
+#4  0x00007f34a1110ba3 in std::terminate () at ../../../../gcc-4.8.0/libstdc++-v3/libsupc++/eh_terminate.cc:48
+#5  0x00007f34a111167f in __cxxabiv1::__cxa_pure_virtual () at ../../../../gcc-4.8.0/libstdc++-v3/libsupc++/pure.cc:50
+#6  0x00007f34a1433f66 in rocksdb::DBImpl::FindObsoleteFiles (this=this@entry=0x7f3418ad7c00, deletion_state=..., force=force@entry=true, no_full_scan=no_full_scan@entry=false) at db/db_impl.cc:624
+#7  0x00007f34a1441765 in rocksdb::DBImpl::~DBImpl (this=0x7f3418ad7c00, __in_chrg=<optimized out>) at db/db_impl.cc:362
+#8  0x00007f34a1441911 in rocksdb::DBImpl::~DBImpl (this=0x7f3418ad7c00, __in_chrg=<optimized out>) at db/db_impl.cc:397
+
+How is your RocksDB instance life cycle managed? Is there any chance that the instance is tied up with a static variable? It's ideal if all instances are deleted in a controlled manner before static cleanup kicks in.
+
+@ravikant86 are you still having issues with this? Please reopen this issue if yes.
+
+may I know how this was fixed? I now have the same problem.
+
+@hwpw can you open a separate issue for your problem? This is likely a result of either:
+1) you keep using DB\* even after the destructor kicks in, or
+2) you destruct RocksDB as part of static destruction. You need to delete DB\* before `int main()` finishes.
+
+issue link: https://github.com/facebook/rocksdb/issues/649
+
+On Wed, Jul 8, 2015 at 4:38 PM, Igor Canadi notifications@github.com
+wrote:
+
+> @hwpw https://github.com/hwpw can you open a separate issue for your
+> problem? This is likely a result of either:
+> 1) you keep using DB\* even after the destructor kicks in, or
+> 2) you destruct RocksDB as part of static destruction. You need to delete
+> DB\* before int main() finishes.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/133#issuecomment-119759873.
+

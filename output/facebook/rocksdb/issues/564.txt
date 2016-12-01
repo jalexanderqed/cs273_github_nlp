@@ -1,0 +1,84 @@
+I would like to know if the rocksdb data is persistent across process restart.
+If there is way, can you please share the steps.
+
+TEST CASE:
+Rocksdb Version: 3.10
+
+An instance of rocksdb is started with the follwing options:
+WAL = enabled
+WAL dir = rocksdb dir
+Sync = true
+check_if_missing = true
+
+Rocksdb directory and WAL directory are persisted on SSD.
+Some I/O is performed to the rocksdb, WAL file gets populated and SST file is created.
+The process is killed at this point.
+
+Rocksdb is restarted with check_if_missing = false option this time.
+Rocksdb restart returns an error "Invalid argument, <DB location> does not exist (create_if_missing is false)"
+DB directory is present and all the files are present in the DB, but restart fails.
+
+Can you please confirm if data persistence is supported across process restart?
+
+Yes, data persistence is supported across process restart (even with WriteOptions::sync == false).
+
+This error means that the DB directory doesn't exist: https://github.com/facebook/rocksdb/blob/master/db/db_impl.cc#L823
+
+Can you send us a listing of files? How easy is it to reproduce the problem?
+
+Here is the file listing of the rocskdb directory before and after the restart of process.
+
+After opening DB first time (create if missing = true):
+Few I/O is performed.
+
+total 56
+15613953 drwxr-xr-x 2 root root  4096 Apr  2 17:54 .
+       2 drwxr-xr-x 4 root root 20480 Apr  2 17:54 ..
+15613959 -rw-r--r-- 1 root root   303 Apr  2 17:54 000003.log
+15613957 -rw-r--r-- 1 root root    16 Apr  2 17:54 CURRENT
+15613958 -rw-r--r-- 1 root root    37 Apr  2 17:54 IDENTITY
+15613955 -rw-r--r-- 1 root root     0 Apr  2 17:54 LOCK
+15613954 -rw-r--r-- 1 root root 14030 Apr  2 17:54 LOG
+15613956 -rw-r--r-- 1 root root    13 Apr  2 17:54 MANIFEST-000001
+
+After Process is Killed:
+
+total 56
+15613953 drwxr-xr-x 2 root root  4096 Apr  2 17:54 .
+       2 drwxr-xr-x 4 root root 20480 Apr  2 17:54 ..
+15613959 -rw-r--r-- 1 root root   303 Apr  2 17:54 000003.log
+15613957 -rw-r--r-- 1 root root    16 Apr  2 17:54 CURRENT
+15613958 -rw-r--r-- 1 root root    37 Apr  2 17:54 IDENTITY
+15613955 -rw-r--r-- 1 root root     0 Apr  2 17:54 LOCK
+15613954 -rw-r--r-- 1 root root 14030 Apr  2 17:54 LOG
+15613956 -rw-r--r-- 1 root root    13 Apr  2 17:54 MANIFEST-000001
+
+After re-opening the DB (create if missing = false):
+
+total 28
+3530753 drwxr-xr-x 2 root root  4096 Apr  2 17:58 .
+      2 drwxr-xr-x 4 root root 20480 Apr  2 17:58 ..
+3530755 -rw-r--r-- 1 root root     0 Apr  2 17:58 LOCK
+3530754 -rw-r--r-- 1 root root  3895 Apr  2 17:58 LOG
+
+Error: Invalid argument: <DB location> : does not exist (create_if_missing is false)
+
+Note:
+1. The DB is hosted on the SSD.
+2. SSD is formatted with ext3 file system.
+3. C API is being used.
+
+Hm, It looks like some other process deleted all the files.
+
+Are you sure you're not calling DestroyDB() somewhere?
+
+Can you send us those LOG files that you have?
+
+Oops. DB is destroyed during restart.
+Thanks for the help.
+
+Can we close this?
+
+Please close this issue.
+Working as expected.
+

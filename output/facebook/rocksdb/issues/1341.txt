@@ -1,0 +1,98 @@
+- Is it a feature or bug? Are there any inner operations will block 'put' operation, like 'flush' or 'compact'? If so, is there a switch or something to open these operations' logs?
+- Or my JNI version is too old? It relies on version 3.7.0, the latest one with Java6.
+  Thanks a lot!
+
+Can you provide more info about the issue ?
+RocksDB will stop the writes when certain triggers are met
+You can check these options for example
+- level0_stop_writes_trigger
+- hard_pending_compaction_bytes_limit
+
+I build my application according to this wiki:  'https://github.com/facebook/rocksdb/wiki/RocksJava-Basics'.
+Then I start the client to perform load test, but the result is awful. All puts are blocked by native method, and after 2 hours, it turns to be able to put again, while it lasts short, for almost 20 minutes and then get blocked again.
+I am wondering the introduction wiki is too simple to contains some best practices in high IO performance. So I am trying to guess the Options fields and modify a little to observe the affect, which is so inefficient in this way.
+Is there any clue to this 'best practice options'? 
+
+Thanks a lot.
+
+Problem solved.
+Some conclusions:
+- as @IslamAbdelRahman 's reply, flush and compact params should be well defined. Otherwise they will block write
+- my application young gc a lot when it starts to flush. And it turns out to be my comparator's fault. From the heap dump, a lot int[511278] arrays are allocated and I have no idea why.
+- The performance looks ok when I solved the above two issues.
+  My code:
+
+```
+public class KeyComparator extends Comparator {
+
+    public KeyComparator(ComparatorOptions copt) {
+        super(copt);
+    }
+
+    @Override
+    public String name() {
+        return "key-comparator";
+    }
+
+    @Override
+    public int compare(Slice a, Slice b) {
+        Key ka = new Key(a.data()), kb = new Key(b.data());
+        return ka.compareTo(kb);
+    }
+
+}
+
+```
+
+```
+public class Key implements Comparable<Key> {
+
+    public byte[] rowKey;
+
+    public byte[] column;
+
+    public Key() {
+    }
+
+    public Key(byte[] rowKey, byte[] column) {
+        this.rowKey = rowKey;
+        this.column = column;
+    }
+
+    public Key(byte[] key) {
+        fromBytes(key);
+    }
+
+    public byte[] toBytes() {
+        int x = rowKey.length, y = column.length;
+        byte[] bs = new byte[2 + x + y];
+        bs[0] = (byte) (x & 0xff);
+        bs[1] = (byte) ((x & 0xff00) >> 8);
+        System.arraycopy(rowKey, 0, bs, 2, x);
+        System.arraycopy(column, 0, bs, 2 + x, y);
+        return bs;
+    }
+
+    public void fromBytes(byte[] bs) {
+        int x = ((0xff & bs[0]) | (0xff00 & (bs[1] << 8))), y = bs.length - 2 - x;
+        byte[] _rowKey = new byte[x];
+        byte[] _column = new byte[y];
+        System.arraycopy(bs, 2, _rowKey, 0, x);
+        System.arraycopy(bs, 2 + x, _column, 0, y);
+        this.rowKey = _rowKey;
+        this.column = _column;
+    }
+
+    @Override
+    public int compareTo(Key o) {
+        int res = BinaryUtil.compareBytes(this.rowKey, o.rowKey);
+        return res != 0 ? res : BinaryUtil.compareBytes(this.column, o.column);
+    }
+
+}
+```
+
+Thanks @cndaimin for the update. please keep in mind that the comparator is used heavily inside RocksDB, so keeping it efficient and lightweight is always a good idea.
+
+I will close this issue now
+

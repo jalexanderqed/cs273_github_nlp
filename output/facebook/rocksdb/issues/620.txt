@@ -1,0 +1,17 @@
+error: format specifies type 'unsigned long' but the argument has type 'SequenceNumber'
+      (aka 'unsigned long long') [-Werror,-Wformat]
+
+Tnx @stege ! Looks like travis build failed because PRIu64 was not recognized. I think you can fix that by adding 
+
+```
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS
+#endif
+```
+
+before you include inttypes.h
+
+I stole your PR and merged it in https://github.com/facebook/rocksdb/commit/4c181f08bca568efc42a9d90c612a7569bf9c388 :)
+
+ok thx
+

@@ -1,0 +1,8 @@
+
+@siying @IslamAbdelRahman It looks likeTravis errors are not related. One is Java related and the other one is memory corruption which worries me a lot. Otherwise, I am prepared to merge it. Will wait unti this afternoon PDT
+
+Take that back. It is an assertion failure.
+
+[ RUN      ] UniversalCompactionNumLevels/DBTestUniversalCompaction.UniversalCompactionTrivialMoveTest2/2
+Assertion failed: (leftover >= 0), function AddRecord, file db/log_writer.cc, line 51.
+

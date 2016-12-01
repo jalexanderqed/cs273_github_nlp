@@ -1,0 +1,22 @@
+@fyrz and @adamretter -- we're releasing RocksDB 3.11 probably today. Any patches you want to get in?
+
+@igorcanadi That is a bit short notice!
+
+Yeah I know, sorry. We have some hi-pri patches that we need to release for our internal use-cases. We're back to quick release cycle, so we should be releasing 3.12 in 4 weeks.
+
+@igorcanadi Any chance of getting a semblance of a roadmap/release schedule into GitHub milestones, so that non-FBers can contribute/follow?
+
+Yeah, we should definitely do that. I know we promised this at 3.10 release already.
+
+BTW we don't have fixed roadmap and milestones and don't target particular features for certain releases. Our goal is to do time-based releases. Develop into master branch and then just release every 4 weeks. Whatever feature gets in, it gets released. Features that don't get in, don't get released. It's very similar how other teams at Facebook function. (of course, we sometimes block the release if there's a need from internal customer for particular feature. but it shouldn't happen often because even if it doesn't make this release, it will get into the release scheduled for 4 weeks from now)
+
+cc @siying @yhchiang @kradhakrishnan @rven1 
+
+@igorcanadi ah okay... I had no idea! Last question, how do you decide to go from a minor x.x release to the next major x.0 release?
+
+We moved to 3.0 because we introduced column families. I'm not sure when we'll go with 4.0 :) Maybe when we add full transaction support :)
+
+@igorcanadi nothing to be comitted by me this time. I`ll going to move the pull request to 3.12. 
+
+Tnx guys. I'm closing this issue, we'll be releasing soon
+

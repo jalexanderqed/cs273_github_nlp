@@ -1,0 +1,68 @@
+Hi,
+
+In my junit test case, I repeatedly write to rocks db, close it (by closing all rocks resource I can think of, then `RocksDB.close()`), delete the db, and start over again. At random time I would get this error:
+
+```
+Assertion failed: (refs_.load(std::memory_order_relaxed) == 0), function ~ColumnFamilyData, file db/column_family.cc, line 412.
+```
+
+This error appears on random time of the test, always after the delete db. I suspect the `RocksDB.close()` is not completed yet in the background when the db is deleted in disk. Is this possible?
+
+In my test I use only default column family, so there is no need to close the column family explicitly. Is this correct?
+
+Thanks,
+Sam
+
+@sam-guo Which version of RocksJava are you using? Can you test this with the HEAD version of RocksDB? Quite some changes were made around closing resources from the Java API here - https://github.com/facebook/rocksdb/commit/51c9464dfc0415911897e83a275dcf84753f99f9
+
+Hi adamretter,
+
+I am at master (HEAD?). Is there another branch you would like me to try?
+
+The error (Assertion failed: (refs_.load(std::memory_order_relaxed) == 0)) shown up randomly in many of my unit test.
+
+Thanks,
+Sam
+
+RocksJava has a fairly reasonable test suite which doesn't show this. Would you be able to contribute a test which shows this behaviour?
+
+Hi,
+
+I think I know a little bit more on this.
+
+In my code I use the default column family only. When I opened up a db using this method:
+
+```
+open(DBOptions var0, String var1, List<ColumnFamilyDescriptor> var2, List<ColumnFamilyHandle> var3)
+```
+
+and closing it by first closing everything in `var3`, it will give me that error.
+
+So I switched to using this open method:
+
+```
+RocksDB open(Options var0, String var1)
+```
+
+and just close the db it self, not any `ColumnFamilyHandle` explicitly, the problem went away.
+
+There seems to be a bug in the former way of opening/closing with only the default column family.
+
+Hope this helps.
+
+Sam
+
+There is another piece of related info.
+
+With 
+   `RocksDB open(Options var0, String var1)`
+when ever I use Intellij debugger to step into a class that directly uses RocksIterator, the debugger session dies immediately. Without stepping into those classes the program runs fine, with and without debugger running.
+
+With 
+   `open(DBOptions var0, String var1, List var2, List var3)`
+above problem never occurred.
+
+Have no idea why, just observation.
+
+@sam-guo You have to cleanup (close) the column family handles before you close the database, otherwise you can get the assertion error that you described. See https://github.com/facebook/rocksdb/issues/974
+

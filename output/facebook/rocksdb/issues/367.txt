@@ -1,0 +1,8 @@
+RocksJava build is broken after commit: f184198.
+
+@ljinfb can you look into this ?
+
+@igorcanadi i removed one of the MutableOptions.
+
+I missed the java part. The fix looks good to me
+

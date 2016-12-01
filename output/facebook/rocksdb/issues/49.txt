@@ -1,0 +1,25 @@
+the whole sst file must be loaded when doing sst merge, some useless value will be read into memory repeatedly, a lot of useless values can cost much memory,is it right?
+
+Can you elaborate this problem a little bit more? What are the "useless values"?
+
+Right now when compacting sst files, we'll not load the whole file; instead, we'll read 1 block (by default it is 4k) to the memory.
+
+Is there an option to use madvise for those reads?
+
+On Thu, Jan 2, 2014 at 10:50 AM, Kai Liu notifications@github.com wrote:
+
+> Can you elaborate this problem a little bit more? What are the "useless
+> values"?
+> 
+> Right now when compacting sst files, we'll not load the whole file;
+> instead, we'll read 1 block (by default it is 4k) to the memory.
+> 
+> —
+> Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/49#issuecomment-31474480
+> .
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+

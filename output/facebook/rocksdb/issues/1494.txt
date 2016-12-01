@@ -1,0 +1,36 @@
+as ubuntu-16.04 defaults to link /bin/sh to /bin/dash the following compile error is generated for the make check target.
+
+<pre>
+14:56:27 make[2]: Leaving directory '/source'
+14:56:27 make[2]: Entering directory '/source'
+14:56:27 TEST_BINARY=db_universal_compaction_test; \
+14:56:27   TEST_NAMES=` \
+14:56:27     ./$TEST_BINARY --gtest_list_tests \
+14:56:27     | perl -n \
+14:56:27       -e 's/ *\#.*//;' \
+14:56:27       -e '/^(\s*)(\S+)/; !$1 and do {$p=$2; break};'	\
+14:56:27       -e 'print qq! $p$2!'`; \
+14:56:27 for TEST_NAME in $TEST_NAMES; do \
+14:56:27 	TEST_SCRIPT=t/run-$TEST_BINARY-${TEST_NAME//\//-}; \
+14:56:27 	echo "  GEN     " $TEST_SCRIPT; \
+14:56:27     printf '%s\n' \
+14:56:27       '#!/bin/sh' \
+14:56:27       "d=\/dev/shm/rocksdb.x2Z6$TEST_SCRIPT" \
+14:56:27       'mkdir -p $d' \
+14:56:27       "TEST_TMPDIR=\$d  ./$TEST_BINARY --gtest_filter=$TEST_NAME" \
+14:56:27 	> $TEST_SCRIPT; \
+14:56:27 	chmod a=rx $TEST_SCRIPT; \
+14:56:27 done
+14:56:27 /bin/sh: 9: Bad substitution
+</pre>
+
+A SHELL=/bin/bash at the top of the Makefile corrects this.
+I also had this problem once and have a fix. The reason is that `${TEST_NAME//\//-}` is not compatible with bash. This could be replaced by a `echo | sed`.
+
+I can send a pull request if necessary.
+
+@omegaga  You've got a CLA signed and I haven't (yet - in progress) so feel free to write a pull request if you want.
+
+Any update on the PR? I can try fixing it myself, but I'm not very familiar with sed.
+Add SHELL=/bin/bash to top level Makefile. Or install bash and change the OS /bin/sh symlink.
+Would adding that line break the build on non-Linux platforms? Or would it be safe to commit that change to master?

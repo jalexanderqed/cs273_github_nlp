@@ -1,0 +1,25 @@
+https://github.com/facebook/rocksdb/wiki/Third-party-language-bindings
+rust: https://github.com/spacejam/rust-rocksdb
+
+Done. Thanks @spacejam for building this!
+
+@spacejam do you mind sending a pull request to add it to LANGUAGE-BINDINGS.md file too?
+
+this is great! thanks @spacejam!
+
+On Tue, Jul 12, 2016 at 3:10 PM Siying Dong notifications@github.com
+wrote:
+
+> @spacejam https://github.com/spacejam do you mind sending a pull
+> request to add it to LANGUAGE-BINDINGS.md file too?
+> 
+> —
+> You are receiving this because you are subscribed to this thread.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1204#issuecomment-232197222,
+> or mute the thread
+> https://github.com/notifications/unsubscribe/AFdQsaHWQDO1Q3JrhN5RSTvpSk0wRYLHks5qVBCzgaJpZM4JI8Yg
+> .
+
+https://github.com/facebook/rocksdb/commit/c6a8665b37594bde380fd16695cb2b9ce6376f2d
+

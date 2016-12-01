@@ -1,0 +1,21 @@
+Hi,
+
+I'm writing a clojure wrapper for RocksJava, and am trying to automatically release snapshots in a finalizer with `releaseSnapshot`. However this causes the jvm to segfault reproducibly.
+Releasing the snapshot outside the finalizer works fine.
+I've tested this on rocksdbjni 3.13.1 and 4.0, both have the same problem.
+The system this is running on is OS X.
+Does anybody have any ideas or pointers what is happening here?
+
+I attached the segfault log.
+[hs_err_pid50805.log.txt](https://github.com/facebook/rocksdb/files/74804/hs_err_pid50805.log.txt)
+
+I have a Gist that reproduces this in Java. I hope it helps to track down the problem
+https://gist.github.com/dmarjenburgh/8ae4ec33b2a8cd8905d6
+
+Hello @j-pb and @dmarjenburgh.  Thanks for providing the information.  I suspect the problem might be the case where finalizer was called after the rocksdb instance has already been closed.  Can I know whether that is the case?
+
+Hey @yhchiang ,
+In my case it also happens when the database is not closed, and still referenced by a toplevel object.
+
+@dmarjenburgh On the latest RocksJava I can run your test until I run out of Heap Space, I have allocated `-Xmx6g`. Do you want to try with the latest Rocks, or how much Heap do I need for your test?
+

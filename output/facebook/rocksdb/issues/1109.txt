@@ -1,0 +1,4 @@
+Closes https://github.com/facebook/rocksdb/issues/932
+
+Travis was broken because other changes. Built and ran Java tests on my host and it passed (after fixing the merge problem introduced in https://github.com/facebook/rocksdb/pull/1106 ). I'm merging it.
+

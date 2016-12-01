@@ -1,0 +1,19 @@
+I get this error
+
+```
+> make check
+g++ -g -Wall -Werror -Wsign-compare -I. -I./include -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_MACOSX -DROCKSDB_ATOMIC_PRESENT -DGFLAGS=google -DZLIB -DBZIP2   -DHAVE_JEMALLOC -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c util/build_version.cc -o util/build_version.o
+g++ -g -Wall -Werror -Wsign-compare -I. -I./include -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_MACOSX -DROCKSDB_ATOMIC_PRESENT -DGFLAGS=google -DZLIB -DBZIP2   -DHAVE_JEMALLOC -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c   utilities/spatialdb/spatial_db.cc -o utilities/spatialdb/spatial_db.o
+utilities/spatialdb/spatial_db.cc: In member function 'virtual rocksdb::Status rocksdb::spatial::SpatialDBImpl::Insert(const rocksdb::WriteOptions&, const rocksdb::spatial::BoundingBox<double>&, const rocksdb::Slice&, const rocksdb::spatial::FeatureSet&, const std::vector<std::basic_string<char> >&)':
+utilities/spatialdb/spatial_db.cc:542:38: error: comparison between signed and unsigned integer expressions [-Werror=sign-compare]
+cc1plus: all warnings being treated as errors
+make: *** [utilities/spatialdb/spatial_db.o] Error 1
+```
+
+It works perfectly fine on 4.9, so feel free to close it if we are not going to support 4.7.
+
+Thanks for reporting this issue.  Just submitted a patch for this.  Will be ready once it has been reviewed and committed.  
+https://reviews.facebook.net/D23565
+
+closed by commit https://github.com/facebook/rocksdb/commit/035043559d300d8fd001c48676964a6b91254328
+

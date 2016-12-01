@@ -1,0 +1,22 @@
+Hi.I use the interface Merge operation. I set TTL is 10 days and open database with "DBWithTTL::Open". But I find datas not be deleted 10 days later.   I don't  know why and how to do. My email is "bingfeng198878@163.com". Please help me.   Thank you!
+
+Hi @q96456, Expired TTL values are deleted during compaction only, so it's possible that when you read from a TTL DB you still get expired value.
+you can check https://github.com/facebook/rocksdb/wiki/Time-to-Live
+
+Hi @IslamAbdelRahman   My database files has 290G, So I think compaction must be happened.
+
+@IslamAbdelRahman  My program produces 8G data a day.   I can read 10 days ago data.  So I don't think TTL to take effect
+
+@IslamAbdelRahman  I want to know when "FullMerge" will be called.  I only know "Get" will call "FullMerge".
+
+Thanks @q96456, I believe there is a problem when using TTL and merge operator, looking into this
+
+Hey @q96456, what is the behaviour you are expecting from using TTL + merge ?
+
+Are you expecting the TTL to be relative to the last Merge operation ?
+If you do a Merge() with a key that was already expired what do you expect the behaviour to be ?
+
+We may keep the values that were merged even after they expire so that when we get a future Merge() we apply it to the this value.
+
+Hi @IslamAbdelRahman .I find when FullMerge  and PartialMergeMulti , TTL will be update to now time.Can I modify the codes, in TTL's FullMerge and PartialMergeMulti,I won't update time.I want the "key"'s ttl is first merge time.Modify the code can cause other problems like this?
+

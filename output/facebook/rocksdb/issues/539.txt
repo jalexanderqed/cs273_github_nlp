@@ -1,0 +1,55 @@
+Looking at the [official benchmarks](https://github.com/facebook/rocksdb/wiki/Read-Modify-Write-Benchmarks) for the merge operator, it seems that some important parameters and some details are missing.
+## Issue with key size
+
+Although not mentioned on the page, by looking at the code, my conclusion is that you were using 16 byte keys. Since you are using a 64bit uniform [I believe] random number generator, the are two problems:
+1. Your keys always look like an 8byte random number followed by 8 bytes of zeros, B1...B800000000. This seems unnecessary. You could simply use an 8byte key.
+2. More importantly, the possibility of collision over the course of 50M keys is very very small. Therefore, I am not sure how many of the merge statements actually caused two values to be merged as the probability of producing the same key is so small! So, does this mean that the 20 micros/ops difference can simply be the time it took the "update" benchmark to do the read before the write operation? Am I missing something here?
+3. If my point regarding lack [or infrequency] of key collision is valid, I would suggest re-writing the key generator.
+## Issue with reads after merge (or lack thereof)
+
+I am still learning about the implementation details of RocksDB, so I might be wrong on this one. Let's assume that [the above mentioned issue is resolved and] the random number generator actually produces same keys often, which means the benchmarks will in fact perform "Read-Modify-Write" and merges using the merge operator. In the "update" benchmark, when we do a RMW operation, a future read on the same key would be quite cheap as it does not incur the cost of merging two values. However, in the "merge" benchmark, a `db.merge(k,v)` statement may not necessarily cause an immediate merge of two values. In fact, it is possible that a read will have to pay this cost. Alternatively, depending on when and how compaction is scheduled to happen, a future write of a different key may be stalled. I would suggest that it is important to improve both experiments by adding a read phase to each of them. This will help understand the performance impact of the merge operator on future read operations. For example, assuming a total of N entries for the "merge" benchmark, it should look like
+
+```
+for i in 1 to N
+   generate random key
+   generate random value
+   db.merge(key, value)
+end for
+for i in 1 to N
+   generate random key
+   db.get(key, value)
+end for
+```
+## Misc
+
+Lastly, it would be great if the RMW benchmarks were executed on the same hardware config as the other official [performance benchmarks](https://github.com/facebook/rocksdb/wiki/Performance-Benchmarks). This would make it easier to compare the times.
+
+I haven't looked at key generation code recently. I am not sure whether we do it but I think we should try to spread the 64-bit ints used for key generation across all bytes of the key. Otherwise, prefix compression on index keys will overstate compression we might really get.
+
+I agree with your point about the chance of collision being too small. We either need to perform many more writes than there are keys or need skew in the generated keys. There is work in progress on skewed keys.
+
+For comparisons, I want two comparisons. The first comparison is overwrite vs merge to confirm that merge can do writes almost as fast as overwrite. In the long run merge might get more stalls than overwrite because there is more work to do during compaction. 
+
+The second comparison is merge + reads vs updaterandom, which is what you have requested. You suggested doing merges first and then reads. I prefer that reads and merge run concurrently because if merges go first then the memtable will be empty and compaction might not be in steady state when reads run. And reads with an empty memtable and/or empty L0 are faster because there are fewer places to check for data.
+
+I will probably make the merge+read client look like updaterandom. The updaterandom client does read then write in a loop and merge+read can do read+merge in a loop. Then I will add a parameter to control the percentage of loop iterations that skip the write/merge.
+
+Our benchmark scripts continue to change and get better. There were a few bugs fixed so it will be hard to produce any results today that can be compared with old results.
+
+Change my mind somewhat. The existing mergerandom test can be used to compare merge with overwrite to confirm that compaction can keep up with a heavy merge workload. But as you state, we don't have anything to consider the cost of merge on reads. I want to add mergewhilewriting, which will be similar to readwhilewriting except the writes will be merges rather than Put. With the existing db_bench framework it will be difficult to have one test to measure read and merge performance.
+
+Thanks for the fast response, @mdcallag. One more thing, to do a fair comparison between the Read-Modify-Write and the Merge operator, we should have an "update" benchmark that implements the same modification logic as in the merge operator of the merge benchmark. The current implementation just generates a new value and puts it back.
+
+Instead of uint64add, you may want to use a more flexible operator that lets you deal with values larger than 8 bytes. I have implemented one that XORs to arrays of chars, byte by byte. See [in my personal fork](https://github.com/pshareghi/rocksdb/blob/master/utilities/merge_operators/bytesxor.cc). Then, I also added a xorupdaterandom benchmark that uses the static method `BytesXOROperator::XorBytes(.)` of my merge operator to perform the "modify" step.
+
+The reason I am having this discussion is that for the last few weeks I have been working on porting the merge operator to RocksJava. I noticed that my implementation did not have a good performance while doing reads. This is partly due to JNI, and partly due to mutexes that I use. So, I decided to compare its performance to a merge operator written in C++. So far it has not been easy to do a fair comparison partly due to huge number of Rocksdb options, but that is another story.
+
+For the "update" benchmark, it would be useful to know how many of reads in read-modify-write actually returned a value.
+
+For values read in updaterandom that is reported...
+updaterandom :      13.494 micros/op 74108 ops/sec; ( updates:100000 found:100000)
+
+I have been using 'put' as the merge operator and value_size larger than 100
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

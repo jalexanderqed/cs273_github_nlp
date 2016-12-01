@@ -1,0 +1,4 @@
+Travis is failing with Java. Try to fix it.
+
+I've no idea why it was automatically closed. I'm sending a new one: https://github.com/facebook/rocksdb/pull/1396 for the same change.
+

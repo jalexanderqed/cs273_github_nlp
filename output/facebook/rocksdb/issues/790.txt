@@ -1,0 +1,21 @@
+  Introduce a new DBOption random_access_max_buffer_size to limit
+  the size of the random access buffer used for unbuffered access.
+  Implement read ahead buffering when enabled.
+  To that effect propagate compaction_readahead_size and the new option
+  to the env options to make it available for the implementation.
+  Add Hint() override so SetupForCompaction() call would call Hint()
+  readahead can now be setup from both Hint() and EnableReadAhead()
+  Add new option random_access_max_buffer_size support
+  db_bench, options_helper to make it string parsable
+  and the unit test.
+
+@siying This is a continuation of our discussion in the past. per your request I added a comment to the new option that it is only supported on Windows. I also left the call to EnableReadAhead() at the ReadaheadRandomAccess(). I also introduced Hint() override so SetupForCompaction() would have an effect of enabling read ahead. With the new table reader option set this provides a great deal of speed improvement in our tests.
+
+I didn't review port/win/env_win.cc. I hope you find a teammate to review it. If you fix the 80-char issue and say Windows codes are OK, I'm going to merge it.
+
+@siying Excellent.
+
+I'm confused. You closed it. Did anyone merge anything?
+
+@siying My mistake. Thought it is already merged.
+

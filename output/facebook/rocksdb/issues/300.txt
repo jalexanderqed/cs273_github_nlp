@@ -1,0 +1,6 @@
+Hi, I find there is no option for specifying the column family (eg: by name), then how can I access data in non-default column-family by ldb?
+
+Hey @zoglee. We just recently added support to column families in RocksDB and we unfortunately hadn't had the chance to add the support to ldb yet. :( We would welcome any contributions towards making this happen
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

@@ -1,0 +1,6 @@
+Hi,
+
+It seems that `c_test.c` does not clean up the `rocksdb_mergeoperator_t` it creates [here](https://github.com/facebook/rocksdb/blob/master/db/c_test.c#L658).  If it is cleaned up with a call to `rocksdb_mergeoperator_destroy` at the end of the block then a segfault will occur.  Should merge operators be cleaned up by calling `rocksdb_mergeoperator_destroy`?  If not, what is the purpose of `rocksdb_mergeoperator_destroy`, and what is the proper way to clean up merge operators?
+
+`rocksdb_options_set_merge_operator()` will consume your `rocksdb_mergeoperator_t` so that you don't have to clean it up. You should only call `rocksdb_mergeoperator_destroy()` on merge operators that have not be assigned to options by calling `rocksdb_options_set_merge_operator()`
+

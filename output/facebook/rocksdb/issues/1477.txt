@@ -1,0 +1,13 @@
+Summary:
+Currently the compaction stats are printed to stdout. We want to export the compaction stats in a map format so that the upper layer apps (e.g., MySQL) could present
+the stats in any format required by the them.
+
+Test Plan: An exiting unit test is augmented to also test the new export API: "./db_test2 --gtest_filter=*AutomaticCompactionOverlapManualCompaction"
+@maysamyabandeh has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4149836).
+
+@maysamyabandeh updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1477/files/13fca998065525b7c96f194a9985e0b3933d1962..65ec24880a4e4c33db61ab30f2dd4624ffba2268) - [changes since last import](https://github.com/facebook/rocksdb/pull/1477/files/13fca998065525b7c96f194a9985e0b3933d1962..65ec24880a4e4c33db61ab30f2dd4624ffba2268)
+
+@maysamyabandeh updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1477/files/65ec24880a4e4c33db61ab30f2dd4624ffba2268..58a1450354e678e0c1b5ecf626d6d12bca224bbd) - [changes since last import](https://github.com/facebook/rocksdb/pull/1477/files/65ec24880a4e4c33db61ab30f2dd4624ffba2268..58a1450354e678e0c1b5ecf626d6d12bca224bbd)
+
+@maysamyabandeh updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1477/files/58a1450354e678e0c1b5ecf626d6d12bca224bbd..5c6d4d99686fd1bae470cd51592ccd0d1b669099) - [changes since last import](https://github.com/facebook/rocksdb/pull/1477/files/58a1450354e678e0c1b5ecf626d6d12bca224bbd..5c6d4d99686fd1bae470cd51592ccd0d1b669099)
+

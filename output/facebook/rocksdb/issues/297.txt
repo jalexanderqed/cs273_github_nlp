@@ -1,0 +1,6 @@
+A small nit. If I do 'make check', it ends up creating a lot of test binaries in the root directory. They can possibly be moved into a 'bin' or 'bintests' kind of directory, so as not to clutter the root directory.
+
+True, this sounds like a good idea.
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

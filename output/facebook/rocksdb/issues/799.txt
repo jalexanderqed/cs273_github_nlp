@@ -1,0 +1,5 @@
+  char is not a valid template parameter for std::uniform_int_distribution
+  according to the standard. Replacing with int should be just fine.
+
+@siying some SEGFAULT. Don't think it is related.
+

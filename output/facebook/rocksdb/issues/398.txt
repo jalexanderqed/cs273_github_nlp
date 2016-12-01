@@ -1,0 +1,36 @@
+RocksDB supports two ways of saving snapshots. In
+memory and on disk. The later one was not available
+in Java.
+
+Hold on it. We are discussing to move this functionality to utilities path.
+
+@siying will patch my pull request, when the decision is made. Can you comment in here about the outcome ?
+
+@siying btw can you add to the discussion that the storage folder behavior is different from any other open directory method(see test).
+
+@fyrz  what behavior difference do you mean?
+CC @rven1 
+
+@siying any other method doesn't care about existence of the passed folder. The CreateCheckpoint method fails if the directory exists.
+
+If there's no c++ API change, then just the rocksjni.cc part should change accordingly.  However, if it's going to change c++ API, then I would suggest to put this diff on hold until the c++ snapshot is ready again.
+
+@rven1 is the latest implementation now generally accepted ?
+
+Yes, you can add the java support for it. Thanks @fyrz
+-Venky
+
+From: fyrz <notifications@github.com<mailto:notifications@github.com>>
+Reply-To: facebook/rocksdb <reply@reply.github.com<mailto:reply@reply.github.com>>
+Date: Friday, November 21, 2014 at 10:52 AM
+To: facebook/rocksdb <rocksdb@noreply.github.com<mailto:rocksdb@noreply.github.com>>
+Cc: Venkatesh Radhakrishnan <rven@fb.com<mailto:rven@fb.com>>
+Subject: Re: [rocksdb] [RocksJava] Support for stored snapshots (#398)
+
+@rven1https://github.com/rven1 is the latest implementation now generally accepted ?
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/pull/398#issuecomment-64009966.
+
+@rven1 @yhchiang up-to-date now see.: https://reviews.facebook.net/D28971
+

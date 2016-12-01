@@ -1,0 +1,7 @@
+Dont use c_str() of temp std::string in RocksLuaCompactionFilter::Name()
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4199094).
+
+@IslamAbdelRahman updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1535/files/28ab241e45f24c7c01c0bc66b8bed25dac8bac89..a1a2ca78557e909b5cc8a91bd901d05bee40c6c6) - [changes since last import](https://github.com/facebook/rocksdb/pull/1535/files/28ab241e45f24c7c01c0bc66b8bed25dac8bac89..a1a2ca78557e909b5cc8a91bd901d05bee40c6c6)
+
+Update to use cached name_
+

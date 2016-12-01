@@ -1,0 +1,4 @@
+In Makefile there are lib.a builds for four compression libraries (libz, libbz2, libsnappy, liblz4), but the new experimental zstd is missing.
+
+In ./build_tools/rocksdb-lego-determinator run_no_compression, ztsd is not explicitly excluded as the other compression libraries are.
+

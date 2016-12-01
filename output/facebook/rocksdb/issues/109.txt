@@ -1,0 +1,29 @@
+would love to see an official rockdb binding for node.js :-)
+
+right now our only option is leveldb
+
+Did you try https://www.npmjs.org/package/rocksdb ?
+
+unfortunately it's not really supported and there is no repository on github. also, go badgers!
+
+Higher level bindings...
+https://github.com/rvagg/node-levelup
+
+Lower level bindings...
+https://github.com/rvagg/node-leveldown
+
+Alternate bindings...
+https://github.com/level
+
+A tool for inspecting/exploring instances in C++...
+https://github.com/hij1nx/ldb
+
+A tool for inspecting/exploring instances in Node.js...
+https://github.com/hij1nx/lev
+
+@hij1nx ohh very cool. unfortunately rvagg's stuff doesn't really work on 0.11.x. Do the leveldown bindings work with rocksdb though?
+
+I believe the only issue was with `nan`, the library that provides native abstractions for node. But, I also recently heard that it works again for `0.11.x`, you might want to join us in IRC and ask around: `##leveldb` on `irc.freenode.net`.
+
+We are likely not be officially supporting node.js bindings. We hope somebody from the node.js community might be able to provide good and supported bindings.
+

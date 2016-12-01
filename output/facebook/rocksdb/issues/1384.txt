@@ -1,0 +1,62 @@
+- util/build_verion.cc.in: add this file, so cmake and make can share the
+  template file for generating util/build_version.cc.
+- CMakeLists.txt: also, cmake v2.8.11 does not support file(GENERATE ...),
+  so we are using configure_file() for creating build_version.cc.
+- Makefile: use util/build_verion.cc.in for creating build_version.cc.
+
+Signed-off-by: Kefu Chai tchaikov@gmail.com
+
+```
+[ RUN      ] DBTest.RepeatedWritesToSameKey
+Received signal 11 (Segmentation fault: 11)
+#0   szone_free_definite_size (in libsystem_malloc.dylib) + 2638    
+#1   rocksdb::DBImpl::WriteImpl(rocksdb::WriteOptions const&, rocksdb::WriteBatch*, rocksdb::WriteCallback*, unsigned long long*, unsigned long long, bool) (in db_test) (db_impl.cc:4799)  
+#2   rocksdb::DBImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch*) (in db_test) (db_impl.cc:4493)  
+#3   rocksdb::DBImpl::Put(rocksdb::WriteOptions const&, rocksdb::ColumnFamilyHandle*, rocksdb::Slice const&, rocksdb::Slice const&) (in db_test) (db_impl.cc:5711)  
+#4   rocksdb::DBTestBase::Put(int, rocksdb::Slice const&, rocksdb::Slice const&, rocksdb::WriteOptions) (in db_test) (db_test_util.cc:498)  
+#5   rocksdb::DBTest_RepeatedWritesToSameKey_Test::TestBody() (in db_test) (db_test.cc:1271)    
+#6   void testing::internal::HandleExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) (in db_test) (gtest-all.cc:3882)  
+#7   testing::Test::Run() (in db_test) (gtest-all.cc:6332)  
+#8   testing::TestInfo::Run() (in db_test) (gtest-all.cc:6332)  
+#9   testing::TestCase::Run() (in db_test) (gtest-all.cc:4189)  
+#10  testing::internal::UnitTestImpl::RunAllTests() (in db_test) (gtest-all.cc:6060)    
+#11  bool testing::internal::HandleExceptionsInMethodIfSupported<testing::internal::UnitTestImpl, bool>(testing::internal::UnitTestImpl*, bool (testing::internal::UnitTestImpl::*)(), char const*) (in db_test) (gtest-all.cc:3824)    
+#12  testing::UnitTest::Run() (in db_test) (gtest-all.cc:5680)  
+#13  main (in db_test) (db_test.cc:5724)    
+#14  start (in libdyld.dylib) + 1   
+#15  0x00000001 (in db_test)    
+/bin/sh: line 1:  5929 Segmentation fault: 11  ./$t
+make: *** [check_some] Error 1
+```
+
+the test failure is not relevant.
+
+@tchaikov IMHO, you are facing an uphill battle trying to fix everything that the older versions of CMake do not support. The new features will pop up continuously. Why no upgrading CMake?
+
+> you are facing an uphill battle trying to fix everything that the older versions of CMake do not support.
+
+@yuslepukhin the battle is almost over =) this is the last bit that enables rocksdb to build with cmake v2.8.11.
+
+>  The new features will pop up continuously.
+
+yes, we can start using them once we drop the support of the distros (hence the cmake) without this features.
+
+> Why no upgrading CMake?
+
+in https://github.com/facebook/rocksdb/blob/master/CMakeLists.txt#L29, we have
+
+``` cmake
+cmake_minimum_required(VERSION 2.6)
+```
+
+so technically, we can not use any feature not offered by cmake v2.6. if rocksdb decides to bump the supported cmake version to 2.8.12 or up, we can unlock the features in v2.8.12 then.
+
+but the downside of this decision is that, downstream project or packager will need to patch the rocksdb's CMakeLists.txt to be compatible with the cmake version they have, if they are using cmake to build it. take our project[1] as an example, rocksdb is included as a git submodule in ceph, and we want to support GNU/Linux distros[2] that ship old cmake versions , so they can compile our code without any patches. that's we want to cleanup all bits not compatible with v2.8.11.
+
+---
+
+[1] https://github.com/ceph/ceph/
+[2] rhel7 and centos7 are still with 2.8.11, that's why we have "cmake_minimum_required(VERSION 2.8.11)" in our cmake script.
+
+@yuslepukhin ping? is this change good to merge? it is the last hurdle i believe.
+

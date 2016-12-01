@@ -1,0 +1,5 @@
+it'll leave an empty file behind each time open fails. once open eventually succeeds it'll delete all the accumulated empty files.
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1490/files/4f23275e4f1ae86c7a9dce0dc5a6cfadce641cb2..896848c89fd7635661b5bb63683f3c94d5efa55c)
+
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4158821).
+

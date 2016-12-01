@@ -1,0 +1,16 @@
+I hope this patch will fix the bug i mentioned in #155.
+
+[1] [How to print pthread_t](http://stackoverflow.com/questions/1759794/how-to-print-pthread-t#answer-1759846)
+
+Thanks for fixing this! I have a style comment :)
+
+Hi Igor,
+Is the function `PrintThreadInfo` at the right place in the commit 96428a769ea908a2f3b17a8c881a10bb72328a4f ?
+Waiting for your review.
+
+No, it's in the global namespace now. Put it on the line 95 please.
+
+Sorry, I am making it right.
+
+Thanks a lot!
+

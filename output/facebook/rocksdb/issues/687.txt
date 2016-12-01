@@ -1,0 +1,64 @@
+I am on Ubutun 15.04 and using gcc version 4.9.2
+
+  GEN      util/build_version.cc
+  CC       db/db_bench.o
+  CC       util/testutil.o
+  CCLD     db_bench
+  CC       table/table_reader_bench.o
+  CC       util/testharness.o
+  CC       table/mock_table.o
+  CC       util/mock_env.o
+  CC       third-party/gtest-1.7.0/fused-src/gtest/gtest-all.o
+  CCLD     table_reader_bench
+  CC       util/cache_bench.o
+  CCLD     cache_bench
+  CC       db/memtablerep_bench.o
+  CCLD     memtablerep_bench
+  CC       tools/sst_dump.o
+  CCLD     sst_dump
+  CC       tools/db_sanity_test.o
+  CCLD     db_sanity_test
+  CC       tools/db_stress.o
+  CCLD     db_stress
+  CC       tools/ldb.o
+  CCLD     ldb
+  CC       tools/db_repl_stress.o
+  CCLD     db_repl_stress
+  CC       tools/dump/rocksdb_dump.o
+  CCLD     rocksdb_dump
+  CC       tools/dump/rocksdb_undump.o
+  CCLD     rocksdb_undump
+  CC       db/db_test.o
+  CC       util/db_test_util.o
+  CCLD     db_test
+db/db_test.o: In function `rocksdb::DBTest_FlushesInParallelWithCompactRange_Test::TestBody()':
+/home/me/Documents/Projects/rocksdb/db/db_test.cc:7948: undefined reference to`rocksdb::SyncPoint::GetInstance()'
+
+Any ideas?
+
+It looks like an issue with make running the prerequisites for `all` in parallel. Which version of make are you using? What was command that you used?
+
+Can you try "make clean" and retry? If you try to make release build, and then build tests, you will likely to fail with this error.
+
+Hey @Andymic, I'm closing this issue since it's inactive. Let us know if you're still seeing issues.
+
+@4tXJ7f I am using make 4.0
+@siying Tried it initially and 'make clean' didn't work
+
+@igorcanadi  Ok, have not tried since then but I will grab latest and try again. Thanks
+
+Did you do a `make clean all` or something similar? This can lead to
+problems, `make clean && make all` on the other hand should work.
+On Sep 29, 2015 7:49 PM, "Andymic" notifications@github.com wrote:
+
+> @4tXJ7f https://github.com/4tXJ7f I am using make 4.0
+> @siying https://github.com/siying Tried it initially and 'make clean'
+> didn't work
+> 
+> @igorcanadi https://github.com/igorcanadi Ok, have not tried since then
+> but I will grab latest and try again. Thanks
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/687#issuecomment-144133944.
+

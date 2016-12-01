@@ -1,0 +1,111 @@
+It seems that the _max_open_files_ options is not used when using _RepairDB_ on a database:
+
+```
+#include <rocksdb/db.h>
+#include <iostream>
+#include <sstream>
+
+#include <sys/time.h>
+#include <sys/resource.h>
+
+int main()
+{
+    rocksdb::Options options;
+
+    // limit to 10 files 
+
+    options.max_open_files = 10;
+    options.compression = rocksdb::kNoCompression;
+    options.create_if_missing = true;
+
+    rocksdb::DestroyDB("./testdb", options);
+
+    // create a db with more files than the limit, ok
+    {
+        rocksdb::DB *db;
+        assert(rocksdb::DB::Open(options, "./testdb", &db).ok());
+
+        std::string value_1mb;
+        for (int i = 0; i < 1024 * 1024; ++i) {
+            value_1mb.append("a");
+        }
+
+        std::cout << "populating db..." << std::endl;
+        for (int i = 0; i < 500; ++i) {
+            std::ostringstream r;
+            r << i;
+            assert(db->Put(rocksdb::WriteOptions(), r.str(), value_1mb).ok());
+        }
+
+        delete db;
+    }
+
+    // attempt to repair and reopen the db with a limit on number of FDs, nok
+    {
+        struct rlimit r;
+        r.rlim_cur = 20;
+        r.rlim_max = 20;
+        assert(::setrlimit(RLIMIT_NOFILE, &r) == 0);
+
+        rocksdb::Status s;
+
+        std::cout << "repairing db..." << std::endl;
+        s = rocksdb::RepairDB("./testdb", options);
+        std::cout << "repairdb returned: " << s.ToString() << std::endl;
+        assert(s.ok());
+
+        rocksdb::DB *db;
+        std::cout << "opening db..." << std::endl;
+        s = rocksdb::DB::Open(options, "./testdb", &db);
+        std::cout << "open returned: " << s.ToString() << std::endl;
+        delete db;
+    }
+
+    return 0;
+}
+```
+
+Results in:
+
+```
+populating db...
+repairing db...
+repairdb returned: IO error: ./testdb/000001.dbtmp: Too many open files
+exhaust: main.cpp:51: int main(): Assertion `s.ok()' failed.
+Aborted
+```
+
+This can be problematic when dealing with larger databases, I had to increase the limit to > 150 000 to repair a 200gb database, using a default configuration.
+
+That errors is from your OS. You need to lift limit in OS. max_open_files does not control that. Can you also consider increase the file size to 64MB or even larger to reduce file #
+
+Why are you trying to repair the database? Did you see any corruption?
+
+@ljinfb Yes, I was expecting to play with rocksdb's limit first to avoid tweaking the OS.  I'll consider increasing the file size, though I'll still have to tweak the OS. Does modifying the file size has other impacts than reducing the number of file descriptors?
+
+@igorcanadi I'm trying to duplicate a running database without interrupting it, from an outside process (I can afford losing what's not written to the disk yet), so what I'm doing is:
+- copying the database while it is being written,
+- repairing the resulting corrupted database on another server,
+- performing a full range compaction with a custom filter (to filter out some points, and to have a ready-to-use database),
+- using this new db on a few servers.
+
+@aimxhaisse can you set up some sort of API to the process running the RocksDB? We have a very good support for backing up data, which will do exactly what you want.
+
+The solution you posted might lose you some data, it's hard to guarantee consistency.
+
+When I say "lose some data", it can also mean lose old data, not just the newly written data.
+
+The process running the RocksDB can back up without interrupting the database. Actually, just calling DisableFileDeletions(), then copying all the files and then calling EnableFileDeletions() would work as well. Although I would recommend running the backup utility:  https://github.com/facebook/rocksdb/wiki/How-to-backup-RocksDB%3F
+
+@igorcanadi Thanks for the tip about enable/disable file deletions. Yes, I'm aware of the data loss. I'm still more comfortable by doing it with an external tool, since doing it internally may impact the workload of the server (I'm currently rebuilding the database on another machine). Also, my use-case is a bit different than a backup, since I want to filter out some values, it's more "an extract of a subset of a database (possibly running, or not) with as little impact as possible".
+
+Anyway that's not related to the issue, feel free to close the ticket if you don't think _max_open_files_ is an option to be supported in the context of a RepairDB (since all options do not apply to the repair operation, I agree that my issue is questionable).
+
+So it seems like the max number of files that Repair utility will open is 10 -- https://github.com/facebook/rocksdb/blob/master/db/repair.cc#L69-L72. Are you seeing a different behavior? How many files did RepairDB open?
+
+@igorcanadi  Yes, it is handled by repair. My code sample is flawed, the limit is hit because some other files are being opened (.dbtmp & cie), which I think are not related to the size of the database, I guess that's a constant overhead number of FDs, so this is not an issue in itself.
+
+I can' t reproduce the conditions under which I had to increase the number of file descriptors, I naively thought this was the repair because my code sample was somehow hitting the limit too. I'll reopen this ticket if I can isolate under which conditions it happened. Maybe you have a clue under which conditions it could happen?
+
+Anyway, thanks for the help!
+

@@ -1,0 +1,62 @@
+This is an Env implementation that mirrors all file-related activity on two different
+backend Env's.  It's been very helpful while debugging a custom Env implementation.
+
+Thanks for the contribution! Could we move this to utilities directory? (include/rocksdb/utilities/env_mirror.h). Also, it might be better to keep the actual implementation in an .cc file.
+
+It would also be good to guard this with ROCKSDB_LITE. Check this out: https://github.com/facebook/rocksdb/blob/master/ROCKSDB_LITE.md
+
+I can't tell what the AppVeyor failure is all about...
+
+@igorcanadi I'm not sure if ROCKSDB_LITE is useful here, since all the code lives in an optional header anyway; it won't bloat builds for anything in the tree that doesn't explicitly #include it.
+
+True, but somebody in the future might #include it somewhere in the codebase and then we'll have that bloat. :) Should be easy to add that #ifdef and make it future-proof.
+
+I would also appreciate a basic unit test. We sometimes change Env APIs and we'll almost certainly break EnvMirror one day if you don't add a test. Similar thing happened with HdfsEnv: https://github.com/facebook/rocksdb/pull/863
+
+@igorcanadi good point.  Added some tests (mostly copied from mock_env_test) and fixed a few bugs in the failure path.
+
+Now you're missing the test file :)
+
+Hah, that explains it.. I gave up trying to figure out hwat I got wrong in the Makefile.
+
+Okay, everything looks good now! I just have a small comment about comments and then we're good to go :)
+
+@igorcanadi Fixed.  Thanks!
+
+Next up are some fixes for the wal recycling...
+
+Looks like appveyor is complaining because of:
+1) type conversions, and
+2) usage of constexpr (Microsoft's compiler doesn't support it yet):
+https://gist.github.com/igorcanadi/88d7e78e8468de5d3447
+
+Sorry about that :(
+
+@igorcanadi With regards to constexpr. I think we are good to switch appveyor to Visual Studio 15 as soon as they allow it.
+
+> @igorcanadi With regards to constexpr. I think we are good to switch appveyor to Visual Studio 15 as soon as they allow it.
+
+Yay! Do we have to do something to make that happen?
+
+@igorcanadi I would probably poll users if they are OK to move to VS 2015, some of them may not have it. As for the switch itself one just need to edit appveyor project config and select VS 2015. Last time I checked it was not available yet. We internally are switching very soon.
+
+I worked around the VS issues.. I don't think we need to make a move on account of this PR.  But there is an unrelated AppVeyor failure now in util\delete_scheduler_test.cc...
+
+The travis clang build failed also for unrelated reasons, I think?
+
+utilities/memory/memory_test.cc:140: Failure
+Value of: usage_history_[MemoryUtil::kTableReadersTotal][i - 1]
+  Actual: 39264
+Expected: usage_history_[MemoryUtil::kTableReadersTotal][i]
+Which is: 38224
+terminate called after throwing an instance of 'testing::internal::GoogleTestFailureException'
+  what():  utilities/memory/memory_test.cc:140: Failure
+Value of: usage_history_[MemoryUtil::kTableReadersTotal][i - 1]
+  Actual: 39264
+Expected: usage_history_[MemoryUtil::kTableReadersTotal][i]
+Which is: 38224
+Aborted (core dumped)
+make: **\* [check] Error 1
+
+If compile succeeds and env_mirror_test passes, that's okay. Our tests have been flakey lately.
+

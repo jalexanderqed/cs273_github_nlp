@@ -1,0 +1,166 @@
+Hello and thank you for RocksDB,
+
+  ldb (ldb_cmd.h HexToString) usage of sscanf is O(N) making ldb O(N^2).  I noticed this on RHEL7 with glibc-2.17-55.el7_0.5.x86_64 while loading some large hex values.  Here is a reproducer for a bash shell:
+
+```
+> for i in {1,2,4,8}; do rm -rf /tmp/tmp.rdb ; perl -e 'printf qq{%d ==> 0x%s\n},1,0 x $ARGV[0]' ${i}000000 | time -v ./ldb --create_if_missing --db=/tmp/tmp.rdb --value_hex load 2>&1 | egrep 'User|Elapsed' ; done
+   User time (seconds): 9.45
+   Elapsed (wall clock) time (h:mm:ss or m:ss): 0:09.48
+   User time (seconds): 39.79
+   Elapsed (wall clock) time (h:mm:ss or m:ss): 0:40.14
+   User time (seconds): 174.03
+   Elapsed (wall clock) time (h:mm:ss or m:ss): 2:55.41
+   User time (seconds): 774.66
+   Elapsed (wall clock) time (h:mm:ss or m:ss): 13:02.68
+```
+
+Just to demonstrate the perl time and max line length:
+
+```
+> for i in {1,2,4,8}; do perl -e 'printf qq{%d ==> 0x%s\n},1,0 x $ARGV[0]' ${i}000000 | time -v wc -L 2>&1 | egrep 'User|Elapsed|00000' ; done
+1000008
+   User time (seconds): 0.01
+   Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.01
+2000008
+   User time (seconds): 0.02
+   Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.02
+4000008
+   User time (seconds): 0.04
+   Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.05
+8000008
+   User time (seconds): 0.08
+   Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.10
+```
+
+An ltrace while ldb was running:
+
+```
+> ltrace -fcp `pidof ldb`
+time     seconds  usecs/call     calls      function
+------ ----------- ----------- --------- --------------------
+100.00    3.481690         528      6589 sscanf
+------ ----------- ----------- --------- --------------------
+100.00    3.481690                  6589 total
+```
+
+This is the glibc bug:
+
+  https://sourceware.org/bugzilla/show_bug.cgi?id=17577
+
+and a stackoverflow discussion:
+
+  http://stackoverflow.com/questions/23923924/why-is-glibcs-sscanf-vastly-slower-than-fscanf-on-linux
+
+Cheers.
+
+Oh wow, thanks for the report. For the record, I created internal task t7123250 to track fixing this.
+
+Thanks, to speed up the proof of concept I was working on I went with:
+
+```
+static string HexToString(const string& str) {
+  string parsed;
+  if (str[0] != '0' || str[1] != 'x') {
+    fprintf(stderr, "Invalid hex input %s.  Must start with 0x\n", str.c_str());
+    throw "Invalid hex input";
+  }
+  unsigned int len = str.length();
+  if (len & 1) {
+    fprintf(stderr, "Invalid hex input %s.  Odd length %d\n", str.c_str(), len);
+    throw "Invalid hex input";
+  }
+  parsed.reserve(len / 2);
+  static const char* const lut = "0123456789ABCDEF";
+
+  for (unsigned int i = 2; i < len; i += 2) {
+    char a = str[i];
+    const char* p = std::lower_bound(lut, lut + 16, a);
+    if (*p != a) throw std::invalid_argument("not a hex digit");
+
+    char b = str[i + 1];
+    const char* q = std::lower_bound(lut, lut + 16, b);
+    if (*q != b) throw std::invalid_argument("not a hex digit");
+
+    parsed.push_back(((p - lut) << 4) | (q - lut));
+  }
+
+  return parsed;
+}
+```
+
+after extremely limited testing with:
+
+```
+#include <iomanip>
+
+static std::string HexToString(const std::string& str) {
+  std::string parsed;
+  for (unsigned int i = 0; i < str.length();) {
+    int c;
+    sscanf(str.c_str() + i, "%2X", &c);
+    parsed.push_back(c);
+    i += 2;
+  }
+  return parsed;
+}
+
+static std::string HexToStringLUT(const std::string& str) {
+  std::string parsed;
+  int len = str.length();
+  parsed.reserve(len / 2);
+  static const char* const lut = "0123456789ABCDEF";
+
+  for (unsigned int i = 0; i < len; i += 2) {
+    char a = str[i];
+    const char* p = std::lower_bound(lut, lut + 16, a);
+    if (*p != a) printf("not a hex digit");
+
+    char b = str[i + 1];
+    const char* q = std::lower_bound(lut, lut + 16, b);
+    if (*q != b) printf("not a hex digit");
+
+    parsed.push_back(((p - lut) << 4) | (q - lut));
+  }
+  return parsed;
+}
+
+int main(int argc, char** argv) {
+  std::string hex_string;
+  for (int i = 0; i < (1000000/2); i++) { hex_string += "41"; };
+
+  clock_t beg = clock();
+  std::string str1 = HexToString(hex_string);
+  printf("HexToString=%s\n", str1.c_str());
+  fprintf(stderr, "HexToString: %f , ", (clock() - beg) / (1.0 * CLOCKS_PER_SEC));
+
+  beg = clock();
+  std::string str2 = HexToStringLUT(hex_string);
+  printf("HexToStringLUT=%s\n", str2.c_str());
+  fprintf(stderr, "HexToStringLUT: %f ", (clock() - beg) / (1.0 * CLOCKS_PER_SEC));
+
+  std::string res = ( 0 == str1.compare(str2) ) ? "ok" : "not ok";
+  fprintf(stderr,"%s\n",res.c_str());
+
+  return 0;
+}
+
+> c++ -std=c++11 hex_to_string.cxx && ( ./a.out > /dev/null )
+HexToString: 12.210000 , HexToStringLUT: 0.070000 ok
+```
+
+I also just tested using std::hex in a stringstream (a little slower than LUT but maybe more portable), and arithmetic manipulation of the char hex values which was faster than the LUT but had less checks on the input.
+
+Tnx, this looks pretty good! Would you like to submit a pull request? I can comment on the code there.
+
+In the short and medium term I do not anticipate spending any time developing using RocksDB (or other FB code), I found this during a $work hackathon.  I think a patch (or pull request) is going to require a CLA agreement and an internal approval process which I do not think is worth it for this, so I would just like to report the issue.  Using std::hex in a stringstream is (I think) a succinct approach that may be suitable to use.
+Thank you.  
+
+Yeah, that's true, a patch would require a CLA :(
+
+Anyhow, thanks for your contribution!
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+
+Also see https://reviews.facebook.net/D46785
+Thanks.
+

@@ -1,0 +1,23 @@
+The C++ new operator implicitly uses `malloc` of course, but here I want to link to a version of jemalloc that has the `je_` prefixes (complex long-winded reason). Is this possible?
+@alexreg You can either use LD_PRELOAD technique or link against jemalloc and this will 'replace' default malloc implementation. More info here: https://github.com/jemalloc/jemalloc/wiki/Getting-Started
+
+Issue #1442 shows that RocksDb can be linked with jemalloc or tcmalloc already at build time, but they're proposing some changes.
+
+Yeah, the problem is the jemalloc prefix though (`je_`). If jemalloc is compiled with that, the build complains about missing symbols.
+
+> On 14 Nov 2016, at 15:14, Steven Briscoe notifications@github.com wrote:
+> 
+> @alexreg https://github.com/alexreg You can either use LD_PRELOAD technique or link against jemalloc and this will 'replace' default malloc implementation. More info here: https://github.com/jemalloc/jemalloc/wiki/Getting-Started https://github.com/jemalloc/jemalloc/wiki/Getting-Started
+> Issue #1442 https://github.com/facebook/rocksdb/issues/1442 shows that RocksDb can be linked with jemalloc or tcmalloc already at build time, but they're proposing some changes.
+> 
+> —
+> You are receiving this because you were mentioned.
+> Reply to this email directly, view it on GitHub https://github.com/facebook/rocksdb/issues/1462#issuecomment-260361872, or mute the thread https://github.com/notifications/unsubscribe-auth/AAEF3JenG0qm55Xr30j9d5X_RaCpygJOks5q-HrYgaJpZM4KpEpt.
+
+Note from https://github.com/jemalloc/jemalloc/wiki/Getting-Started:
+
+Link jemalloc into the application at build time, **but use it as a generic malloc implementation**:
+cc app.c -o app -L${JEMALLOC_PATH}/lib -Wl,-rpath,${JEMALLOC_PATH}/lib -ljemalloc
+
+Compile jemalloc with an API prefix (see the --with-jemalloc-prefix configure option), link with jemalloc at build time as above, but use jemalloc distinctly from the system allocator.
+

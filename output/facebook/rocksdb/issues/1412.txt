@@ -1,0 +1,20 @@
+Hi team. We are using rocksdb 4.1.0 and we hit a segfault inside VersionSet::LogAndApply when we CreateColumnFamily, here is the function call stack and logs:
+
+**call stack:**
+#0  0x00007ff4fc0e4444 in rocksdb::VersionSet::LogAndApply(rocksdb::ColumnFamilyData*, rocksdb::MutableCFOptions const&, rocksdb::VersionEdit*, rocksdb::InstrumentedMutex*, rock
+
+sdb::Directory*, bool, rocksdb::ColumnFamilyOptions const*) () from /usr/lib/librocksdb.so.4.1
+#1  0x00007ff4fc07a81e in rocksdb::DBImpl::CreateColumnFamily(rocksdb::ColumnFamilyOptions const&, std::string const&, rocksdb::ColumnFamilyHandle**) ()
+   from /usr/lib/librocksdb.so.4.1
+
+**logs:**
+
+Oct 20 04:31:29 localhost lrse[2836]: [kvs.INFO] (2836) Created column family [ConsistentSnapshot] (ID 2)
+Oct 20 04:31:29 localhost lrse[2836]: [kvs.ERR] (2836) MANIFEST write: IO error: /rfs/lrse/meta/info/meta/MANIFEST-000004: Device or resource busy
+Oct 20 04:31:29 localhost lrse[2836]: [kvs.INFO] (2836) ManifestContains: checking /rfs/lrse/meta/info/meta/MANIFEST-000004
+Oct 20 04:31:29 localhost lrse[2836]: [kvs.INFO] (2836) ManifestContains: IO error: /rfs/lrse/meta/info/meta/MANIFEST-000004: Software caused connection abort
+Oct 20 04:31:29 localhost lrse[2836]: [kvs.INFO] (2836) ManifestContains: is unable to reopen the manifest file  /rfs/lrse/meta/info/meta/MANIFEST-000004
+Oct 20 04:31:29 localhost pm[1695]: [pm.ERR]: Output from lrse: /opt/rbt/bin/lrse (pid 2836) received signal 11 (SIGSEGV) dumping core
+
+We would like to exit gracefully in this case. Thanks!
+

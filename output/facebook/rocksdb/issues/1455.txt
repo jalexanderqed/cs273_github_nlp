@@ -1,0 +1,27 @@
+Add C api for RateLimiter.
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+**If you are contributing on behalf of someone else (eg your employer)**: the individual CLA is not sufficient - use https://developers.facebook.com/opensource/cla?type=company instead. Contact cla@fb.com if you have any questions.
+
+PTAL @siying 
+
+@zhangjinpeng1987 Can you sign the CLA? Thanks!
+
+@zhangjinpeng1987 updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1455/files/3ce34a4e2ba4a9e99f0a9fa2be23c71e5a20f0a8..36945e4e627ab2aeb1a51c226e354d98faf75d9d)
+
+@zhangjinpeng1987 updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1455/files/36945e4e627ab2aeb1a51c226e354d98faf75d9d..cba509b52ac19e947e82bb65174ec4ff7b7a4b73)
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+@yiwu-arbug has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4116362).
+
+@zhangjinpeng1987 updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1455/files/cba509b52ac19e947e82bb65174ec4ff7b7a4b73..a78d6257c9959c57d7a183c635c045369b9d7147) - [changes since last import](https://github.com/facebook/rocksdb/pull/1455/files/cba509b52ac19e947e82bb65174ec4ff7b7a4b73..a78d6257c9959c57d7a183c635c045369b9d7147)
+
+@zhangjinpeng1987 One last thing. Can you run `make format` and update the PR? Thanks!
+
+@zhangjinpeng1987 updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1455/files/a78d6257c9959c57d7a183c635c045369b9d7147..7851c8110e89e72c75ae6c7c041fb57f876d1e25) - [changes since last import](https://github.com/facebook/rocksdb/pull/1455/files/a78d6257c9959c57d7a183c635c045369b9d7147..7851c8110e89e72c75ae6c7c041fb57f876d1e25)
+
+@zhangjinpeng1987 updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1455/files/7851c8110e89e72c75ae6c7c041fb57f876d1e25..d4fb0a45d9afac496fbfd845408b50a7bf8407d7) - [changes since last import](https://github.com/facebook/rocksdb/pull/1455/files/7851c8110e89e72c75ae6c7c041fb57f876d1e25..d4fb0a45d9afac496fbfd845408b50a7bf8407d7)
+
+Seems `DBTest_FileCreationRandomFailure_Test` will failed randomly.
+

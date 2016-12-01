@@ -1,0 +1,31 @@
+I got the following while building the java version (checked out this afternoon),
+
+make rocksdbjava
+Makefile:100: Warning: Compiling in debug mode. Don't use the resulting binary in production
+
+How do I make a release build of the java version? From reading the documentation, it seems the shared library used with java, librocksdbjni.so, is different from the regular librocksdb.so . What is the reason for this? I am interested in whether librocksdbjni.so is very different from librocksdb.so, functionality-wise. In particular I am interested in whether the java version of RocksDB is produciton ready.
+
+From what I see in the code, to make this work we need to set ROCKSDB_SHAREDLIB_DIR to the location of librocksdbjni.so , instead of the standard LD_LIBRARY_PATH . Is this correct?
+
+Thanks,
+
+To create a release version (without debugging and with optimization), you need to run:
+
+``` bash
+export DEBUG_LEVEL=0
+make clean rocksdbjava
+```
+
+`librocksdbjni.so` also contains the C++ JNI code which enables the Java API, whereas `librocksdb.so` does not.
+
+Thanks!
+
+That took care of the problem, now I am getting the same problem as in issue #978 . Basically for some reason, the final link step is picking the static version of libsnappy not the dynamic one: 
+
+/opt/centos/devtoolset-2/root/usr/bin/../libexec/gcc/x86_64-redhat-linux/4.8.2/ld: /usr/lib/../lib64/libsnappy.a(snappy.o): relocation R_X86_64_32S against `.rodata' can not be used when making a shared object; recompile with -fPIC
+/usr/lib/../lib64/libsnappy.a: could not read symbols: Bad value
+collect2: error: ld returned 1 exit status
+make: **\* [rocksdbjava] Error 1
+
+I am closing this one.
+

@@ -1,0 +1,28 @@
+I am storing metadata about files into RocksDB, however the binary files themselves are living on the filesystem alongside my Rocks data dir.
+
+Whilst I can use BackupEngine to backup the database, I wondered if there was an elegant solution for also backing up my binary files.
+
+I know that I can scan through my metadata stored in RocksDB to find the binary files that I need to backup. However, to be consistent I would need to access RocksDB at the same sequence number as the BackupEngine when `createNewBackup` is called. Is there any mechanism for getting a snapshot or iterator on a column family which is based on the same sequence number used by `createNewBackup`?
+
+include/rocksdb/utilities/checkpoint.h will create a checkpoint with the same sequence number across of column families to another directory, with all file needed hard linked from the source files. We recently made it consistent across all column families.
+
+@siying Okay that looks interesting, but it is not clear from looking at the header file, how I work with a Checkpoint object.
+1. How can I use the `BackupEngine` on the checkpoint?
+2. How can I open the Snapshot created by the Checkpoint?
+
+@adamretter 
+1. so far it is not supported.
+2. You simply open the DB using the checkpoint directory, and it will be a DB stay at the time.
+
+@siying Hmm so I would need to open another database? i.e. I don't want to shutdown my running database to do a checkpoint/backup. Is that possible?
+
+@siying ...Would really appreciate a follow-up on this so I can move forward (and close this ticket ;-))
+
+@adamretter You can create checkpoint when DB is running. After the checkpoint is created, you can create the checkpoint as a separate DB, while in the whole process the original DB is still running.
+
+CC @rven1 
+
+@siying Okay, but can I open the second DB created by the checkpoint, without shutting down my first DB? If so, do I need to use a separate `Env`?
+
+@adamretter  yes you can do that and you don't need a separate Env. Just remember to delete the checkpoint directory after using them.
+

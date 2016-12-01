@@ -1,0 +1,11 @@
+Current fixed length prefix extractor restricts in usage of keys smaller that the prefix length. 
+
+Thanks for adding this support.  Have merged and fixed the test failure caused by missing the native implementation of Java_org_rocksdb_ColumnFamilyOptions_useCappedPrefixExtractor.  
+
+Somehow git does not pick up my fix.  Am submitting a diff for the fix.
+
+Tests passed for me when I ran it locally and even travis showed the test as passed. Anyways thanks for merging the PR :) .
+
+The diff has been merged.  Closing the request.
+https://github.com/facebook/rocksdb/commit/f0b5bcc7b5ff5b69a912d16605d4940138e282c5
+

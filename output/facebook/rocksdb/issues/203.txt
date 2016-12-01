@@ -1,0 +1,5 @@
+The source file copyrights mention an `AUTHORS` file, but I don't see one in the tree.
+
+Yes, we should add the  AUTHORS file with the original contents from LevelDB after adding the following line to the end of that file
+"Facebook Engineering Team"
+

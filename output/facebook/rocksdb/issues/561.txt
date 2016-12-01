@@ -1,0 +1,69 @@
+I'm following the very nicely written INSTALL instructions for rocksdb (also, kudos on https://github.com/facebook/rocksdb/wiki/RocksDB-Tuning-Guide). 
+
+But I've hit a snag that I just don't understand when trying to Make. I'm running on a new Ubuntu install and was able to install all of the dependencies for the rocksdb fork with no problems (I thought, at least.)
+
+db/table_properties_collector_test.cc:137:15: error: converting to ‘rocksdb::TableProperties::UserCollectedProperties {aka std::unordered_mapstd::basic_string<char, std::basic_string<char> >}’ from initializer list would use explicit constructor ‘std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::size_type, const hasher&, const key_equal&, const allocator_type&) [with _Key = std::basic_string<char>; _Tp = std::basic_string<char>; _Hash = std::hashstd::basic_string<char >; _Pred = std::equal_tostd::basic_string<char >; _Alloc = std::allocator<std::pair<const std::basic_string<char>, std::basic_string<char> > >; std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::size_type = long unsigned int; std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::hasher = std::hashstd::basic_string<char >; std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::key_equal = std::equal_tostd::basic_string<char >; std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::allocator_type = std::allocator<std::pair<const std::basic_string<char>, std::basic_string<char> > >]’
+       return {};
+               ^
+Makefile:391: recipe for target 'db/table_properties_collector_test.o' failed
+make: **\* [db/table_properties_collector_test.o] Error 1
+
+Interesting. We'll look into this, but in the meanwhile, you can still install rocksdb without compiling the tests (this looks like test compilation issue). Does `make release; make install` work for you?
+
+I tried make relase and got a slightly different error:
+g++ -g -Wall -Werror -I. -I./include -std=gnu++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_ATOMIC_PRESENT -DROCKSDB_FALLOCATE_PRESENT -DSNAPPY -DGFLAGS -DZLIB -DBZIP2   -DHAVE_JEMALLOC -DNDEBUG -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c utilities/merge_operators/string_append/stringappend_test.cc -o utilities/merge_operators/string_append/stringappend_test.o 
+Makefile:391: recipe for target 'db/table_properties_collector_test.o' failed
+make[1]: **\* [db/table_properties_collector_test.o] Error 1
+make[1]: **\* Waiting for unfinished jobs....
+make[1]: Leaving directory '/media/twoTBone/work/samtools/rocksdb'
+Makefile:142: recipe for target 'release' failed
+make: **\* [release] Error 2
+
+It didn't print out error message. Maybe it was earlier in the output?
+
+Or just do this:
+
+DISABLE_WARNING_AS_ERROR=1 make release
+
+I tried disabling warnings as errors and making the release, but this error still came up. I hope I captured enough of the return this time.
+
+```
+ g++ -g -Wall -Werror -I. -I./include -std=gnu++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_ATOMIC_PRESENT -DROCKSDB_FALLOCATE_PRESENT -DSNAPPY -DGFLAGS -DZLIB -DBZIP2   -DHAVE_JEMALLOC -DNDEBUG -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c db/merge_test.cc -o db/merge_test.o 
+db/table_properties_collector_test.cc: In member function ‘virtual rocksdb::TableProperties::UserCollectedProperties rocksdb::RegularKeysStartWithA::GetReadableProperties() const’:
+db/table_properties_collector_test.cc:137:15: error: converting to ‘rocksdb::TableProperties::UserCollectedProperties {aka std::unordered_map<std::basic_string<char>, std::basic_string<char> >}’ from initializer list would use explicit constructor ‘std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::size_type, const hasher&, const key_equal&, const allocator_type&) [with _Key = std::basic_string<char>; _Tp = std::basic_string<char>; _Hash = std::hash<std::basic_string<char> >; _Pred = std::equal_to<std::basic_string<char> >; _Alloc = std::allocator<std::pair<const std::basic_string<char>, std::basic_string<char> > >; std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::size_type = long unsigned int; std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::hasher = std::hash<std::basic_string<char> >; std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::key_equal = std::equal_to<std::basic_string<char> >; std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::allocator_type = std::allocator<std::pair<const std::basic_string<char>, std::basic_string<char> > >]’
+       return {};
+               ^
+g++ -g -Wall -Werror -I. -I./include -std=gnu++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_ATOMIC_PRESENT -DROCKSDB_FALLOCATE_PRESENT -DSNAPPY -DGFLAGS -DZLIB -DBZIP2   -DHAVE_JEMALLOC -DNDEBUG -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c utilities/redis/redis_lists_test.cc -o utilities/redis/redis_lists_test.o 
+g++ -g -Wall -Werror -I. -I./include -std=gnu++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_ATOMIC_PRESENT -DROCKSDB_FALLOCATE_PRESENT -DSNAPPY -DGFLAGS -DZLIB -DBZIP2   -DHAVE_JEMALLOC -DNDEBUG -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c tools/reduce_levels_test.cc -o tools/reduce_levels_test.o 
+Makefile:391: recipe for target 'db/table_properties_collector_test.o' failed
+make[1]: *** [db/table_properties_collector_test.o] Error 1
+make[1]: *** Waiting for unfinished jobs....
+make[1]: Leaving directory '/media/twoTBone/work/samtools/rocksdb'
+Makefile:142: recipe for target 'release' failed
+make: *** [release] Error 2
+```
+
+This is weird, why does release build try to also compile the test? I'll look into this.
+
+Ok, one more try (as a workaround, before we fix this issue).
+
+`make clean` 
+`DISABLE_WARNING_AS_ERROR=1 make static_lib`
+
+It seems unhappy about static_lib...
+
+```
+make: *** No rule to make target 'static_lib'.  Stop.
+
+```
+
+WTH. We have target static_lib in our Makefile: https://github.com/facebook/rocksdb/blob/master/Makefile#L321. Which version of RocksDB are you using?
+
+Curiouser and curiouser. I cloned it using the ssh link on the git hub page, about, what? Maybe a bit over a week ago?
+
+So I did a fresh clone with the latest ssh link from the github page, and everything went swimmingly.
+Clean and beautiful make install. 
+Problem magically solved!
+
+Awesome! Closing this. :)
+

@@ -1,0 +1,6 @@
+Fix windows build due to improper handling of move/copy constructors by MS VC++
+
+Hey @yuslepukhin. Can you please squash 80 commits into one? Merging PRs with lots of commits makes our history messy and bisecting harder.  
+
+@igorcanadi my mistake. somehow it came out more than one.
+

@@ -1,0 +1,12 @@
+When use java api get() function to make random access to DB, the time spent firstly is much longer than follow? 
+
+Is this specific to the Java API, or does the same go for the C++ API?
+
+@adamretter Just for java api. 
+
+How much longer? Milliseconds? Or longer than a second?
+
+First get() spend 1.7 seconds with 2.7 billion entries in db and 40 milliseconds with no data db.
+
+What's your value of max_open_files, cache_index_and_filter_blocks setting, and compaction style?
+

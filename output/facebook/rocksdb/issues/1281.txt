@@ -1,0 +1,8 @@
+plain_table_reader.cc:517: bytes_read is not initialized any where, it should be initialized at definition.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thanks @rockeet, actually it's initialized in the first line in PlainTableKeyDecoder::NextKeyNoValue
+
+@rockeet, I will close this, please reopen if needed
+

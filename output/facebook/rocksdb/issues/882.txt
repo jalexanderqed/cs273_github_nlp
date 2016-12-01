@@ -1,0 +1,8 @@
+As Title
+
+c:\projects\rocksdb\include\rocksdb\delete_scheduler.h(63): error C2039: 'shared_ptr' : is not a member of 'std' [C:\projects\rocksdb\build\delete_scheduler_test.vcxproj]
+
+Thanks @SherlockNoMad 
+
+Thanks for prompt response.  @IslamAbdelRahman 
+

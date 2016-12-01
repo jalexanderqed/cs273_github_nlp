@@ -1,0 +1,18 @@
+More context:
+We are building a replication library for RocksDB. Slaves read updates from Master, and apply them locally. Currently WriteBatch takes std::string as input, which means we will have to do a string copy for all replicated data before applying it to Slave db. It will be more efficient if we can save this copy.
+
+We have talked about this earlier. Good idea in my opinion. We can take a IOBUF and take it all the way to LogWriter::AddRecord() so that no new additional data copy is needed.
+
+Would this work with rocksdb::Slice instead of IOBuf?
+
+If the write path is synchronous (which I think should be), rocksdb::Slice will be helpful. We can simply convert a non-chained IOBuf into a rocksdb::Slice without copying. One corner case is when the IOBuf read from network is an IOBuf chain, we will have to do one copy. Even in this case rocksdb::Slice is still helpful. Otherwise we will have to do two copies with current interface. If RocksDB currently doesn't depends on folly, rocksdb::Slice seems to be a good choice to me.
+
+It is a valid optimization. Given that it needs quite some code changes, the question is: is it a performance bottleneck? @newpoo what kind of profiling results do you see in your system?
+
+@siying In our performance test, cpu was not the bottleneck. Because we could easily drive the load to saturate the network bandwidth (We are using AWS i2.2xlarge instances, the bandwidth limit is at about 1000Mbps) with about 30% cpu consumption and 40MB/s replication rate. I think in general string copy is expensive, especially we need to make an additional copy of every replicated byte. So it would be nice to have an interface saving us from an unnecessary string copy.
+
+Just for the records: RocksDB also has a data structure called SliceParts. (in slice.h). 
+Converting a folly:IoBuf into rocksdb::SliceParts should not need any data-copy, is that right?
+
+@dhruba I think you are right, that's the thing!
+

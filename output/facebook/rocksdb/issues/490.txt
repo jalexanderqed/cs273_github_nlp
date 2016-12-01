@@ -1,0 +1,180 @@
+I just spent a fair bit of time and tweaking debugging poor bulk loading performance in rocksdb. One thing that tripped me up is that [simply calling IncreaseParallelism on the options doesn't increase the number of available threads for background flushes](https://github.com/facebook/rocksdb/blob/62ad0a9b19f0be4cefa70b6b32876e764b7f3c11/util/options.cc#L581). Once I realized this and set a high maximum number of flushes I was able to quadruple my application's throughput! rocksdb is no longer the major bottleneck in my process.
+
+Is there any reason this doesn't happen by default? It seems particularly problematic for bulk loads.
+
+There are other options that might need to be adjusted to benefit from more background flush threads:
+- max_write_buffer_number
+- min_write_buffer_number_to_merge
+
+@mdcallag Would you please describe the effect of each of these? Thanks for the help!
+
+@ekg Did you have a look or use `PrepareForBulkLoad` method in Options ?
+
+max_write_buffer_number is the max number of write buffers you can have in memory. If you set max_background_flushes to 4 but max_write_buffer_number to 2 (the min) then at most two flushes can be in progress concurrently. 
+
+When min_write_buffer_number_to_merge is greater than 1, then write buffers can be merged when flushed to create a larger L0 file.
+
+@fyrz Yes, I am using `PrepareForBulkLoad`. I added [additional configuration options](https://github.com/ekg/vg/blob/e951e6c3849e832eacbdbbba76c058d8692d4140/index.cpp#L34) which seem to improve the overall throughput and limit the number of produced files. My data size is typically terabyte-order.
+
+```
+options.write_buffer_size = 1024 * 1024 * 256;
+options.target_file_size_base = 1024 * 1024 * 512;
+options.IncreaseParallelism(threads);
+options.max_background_compactions = threads;
+options.max_background_flushes = threads;
+options.max_write_buffer_number = threads;
+options.compaction_style = rocksdb::kCompactionStyleNone;
+options.memtable_factory.reset(new rocksdb::VectorRepFactory(1000));
+```
+
+One thing which escaped me was that its _really_ important to use batches for bulk loading. [This is mentioned in the API overview though](https://github.com/facebook/rocksdb/wiki/Basic-Operations#atomic-updates), I just missed it. My application needed to be restructured somewhat to fully take advantage of this, but it makes a huge difference.
+
+@mdcallag Thanks for the clarification. I'm getting some odd behavior when I set min_write_buffer_number_to_merge pretty high (== threads in the above code snippet), specifically long stalls during compaction. Will setting this to 2, 4, etc. possibly make load faster?
+
+I have not experimented with it. I assume performance won't suffer much
+with it set to 2.
+
+On Mon, Feb 2, 2015 at 6:05 AM, Erik Garrison notifications@github.com
+wrote:
+
+> @fyrz https://github.com/fyrz Yes, I am using PrepareForBulkLoad. I
+> added additional configuration options
+> https://github.com/ekg/vg/blob/e951e6c3849e832eacbdbbba76c058d8692d4140/index.cpp#L34
+> which seem to improve the overall throughput and limit the number of
+> produced files. My data size is typically terabyte-order.
+> 
+> options.write_buffer_size = 1024 \* 1024 \* 256;
+> options.target_file_size_base = 1024 \* 1024 \* 512;
+> options.IncreaseParallelism(threads);
+> options.max_background_compactions = threads;
+> options.max_background_flushes = threads;
+> options.max_write_buffer_number = threads;
+> options.compaction_style = rocksdb::kCompactionStyleNone;
+> options.memtable_factory.reset(new rocksdb::VectorRepFactory(1000));
+> 
+> One thing which escaped me was that its _really_ important to use batches
+> for bulk loading. This is mentioned in the API overview though
+> https://github.com/facebook/rocksdb/wiki/Basic-Operations#atomic-updates,
+> I just missed it. My application needed to be restructured somewhat to
+> fully take advantage of this, but it makes a huge difference.
+> 
+> @mdcallag https://github.com/mdcallag Thanks for the clarification. I'm
+> getting some odd behavior when I set min_write_buffer_number_to_merge
+> pretty high (== threads in the above code snippet), specifically long
+> stalls during compaction. Will setting this to 2, 4, etc. possibly make
+> load faster?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/490#issuecomment-72462430.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@mdcallag it seems loads are slower with 2, if only marginally. I'll leave it at default.
+
+Let me increase it. One flush thread is not sufficient for bulk loading.
+
+I sent a patch: https://reviews.facebook.net/D32685 to increase flush threads. Didn't change compaction, or to use vector mem table, feeling it is too dramatic.
+
+@siying for bulk load, it would seem optimal to use the vector mem table. I could be confused about the magnitude of performance improvement I got from that. It seemed large.
+
+One thing to consider is alternate path for bulk load to avoid going
+through the primary memtable with the bulk load inserts in case non
+bulk-load work is also being done. I have a vague memory that Siying has
+discussed that elsewhere.
+
+On Wed, Feb 4, 2015 at 9:48 AM, Erik Garrison notifications@github.com
+wrote:
+
+> @siying https://github.com/siying for bulk load, it would seem optimal
+> to use the vector mem table. I could be confused about the magnitude of
+> performance improvement I got from that. It seemed large.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/490#issuecomment-72826676.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@mdcallag I did mentioned my thoughts of "bulk load". But that was for loading a big chunk of data to a running database. In that case, there are some complexity to resolve. For initial loading, if needed, we can allow users to directly write to SST tables in sorted key order, using seqID they pick, and we link them to a DB. This is quite doable if needed.
+
+I had experimented with bulk load for my SpatialDB. It actually turned out to be better to enable compaction during the bulk load. PrepareForBulkLoad() goes easy on the storage by compacting only once at the end. However, that compaction can only be single-threaded (needs to sort all files from level 0). If you compact as you write, your runtime should be much faster, although you might write more bytes to storage.
+
+Here's my config for SpatialDB: https://github.com/facebook/rocksdb/blob/master/utilities/spatialdb/spatial_db.cc#L660-L716
+
+@igorcanadi Thanks so much for the pointer to your configuration, I'll see how I can get on with this.
+
+Do you think that I'll also need to use level-style compaction due to my data size, which possibly is upwards of 250G and can end up compressed into one SST due to manual compaction at the end of the load? I believe I exceeded the data table index size of 4G for one of my tests, resulting in a database I couldn't query, but I didn't see any errors in the log to indicate the overrun.
+
+That noted, what would it take to resolve this limitation? It seems pretty severe to have to guess your data size up-front in order to determine which compaction style to use.
+
+Another minor question. What cache size do you typically use here: https://github.com/facebook/rocksdb/blob/master/utilities/spatialdb/spatial_db.cc#L768 ?
+
+Igor - I am not sure there is a right answer in the fast vs IO-efficient
+space. In some cases we want the load to be as fast as possible. In other
+cases we don't want to ruin performance for the normal workload, so we
+prefer for bulk load to be IO-efficient. In production today, "create
+index" is mostly single threaded -- ignoring that page write back is
+concurrent. And "create index" for RocksDB is usually much faster than
+InnoDB when it doesn't need to do read-modify-write. So I think even
+single-threaded compaction can be OK by comparison to what is done today.
+But I hope we can have options to choose whether to be fast or IO-efficient.
+
+On Thu, Feb 5, 2015 at 10:57 AM, Erik Garrison notifications@github.com
+wrote:
+
+> @igorcanadi https://github.com/igorcanadi Thanks so much for the
+> pointer to your configuration, I'll see how I can get on with this.
+> 
+> Do you think that I'll also need to use level-style compaction due to my
+> data size, which possibly is upwards of 250G and can end up compressed into
+> one SST due to manual compaction at the end of the load? I believe I
+> exceeded the data table index size of 4G for one of my tests, resulting in
+> a database I couldn't query, but I didn't see any errors in the log to
+> indicate the overrun.
+> 
+> That noted, what would it take to resolve this limitation? It seems pretty
+> severe to have to guess your data size up-front in order to determine which
+> compaction style to use.
+> 
+> Another minor question. What cache size do you typically use here:
+> https://github.com/facebook/rocksdb/blob/master/utilities/spatialdb/spatial_db.cc#L768
+> ?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/490#issuecomment-73028551.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+It seems after tests that the non-parallel bulk load is more efficient. I need to test my previous bulk load method to see if this is the case. I believe those were in the order of 40 hours.
+
+It seems after tests that the non-parallel bulk load is more efficient. I need to test my previous bulk load method to see if this is the case. I believe those were in the order of 40 hours.
+
+@igorcanadi So, having tested, it seems that in my case a more standard (non-parallel) [bulk load approach](https://github.com/ekg/vg/blob/5831c34bbcbd53dc7bab82492fdab94b077eac7d/index.cpp#L22-L61) yields much better load times. It's on the order of 2-3x faster for small databases of 2-3G, and I expect the numbers to be similar for my target 1T dataset.
+
+Oddly, [a recent configuration roughly following your example from spatialdb](https://github.com/ekg/vg/blob/634b354de4ece954d18df6e19aea264b8dc7133c/index.cpp#L24-L71) seems to limit the parallelism of batched writes to 4-5 fold. I couldn't figure out what's going on. In my application I get a huge benefit from being able to issue many parallel batched writes. I use at least 32 concurrent threads to do so, and achieve ~100M/s sustained write to the database when doing so.
+
+Do you count compaction speed in your total bulk load time? You'll need to compact if you want your reads to be performant.
+
+@igorcanadi Yes, this does include compaction.
+
+It actually isn't much slower to compact the data from L0->L1 than to have it happen in the background and issue a final compaction at the end. The manual compaction bulk-load comes out on top because data load into L0 is _much_ faster. Right now it's running at 130M/s (48 threads). I couldn't get it above a 5-10 M/s of actual write (not compaction-driven writes) when using the parallel compaction method.
+
+I'm aiming for a relatively small number of files, as in tests this seemed to improve read performance quite a bit. So, I'm using two levels (L0, L1) and setting the target file size to 64G for L1. In my application, zlib compression yields huge gains over snappy and lz4, and seems to work better on larger files.
+
+Note that I also can't use "Universal" compaction because my data size is too large. I broke a bunch of test databases because of this before I realized I was right above the limit for using it. My vote's with a fix to the sst format that allows the files to be >100G without risk. It seems like a rather small upper limit.
+
+Is your data pre-sorted before bulk loading? if it is, https://reviews.facebook.net/D34797 will give you a good performance boost.
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

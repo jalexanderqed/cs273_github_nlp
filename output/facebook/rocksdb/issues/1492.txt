@@ -1,0 +1,38 @@
+Another error from far too recent compiler.
+
+<pre>
+${CXX} --version
++ x86_64-unknown-linux-gnu-g++ --version
+x86_64-unknown-linux-gnu-g++ (crosstool-NG crosstool-ng-1.22.0-201-g11cb2dd) 7.0.0 20161109 (experimental)
+Copyright (C) 2016 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+...
+
+x86_64-unknown-linux-gnu-g++ -I/usr/include -I/usr/include/x86_64-linux-gnu -m64 -O3 -g -mtune=native -std=c++11  -g -W -Wextra -Wall -Wsign-compare -Wshadow -Wno-unused-parameter -Werror -I. -I./include -std=c++11 -I/usr/include -I/usr/include/x86_64-linux-gnu -m64 -O3 -g -mtune=native -std=c++11 -DROCKSDB_PLATFORM_POSIX -DROCKSDB_LIB_IO_POSIX -I/usr/include -I/usr/include/x86_64-linux-gnu -m64 -O3 -g -mtune=native -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_FALLOCATE_PRESENT -DSNAPPY -DGFLAGS=gflags -DZLIB -DBZIP2 -DROCKSDB_MALLOC_USABLE_SIZE -DROCKSDB_PTHREAD_ADAPTIVE_MUTEX -DROCKSDB_BACKTRACE -march=native   -isystem ./third-party/gtest-1.7.0/fused-src -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -Wnon-virtual-dtor -Wno-missing-field-initializers -c db/db_iter.cc -o db/db_iter.o 
+In file included from ./util/statistics.h:17:0,
+                 from ./util/stop_watch.h:8,
+                 from ./db/merge_helper.h:19,
+                 from db/db_iter.cc:19:
+./util/thread_local.h:66:16: error: 'function' in namespace 'std' does not name a template type
+   typedef std::function<void(void*, void*)> FoldFunc;
+                ^~~~~~~~
+./util/thread_local.h:71:13: error: 'FoldFunc' has not been declared
+   void Fold(FoldFunc func, void* res);
+             ^~~~~~~~
+./util/thread_local.h:142:28: error: 'FoldFunc' has not been declared
+     void Fold(uint32_t id, FoldFunc func, void* res);
+                            ^~~~~~~~
+Makefile:1472: recipe for target 'db/db_iter.o' failed
+</pre>
+I feel like we need to include <functional> explicitly here @ajkr 
+
+Feel free to explicitly include the necessary header file and send a Pull Request.
+
+Thanks for diagnosing a cause @omegaga .
+
+Seems to be the header `functional` http://en.cppreference.com/w/cpp/utility/functional/function
+
+I'm waiting on CLA approval internally before writing code.
+

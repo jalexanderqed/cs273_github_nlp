@@ -1,0 +1,12 @@
+Junit and our code generate lots of warning if "-Xcheck:jni" is on and force Travis to fail as the logs are too long.
+
+@siying I have already started along these lines for Java 8 - https://github.com/adamretter/rocksdb/commit/05e126de5a09bc3080b656f32ae5f329e4c47c88
+
+I think maybe we can just disable the checks for production builds, and then fix the JNI exception checking stuff to get rid of the JNI warnings for JDK 8 debug builds.
+
+@adamretter Travis is failing with Java test. I'm just trying to fix the tests to unblock the build. Otherwise, our Travis won't turn green.
+
+@siying Okay sure, I can send the other changes in a later PR
+
+Thank you Adam!
+

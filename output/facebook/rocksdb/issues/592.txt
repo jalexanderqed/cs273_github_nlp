@@ -1,0 +1,196 @@
+We've observed some situations in production where all writes fail with "Invalid column family specified in write batch".  We're still investigating, but in an attempt to reproduce the behavior, we've noticed that once a write fails because it used a dropped column family, a subsequent write will fail as well.
+
+is this expected?  if yes, how to get writes working again?
+
+with the code below on OSX (our observations were originally rhel6, i'll try reproduce there if needed):
+
+```
+2:51 ~/tmp ditzy& git --git-dir ~/src/rocksdb/.git log --oneline | sed 1q
+149ef19 Bump up patch to 3.10.1
+2:51 ~/tmp ditzy& c++ --version
+Apple LLVM version 6.1.0 (clang-602.0.49) (based on LLVM 3.6.0svn)
+Target: x86_64-apple-darwin14.3.0
+Thread model: posix
+2:51 ~/tmp ditzy& c++ -std=c++11 -W -Wall -Wno-unused-parameter -Werror cft4.cc -I ~/src/rocksdb/include -L ~/src/rocksdb -lrocksdb -lz -lbz2
+2:51 ~/tmp ditzy& ./a.out
+2:51 ~/tmp ditzy& ./a.out f
+fatal: cft4.cc:66 Put DEFAULT: 4 Invalid argument: Invalid column family specified in write batch
+```
+
+cft4.cc is below
+
+```
+#include <iostream>
+#include <string>
+#include <vector>
+#include <cstdlib>
+
+#include <rocksdb/db.h>
+#include <rocksdb/options.h>
+#include <rocksdb/slice.h>
+
+static void fatal(const char* fn, int line,
+        const std::string& what, const rocksdb::Status& s)
+{
+    std::cerr << "fatal: " << fn << ':' << line << ' '
+        << what << ": " << s.code() << ' ' << s.ToString() << '\n';
+    std::exit(1);
+}
+
+#define FATAL(w,s) fatal(__FILE__, __LINE__, (w), (s))
+
+int main(int argc, char**)
+{
+    using namespace rocksdb;
+
+    Options options;
+    options.create_if_missing = true;
+    options.create_missing_column_families = true;
+    options.error_if_exists = true;
+
+    const std::string dbname("cft.test.db");
+
+    // cleanup from a previous run
+    DestroyDB(dbname, options);
+
+    DB* db = nullptr;
+    std::vector<ColumnFamilyHandle*> cfh;
+
+    const std::vector<ColumnFamilyDescriptor> cfd = {
+        { "1", options },
+        { kDefaultColumnFamilyName, options },
+    };
+
+    auto s = DB::Open(options, dbname, cfd, &cfh, &db);
+    if (!s.ok())
+        FATAL("DB::Open", s);
+
+    if (argc != 1) {
+        s = db->DropColumnFamily(cfh[0]);
+        if (!s.ok())
+            FATAL("DropColumnFamily", s);
+    }
+
+    const auto k = Slice{"k"};
+    const auto v = Slice{"v"};
+
+    // attempt to write to the dropped column family
+    s = db->Put(WriteOptions(), cfh[0], k, v);
+    if (s.ok())
+        std::exit(0);
+
+    if (!s.IsInvalidArgument())
+        FATAL("Put cfh[0]", s);
+
+    // write to the default column family
+    s = db->Put(WriteOptions(), k, v);
+    if (!s.ok())
+        FATAL("Put DEFAULT", s);
+
+    return 0;
+}
+```
+
+a modestly simpler version:
+
+```
+3:07 ~/tmp ditzy& c++ -std=c++11 -W -Wall -Wno-unused-parameter -Werror cft5.cc -I ~/src/rocksdb/include -L ~/src/rocksdb -lrocksdb -lz -lbz2
+3:07 ~/tmp ditzy& ./a.out
+3:07 ~/tmp ditzy& ./a.out f
+fatal: cft5.cc:59 Put DEFAULT: 4 Invalid argument: Invalid column family specified in write batch
+```
+
+```
+#include <iostream>
+#include <string>
+#include <vector>
+#include <cstdlib>
+
+#include <rocksdb/db.h>
+#include <rocksdb/options.h>
+#include <rocksdb/slice.h>
+
+static void fatal(const char* fn, int line,
+        const std::string& what, const rocksdb::Status& s)
+{
+    std::cerr << "fatal: " << fn << ':' << line << ' '
+        << what << ": " << s.code() << ' ' << s.ToString() << '\n';
+    std::exit(1);
+}
+
+#define FATAL(w,s) fatal(__FILE__, __LINE__, (w), (s))
+
+int main(int argc, char**)
+{
+    using namespace rocksdb;
+
+    Options options;
+    options.create_if_missing = true;
+    options.create_missing_column_families = true;
+    options.error_if_exists = true;
+
+    const std::string dbname("cft.test.db");
+
+    // cleanup from a previous run
+    DestroyDB(dbname, options);
+
+    DB* db = nullptr;
+    std::vector<ColumnFamilyHandle*> cfh;
+
+    const std::vector<ColumnFamilyDescriptor> cfd = {
+        { "1", options },
+        { kDefaultColumnFamilyName, options },
+    };
+
+    auto s = DB::Open(options, dbname, cfd, &cfh, &db);
+    if (!s.ok())
+        FATAL("DB::Open", s);
+
+    if (argc != 1) {
+        // close our column family, and then attempt to write to it.
+        s = db->DropColumnFamily(cfh[0]);
+        if (!s.ok())
+            FATAL("DropColumnFamily", s);
+        s = db->Put({}, cfh[0], {}, {});
+        if (!s.IsInvalidArgument())
+            FATAL("Put cfh[0]", s);
+    }
+
+    // write to the default column family
+    s = db->Put({}, {}, {});
+    if (!s.ok())
+        FATAL("Put DEFAULT", s);
+
+    return 0;
+}
+```
+
+Yes, this is expected behavior, although I agree that it's kind of confusing. As soon as any error happens in write, we mark the database read-only. I think we should restrict this to only IO errors.
+
+thanks.  no promises, but if i get some time i'll look into fixing the error handling.
+
+in my application, i had a race between DropColumnFamily() and Put() on the same column family handle.  the subsequent failures were confusing and scary, since it looked like we'd managed to
+clobber the internal cf handle data structure in rocksdb.
+
+I'm looking into this. What should happen if one write in the batch is to the dropped column family (and there are other writes in the batch)? Should we apply other writes and not apply the dropped-cf write? If that's the behavior we want, it would be a bit un-intuitive that DB::Write() returns an error even if other writes are applied. This will also be a problem in group commit -- all writes from a group commit will return the same error. Some writes will return an error even if they're fully applied (in case when they get group committed with dropped-cf-write).
+
+On the other hand, if we want to skip the entire batch if a write in the batch is a dropped-cf-write, then we need to add overhead to the write. Before every write, we need to check all writes in the batch to see if they're pointing to the dropped-cf.
+
+Thoughts?
+
+From an API perspective, it will be great is we can keep the 'atomic' semantics of a single Write(). Either all writes to all column families should be successful or none at all. 
+
+Ignoring the performance penalty, is the above semantics 'possible' to implement?
+
+Ignoring the performance penalty, it is possible. We can check every write in the batch when we enter the write-thread. (before we start applying the writes)
+
+@igorcanadi @dhruba I agree that we should keep the atomic semantics.
+
+Perhaps though there is a quicker way than checking all writes in the batch; I would think that generally there are few column families but many writes. So why not have the write batch maintain a HashSet of column family ids, each write to the batch could add its column family id to that set. Then at the time of writing the batch atomically you need only compare the few column families in the hash set of the write batch against the existing column families in the db.
+
+Igor: is the check of the existence of the column family and the issuance of the Write call protected by the dbmutex and/or super-version?
+
+> Igor: is the check of the existence of the column family and the issuance of the Write call protected by the dbmutex and/or super-version?
+
+No, it wouldn't need to be protected by dbmutex, it would just need to be executed in the write thread.
+

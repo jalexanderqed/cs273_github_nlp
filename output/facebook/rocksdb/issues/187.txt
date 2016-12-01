@@ -1,0 +1,112 @@
+with clang 3.4 on Ubuntu 14.04:
+
+```
+./java/rocksjni/iterator.cc:80:7: error: cannot initialize a parameter of type 'jbyte *' (aka 'signed char *') with an rvalue of type 'const jbyte *' (aka 'const signed char *')
+      reinterpret_cast<const jbyte*>(key_slice.data()));
+      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/bin/../lib/gcc/x86_64-linux-gnu/4.8/include/jni.h:1471:77: note: passing argument to parameter 'val3' here
+  void SetByteArrayRegion (jbyteArray val0, jsize val1, jsize val2, jbyte * val3)
+                                                                            ^
+./java/rocksjni/iterator.cc:97:7: error: cannot initialize a parameter of type 'jbyte *' (aka 'signed char *') with an rvalue of type 'const jbyte *' (aka 'const signed char *')
+      reinterpret_cast<const jbyte*>(value_slice.data()));
+      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/bin/../lib/gcc/x86_64-linux-gnu/4.8/include/jni.h:1471:77: note: passing argument to parameter 'val3' here
+  void SetByteArrayRegion (jbyteArray val0, jsize val1, jsize val2, jbyte * val3)
+                                                                            ^
+2 errors generated.
+./java/rocksjni/rocksjni.cc:166:9: error: cannot initialize a parameter of type 'jbyte *' (aka 'signed char *') with an rvalue of type 'const jbyte *' (aka 'const signed char *')
+        reinterpret_cast<const jbyte*>(value.c_str()));
+        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/bin/../lib/gcc/x86_64-linux-gnu/4.8/include/jni.h:1471:77: note: passing argument to parameter 'val3' here
+  void SetByteArrayRegion (jbyteArray val0, jsize val1, jsize val2, jbyte * val3)
+                                                                            ^
+./java/rocksjni/rocksjni.cc:244:7: error: cannot initialize a parameter of type 'jbyte *' (aka 'signed char *') with an rvalue of type 'const jbyte *' (aka 'const signed char *')
+      reinterpret_cast<const jbyte*>(cvalue.c_str()));
+      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/bin/../lib/gcc/x86_64-linux-gnu/4.8/include/jni.h:1471:77: note: passing argument to parameter 'val3' here
+  void SetByteArrayRegion (jbyteArray val0, jsize val1, jsize val2, jbyte * val3)
+                                                                            ^
+./java/rocksjni/rocksjni.cc:289:11: error: cannot initialize a parameter of type 'jbyte *' (aka 'signed char *') with an rvalue of type 'const jbyte *'
+      (aka 'const signed char *')
+          reinterpret_cast<const jbyte*>(values[i].c_str()));
+          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/bin/../lib/gcc/x86_64-linux-gnu/4.8/include/jni.h:1471:77: note: passing argument to parameter 'val3' here
+  void SetByteArrayRegion (jbyteArray val0, jsize val1, jsize val2, jbyte * val3)
+                                                                            ^
+3 errors generated.
+./java/rocksjni/write_batch.cc:258:7: error: cannot initialize a parameter of type 'jbyte *' (aka 'signed char *') with an rvalue of type 'const jbyte *'
+      (aka 'const signed char *')
+      reinterpret_cast<const jbyte*>(state.c_str()));
+      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/usr/bin/../lib/gcc/x86_64-linux-gnu/4.8/include/jni.h:1471:77: note: passing argument to parameter 'val3' here
+  void SetByteArrayRegion (jbyteArray val0, jsize val1, jsize val2, jbyte * val3)
+                                                                            ^
+```
+
+with gcc 4.8.2 on Ubuntu 14.04:
+
+```
+./java/rocksjni/iterator.cc: In function ‘__jbyteArray* Java_org_rocksdb_RocksIterator_key0(JNIEnv*, jobject, jlong)’:
+./java/rocksjni/iterator.cc:80:55: error: invalid conversion from ‘const jbyte* {aka const signed char*}’ to ‘jbyte* {aka signed char*}’ [-fpermissive]
+       reinterpret_cast<const jbyte*>(key_slice.data()));
+                                                       ^
+In file included from ./java/rocksjni/iterator.cc:11:0:
+/usr/lib/gcc/x86_64-linux-gnu/4.8/include/jni.h:1471:8: error:   initializing argument 4 of ‘void _Jv_JNIEnv::SetByteArrayRegion(jbyteArray, jsize, jsize, jbyte*)’ [-fpermissive]
+   void SetByteArrayRegion (jbyteArray val0, jsize val1, jsize val2, jbyte * val3)
+        ^
+./java/rocksjni/iterator.cc: In function ‘__jbyteArray* Java_org_rocksdb_RocksIterator_value0(JNIEnv*, jobject, jlong)’:
+./java/rocksjni/iterator.cc:97:57: error: invalid conversion from ‘const jbyte* {aka const signed char*}’ to ‘jbyte* {aka signed char*}’ [-fpermissive]
+       reinterpret_cast<const jbyte*>(value_slice.data()));
+                                                         ^
+In file included from ./java/rocksjni/iterator.cc:11:0:
+/usr/lib/gcc/x86_64-linux-gnu/4.8/include/jni.h:1471:8: error:   initializing argument 4 of ‘void _Jv_JNIEnv::SetByteArrayRegion(jbyteArray, jsize, jsize, jbyte*)’ [-fpermissive]
+   void SetByteArrayRegion (jbyteArray val0, jsize val1, jsize val2, jbyte * val3)
+        ^
+./java/rocksjni/rocksjni.cc: In function ‘__jbyteArray* rocksdb_get_helper(JNIEnv*, rocksdb::DB*, const rocksdb::ReadOptions&, jbyteArray, jint)’:
+./java/rocksjni/rocksjni.cc:166:54: error: invalid conversion from ‘const jbyte* {aka const signed char*}’ to ‘jbyte* {aka signed char*}’ [-fpermissive]
+         reinterpret_cast<const jbyte*>(value.c_str()));
+                                                      ^
+In file included from ./java/rocksjni/rocksjni.cc:11:0:
+/usr/lib/gcc/x86_64-linux-gnu/4.8/include/jni.h:1471:8: error:   initializing argument 4 of ‘void _Jv_JNIEnv::SetByteArrayRegion(jbyteArray, jsize, jsize, jbyte*)’ [-fpermissive]
+   void SetByteArrayRegion (jbyteArray val0, jsize val1, jsize val2, jbyte * val3)
+        ^
+./java/rocksjni/rocksjni.cc: In function ‘jint rocksdb_get_helper(JNIEnv*, rocksdb::DB*, const rocksdb::ReadOptions&, jbyteArray, jint, jbyteArray, jint)’:
+./java/rocksjni/rocksjni.cc:244:53: error: invalid conversion from ‘const jbyte* {aka const signed char*}’ to ‘jbyte* {aka signed char*}’ [-fpermissive]
+       reinterpret_cast<const jbyte*>(cvalue.c_str()));
+                                                     ^
+In file included from ./java/rocksjni/rocksjni.cc:11:0:
+/usr/lib/gcc/x86_64-linux-gnu/4.8/include/jni.h:1471:8: error:   initializing argument 4 of ‘void _Jv_JNIEnv::SetByteArrayRegion(jbyteArray, jsize, jsize, jbyte*)’ [-fpermissive]
+   void SetByteArrayRegion (jbyteArray val0, jsize val1, jsize val2, jbyte * val3)
+        ^
+./java/rocksjni/rocksjni.cc: In function ‘__jobject* multi_get_helper(JNIEnv*, jobject, rocksdb::DB*, const rocksdb::ReadOptions&, jobject, jint)’:
+./java/rocksjni/rocksjni.cc:289:60: error: invalid conversion from ‘const jbyte* {aka const signed char*}’ to ‘jbyte* {aka signed char*}’ [-fpermissive]
+           reinterpret_cast<const jbyte*>(values[i].c_str()));
+                                                            ^
+In file included from ./java/rocksjni/rocksjni.cc:11:0:
+/usr/lib/gcc/x86_64-linux-gnu/4.8/include/jni.h:1471:8: error:   initializing argument 4 of ‘void _Jv_JNIEnv::SetByteArrayRegion(jbyteArray, jsize, jsize, jbyte*)’ [-fpermissive]
+   void SetByteArrayRegion (jbyteArray val0, jsize val1, jsize val2, jbyte * val3)
+        ^
+./java/rocksjni/write_batch.cc: In function ‘__jbyteArray* Java_org_rocksdb_WriteBatchTest_getContents(JNIEnv*, jclass, jobject)’:
+./java/rocksjni/write_batch.cc:258:52: error: invalid conversion from ‘const jbyte* {aka const signed char*}’ to ‘jbyte* {aka signed char*}’ [-fpermissive]
+       reinterpret_cast<const jbyte*>(state.c_str()));
+                                                    ^
+In file included from ./java/./include/org_rocksdb_WriteBatch.h:2:0,
+                 from ./java/rocksjni/write_batch.cc:10:
+/usr/lib/gcc/x86_64-linux-gnu/4.8/include/jni.h:1471:8: error:   initializing argument 4 of ‘void _Jv_JNIEnv::SetByteArrayRegion(jbyteArray, jsize, jsize, jbyte*)’ [-fpermissive]
+   void SetByteArrayRegion (jbyteArray val0, jsize val1, jsize val2, jbyte * val3)
+        ^
+make: *** [rocksdbjava] Error 1
+```
+
+It looks like the JNI header it finds, `/usr/lib/gcc/x86_64-linux-gnu/4.8/include/jni.h` is a GNU Classpath header that doesn't have enough `const jbyte`.  Doing any one of these fixed the build errors for me:
+
+1) Adding `-I/usr/lib/jvm/java-8-oracle/include` to `OPT` in `Makefile`
+
+2) Adding `-I/usr/lib/jvm/java-7-openjdk-amd64/include` to `OPT` in `Makefile`
+
+3) Changing all of the `reinterpret_cast<const jbyte*>` to `(jbyte*)`
+
+Or, now that I read https://github.com/facebook/rocksdb/wiki/RocksJava-Basics, setting `JAVA_HOME` works too.
+
+Feel free to reopen this issue if you still have problems.
+

@@ -1,0 +1,8 @@
+Small issue with allocation; Similar to https://github.com/facebook/rocksdb/issues/1220
+
+I'm a bit confused on which patch is included in this PR.  Would you mind doing a rebase and only include 9887661?
+
+@yhchiang Er... it does only include 9887661. What's the issue you are seeing?
+
+Oops, my bad.  I thought f4d9863 was also included but it's actually not.  Good to go :)
+

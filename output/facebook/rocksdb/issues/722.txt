@@ -1,0 +1,21 @@
+Wiki page https://github.com/facebook/rocksdb/wiki/Basic-Operations#cache contains the following example, which cannot be compiled with current RocksDB (a5e312a7a475c6607845ccca3330d73bb88f7740):
+
+``` cpp
+  rocksdb::Options options;
+  options.block_cache = rocksdb::NewLRUCache(100 * 1048576); // 100MB uncompressed cache 
+  options.block_cache_compressed = rocksdb::NewLRUCache(100 * 1048576); // 100MB compressed cache
+
+  // ...
+
+  delete options.block_cache; 
+  delete options.block_cache_compressed;
+```
+
+This example won't work anymore, because `rocksdb::Options` doesn't have a member `block_cache`. 
+The option in question seems to have been moved into struct `BlockBasedTableOptions`.
+The example should be updated accordingly.
+
+Tnx for reporting this. I updated the wiki: https://github.com/facebook/rocksdb/wiki/Basic-Operations
+
+thanks!
+

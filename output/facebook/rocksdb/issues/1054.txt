@@ -1,0 +1,10 @@
+In all the places where log records are read, there was a check that record.size() should not be less than 12.
+
+This "magic number" seems to be the WriteBatch header (8 byte sequence and 4 byte count). 
+
+Replaced all the places where "12" was used by WriteBatchInternal::kHeader.
+
+Looks good, but can you please run `make format` (with clang-format installed)? It looks like some of your lines are bigger than 80 characters.
+
+Couldn't get clang-format to install properly, but truncated lines to 80 chars.  Please verify
+

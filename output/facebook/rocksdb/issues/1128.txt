@@ -1,0 +1,15 @@
+  For ease of reuse and customization as a library
+  without wrapping.
+  WinEnvThreads is a class for replacement.
+  WintEnvIO is a class for reuse and behavior override.
+  Added private virtual functions for custom override
+  of fallocate pread for io classes.
+
+@siying This succeeds
+
+@yuslepukhin did any of your teammate review it? If they have, I'll just merge it blindly.
+
+@siying @PraveenSinghRao @SherlockNoMad Yes, there has been an internal review.
+
+Thanks for your contribution!
+

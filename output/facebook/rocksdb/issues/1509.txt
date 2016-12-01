@@ -1,0 +1,9 @@
+
+@yiwu-arbug has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4176426).
+
+@artemy-kolesnikov updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1509/files/4bc47732a232724e6dc57fb0e3347c087574933d..162d63530ff444af86617bda3a05247791ba46ed) - [changes since last import](https://github.com/facebook/rocksdb/pull/1509/files/4bc47732a232724e6dc57fb0e3347c087574933d..162d63530ff444af86617bda3a05247791ba46ed)
+
+Looking good! Can you also fix AppVeyor build?
+
+@artemy-kolesnikov updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1509/files/162d63530ff444af86617bda3a05247791ba46ed..799ca94d6e46ca3f004327a19ae88416d2927745) - [changes since last import](https://github.com/facebook/rocksdb/pull/1509/files/162d63530ff444af86617bda3a05247791ba46ed..799ca94d6e46ca3f004327a19ae88416d2927745)
+

@@ -1,0 +1,4 @@
+  Implement GetUniqueIdFromFile to support new tests and the feature.
+
+Please, merge this PR.
+

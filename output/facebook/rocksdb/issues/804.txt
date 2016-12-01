@@ -1,0 +1,48 @@
+Tried several times on an up-to-date Debian/Sid amd64 environment. It consistently fails:
+[----------] 15 tests from EnvPosixTest
+[...]
+[ RUN      ] EnvPosixTest.DecreaseNumBgThreads
+[       OK ] EnvPosixTest.DecreaseNumBgThreads (7303 ms)
+[ RUN      ] EnvPosixTest.RandomAccessUniqueID
+Segmentation fault
+
+gdb bt shows:
+[ RUN      ] EnvPosixTest.RandomAccessUniqueID
+
+Program received signal SIGSEGV, Segmentation fault.
+0x00007ffff65a9c9a in strlen () from /lib/x86_64-linux-gnu/libc.so.6
+(gdb) bt
+#0  0x00007ffff65a9c9a in strlen () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x00007ffff6f0322c in std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::compare(char const*) const ()
+
+   from /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+#2  0x0000000000456aaf in std::operator==<char, std::char_traits<char>, std::allocator<char> > (__rhs="/var/tmp", __lhs=0x0)
+
+```
+at /usr/include/c++/5/bits/basic_string.h:4925
+```
+#3  rocksdb::IoctlFriendlyTmpdir::IoctlFriendlyTmpdir (this=0x7fffffffe100)
+
+```
+at util/env_test.cc:556
+```
+#4  0x00000000004522cc in rocksdb::EnvPosixTest_RandomAccessUniqueID_Test::TestBody (this=0x9a1370) at util/env_test.cc:590
+#5  0x0000000000655ce7 in testing::internal::HandleSehExceptionsInMethodIfSupported<testing::Test, void> (location=0x69ddb8 "the test body",
+
+```
+method=<optimized out>, object=<optimized out>)
+at third-party/gtest-1.7.0/fused-src/gtest/gtest-all.cc:3822
+```
+#6  testing::internal::HandleExceptionsInMethodIfSupported<testing::Test, void>
+
+```
+(object=object@entry=0x9a1370, 
+method=(void (testing::Test::*)(testing::Test * const)) 0x452290 <rocksdb::EnvPosixTest_RandomAccessUniqueID_Test::TestBody()>, 
+location=location@entry=0x69ddb8 "the test body")
+at third-party/gtest-1.7.0/fused-src/gtest/gtest-all.cc:3858
+```
+
+[...]
+
+What should I check, how can this be fixed, what additional information may you need?
+

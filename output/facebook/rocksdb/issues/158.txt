@@ -1,0 +1,75 @@
+Hi,
+
+I have a question regarding the naming policy of branches/tags here on github. What is the purpose of naming the branches exactly as the tags? From my point of view it only adds confusion. For example our build server prints the following
+
+```
+simple  22-May-2014 13:49:38    From https://github.com/facebook/rocksdb
+simple  22-May-2014 13:49:38     * [new branch]      3.0.fb     -> 3.0.fb
+simple  22-May-2014 13:49:38     * [new tag]         3.0.fb     -> 3.0.fb
+simple  22-May-2014 13:49:38    Checking out revision a1a1f61fa75e35340ec64624234f9b68520545b4.
+simple  22-May-2014 13:49:38    warning: refname '3.0.fb' is ambiguous.
+simple  22-May-2014 13:49:38    Switched to branch '3.0.fb'
+```
+
+Even github itself behaves a bit strange. For example this is the URL I get to view the branch 2.8.fb
+https://github.com/facebook/rocksdb/tree/2.8.fb
+However github generates the same URL when clicking on the **tag** 2.8.fb.
+Which is wrong from my point of view, because the tag 2.8.fb and branch 2.8.fb point to two different commits. 
+
+I know it is a tool problem only, because git itself allows branches and tags with the same name. Still it could lead to confusion.
+
+I'm also wondering what is the intention of the branches with name
+- 2.8.1.fb
+- 2.8.fb.trunk
+- why no 3.0.fb.trunk
+
+For example the branch/tag names used at https://github.com/facebook/hhvm are obvious at the first look.
+Branches look like
+- hhvm-2.0
+- hhvm-3.0
+
+Which means each series has its own branch, where fixes for a specific series go into a branch. Tags have the following name
+- hhvm-2.0.0
+- hhvm-2.0.1
+- hhvm-3.0.0
+
+So for each bugfix version in a series a new tag is created.
+
+I know there are a many 'git development schemes' I'm just wondering which one rocksdb follows.
+
+To be honest, we haven't spent much time thinking about git development workflow. Most of the decisions were made ad hoc.
+
+I agree that naming branch and tags the same name is the problem. I was confused by this multiple times. As a good first step, we should name our tags differently. My proposal is `rocksdb-3.1` as a tag name and `3.1.fb` as a branch name.
+
+Going forward, we should definitely set some rules and document them. @stephan-hof which workflow would you recommend? 
+
+Hi, if you ask me I would not change much on the current way, which is:
+- Committing new stuff to master. Where master should always be in a compilable/usable state. The integration of travis was a huge improvement to this.
+- For bigger development (which would disrupt master for a while) create a feature branch and do development there. This feature branch could be deleted when merged to master. Like you did for column families. Optionally you could name feature branches like 'feature-XXX' or feature/XXX'
+- Pull requests from the community going mainly to master. 
+- Create a tag for every release and give the tag a good name. Your naming proposal sounds fine to me. I really appreciate that you used it already for the 3.1 release. I'm just wondering if it makes sense to include the minor version also in the release tag => rocksdb-3.1.0 instead of rocksdb-3.1
+
+Now the interesting part. When to create a 'branch' (not talking about feature branches).
+I would only create a branch if there is really a intention to support a series for a longer time, parallel to master. So for example if you intend to release 2.8.1, 2.8.2, ....then keep a 2.8.fb branch. Commit the fixes for the 2.8 series there and create tags from this branch. There is no need to create a 2.8.fb.trunk nor a 2.8.1.fb branch. Creating a branch for each tag is not necessary. Let fixes go to 2.8.fb branch and create tags (rocksdb-2.8.X.fb) from it.
+Which means I would not create a 3.0.fb or 3.1.fb branch. Is there really a need for a, lets say 3.0.1 release, you could create the 3.0.fb branch later too.
+
+Optionally: You could do something like the linux-kernel (https://www.kernel.org/) . Which is 'maintain' the latest stable release. For example with rocksdb. While 3.2 (currently master) is on its way, bug-fixes go to the 3.1 branch too. From this 3.1 branch the rocksdb-3.1.X.fb tags are created. If 3.2 is out the 3.1 branch is abandoned and bugfixes go to the 3.2 branch (and master of course), ...
+For some specific branches 'long term' support could be announced. 
+
+To summarize, this branches are always a kind of 'fork' from the master and need maintenance.
+So for the end users it is important to know on which branches/series they can expect maintenance.
+
+Keep in mind, this is my personal view. Please feel free to drive the model which you think fits best to rocksdb. 
+
+Igor: if you can update https://github.com/facebook/rocksdb/wiki/RocksDB-Release-Methodology with your release summary (for future releases), that would be cool.
+
+@stephan-hof I agree with most of what you're saying. However, I think we should create branches for each X.Y release (3.0.fb, 3.1.fb). That way we can quickly push a hotfix and release rocksdb-3.0.1. I like the linux-kernel way of doing things. While we develop 3.2.fb, we push bug fixes to 3.1.fb. We need to do this because all of facebook customers are using 3.1.fb. We will keep that branch very stable.
+
+@dhruba yes, I'll update the wiki.
+
+@stephan-hof I updated our release methodology: https://github.com/facebook/rocksdb/wiki/RocksDB-Release-Methodology
+
+Let me know your feedback.
+
+For me it sounds very good. Thanks for the clarification on the wiki page. 
+

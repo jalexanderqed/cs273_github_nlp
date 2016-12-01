@@ -1,0 +1,209 @@
+I am seeing a strange issue with WriteBatchWithIndex. Whilst I am using this from Java, I suspect the underlying problem is in the C++ code of WriteBatchWithIndex or its BaseDeltaIterator. I am not the strongest C++ developer, so I would appreciate it if someone could take a look.
+
+``` java
+Options opts = new Options()
+                    .setCreateIfMissing(true)
+                    .setIncreaseParallelism(4)
+                    .optimizeLevelStyleCompaction()
+                    .setMaxBackgroundCompactions(4);
+
+RocksDB rocks = RocksDB.open(opts, "/tmp/test1");
+Snapshot snapshot = rocks.getSnapshot();
+ReadOptions readOptions = new ReadOptions().setSnapshot(snapshot);
+WriteBatchWithIndex writeBatch = new WriteBatchWithIndex(true);
+
+RocksIterator baseIterator = db.newIterator(readOptions);
+RocksIterator iterator = writeBatch.newIteratorWithBase(baseIterator);
+```
+
+First, I write various PUT and DELETE into the `writeBatch`.
+
+Subsequently, in a loop after calling `next()` on `iterator`, if I call `getKey` then I get returned 9 bytes all of which are zero. However, if I call `getKey` on baseIterator then I get 12 bytes with a possibly correct value.
+
+`iterator.isValid` and `baseIterator.isValid` both report `true`.
+
+In this instance, the keys are numbers. When `iterator.key()` mistakenly returns 0 (i.e. nine zero bytes), `baseIterator.key()` returns 12 bytes which decode to `4374136231`. If I inspect the WriteBatchWithIndex with a debugger I can confirm that there are no entires in the WriteBatchWithIndex for the key `4374136231` or for the preceding key `4374136230` or even the following key `4374136232`.
+
+So, if I have not modified the entry in the WriteBatchWithIndex, then how can I get a key from the iterator which is nine bytes of zero, whilst the baseIterator shows a valid key? This is a mystery!
+
+Perhaps related, or a separate issue? Sometimes when I call `getKey` on the `iterator` from the above example I get a SIGSEGV:
+
+```
+C  [libsystem_platform.dylib+0x1380]  _platform_memmove$VARIANT$Nehalem+0x40
+V  [libjvm.dylib+0x313be1]  jni_SetByteArrayRegion+0x10e
+C  [librocksdbjni6065054552151966993..jnilib+0x41f6]  Java_org_rocksdb_RocksIterator_key0+0x46
+J 1776  org.rocksdb.RocksIterator.key0(J)[B (0 bytes) @ 0x000000010e6c3330 [0x000000010e6c3280+0xb0]
+```
+
+The except from RocksIterator is:
+
+```
+jbyteArray Java_org_rocksdb_RocksIterator_key0(
+JNIEnv* env, jobject jobj, jlong handle) {
+   auto it = reinterpret_cast<rocksdb::Iterator*>(handle);
+  rocksdb::Slice key_slice = it->key();
+    jbyteArray jkey = env->NewByteArray(static_cast<jsize>(key_slice.size()));
+  env->SetByteArrayRegion(jkey, 0, static_cast<jsize>(key_slice.size()),                           reinterpret_cast<const jbyte*>(key_slice.data()));
+  return jkey;
+}
+```
+
+I know it's hard but can you give repro steps? Can't think of anything based on your description.
+
+@siying Thanks, unfortunately this is embedded deep within another app and reproducing it is non-trivial. If I can provide any further information or work out a simpler reproducible example I will of cause post it.
+
+@adamretter  double check one another thing. You don't update the same key multiple times in the write batch, right?
+
+@siying Well that is possible yes. Is that not allowed, I thought it was?
+
+If I did update it in the write batch once or more, should I not see an entry for it in the write batch, even if it was just the last update that was made to the write batch?
+
+@adamretter it is allowed but for newIteratorWithBase(), where in the merge logic, I remember we don't correctly handle this case. But anyway I don't see how you can see key/value you never inserted.
+
+@siying Erm... that sounds _worrying_, could you elaborate on `we don't correctly handle this case`? Do you mean there is an issue with updating the same key multiple times in a write batch?
+
+In the real application, we use a custom Comparator, which is my own C++ code. As mentioned I am not a strong C++ programmer, is there anyway that a custom Comparator could corrupt the key returned by the iterator?
+
+I actually don't remember the details but I am sure when I wrote it I determined that this case was not to supported in my mind and I didn't write any unit test to verify the behavior of that.
+
+If a comparator is not total ordered, I don't know what will happen. Think of Binary search is not working and/or a merge heap is confused. But I cannot think of reasons you can see keys you never inserted. Not a scientific proof though.
+
+On Apr 11, 2015, at 8:34 PM, "Adam Retter" <notifications@github.com<mailto:notifications@github.com>> wrote:
+
+In the real application, we use a custom Comparator, which is my own C++ code. As mentioned I am not a strong C++ programmer, is there anyway that a custom Comparator could corrupt the key returned by the iterator?
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/571#issuecomment-91830621.
+
+@siying I think there might be a problem in WriteBatchWithIndex. Coming at it in the other direction, I sometimes see a SIGSEGV caused by my Comparator when it is invoked from `BaseDeltaIterator`. I have to run my system several times, and this only occasionally happens.
+
+The relevant excepts from the dump (hs_err_pid):
+
+```
+siginfo: si_signo: 11 (SIGSEGV), si_code: 1 (SEGV_MAPERR), si_addr: 0x00000001273f800e
+
+RAX=0x00007fc4d3a4b2c8 is an unknown value
+RBX=0x00007fc4d3280ed0 is an unknown value
+RCX=0x2000000041050061 is an unknown value
+RDX=0x0000000107be0c58 is pointing into the stack for thread: 0x00007fc4d2807000
+RSP=0x0000000107be0c48 is pointing into the stack for thread: 0x00007fc4d2807000
+RBP=0x0000000107be0c90 is pointing into the stack for thread: 0x00007fc4d2807000
+RSI=0x00007fc4d35482e8 is an unknown value
+RDI=0x00007fc4d3280ed0 is an unknown value
+R8 =0x00000001273f800e is an unknown value
+R9 =0x0000000000000004 is an unknown value
+R10=0x00007fc4d3a4b2c8 is an unknown value
+R11=0x00000000004fd6b8 is an unknown value
+R12=0x00007fc4d35482e8 is an unknown value
+R13=0x0000000127908a70: _ZNK2eb22AdamComparator7CompareERKN7rocksdb5SliceES4_+0 in /private/var/folders/hd/3l5yqgy17zq2x07xtf9cj_zh0000gn/T/librocksdbjni428011740207577189..jnilib at 0x0000000127907000
+R14=0x0000000107be0c58 is pointing into the stack for thread: 0x00007fc4d2807000
+R15=0x00007fc4d353d090 is an unknown value
+
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  [librocksdbjni428011740207577189..jnilib+0x1a76]  _ZNK2eb22AdamComparator7CompareERKN7rocksdb5SliceES4_+0x6
+C  [librocksdbjni428011740207577189..jnilib+0x14eb85]  _ZN7rocksdb17BaseDeltaIterator4NextEv+0x185
+J 1947  org.rocksdb.RocksIterator.next0(J)V (0 bytes) @ 0x000000010999fd68 [0x000000010999fcc0+0xa8]
+```
+
+My `AdamComparator::Compare` comparator is made up of the following C++ code: 
+
+```
+int AdamComparator::Compare(const rocksdb::Slice& a, const rocksdb::Slice& b) const {
+
+  const unsigned char * u_keyA = reinterpret_cast<const unsigned char *>(a.data());
+  const unsigned char * u_keyB = reinterpret_cast<const unsigned char *>(b.data());
+
+  const int docIdA = bytesToInt(u_keyA);
+
+...
+
+int AdamComparator::bytesToInt(const unsigned char* bytes, const int offset) const {
+  int result = bytes[offset];
+  result = (result << 8) + bytes[offset + 1];
+  result = (result << 8) + bytes[offset + 2];
+  result = (result << 8) + bytes[offset + 3];
+
+  return result;
+}
+```
+
+From examining the hs_err_pid file produced by the JVM, and then looking at the address in lldb:
+
+```
+    LineEntry: [0x0000000000001a76-0x0000000000001a7a): /Users/aretter/NetBeansProjects/rocksdb/./java/rocksjni/AdamComparator.cc:78
+       Symbol: id = {0x00000020}, range = [0x0000000000001a70-0x0000000000001b80), name="eb::AdamComparator::Compare(rocksdb::Slice const&, rocksdb::Slice const&) const", mangled="_ZNK2eb22AdamComparator7CompareERKN7rocksdb5SliceES4_"
+     Variable: id = {0x00009fb7}, name = "bytes", type= "const unsigned char *", location = r8, decl = AdamComparator.cc:77
+     Variable: id = {0x00009fc0}, name = "offset", type= "const int", location =, decl = AdamComparator.cc:77
+     Variable: id = {0x00009ee1}, name = "this", type= "const eb::AdamComparator *", location = rdi, decl = 
+     Variable: id = {0x00009eef}, name = "a", type= "const rocksdb::Slice &", location = rsi, decl = AdamComparator.cc:13
+     Variable: id = {0x00009efe}, name = "b", type= "const rocksdb::Slice &", location = rdx, decl = AdamComparator.cc:13
+     Variable: id = {0x00009f0d}, name = "u_keyA", type= "const unsigned char *", location = r8, decl = AdamComparator.cc:15
+     Variable: id = {0x00009f1c}, name = "u_keyB", type= "const unsigned char *", location = r10, decl = AdamComparator.cc:16
+     Variable: id = {0x00009f49}, name = "docIdComparison", type= "const int", location =, decl = AdamComparator.cc:25
+```
+
+I can see that the SIGSEGV is caused by the line `int result = bytes[offset];` which is called from `const int docIdA = bytesToInt(u_keyA);`. 
+
+The value of the variable `a` (i.e. `rsi`) is `0x00007fc4d35482e8`, and the value of `u_keyA` (i.e. `r8`) is `0x00000001273f800e`.
+
+I am not sure if those values are significant, but I cannot see why in my code calling `int result = bytes[0]` would cause a SIGSEGV. Is it possible that somehow, I have been given an invalid pointer to the key data for `a` by BaseDeltaIterator?
+
+If you can find the line numbers in the call stack, it will be very helpful.
+
+In the comparator, I assume you called BytesToInt(a, 0) and (b,0) and return the difference while the numbers are small enough so they never overflow? Also they are always 4bytes never bigger?
+
+@siying Sorry, which line numbers are you after? The output I pasted above from lld shows the line numbers in my comparator. Perhaps you mean for `BaseDeltaIterator`, if so then lldb reports:
+
+```
+(lldb) image lookup -v --address 0x14eb85
+      Address: librocksdbjni-osx.jnilib[0x000000000014eb85] (librocksdbjni-osx.jnilib.__TEXT.__text + 1364581)
+      Summary: librocksdbjni-osx.jnilib`rocksdb::BaseDeltaIterator::Next() + 389 at write_batch_with_index.cc:95
+       Module: file = "/Users/aretter/NetBeansProjects/rocksdb/java/target/librocksdbjni-osx.jnilib", arch = "x86_64"
+  CompileUnit: id = {0x012f2772}, file = "/Users/aretter/NetBeansProjects/rocksdb/utilities/write_batch_with_index/write_batch_with_index.cc", language = "ISO C++:1998"
+     Function: id = {0x01308f57}, name = "Next", range = [0x000000000014ea00-0x000000000014ebae)
+     FuncType: id = {0x01308f57}, decl = write_batch_with_index.cc:63, clang_type = "void (void)"
+       Blocks: id = {0x01308f57}, range = [0x0014ea00-0x0014ebae)
+    LineEntry: [0x000000000014eb85-0x000000000014eb95): /Users/aretter/NetBeansProjects/rocksdb/utilities/write_batch_with_index/write_batch_with_index.cc:95
+       Symbol: id = {0x00004de4}, range = [0x000000000014ea00-0x000000000014ebb0), name="rocksdb::BaseDeltaIterator::Next()", mangled="_ZN7rocksdb17BaseDeltaIterator4NextEv"
+     Variable: id = {0x01308f73}, name = "this", type= "rocksdb::BaseDeltaIterator *", location = rbx, decl = 
+```
+
+So that seems to say to me line 95 of `write_batch_with_index.cc`.
+
+Regards the 4 bytes - I am trying to decode a Java Integer which I believe is 4 bytes. My key is a composite thing, hence a custom comparator, but the first 4 bytes of the key are a Java integer. I don't get as far as comparing them, as the crash happens from here `const int docIdA = bytesToInt(u_keyA);`
+
+Line 95 doesn't seem to e a statement. Does addr2line point to the same line?
+
+Just to double check, it is a single threaded program and no other thread is updating the write bath, right?
+
+@siying Hmm yeah so line 95 is the closing brace `}` of `Next`. I guess that tells us it just happens somewhere in `Next` which was already suggested.
+
+I am on a Mac and so we don't have `addr2line`, the nearest I think is `atos` which also suggests line 95, i.e.:
+
+```
+$ atos -o librocksdbjni-osx.jnilib 0x14eb85
+rocksdb::BaseDeltaIterator::Next() (in librocksdbjni-osx.jnilib) (write_batch_with_index.cc:95)
+```
+
+@siying As far as I am aware all interactions with the WriteBatch should be single-threaded. I could add some explicit synchronization and re-run if you would like?
+
+I reread the original post. How does 12 bytes decoded to 4374136231? I assume it is not the leading 4 bytes, as it takes more than 4 bytes. If you are in a debugger, can you check the pointer address (Slices::data_) to the key you got (all zeros) is in the range of write batch's buffer?
+
+Still thinking of what information you can collect for us to look.
+
+By threading, in the life time of the iterator (not just Next() itself), no updates can be added to write batch. It's for sure, right?
+
+@siying It is not the same 12 bytes! The SIGSEGV just occurs outside of my control during use occasionally, so I cannot say that it is for the same key/value that I was accessing at the start of this issue.
+
+I have a Transaction object which encapsulates the WriteBatchWithIndex. There should be one thread only which accesses my Transaction object, it may call `newIteratorWithBase` (and subsecquently `dispose` of that iterator) several times on the same WriteBatchWithIndex, but I do believe that it is just all from a single thread.
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+
+Adam, do you think this is the same issue as https://github.com/facebook/rocksdb/issues/616 ?
+
+If so, can this be closed or is there still something remaining to be debugged?
+
+@agiardullo I don't think it is the same issue.
+
+I am closing this as I haven't experienced this problem now for some time.
+

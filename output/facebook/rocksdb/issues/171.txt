@@ -1,0 +1,102 @@
+Hello!
+
+I did not understand how to adjust the size sst files for kCompactionStyleLevel and kCompactionStyleUniversal. The impression is that the files created by rand and size does not depend on the settings.
+
+Level:
+
+```
+options.error_if_exists = false;
+options.create_if_missing = true;
+options.compaction_style = rocksdb :: kCompactionStyleLevel;
+options.compression_per_level.push_back (rocksdb :: kNoCompression);
+options.compression_per_level.push_back (rocksdb :: kNoCompression);
+options.comparator = new MyComparator ();
+options.num_levels = 2;
+options.max_open_files = 50;
+options.write_buffer_size = 4 * 1024 * 1024;
+options.max_write_buffer_number = 15;
+options.min_write_buffer_number_to_merge = 10;
+options.max_background_compactions = 4;
+options.max_background_flushes = 4;
+options.disable_seek_compaction = false;
+options.disable_auto_compactions = false;
+options.disableDataSync = true;
+options.db_stats_log_interval = -1;
+options.keep_log_file_num = 5;
+options.max_log_file_size = 128 * 1024;
+options.verify_checksums_in_compaction = true;
+options.target_file_size_base = 10 * 1024 * 1024;
+options.target_file_size_multiplier = 5;
+```
+
+72kb log files are created, sst 721kb all. Change num_levels not affected. Creating thousands of small files. Keep_log_file_num also does not affect the number of created LOG file.
+
+Universal:
+
+```
+options.error_if_exists = false;
+options.create_if_missing = true;
+options.compaction_style = rocksdb :: kCompactionStyleUniversal;
+options.comparator = new MyComparator ();
+options.num_levels = 2;
+options.max_open_files = 500;
+options.write_buffer_size = 10 * 1024 * 1024;
+options.max_write_buffer_number = 50;
+options.min_write_buffer_number_to_merge = 10;
+options.max_background_compactions = 4;
+options.max_background_flushes = 4;
+options.disable_seek_compaction = false;
+options.disable_auto_compactions = false;
+options.disableDataSync = true;
+options.db_stats_log_interval = -1;
+options.keep_log_file_num = 5;
+options.max_log_file_size = 20 * 1024 * 1024;
+options.verify_checksums_in_compaction = true;
+options.target_file_size_base = 10 * 1024 * 1024;
+options.target_file_size_multiplier = 5;
+options.max_mem_compaction_level = 2;
+```
+
+Creates files of any size at all (from 4Mb to 2GB), though are target_file_size_base and target_file_size_multiplier.
+
+At Level if you start deleting records with minkey, then hangs stream compaction (99% load and no changes) when files are created only level-0.
+Also the amount of compaction flow always 1, and does not depend on max_background_compactions.
+
+Source code: http://pastebin.com/7naQkFWu
+Ubuntu x86_32, Rocksdb 3.1, clang 3.5
+
+For kCompactionStyleUniversal, file size doesn't depend on any setting. For kCompactionStyleLevel, it depends on options.target_file_size_base mostly, except that sizes for L0 are mostly determined by options.write_buffer_size and options.min_write_buffer_number_to_merge.
+
+Thanks for the answer!
+Yes, for Level waited to see file 4MB then 40MB instead 720KB thousands of files.
+Those are very inefficient for Universal delete records minkey, large files will be overwritten ...
+
+Can you send us your LOG file?
+
+@Rustam12345  this is so far one limitation of universal style. We do identify it as a problem to solve.
+
+Yes, LOG files lay out how I'll be home.
+On x86_64, this code works fine and creates sst files 4Mb and 40Mb.
+
+I am wondering how you delete old records by creating a cyclic basis (limited size)? FIFO not yet tried to use, but I'll try.
+
+Simple example, the base type Level, written record size 10Kb, when recorded 10,000 entries - to delete the first 1000.
+If the records are not removed - the size of the database at the completion of 2.1Gb.
+If you delete records - the database size becomes larger than 5Gb!!! And many files as small as 2MB and they continue to be created.
+Code to delete the file database is working properly:
+
+```
+delRecords (db, 1000);
+/ / DelFirstFile (db);
+```
+
+http://pastebin.com/5HWSQGxX
+
+Recorded 20,000 entries, the entire folder with the archived database(sst, LOG), ~ 1Mb
+http://www.ex.ua/127675435960
+
+Hey @Rustam12345, we have a patch fixing the disk-space reclaim issue of deleting large values.
+https://reviews.facebook.net/D19029.  This should fix your issue.
+
+@Rustam12345 please reopen the issue if you have any more questions.
+

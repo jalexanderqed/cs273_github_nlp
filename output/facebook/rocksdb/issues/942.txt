@@ -1,0 +1,13 @@
+![image](https://cloud.githubusercontent.com/assets/5534049/12257018/790d3dcc-b93d-11e5-99e5-9eb28f059230.png)
+
+I learned the same rocksDB instance cannot be shared among threads.   
+
+But if each thread has its own instance , will the extra(user level) synchronous mechanism still needed ?
+
+The same RocksDB instance can definitely be shared among multiple threads.
+
+Yes ,sorry ,  I didn't made it clear.  What I mean is , when I wanna use the same instance among threads, 
+I can't do write operation simultaneously , according to the document.   But Can I do that when every single thread has its own instance ?
+
+You can definitely call Write() function simultaneously. What you can't do is define WriteBatch in one thread and then use it in another. But two threads having their own WriteBatch and calling Write() is legal.
+

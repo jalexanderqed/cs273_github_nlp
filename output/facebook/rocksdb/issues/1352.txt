@@ -1,0 +1,17 @@
+I have a use case where RocksDB performs well once the cache is warmed up, but until then the latency suffers. I am planning on adding a hack for this, which is to have cache just the keys at application layer, persist it before shutdown, and on startup read all the keys again to force RocksDB cache to be warmed up. It would be nice to have RocksDB do this instead, so that we can get reliable, stable performance even immediately after startup.
+
+Hi @hshankar, How would that be different from creating an iterator after DB open and reading all they keys in the DB
+
+If cache size is roughly equal to DB size then it won't be a problem. But that is rarely the case. If cache size is much smaller than DB size, then reading all keys would cause two problems:
+(1) That would lead to the last N keys being in the cache instead of the hottest N keys which is not useful.
+(2) It would take longer to warm up which could be a concern if the cache size is much smaller than DB size.
+
+That's correct, but I am not sure I understand how your approach is different ?
+
+Which keys are you going to persist and which are you going to read on startup ?
+
+What I can do is maintain a LRU cache at app level, which just stores the
+keys that are fetched. During shutdown, I can dump this list of keys
+somewhere and during the next startup, just do a get() call on RocksDB for each of those keys.
+It will make sure that the keys that were present in cache during shutdown are immediately in cache after startup.
+

@@ -1,0 +1,13 @@
+Summary:
+Added a few options to configure when to add range tombstones during
+any benchmark involving writes.
+
+Test Plan:
+ran locally, verified with sst_dump that the range tombstones are
+added and considered during flush/compaction
+
+Differential Revision: https://reviews.facebook.net/D64287
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4187388).
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1522/files/4d9be2e29ba188ad4968654938dbef54a6613779..2045335b1d4c0caf2c116ecfe1ee5f26051b467c) - [changes since last import](https://github.com/facebook/rocksdb/pull/1522/files/4d9be2e29ba188ad4968654938dbef54a6613779..2045335b1d4c0caf2c116ecfe1ee5f26051b467c)
+

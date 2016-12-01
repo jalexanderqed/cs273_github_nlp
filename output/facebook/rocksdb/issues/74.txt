@@ -1,0 +1,78 @@
+Support for LZ4 compression.
+
+CPU: 4 \* Intel(R) Core(TM) i7-3540M CPU @ 3.00GHz
+
+Compression:
+snappy: 4.928 micros/op 202905 ops/sec; 792.6 MB/s (output: 55.1%)
+lz4: 5.973 micros/op 167427 ops/sec; 654.0 MB/s (output: 55.4%)
+lz4hc: 65.445 micros/op 15279 ops/sec; 59.7 MB/s (output: 55.4%)
+
+Decompression:
+snappy: 0.837 micros/op 1194871 ops/sec; 4667.5 MB/s
+lz4: 0.659 micros/op 1517871 ops/sec; 5929.2 MB/s
+lz4hc: 0.667 micros/op 1498213 ops/sec; 5852.4 MB/s
+
+The latest greatest lz4 versions aren't packaged by any major Linux distributions, so that's why I opted for a kind of in-tree build.
+
+Those are great results. :)
+
+I would prefer using lz4 as a shared library instead of static in rocksdb tree. That's how we use other compression libraries.
+
+Okay, I'll make the changes and get back to you.
+
+Need to figure out why LZ4 is so much slower when called from a shared library...
+
+Found the problem:
+
+https://code.google.com/p/lz4/issues/detail?id=114
+
+Some numbers when compiling liblz4.so with -O3:
+
+Compression: snappy
+compress: 4.865 micros/op 205553 ops/sec;  802.9 MB/s (output: 55.1%)
+uncompress: 0.861 micros/op 1162073 ops/sec; 4539.3 MB/s
+
+Compression: lz4
+compress: 5.952 micros/op 168009 ops/sec;  656.3 MB/s (output: 55.4%)
+uncompress: 0.677 micros/op 1476476 ops/sec; 5767.5 MB/s
+
+Compression: lz4hc
+compress: 66.506 micros/op 15036 ops/sec;   58.7 MB/s (output: 55.4%)
+uncompress: 0.648 micros/op 1543885 ops/sec; 6030.8 MB/s
+
+Typical inputs should compress smaller with lz4hc than with lz4.
+
+This pull request is ready to merge unless you have more comments.
+
+I just checked our internal third-party release libraries: we are able to access lz4 library in our internal release.
+
+I think with this diff, other team can benefit from lz4 seamlessly in next release.
+
+Great PR, tnx! I have some comments. Can you also try running `arc lint`?
+
+Think I addressed most of the issues.
+
+arc lint found 2, but it also seems my setup isn't quite right yet:
+
+```
+which: no checkCpp in (...)
+which: no cpplint in (...)
+[2014-02-07 21:16:56] ERROR 8: Undefined index: db/db_bench.cc at [/home/albert/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(db/db_bench.cc) called at [/home/albert/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(db/db_bench.cc) called at [/home/albert/arcanist/src/lint/engine/ArcanistLintEngine.php:297]
+  #2 ArcanistLintEngine::run() called at [/home/albert/arcanist/src/workflow/ArcanistLintWorkflow.php:359]
+  #3 ArcanistLintWorkflow::run() called at [/home/albert/arcanist/scripts/arcanist.php:321]
+```
+
+Could you add a page on the wiki on how contributors should set up arcanist and cpplint?
+
+Finally, it's probably time to make format master again. It helps to run make format a few times in a row to see the issues with it not being idempotent.
+
+cc @liukai on `make format`
+
+@alberts I think the lint issue showed up because you didn't run "arc lint" or "arc diff" in rocksdb root dir (sorry that's a known issue).
+
+Similarly make format works for uncommitted files or your last committed diff. If you want to apply `make format` to all the lines you've touched so far, can you squash your diffs into one (which is also a recommended at Facebook: we use "git commit --amend" to make sure one code review associates with one git commit).
+
+I've rolled up the work into a single commit now.
+

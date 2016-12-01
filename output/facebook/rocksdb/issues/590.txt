@@ -1,0 +1,213 @@
+When running rocksdbjni 3.10.0 in Mac, have the following error:
+
+```
+dyld: lazy symbol binding failed: Symbol not found: __ZNKSt8__detail20_Prime_rehash_policy11_M_next_bktEm
+  Referenced from: /private/var/folders/n9/39w5lyps5_gf6t7n5hvcm5x80000gn/T/librocksdbjni1705547947610216590..jnilib
+  Expected in: /usr/lib/libstdc++.6.dylib
+
+dyld: Symbol not found: __ZNKSt8__detail20_Prime_rehash_policy11_M_next_bktEm
+  Referenced from: /private/var/folders/n9/39w5lyps5_gf6t7n5hvcm5x80000gn/T/librocksdbjni1705547947610216590..jnilib
+  Expected in: /usr/lib/libstdc++.6.dylib
+```
+
+Mac version: 10.9.5
+Java version: 1.7.0_65
+
+Thank you.
+
+I am on Mac OS X 10.10.3 and have not yet experienced this problem. Is there some simple mechanism for reproducing your issue?
+
+I got this problem by simply running 
+
+```
+ public static void main(String[] args) {
+        RocksDB.loadLibrary();
+        Options options = new Options().setCreateIfMissing(true);
+        String path = "/Users/yanfang/Develep/tmp/rocksDB2";
+
+        RocksDB db = null;
+        try {
+            db = RocksDB.open(options, path);
+        } catch (RocksDBException e) {
+
+        }
+
+        db.close();      
+        options.dispose();
+    }
+```
+
+This problem does not exist in 3.9.0.
+
+Similar issue here:
+https://github.com/emcrisostomo/fswatch/issues/65
+
+I think it occurs in some old versions of Mac. (Well, not that old...) 
+
+Hey guys, can you try using the maven release ?
+https://oss.sonatype.org/content/repositories/releases/org/rocksdb/rocksdbjni/3.10.0/
+
+I have also noticed that it can sometime be related to the gcc version in use:
+
+```
+gcc --version                                                                                                                                
+gcc (Homebrew gcc49 4.9.0) 4.9.0
+Copyright (C) 2014 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+```
+
+This version seems to work for me.
+
+Actually I do not have gcc... Mac removes gcc in 10.9 . See here https://support.enthought.com/hc/en-us/articles/204469410-OS-X-GCC-Clang-and-Cython-in-10-9-Mavericks 
+
+Not sure if this is related to this issue.
+
+Having the same issue. Using repository jars.
+dyld: lazy symbol binding failed: Symbol not found: __ZNKSt8__detail20_Prime_rehash_policy11_M_next_bktEm
+
+```
+sw_vers
+ProductName:    Mac OS X
+ProductVersion: 10.10.3
+BuildVersion:   14D136
+```
+
+```
+cc --version 
+Apple LLVM version 6.1.0 (clang-602.0.49) (based on LLVM 3.6.0svn)
+Target: x86_64-apple-darwin14.3.0
+Thread model: posix
+```
+
+```
+java -version
+java version "1.7.0_75"
+Java(TM) SE Runtime Environment (build 1.7.0_75-b13)
+Java HotSpot(TM) 64-Bit Server VM (build 24.75-b04, mixed mode)
+```
+
+I unpacked jar and check jnilib dependencies
+
+```
+otool -L librocksdbjni-osx.jnilib 
+librocksdbjni-osx.jnilib:
+        ./java/target/librocksdbjni-osx.jnilib (compatibility version 0.0.0, current version 0.0.0)
+        /usr/local/lib/gcc/x86_64-apple-darwin13.3.0/4.9.0/libstdc++.6.dylib (compatibility version 7.0.0, current version 7.20.0)
+        /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1197.1.1)
+        /usr/local/Cellar/gcc49/4.9.0/lib/gcc/x86_64-apple-darwin13.3.0/4.9.0/libgcc_s.1.dylib (compatibility version 1.0.0, current version 1.0.0)
+```
+
+It looks to me that it compiled with brew compiler (I conclude it from /usr/local/Cellar) and carries brew dependencies.
+
+hey @kharus, I concluded the same thing  from the dynamic dependencies and have been digging around for a bit.
+
+```
+Load command 10
+          cmd LC_LOAD_DYLIB
+      cmdsize 96
+         name /usr/local/lib/gcc/x86_64-apple-darwin13.3.0/4.9.0/libstdc++.6.dylib (offset 24)
+   time stamp 2 Wed Dec 31 16:00:02 1969
+      current version 7.20.0
+compatibility version 7.0.0
+Load command 11
+          cmd LC_LOAD_DYLIB
+      cmdsize 56
+         name /usr/lib/libSystem.B.dylib (offset 24)
+   time stamp 2 Wed Dec 31 16:00:02 1969
+      current version 1197.1.1
+compatibility version 1.0.0
+Load command 12
+          cmd LC_LOAD_DYLIB
+      cmdsize 112
+         name /usr/local/Cellar/gcc49/4.9.0/lib/gcc/x86_64-apple-darwin13.3.0/4.9.0/libgcc_s.1.dylib (offset 24)
+   time stamp 2 Wed Dec 31 16:00:02 1969
+      current version 1.0.0
+compatibility version 1.0.0
+Load command 13
+      cmd LC_FUNCTION_STARTS
+  cmdsize 16
+  dataoff 3053208
+ datasize 7072
+Load command 14
+      cmd LC_DATA_IN_CODE
+  cmdsize 16
+  dataoff 3060280
+ datasize 0
+Load command 15
+      cmd LC_DYLIB_CODE_SIGN_DRS
+  cmdsize 16
+  dataoff 3060280
+ datasize 80
+```
+
+My guess is the previous builds worked because it used the standard OS X gcc verison. 
+
+Unfortunately, OS X does not support GCC anymore:
+http://stackoverflow.com/questions/19535422/os-x-10-9-gcc-links-to-clang
+
+The correct solution to this problem will be to include the dependencies as a part of jar, by changing the dylib path something relative with the package using:
+
+```
+    install_name_tool 
+```
+
+One route to do this to use this bundler, which seems to the right thing. Pulls the dependencies to a destination folder and then change them to a relative path:
+https://github.com/auriamg/macdylibbundler/
+
+```
+ dylibbundler -b -x librocksdbjni-osx.jnilib -d lib/ -of    
+```
+
+Running this drops all the dependencies to the lib folder and changes the jnilib to point all references to the lib folder. The lib needs to be bundled in the release.
+
+Unfortunately, I don't have time to make change for the Makefile to do this, if anyone else wants to do this, I'll be happy to make a new maven release.
+
+For now, the solution is to install the gcc49 version from homebrew to satisfy the dependencies. Unfortunately, if you just install gcc49, it installs 4.9.2 (The latest one current to my comment time). You'll have to install 4.9.0 to satisfy this dependency, you need to install the previous micro version doing something like will do the magic:
+
+```
+brew tap homebrew/versions
+cd `brew --prefix`
+cd ./Library/Taps/homebrew/homebrew-versions
+#checkout formulae for 4.9.0 needs for RocksDB release 3.10.0 java
+git checkout 36216c64370cf018a629a58f0d03bdae047bb945 gcc49.rb
+brew install gcc49
+```
+
+From the path, it looks like there is also a darwin version in the path:
+
+```
+name /usr/local/Cellar/gcc49/4.9.0/lib/gcc/x86_64-apple-darwin13.3.0/4.9.0/libgcc_s.1.dylib (offset 24)
+```
+
+So even install gcc4.9.0 from brew really doesn't solve the problem for everyone.
+
+Is it possible to build jar with clang/Xcode?
+I made a local build with clang but I cannot reproduce full jar release
+make jclean clean rocksdbjavastaticrelease
+Something fails inside centos linux32.
+But it shouldn't be related to host machine clang/gcc.
+
+It is meant to be entirely possible to build Rocks with Clang, so I think we should just use Clang on Mac OS X. In fact, I am on a Mac and it looks to me like my system is using Clang to build RocksDB, so perhaps it is just a problem with the Maven builds?
+
+From my system - 
+
+```
+hollowcore:target aretter$ otool -L librocksdbjni-osx.jnilib
+librocksdbjni-osx.jnilib:
+    ./java/target/librocksdbjni-osx.jnilib (compatibility version 0.0.0, current version 0.0.0)
+    /usr/local/opt/snappy/lib/libsnappy.1.dylib (compatibility version 4.0.0, current version 4.0.0)
+    /usr/lib/libz.1.dylib (compatibility version 1.0.0, current version 1.2.5)
+    /usr/lib/libbz2.1.0.dylib (compatibility version 1.0.0, current version 1.0.5)
+    /usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 120.0.0)
+    /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1213.0.0)
+```
+
+@kharus @adamretter What about < OSX 10.8, which doesn't have clang (or whatever version of gcc it had) ? As you point from the example above @adamretter, from your otool output, snappy points to a custom location. Ideally, the solution would be to package all of dependencies together, just like how it's done for Linux (the .so files are bundled in the Jar). For now, let me evaluate, if doing a clang based release will fix this for > 10.8 versions. 
+
+@naveenatceg I can't help you with <10.8 and I am not interested in supporting it personally. The last few versions of Mac OS X have been free upgrades, so there is little reason not to update!
+
+Made a new release with 3.10.1 (compiled with clang), Yan verified that it works. 
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

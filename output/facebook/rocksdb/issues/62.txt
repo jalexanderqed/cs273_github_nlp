@@ -1,0 +1,26 @@
+When I first `make check`, I got an error below.
+
+```
+==== Test BackupableDBTest.NoDoubleCopy
+utilities/backupable/backupable_db_test.cc:420: IO error: /tmp/rocksdbtest-1000/backupable_db_backup/shared/00010.sst.tmp: No such file or directory
+#0   ./backupable_db_test() [0x43846c] ~Status  /home/vagrant/git/rocksdb/./include/rocksdb/status.h:29
+#1   ./backupable_db_test() [0x4d9ecb] rocksdb::test::RunAllTests()     /home/vagrant/git/rocksdb/util/testharness.cc:46
+#2   /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf5) [0x2aec24cd2de5] ??        ??:0
+#3   ./backupable_db_test() [0x42f71e] _start   ??:?
+make: *** [check] Error 1
+
+~$ ls /tmp/rocksdbtest-1000/backupable_db_backup/
+LATEST_BACKUP  meta  private
+```
+
+`shared` directory that should exists was not created correctly.
+So I fixed an if-condition in BackupEngine constructor. Could you accept this PR if this fix is correct?
+
+Tnx @matope . Have you signed CLA? Please refer to: https://github.com/facebook/rocksdb/blob/master/CONTRIBUTING.md
+
+@igorcanadi Yes, I signed that.
+
+@jamesgpearce I don't see @matope on the list, can you please sync?
+
+Thanks for your Merge!
+

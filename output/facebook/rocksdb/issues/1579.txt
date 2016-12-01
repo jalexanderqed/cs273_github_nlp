@@ -1,0 +1,2 @@
+Having -ve value for max_write_buffer_number does not make sense and cause us to do a left shift on a -ve value number
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4240798).

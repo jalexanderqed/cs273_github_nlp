@@ -1,0 +1,33 @@
+This PR tracks work-in-progress towards getting RocksDB compiling under Visual C++ on Windows. It's not ready to merge yet, but I'm opening it to get early feedback on the changes I'm making.
+
+I expect the work to take place in at least five phases:
+1. Remove incompatible C++ code, adding as few `#ifdef`s as possible.
+2. Implement `port_win.cc` and `env_win.cc`.
+3. Create Visual C++ project and Visual Studio solution.
+4. Get third-party libraries (snappy, zlib, etc.) building and working.
+5. Get the tests all compiling and running on Windows.
+
+So far, step 1 is underway.
+
+This is great! Thanks for doing it!
+
+GJ! @bgrainger ! Thanks for working on this!
+
+This is great! It doesn't look like much changes is needed in core rocksdb code (i.e. not port_\* and env_*)
+
+What's the status of this branch?
+
+Status: still working on it. Unfortunately, had some higher priority issues come up, so haven't been able to give it a lot of time in the last two weeks. I have 100% of port.cc and 50% of env-win.cc that I haven't pushed up to GitHub.
+
+This is awesome. +1 for this as RocksDB is the only core part of my product which doesn't support Windows.
+
++1
+
+This would be really really cool!
+
+@bgrainger: are you still working on this patch? Please let us know if the patch is ready for review and merge.
+
+@yhchiang I'm not actively working on this due to some other commitments; sorry for the lack of updates. It's still something I'd like to get back to but in the meantime I'm happy for anyone to take over this code (and the WIP code at https://github.com/bgrainger/rocksdb-windows) if they want to push ahead with rocksdb on Windows.
+
+http://rocksdb.org/blog/2033/rocksdb-is-now-available-in-windows-platform/
+

@@ -1,0 +1,8 @@
+This pull request exposes the flush functionality of RocksDB to Java.
+
+Differential: https://reviews.facebook.net/D28593
+
+@yhchiang rebased and resolved merge conflicts.
+
+@fyrz, @adamretter.  Thanks for your effort on this diff!
+

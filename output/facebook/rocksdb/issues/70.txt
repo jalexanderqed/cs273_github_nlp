@@ -1,0 +1,70 @@
+I have seen attempts to make rocksdb compiling under 32-bit. I have the following change locally to get rid of a compiling error in util/crc32c.cc
+
+```
+util/crc32c.cc: In function ‘uint32_t rocksdb::crc32c::Extend(uint32_t, const char*, size_t)’:
+util/crc32c.cc:328:57: error: PIC register clobbered by ‘ebx’ in ‘asm’
+util/crc32c.cc:328:57: error: PIC register clobbered by ‘ebx’ in ‘asm’
+util/crc32c.cc:328:57: error: PIC register clobbered by ‘ebx’ in ‘asm’
+```
+
+```
+diff --git a/util/crc32c.cc b/util/crc32c.cc
+index bca955a..3a72a04 100644
+--- a/util/crc32c.cc
++++ b/util/crc32c.cc
+@@ -17,6 +17,7 @@
+ #include <nmmintrin.h>
+ #endif
+ #include "util/coding.h"
++#include <cpuid.h>
+
+ namespace rocksdb {
+ namespace crc32c {
+@@ -323,10 +324,16 @@ static inline void Fast_CRC32(uint64_t* l, uint8_t const **p) {
+ // Detect if SS42 or not.
+ static bool isSSE42() {
+   #ifdef __GNUC__
+-  uint32_t c_;
+-  uint32_t d_;
+-  __asm__("cpuid" : "=c"(c_), "=d"(d_) : "a"(1) : "ebx");
+-  return c_ & (1U << 20); // copied from CpuId.h in Folly.
++  unsigned int a_;
++  unsigned int b_;
++  unsigned int c_;
++  unsigned int d_;
++
++  if (__get_cpuid(1, &a_, &b_, &c_, &d_) == 0) {
++      return false;
++  }
++  return c_ & (1U << 20);
+   #else
+   return false;
+   #endif
+```
+
+I don't know how portable __get_cpuid is on other compilers. I'm using gcc version 4.7.3. At least I would like to share my fix.
+
+Hey, I think this is fixed. Can you please check?
+
+Hi,
+I gave it a try and indeed the error above does not happen anymore. 
+I think the defined(__ x86_64 __) did it
+
+```
+static bool isSSE42() {
+#if defined(__GNUC__) && defined(__x86_64 __) && !defined(IOS_CROSS_COMPILE)
+  uint32_t c_; 
+  uint32_t d_; 
+  __asm__("cpuid" : "=c"(c_), "=d"(d_) : "a"(1) : "ebx");
+  return c_ & (1U << 20);  // copied from CpuId.h in Folly.
+#else
+  return false;
+#endif
+}
+
+```
+
+I'm using the 32Bit build only for testing, so I have no problem that the SSE42 instructions are not used there. 
+
+Thanks @stephan-hof !
+

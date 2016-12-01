@@ -1,0 +1,95 @@
+RocksDB 4.9 introduced a bug which caused CockroachDB state invariant assertions to fire. Bisecting the changes from v4.8 to v4.9 led to https://github.com/facebook/rocksdb/commit/c27061dae763621bdcfb5cc0d0118f57269825b8 and, in particular, this diff:
+
+```
+diff --git a/db/db_impl.cc b/db/db_impl.cc
+index e8cb954..ce2b61e 100644
+--- a/db/db_impl.cc
++++ b/db/db_impl.cc
+@@ -1195,8 +1195,6 @@ Status DBImpl::Recover(
+     // Note that prev_log_number() is no longer used, but we pay
+     // attention to it in case we are recovering a database
+     // produced by an older version of rocksdb.
+-    const uint64_t min_log = versions_->MinLogNumber();
+-    const uint64_t prev_log = versions_->prev_log_number();
+     std::vector<std::string> filenames;
+     s = env_->GetChildren(db_options_.wal_dir, &filenames);
+     if (!s.ok()) {
+@@ -1213,7 +1211,7 @@ Status DBImpl::Recover(
+               "While creating a new Db, wal_dir contains "
+               "existing log file: ",
+               filenames[i]);
+-        } else if ((number >= min_log) || (number == prev_log)) {
++        } else {
+           logs.push_back(number);
+         }
+       }
+```
+
+From what I understand of this code, the above change expanded the set of log files considered during recovery. It appears that RocksDB 4.11.2 has fixed the issue, notably in https://github.com/facebook/rocksdb/commit/2a6d0cde722a92ac6e5229c97ebbd3009921c9d9 which changed recovery to ignore stale log files.
+
+I'm primarily looking for confirmation that https://github.com/facebook/rocksdb/commit/c27061dae763621bdcfb5cc0d0118f57269825b8  did introduce the bug fixed by https://github.com/facebook/rocksdb/commit/2a6d0cde722a92ac6e5229c97ebbd3009921c9d9 so that we can feel comfortable in upgrading to v4.11.2. I haven't yet narrowed down the precise sequence of events that caused our state invariant assertions to fire, but can do so if it would be helpful.
+
+Did your regression tests hit the bug? If yes, can you send me a link to
+the source for that test?
+
+On Sat, Oct 1, 2016 at 11:36 AM, Peter Mattis notifications@github.com
+wrote:
+
+> RocksDB 4.9 introduced a bug which caused CockroachDB state invariant
+> assertions to fire. Bisecting the changes from v4.8 to v4.9 led to c27061d
+> https://github.com/facebook/rocksdb/commit/c27061dae763621bdcfb5cc0d0118f57269825b8
+> and, in particular, this diff:
+> 
+> diff --git a/db/db_impl.cc b/db/db_impl.cc
+> index e8cb954..ce2b61e 100644
+> --- a/db/db_impl.cc
+> +++ b/db/db_impl.cc
+> @@ -1195,8 +1195,6 @@ Status DBImpl::Recover(
+>      // Note that prev_log_number() is no longer used, but we pay
+>      // attention to it in case we are recovering a database
+>      // produced by an older version of rocksdb.
+> -    const uint64_t min_log = versions_->MinLogNumber();
+> -    const uint64_t prev_log = versions_->prev_log_number();
+>    std::vectorstd::string filenames;
+>    s = env_->GetChildren(db_options_.wal_dir, &filenames);
+>    if (!s.ok()) {
+>   @@ -1213,7 +1211,7 @@ Status DBImpl::Recover(
+>              "While creating a new Db, wal_dir contains "
+>              "existing log file: ",
+>              filenames[i]);
+> -        } else if ((number >= min_log) || (number == prev_log)) {
+> -        } else {
+>          logs.push_back(number);
+>        }
+>      }
+> 
+> From what I understand of this code, the above change expanded the set of
+> log files considered during recovery. It appears that RocksDB 4.11.2 has
+> fixed the issue, notably in 2a6d0cd
+> https://github.com/facebook/rocksdb/commit/2a6d0cde722a92ac6e5229c97ebbd3009921c9d9
+> which changed recovery to ignore stale log files.
+> 
+> I'm primarily looking for confirmation that c27061d
+> https://github.com/facebook/rocksdb/commit/c27061dae763621bdcfb5cc0d0118f57269825b8
+> did introduce the bug fixed by 2a6d0cd
+> https://github.com/facebook/rocksdb/commit/2a6d0cde722a92ac6e5229c97ebbd3009921c9d9
+> so that we can feel comfortable in upgrading to v4.11.2. I haven't yet
+> narrowed down the precise sequence of events that caused our state
+> invariant assertions to fire, but can do so if it would be helpful.
+> 
+> —
+> You are receiving this because you are subscribed to this thread.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1370, or mute the thread
+> https://github.com/notifications/unsubscribe-auth/ABkKTTDgzrBxG-7rKxqqNsqRv7Vks3zqks5qvqgtgaJpZM4KL05t
+> .
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+A regression test hit the bug, but the test is not at all simple (it sets up a 5-node cluster) and is relatively irritating to run (it needs 5 machines). With that caveat, the test is [Rebalance_3To5Small](https://github.com/cockroachdb/cockroach/blob/develop/acceptance/allocator_test.go#L399), though I really don't think that will help. I can certainly create a smaller reproduction case and/or characterize why the change in https://github.com/facebook/rocksdb/commit/c27061dae763621bdcfb5cc0d0118f57269825b8 is causing a problem for us. 
+
+It is a657ee9 (one commit before c27061d) first introduce the bug fixed by 2a6d0cd. Not sure if c27061d is related.
+

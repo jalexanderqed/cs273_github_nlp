@@ -1,0 +1,5 @@
+put key-value only when key noexist, other return old key-value
+thanks.
+
+I think we would leave aside the atomic-get-and-put support from RocksDB. If we do decide to get into true atomic readmodify-write then we can do it as a StackableDB.
+

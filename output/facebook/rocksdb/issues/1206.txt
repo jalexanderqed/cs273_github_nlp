@@ -1,0 +1,71 @@
+Trying to follow the official instruction to build RocksDb on windows . I am using VS 2015.
+
+`msbuild rocksdb.sln /p:Configuration=Release /p:Platform=X64` gets me multiple build errors. Attaching the logs. What could be going wrong here?
+
+[buildlog.txt](https://github.com/facebook/rocksdb/files/360952/buildlog.txt)
+
+Hello,
+I'm experiencing the same issue. It looks like this build is not even working.
+The compiler complains in two places:
+
+1.
+
+> coding.h(157): error C2440: 'static_cast': cannot convert from 'uint32_t *' to 'const char *' 
+
+There's a self-explanatory error message for the problem though:
+
+> Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or function-style cast
+
+And it actually makes sense, and if we read the comment from that method it says: `// Pull the last 8 bits and cast it to a character`
+
+This implies reinterpret_case ([reinterpret_cast](http://en.cppreference.com/w/cpp/language/reinterpret_cast)), not [static_cast](http://en.cppreference.com/w/cpp/language/static_cast).
+
+2.
+
+> coding.h(167): error C2065: 'static_const': undeclared identifier 
+
+According to [cppreference language reference](http://en.cppreference.com/w/cpp/language) it's not even a keyword!
+It looks like somebody wanted to put  [static_cast](http://en.cppreference.com/w/cpp/language/static_cast) too. Again here [reinterpret_cast](http://en.cppreference.com/w/cpp/language/reinterpret_cast) seems to be requried.
+
+That said I suggest changing coding.h PutFixed32 and PutFixed64 code to the following:
+
+```
+// Pull the last 8 bits and cast it to a character
+inline void PutFixed32(std::string* dst, uint32_t value) {
+#if __BYTE_ORDER__ == __LITTLE_ENDIAN__
+  dst->append(reinterpret_cast<const char*>(&value), sizeof(value));
+#else
+  char buf[sizeof(value)];
+  EncodeFixed32(buf, value);
+  dst->append(buf, sizeof(buf));
+#endif
+}
+
+inline void PutFixed64(std::string* dst, uint64_t value) {
+#if __BYTE_ORDER__ == __LITTLE_ENDIAN__
+  dst->append(reinterpret_cast<const char*>(&value), sizeof(value));
+#else
+  char buf[sizeof(value)];
+  EncodeFixed64(buf, value);
+  dst->append(buf, sizeof(buf));
+#endif
+}
+```
+
+That seem to fix these errors. The build seem to take forever but so far I see no issues.
+I will provide a pull-request shortly, but meanwhile I suggest checking my suggestion.
+Hope that helps!
+
+@clumsy Is this merged into Rocks, or is their a PR?
+
+Also could I ask that you use Syntax like `Closes #nnnn` in your commit messages, so that issues you have opened are correctly referenced and closed from merging your PR's? Please see: https://help.github.com/articles/closing-issues-via-commit-messages/
+
+@adamretter Aren't they referenced with Fixes too? That manual says it should be just as good... It's just I forgot to mention this issue...
+
+As for the PR - it's merged.
+I think we can close this one too.
+
+@clumsy ah okay. Which PR was it please?
+
+@adamretter It's in the comment to my [PR](https://github.com/facebook/rocksdb/pull/1209) that was closed because another PR had the changes already.
+

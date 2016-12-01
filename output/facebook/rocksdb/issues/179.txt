@@ -1,0 +1,12 @@
+I have completed the CLA.
+
+Tnx for the contribution! Can you please:
+1) run `make format`? I think some lines are over 80 chars
+2) run `make c_test; valgrind --leak-check=full ./c_test`
+
+I have run `make format` and added a line to destroy `cfilter` as suggested.
+
+valgrind detected no problems with c_test.
+
+Thanks!
+

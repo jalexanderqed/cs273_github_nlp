@@ -1,0 +1,36 @@
+I'm working on a rocksdb to nudb importer and its taking seven minutes just to open the rocksdb database (784GB, 330k+ .sst files). On a non-raid spinning disk almost half an hour or more. The operating system shows that its opening each .sst file.
+
+I don't see any options to improve this, so I'm thinking about resorting to just iterating each .sst file myself. The code is a bit complex, are there any pointers on how to do this? Can I re-use some rocksdb code like plain_table_reader or something like that? I just need to iterate all the key/value pairs in the entire database in any order.
+
+@vinniefalco Maybe your open would be much quicker if you compacted to a higher level. I think this would make more sense for workloads that are bulk load + many reads.
+
+@ekg Thanks for getting back to me. I rather not compact, I just want to export the database as-is, doing an unordered visit of every object. I don't want to modify the database, thats risky and extremely time consuming. Or maybe I misunderstood?
+
+I'm thinking that just opening each .sst file and iterating the key/value pairs will be much, much faster than going through RocksDB's Open function.
+
+@vinniefalco I'm not really sure. It would probably be fastest if you could somehow dump each .sst in parallel to some other format. I'm not sure if there is a tool to do this, but [the block table file format is specified on the wiki](https://github.com/facebook/rocksdb/wiki/Rocksdb-BlockBasedTable-Format), and there are probably suitable methods in the table builder sources.
+
+@ekg Ah, thank you that wiki reference is good. Before I dive into this rabbit hole, am I doing the right thing here?
+https://github.com/vinniefalco/rippled/blob/nudb/src/ripple/nodestore/tests/import_test.cpp#L430
+
+It seems straightforward, and there are plenty of other examples of the same iterator usage in the rocksdb sources, but the call to open the db (line 374 above) is taking forever.
+
+There also seems to be another problem, although the RocksDB database is 750GB I only get half a million entries out of the iterator when I should be getting half a billion.
+
+@vinniefalco From my limited experience, having lots of files in the db greatly increases open time. I don't know about the effects you are seeing with the iteration. Maybe one of the devs will chime in.
+
+Hi Vinnie, having too many files in the DB slows down opening the DB because rocksdb needs to read the footer from these files. Is it possible for you to set target_file_size to 64MB so that you have fewer files?
+
+@dhruba Thanks for getting back to me. I'm thinking that this particular database instance is messed up. Because other machines in the server rotation have the same sized data set but only 7 or 8 thousand files. When I open the db on those other machines, it doesn't take as long only a minute.
+
+@vinniefalco which release are you using? Or is it master?
+
+@dhruba RocksDB doesn't read every footer of all the files while opening a DB. It will need to do it the first time it reads s file though.
+
+agreed. i was just pointing out that vinnie wants to iterate through ALL the objects in the database, so in effect, it will do a (random) read of the footer of each individual file.
+
+I was able to do a successful iteration of the rocksdb database, it took 347 minutes and the database folder is 700GB all files combined, around 7700 individual sst files. I'm importing into "nudb:"
+https://github.com/vinniefalco/rippled/blob/develop/src/beast/beast/nudb/README.md
+
+I had success with the import and RocksDB performed as advertised, closing this.
+

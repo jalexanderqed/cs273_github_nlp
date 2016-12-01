@@ -1,0 +1,12 @@
+During Get()/MultiGet(), build up a RangeDelAggregator with range
+tombstones as we search through live memtable, immutable memtables, and
+SST files. This aggregator is then used by memtable.cc's SaveValue() and
+GetContext::SaveValue() to check whether keys are covered.
+
+added tests for Get on memtables/files; end-to-end tests mainly in https://reviews.facebook.net/D64761
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4111271).
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1456/files/a5f8f6bb2ddb69f204fc4ee1ce87613144107e34..a08da1026eba75b37d65223d8299c0faf213d1cf) - [changes since last import](https://github.com/facebook/rocksdb/pull/1456/files/a5f8f6bb2ddb69f204fc4ee1ce87613144107e34..a08da1026eba75b37d65223d8299c0faf213d1cf)
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1456/files/a08da1026eba75b37d65223d8299c0faf213d1cf..9e5df3d16bad2038dbe5e4c7559fdd52ff9d5dd1) - [changes since last import](https://github.com/facebook/rocksdb/pull/1456/files/a08da1026eba75b37d65223d8299c0faf213d1cf..9e5df3d16bad2038dbe5e4c7559fdd52ff9d5dd1)
+

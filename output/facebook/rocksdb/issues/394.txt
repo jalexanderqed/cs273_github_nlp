@@ -1,0 +1,14 @@
+Cuckoo table options are missing in the C interface. I started making changes to add them, but I realized there are currently two ways how this is handled. For block-based table you have a separate options type with functions to be called on it, for plain table you have just a single function call to set the factory with options as multiple parameters. Which way is preferred for new code?
+
+I would say we prefer the block-based way of doing things. That way we can add more parameters to the Options without having to change the function parameters.
+
+CuckooTableOption is better in the long run. Just curious, are you going to use cuckoo table?
+
+I'm going to try to use it for audio fingerprint matching. I have not yet checked the internals, to make sure it's going to work exactly like I want. But either I end up using that, or writing a new table format. I have already done that for another project, so I know approximately what I want, but I'd like to try to use RocksDB for this one.
+
+That is cool. Just to give you a little more context: CuckooTable was initially designed with "read-only" use-case in mind. It takes considerable amount of time to prepare the DB (generating the tables), but performs point lookup quickly. 
+
+I know, fast lookup and very compact database is what I'm looking for. CuckooTable is more complex than what I have been using before, so I'll have to see how it works for me, but from the descriptions I find it looks to solve exactly my use-case.
+
+The build failure seems unrelated, not sure what to do about that.
+

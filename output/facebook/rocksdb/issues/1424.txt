@@ -1,0 +1,34 @@
+These are two handy options I used in my experiment. Sending this PR in hope that others might find it helpful when they also want to use direct I/O (for bypassing OS page cache or other purposes).
+
+You need to actually set these options in `InitializeOptionsFromFlags()`.
+
+Seems that I didn't push the correct version of my code. Fixing it.
+
+@omegaga updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1424/files/c1f472e984ca627e57a2be87c30fd3fddbed08c4..1cd0957e115e762433a223e569ec40bcb769b05d)
+
+Updated. Also fixed mmap_read and mmap_write initialization in db_bench.
+
+CC @IslamAbdelRahman 
+
+The directIO read should be working. RocksDB is not ready for directIO write yet.
+
+@siying That's exactly what we observed last week. Do you think it better to remove the use_direct_writes, or leave it as a future option?
+
+@omegaga, Yes let's remove `use_direct_writes` to not confuse users, and add it later when we support it
+
+@omegaga updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1424/files/1cd0957e115e762433a223e569ec40bcb769b05d..5abb2cdb6f0f5abe638769548299c7063b4d90e5)
+
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4089548).
+
+@omegaga, can you please look at the test failures ?
+
+@omegaga updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1424/files/5abb2cdb6f0f5abe638769548299c7063b4d90e5..e44c17f2f3fb48a15abca17450e1a41518ad0ce0) - [changes since last import](https://github.com/facebook/rocksdb/pull/1424/files/5abb2cdb6f0f5abe638769548299c7063b4d90e5..e44c17f2f3fb48a15abca17450e1a41518ad0ce0)
+
+Fixed. Seems that current failed test is unrelated.
+
+LGTM. Will merge after sandcastle job finishes.
+
+@IslamAbdelRahman do we have land bot yet, or shall I stick to github merge?
+
+@omegaga updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1424/files/e44c17f2f3fb48a15abca17450e1a41518ad0ce0..4a0ad78e8e9f1ec7228ad2703f16d8de5f6e40c0) - [changes since last import](https://github.com/facebook/rocksdb/pull/1424/files/e44c17f2f3fb48a15abca17450e1a41518ad0ce0..4a0ad78e8e9f1ec7228ad2703f16d8de5f6e40c0)
+

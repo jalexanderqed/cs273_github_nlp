@@ -1,0 +1,26 @@
+Currently Java's ReadOptions only have very basic functions, while other features like prefix hashing cannot be enabled  through Java's API. We would like to add such features into Java ReadOptions as well.
+
+@adamretter Thanks for the pointers, I realized that `prefix_seek` has been deprecated in trunk, and that by default when users specify `prefix_extractor` in Options, the prefix seeking is auto turned on.
+
+However, the `prefix_extractor` is not exposed in JNI `Options` yet, is there another way we can get prefix seeking in the current JNI interface from latest RocksDB versions? If not, could we add the `prefix_extractor` interface into `Options` via JNI as well? I would like to contribute to its implementation.
+
+@guozhangwang Yes feel free to send a PR which adds prefix extractor to the Java Options. You might like to study how the existing callbacks are managed.
+
+@adamretter Could you point me to some references about existing callbacks management? Thanks.
+
+@guozhangwang Sure Comparators https://github.com/facebook/rocksdb/blob/master/java/rocksjni/comparatorjnicallback.cc are a good one to look at, although yours will most likely be simpler. Also the LoggerAdapter.
+
+@adamretter Since current JNI only considers byte arrays for put / get / iterator (there is no `Slice`), I'm thinking of only doing byte array transformers assuming default lexicographic comparator as well.
+
+@guozhangwang Well `Options::prefix_extractor` is a type of `SiceTransform` which is declared in slice_transform.h and uses `Slice` so it would be good to try and keep the Java API close to this maybe. 
+
+Perhaps @yhchiang has some thoughts on this?
+
+Ping @yhchiang , personally I would prefer to not introducing `Slice` in the JNI just for adding the prefix_extractor in `Options` because that would be a much bigger addition and may be out of my scope and time.
+
+@guozhangwang Slice already exists in the Java API
+
+Thanks, I will take a look at it.
+
+Thanks @siying , this is great! Which first stable release version will include this patch?
+

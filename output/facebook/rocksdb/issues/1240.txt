@@ -1,0 +1,12 @@
+Can i according the prefixKey to find out all the total key number immediately?
+
+Hi @yemt, I am not sure I understand the question correctly, Do you have a prefix and want to figure out the total number of keys that have this prefix ? Can you explain more what do you mean by "immediately" ?
+
+@IslamAbdelRahman ，yes，is what I mean，“immediately” I'd like to confirm whether there is this interface。
+
+@yemt, RocksDB don't have such API, and even if we implemented this API the underlying logic will be seeking to the prefix and keep issuing `Next()` to count the number of keys with such prefix
+
+@yemt, I hope I answered your questions. I will close this issue
+
+yes,thx
+

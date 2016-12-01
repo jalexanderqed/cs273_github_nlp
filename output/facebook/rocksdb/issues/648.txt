@@ -1,0 +1,80 @@
+Change Iterator Direction from Forward to Backward: Either Next() + Prev(), Seek() + Prev() needs changing iterator direction. Here are known bugs and implementation constraints about it.
+
+How changing direction is implemented? In DBIter, we keep calling Prev() to internal iterator, until we find another user key that is smaller than the current one. In merge iterator (which is most likely the internal iterator), when changing direction, for every child, we Seek() to current key, if !Vallid(), we call SeekToLast(), and then fetch all of them into the heap for a merge sort.
+
+There are outstanding problems in implementing it.
+### Merge operator
+
+In forward direction, if current key is a merge key, internal iterator is placed to the next internal key after the current key. When changing direction, since current position is not for a key of current user key, we simply return, which is a wrong location. For example, if we have such following internal keys:
+
+key: A type: merge seqID: 4 
+key: A type: merge seqID: 3 
+key: B type: merge seqID: 6  <==== (1)
+key: B type: merge seqID: 2 
+
+after seeking to A, internal key is placed to position (1) and user key is A. When we call Prev(), we see current location with key B which is not A, so we simply return.
+
+We tried to fix it in https://github.com/facebook/rocksdb/commit/ec70fea4c4025351190eba7a02bd09bb5f083790. Basically we keep calling Prev() in internal keys until a key is less than A. However, we hit other problems.
+### prefix bloom/hash
+
+Prefix iterator makes sure that if Seek() returns !Valid(), it only means no key with that prefix that is larger than the seek key. SeekToLast() depends on implementation. In most implementation, it will place to the really last position of the iterator. When merge iterator issues the Seek() + SeekToLast() sequence, it places a key to very last key. Lots of valid keys can be there between the seek key and the position. We will either end up with iterating millions of keys to find the value, or (in current implementation), simply return a key much larger than the key we should returned.
+
+Basically, changing iterating direction is not supported in prefix bloom/hash. The problem with this limitation is that, there is no way to find a key smaller than a key in prefix-based iterator, but it is a common use case.
+### number of keys skip optimization, working with prefix bloom/hash
+
+We have an optimization of seeking: https://github.com/facebook/rocksdb/blob/4f56632b16d8ae62b7e9dd6087e22d6c161e49a9/db/db_iter.cc#L572-L579 . The motivation of this optimization is that if there is a key updated many times, we are not comfortable with calling Prev() to iterate to the same key. Instead, we directly seek to the first key to skip them. For example, if we have keys:
+
+key:  type: put seqID: 1 
+key: B type: put seqID: 100 
+key: B type: put seqID: 99
+key: B type: put seqID: 98
+... 
+key: B type: put seqID: 3
+key: B type: put seqID: 2  <===== (1)
+
+and we are in location (1), after several Prev(), we still find ourself iterating internal key of B, we simply Seek to (B, seqID: infinite) to skip all those keys.
+
+This implementation combining with prefix bloom/hash, can cause not just slowness but infinite loop. Since we seek to a wrong location, we never find the value we want within max threshold before seeking, and then keep seeking.
+### data race while inserting
+
+It is possible that new entries is inserted to underlying child iterator. Those entries will have higher sequence ID than the iterator so they should be filtered out. For example, if we are doing forward iterating in this location:
+
+iterator sequence ID: 10
+key: A type: put seqID: 1 
+key: B type: put seqID: 2  <==== (1)
+
+while we are doing Seek("B"), one of the child iterator is like that:
+
+key: A type: put seqID: 1 
+
+so it is !Valid() and we need SeekToLast(). However, before SeekToLast() several more keys are inserted and the child iterator is like this:
+
+key: A type: put seqID: 1 
+key: Z type: put seqID: 100
+key: Z type: put seqID: 99
+...
+key: Z type: put seqID: 60
+key: Z type: put seqID: 59  <==== (2)
+
+So the location is placed in (2) in merged iterator:
+
+key: A type: put seqID: 1 
+key: B type: put seqID: 2
+key: Z type: put seqID: 100
+key: Z type: put seqID: 99
+...
+key: Z type: put seqID: 60
+key: Z type: put seqID: 59  <==== (2)
+
+We keep calling Prev() to internal iterator, and then the optimization of max_skipped kicked in and we start to seek to (Z, seqID: infinite) to internal iterator. Notice we seek to Z to not only the child iterator with Z inserted, but all other child iterators. Now the position of the iterator can be far off. We still don't fully understand the result of it might be.
+
+These problems need to be addressed. A new ReverseSeek() will eliminate most use cases of changing direction to reduce the necessity of handling this complexity. At the same time, changing direction needs to be handled correctly, or gives clear error messages.
+
+This bug makes RocksDB essentially unusable for any application that ever needs to search for the greatest key strictly less than some upper bound... because doing so necessarily involves performing a `seek()` followed by a `prev()`. I'm rather shocked that more people aren't hitting it.
+
+@archiecobbs we committed a patch: https://reviews.facebook.net/D43557 which is supposed to solve the misplaced iterator caused by merge operators. It should solve most of your problems. Problems related to prefix extractor is still unsolved but as long as you don't use it, you should be fine.
+
+Thanks! I have tested this change it it appears to fix the test case in issue #682.
+
+Adding a test case to repro the last data race case: https://reviews.facebook.net/D43671
+

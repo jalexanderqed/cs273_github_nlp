@@ -1,0 +1,104 @@
+version: master 3.11.1 and 3.11.2
+OS: debian 7.6 64bit / Linux 3.16.0-0.bpo.4-amd64
+g++: (Debian 4.7.2-5) 4.7.2
+java: openjdk Java(TM) SE Runtime Environment (build 1.7.0_03-b04)
+glibc: libc-2.13.so
+
+compiling is ok. make jtest has two errors. I doubt that it may be caused by glibc, because i have passed all tests in my desktop fedora with libc-2.18.so.  I tried to upgrade the glibc of server, and I sadly killed it...... so, can I pass all tests by libc-2.13.so?  Thank you so much!
+
+```
+There were 2 failures:
+
+1) compactRangeToLevel(org.rocksdb.RocksDBTest)
+org.junit.ComparisonFailure: expected:<"[1]"> but was:<"[0]">
+        at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+        at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:57)
+        at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+        at org.rocksdb.RocksDBTest.compactRangeToLevel(RocksDBTest.java:638)
+        at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+        at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:57)
+        at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+        at java.lang.reflect.Method.invoke(Method.java:601)
+        at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:50)
+        at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+        at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:47)
+        at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+        at org.junit.rules.ExternalResource$1.evaluate(ExternalResource.java:48)
+        at org.junit.rules.RunRules.evaluate(RunRules.java:20)
+        at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:325)
+        at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:78)
+        at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:57)
+        at org.junit.runners.ParentRunner$3.run(ParentRunner.java:290)
+        at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:71)
+        at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:288)
+        at org.junit.runners.ParentRunner.access$000(ParentRunner.java:58)
+        at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:268)
+        at org.junit.rules.ExternalResource$1.evaluate(ExternalResource.java:48)
+        at org.junit.rules.RunRules.evaluate(RunRules.java:20)
+        at org.junit.runners.ParentRunner.run(ParentRunner.java:363)
+        at org.junit.runners.Suite.runChild(Suite.java:128)
+        at org.junit.runners.Suite.runChild(Suite.java:27)
+        at org.junit.runners.ParentRunner$3.run(ParentRunner.java:290)
+        at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:71)
+        at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:288)
+        at org.junit.runners.ParentRunner.access$000(ParentRunner.java:58)
+        at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:268)
+        at org.junit.runners.ParentRunner.run(ParentRunner.java:363)
+        at org.junit.runner.JUnitCore.run(JUnitCore.java:137)
+        at org.junit.runner.JUnitCore.run(JUnitCore.java:115)
+        at org.junit.runner.JUnitCore.run(JUnitCore.java:105)
+        at org.junit.runner.JUnitCore.run(JUnitCore.java:94)
+        at org.rocksdb.test.RocksJunitRunner.main(RocksJunitRunner.java:59)
+2) compactRangeToLevelColumnFamily(org.rocksdb.RocksDBTest)
+org.junit.ComparisonFailure: expected:<"[1]"> but was:<"[0]">
+        at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+        at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:57)
+        at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+        at org.rocksdb.RocksDBTest.compactRangeToLevelColumnFamily(RocksDBTest.java:723)
+        at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+        at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:57)
+        at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+        at java.lang.reflect.Method.invoke(Method.java:601)
+        at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:50)
+        at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+        at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:47)
+        at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+        at org.junit.rules.ExternalResource$1.evaluate(ExternalResource.java:48)
+        at org.junit.rules.RunRules.evaluate(RunRules.java:20)
+        at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:325)
+        at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:78)
+        at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:57)
+        at org.junit.runners.ParentRunner$3.run(ParentRunner.java:290)
+        at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:71)
+        at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:288)
+        at org.junit.runners.ParentRunner.access$000(ParentRunner.java:58)
+        at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:268)
+        at org.junit.rules.ExternalResource$1.evaluate(ExternalResource.java:48)
+        at org.junit.rules.RunRules.evaluate(RunRules.java:20)
+        at org.junit.runners.ParentRunner.run(ParentRunner.java:363)
+        at org.junit.runners.Suite.runChild(Suite.java:128)
+        at org.junit.runners.Suite.runChild(Suite.java:27)
+        at org.junit.runners.ParentRunner$3.run(ParentRunner.java:290)
+        at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:71)
+        at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:288)
+        at org.junit.runners.ParentRunner.access$000(ParentRunner.java:58)
+        at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:268)
+        at org.junit.runners.ParentRunner.run(ParentRunner.java:363)
+        at org.junit.runner.JUnitCore.run(JUnitCore.java:137)
+        at org.junit.runner.JUnitCore.run(JUnitCore.java:115)
+        at org.junit.runner.JUnitCore.run(JUnitCore.java:105)
+        at org.junit.runner.JUnitCore.run(JUnitCore.java:94)
+        at org.rocksdb.test.RocksJunitRunner.main(RocksJunitRunner.java:59)
+
+FAILURES!!!
+Tests run: 349,  Failures: 2
+```
+
+@igorcanadi do you know any issues with `libc-2.13` ? I have only `libc-2.19` on my machine and I cant reproduce that problem.
+
+Hm, this is interesting. I am not aware of any issues with libc-2.13 :( We're running libc-2.17 and 2.20 here.
+
+@snowtopcoffee Do you still have this issue on the latest version of RocksJava?
+
+@snowtopcoffee I am closing this issue as there has been no update from you.
+

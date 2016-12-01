@@ -1,0 +1,22 @@
+when i run "make shared_lib" ,i got some errors like these:
+
+In file included from table/plain_table_builder.cc:7:
+In file included from ./table/plain_table_builder.h:13:
+./table/plain_table_key_coding.h:15:1: error: class 'ParsedInternalKey' was previously declared as a struct [-Werror,-Wmismatched-tags]
+class ParsedInternalKey;
+^
+./db/dbformat.h:57:8: note: previous use is here
+struct ParsedInternalKey {
+       ^
+./table/plain_table_key_coding.h:15:1: note: did you mean struct here?
+class ParsedInternalKey;
+^~~~~
+struct
+1 error generated.
+
+which compiler are you using? Mine doesn't complain though. patch is here https://reviews.facebook.net/D19173
+
+the patch is committed. Can you please try it again and let us know if issue still exists.
+
+great ! compile success .  the issue is not exists. thanks!
+

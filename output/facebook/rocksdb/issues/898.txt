@@ -1,0 +1,18 @@
+```
+db/db_test.cc:4780:10: error: moving a local object in a return statement prevents copy elision
+      [-Werror,-Wpessimizing-move]
+  return std::move(file_numbers);
+         ^
+db/db_test.cc:4780:10: note: remove std::move call here
+  return std::move(file_numbers);
+         ^~~~~~~~~~            ~
+```
+
+`-Wpessimizing-move` was introduced in clang 3.7.
+
+Thanks for your contribution!
+
+@zhipeng-jia  You should  never use std::move on return. Believe it or not it may suppress the move. C++11 compiler will apply it automatically if applicable.
+
+@yuslepukhin  I agree. We still have several places with it. We can't even upgrade to the latest CLANG because it reports those warnings. In our next TechDebt week from Jan 19-25, we will try to make RocksDB build using the latest CLANG, which may require us to address all those move returns.
+

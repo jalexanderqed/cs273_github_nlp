@@ -1,0 +1,23 @@
+Absent this cast on OSX, make check will fail with the following error:
+
+./util/testharness.h:93:19: error: comparison of integers of different signs: 'const unsigned long' and 'const int' [-Werror,-Wsign-compare]
+  BINARY_OP(IsEq, ==)
+
+``` ^~~
+./util/testharness.h:86:14: note: expanded from macro 'BINARY_OP'
+    if (! (x op y)) {                                   \
+             ^
+db/db_test.cc:1352:3: note: in instantiation of function template specialization 'rocksdb::test::Tester::IsEq<unsigned long, int>' requested here
+  ASSERT_EQ(status_list.size(), 6);
+  ^
+./util/testharness.h:113:68: note: expanded from macro 'ASSERT_EQ'
+#define ASSERT_EQ(a,b) ::rocksdb::test::Tester(__FILE__, __LINE__).IsEq((a),(b))
+                                                                   ^
+1 error generated.
+make: *** [db/db_test.o] Error 1
+```
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+

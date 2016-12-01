@@ -1,0 +1,12 @@
+Use async file handle and wrap sync API on top of async API. This provides better parallelism on Windows.
+
+The change is in Windows port only.
+
+The previous commit (583157f) already has a PR open. 
+
+So this change would be for async file handle only once that PR is merged.
+
+Will update the branch with latest commits.
+
+Need to look into test failures on Windows. I didn't have such local repro.
+

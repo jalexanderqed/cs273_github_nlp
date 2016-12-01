@@ -1,0 +1,6 @@
+Removing unused compression definitions from port_win.h.
+
+Change is only in port_win.h.
+
+Would you please merge?
+

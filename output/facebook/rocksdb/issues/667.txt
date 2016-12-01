@@ -1,0 +1,14 @@
+- std::chrono does not provide enough granularity for microsecs and periodically emits
+  duplicates
+- the bug is manifested in log rotation logic where we get duplicate
+  log file names and loose previous log content
+- msvc does not imlement COW on std::strings adjusted the test to use
+  refs in the loops as auto does not retain ref info
+- adjust auto_log rotation test with Windows specific command to remove
+  a folder. The test previously worked because we have unix utils installed
+  in house but this may not be the case for everyone.
+
+The PR is good to merge to me, but I don't understand why it caused a bug in your second point.
+
+@siying  NowMacros() is used to create new file names during file rotation.
+

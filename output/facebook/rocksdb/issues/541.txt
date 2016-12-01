@@ -1,0 +1,4 @@
+The rocksjava jdb_bench tool does not have any performance histograms.
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

@@ -1,0 +1,48 @@
+@kradhakrishnan
+
+In file included from unity.cc:109:0:
+util/histogram_windowing.cc:18:31: error: redefinition of â€˜const rocksdb::HistogramBucketMapper rocksdb::{anonymous}::bucketMapperâ€™
+const HistogramBucketMapper bucketMapper;
+^
+In file included from unity.cc:108:0:
+util/histogram.cc:77:31: note: â€˜const rocksdb::HistogramBucketMapper rocksdb::{anonymous}::bucketMapperâ€™ previously declared here
+const HistogramBucketMapper bucketMapper;
+
+valgrind error:
+
+==627965== 5,768 bytes in 1 blocks are definitely lost in loss record 10 of 10
+==627965== at 0x4C2B9C4: operator new (in /usr/local/fbcode/gcc-4.9-glibc-2.20/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==627965== by 0x5B230F: rocksdb::HistogramWindowingImpl::HistogramWindowingImpl() (histogram_windowing.cc:23)
+==627965== by 0x411246: rocksdb::HistogramTest_ClearHistogram_Test::TestBody() (histogram_test.cc:112)
+==627965== by 0x6DF027: HandleSehExceptionsInMethodIfSupported (gtest-all.cc:3822)
+==627965== by 0x6DF027: void testing::internal::HandleExceptionsInMethodIfSupported(testing::Test, void (testing::Test::)(), char const*) (gtest-all.cc:3858)
+==627965== by 0x6D415C: testing::Test::Run() (gtest-all.cc:3895)
+==627965== by 0x6D41E8: testing::TestInfo::Run() clone .part.562
+==627965== by 0x6D4354: Run (gtest-all.cc:4045)
+==627965== by 0x6D4354: testing::TestCase::Run() clone .part.563
+==627965== by 0x6D4714: Run (gtest-all.cc:6026)
+==627965== by 0x6D4714: testing::internal::UnitTestImpl::RunAllTests() (gtest-all.cc:6060)
+==627965== by 0x6D492B: HandleSehExceptionsInMethodIfSupported (gtest-all.cc:3822)
+==627965== by 0x6D492B: HandleExceptionsInMethodIfSupported (gtest-all.cc:3858)
+==627965== by 0x6D492B: testing::UnitTest::Run() (gtest-all.cc:5681)
+==627965== by 0x4158E2: RUN_ALL_TESTS (gtest.h:20722)
+==627965== by 0x4158E2: main (histogram_test.cc:209)
+
+@SherlockNoMad It is not obvious to me how the valgrind error is fixed. Can you please explain ?
+
+Thanks for the quick fix.
+
+1) bucketMapper was defined twice: in histogram.cc and histogram_windowing.cc. By removing it, first error is resolved. 
+
+2) In destructor, instead of calling window_stats_.release(), I should have called window_stats_.reset(), since release() would only give up the ownership, but not freeing the underlying row pointer. A even better way is to let compiler to handle by itself: std::unique_ptr will clear the content by itself when destructed. 
+
+Hi @kradhakrishnan Could you please merge this into master? Thank you. 
+
+I will merge once the build finishes and I verify it manually. Shouldn't be too long.
+
+Thanks!
+
+Thank you :)
+
+I think the Travis CI failures are unrelated. 
+

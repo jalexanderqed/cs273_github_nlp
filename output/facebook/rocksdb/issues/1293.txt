@@ -1,0 +1,11 @@
+If We want to split a big sst file into two smaller sst files according to the middle-key, What can we do?
+Can we travel a specified Block directly？
+
+Hi @xh931076284, Can you please clarify more what are you trying to achieve ?
+
+It's not possible to split an SST file into 2 SST files without re-generating the smaller SST files by reading the original SST file.
+
+@IslamAbdelRahman Yes.Frist, we want to lookup and read the middle-key of a single sst file; second, we want to read the original SST file , and write the key range from smallest key to middle-key  to a re-generating SST file; and write the key range from middle-key to largest key to another re-generating SST file.
+
+Feel free to add a function in block_based_table_reader to return you the key.
+

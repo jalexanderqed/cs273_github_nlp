@@ -1,0 +1,29 @@
+This mostly affects Linux since for `RandomAccessFile` it does make some file system calls to optimize for access pattern.
+
+At `table_cache.cc` in `TableCache::GetTableReader()` the following is the sequence of calls for sequential file access:
+- `RandomAccessFile` is opened
+- The above is then gets wrapped into `ReadaheadRandomAccessFile`
+- Which finally gets wrapped into `RandomAccessFileReader`
+
+Then `TableCache::NewIterator` is called it calls `SetupForCompaction()` which is where it is supposed to call `Hint()`. However, `RandomAccessFileReader` does not override `Hint()` and the default implementation is called which is empty. Thus `Hint()` never reaches the `RandomAccessFile` implementation.
+
+Don't understand. We directly call underlying RandomAccessFile's Hint(): https://github.com/facebook/rocksdb/blob/v4.0/table/block_based_table_reader.cc#L615-L631
+
+And ReadaheadRandomAccessFile::Hint() does pass Hint() in: https://github.com/facebook/rocksdb/blob/v4.0/util/file_reader_writer.cc#L285
+
+Did I miss anything?
+
+@siying Yes, the last leg is missing. ReadaheadRandomAccessFile is then wrapped into a RandomAccessFileReader at 
+
+https://github.com/facebook/rocksdb/blob/v4.0/db/table_cache.cc#L94-L107
+
+And the latter does not override Hint() so it goes to a default implementation which is empty.
+
+https://github.com/facebook/rocksdb/blob/v4.0/util/file_reader_writer.h#L34-L57
+
+@yuslepukhin RandomAccessFileReader is not a child class of RandomAccessFile so there is no Hint() to call. We call RandomAccessFileReader::file()::Hint(): https://github.com/facebook/rocksdb/blob/v4.0/table/block_based_table_reader.cc#L615-L631
+
+@siying My mistake. We should remove file() method though that leads to access to private parts and file operations w/o file_reader_writer knowledge.
+
+@yuslepukhin yes that's a good point. We can create a Hint() class in RandomAccessFileReader and forward the call to be clearer.
+

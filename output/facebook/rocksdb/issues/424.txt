@@ -1,0 +1,15 @@
+- Omit some gcc flags not present on Power 
+- Allow additional C,CXX,LDFLAGS to point to custom dependency install path
+
+I don't think the Travis CI error was caused by this changed.
+
+CLA is signed.
+
+@eile: can you pl explain what is BG/Q?  is it a super-computer?
+
+BG/Q: Yes,  it's a supercomputer, BlueGene/Q. Apologies for the domain language.
+
+Thanks for the small twitter storm. Btw, this work is performed @BlueBrainPjt (https://github.com/BlueBrain)
+
+Cool stuff :)
+

@@ -1,0 +1,30 @@
+Usage:
+make clean rocksdbjavastatic
+
+Dependency:
+LZ4
+
+To install LZ4:
+git clone https://github.com/Cyan4973/lz4.git && \
+cd lz4/lib && \
+make install
+
+Alternativel installation method:
+curl -O https://codeload.github.com/Cyan4973/lz4/tar.gz/r127
+mv r127 lz4-r127.tar.gz
+tar xvzf lz4-r127.tar.gz
+cd lz4-r127/lib && \
+make install
+
+Signed-off-by: Pooya Shareghi shareghi@gmail.com
+
+@pshareghi adding dependencies to the Makefile shall not require additional steps to be performed. So it would be good if the lz4 support would be included as other compression libraries. See e.g. snappy.
+
+@fyrz that is exactly what I have done here. The installation instructions above simply describe [as a courtesy to the user] how one can install LZ4 systemwide similar to what is described in [INSTALL.md](https://github.com/facebook/rocksdb/blob/master/INSTALL.md). Ideally LZ4 should be mentioned as a dependency in INSTALL.md
+
+Sorry missed that one. Maybe @yhchiang shall have a look at this one.
+
+@fyrz No, your comment is quite clear and correct. You can see I have done the exact same thing you suggested in my commit. See https://github.com/facebook/rocksdb/pull/555/files#diff-b67911656ef5d18c4ae36cb6741b7965R711
+
+Thanks for adding this support, @pshareghi.  The patch looks good to me :)
+

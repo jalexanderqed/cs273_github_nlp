@@ -1,0 +1,2 @@
+`RocksDB#keyMayExist` in the Java API does not allow control over whether the value should be returned or not, i.e. there is no control over the initial value of `value_found`.
+

@@ -1,0 +1,56 @@
+Would there be interest in a RocksDB amalgamation? The idea is similar to the SQLite amalgamation: https://www.sqlite.org/amalgamation.html
+
+In summary, it would be a way of distributing all of RocksDB in 3 source files:
+- A .h file that contains all RocksDB public headers (except c.h) concatenated
+- c.h
+- A .cc file that contains all RocksDB .cc files concatenated with private header inclusions expanded
+
+The main benefit is that it provides a simple way to include RocksDB in a project. Drop in those three files and you're set.
+
+Secondary benefits are faster compile time and possibly better compiler optimizations.
+
+If there's interest, I will contribute a script and Makefile rule to build an amalgamation.
+
+That's pretty interesting. Can you build it on top of our existing unity build? https://github.com/facebook/rocksdb/blob/master/Makefile#L600
+
+Sounds like a good idea. Will this patch involve modifications to the Makefile only or also to rocksdb source code?
+
+My plan is:
+- Start with the unity build
+- Write a script to do some preprocessing to expand private inclusions
+- The concatenated header can be created by simply using the cat Unix utility (I think)
+- Add a Makefile rule
+
+My choice would be to write the script in Python, but I can write it in bash or even C++ if others have preferences.
+
+I don't anticipate having to modify any RocksDB source code.
+
+Actually cat won't work for the public header due to dependencies between the headers (duh), so the script will probably have to generate that too.
+
+I've been playing with this a little bit and am curious about the unity build. What is it actually used for and why does it have a main function? It contains some stuff that wouldn't be needed in an amalgamation, like source used for the ldb command-line tool. Is that intentional?
+
+@edsrzf I don't know who and why uses unity. It was contributed by our open source community very early on: https://github.com/facebook/rocksdb/pull/228
+
+@miguelportilla or @vinniefalco can you please advise? If I make unity.cc compile to a library instead of an executable and remove unnecessary, non-library sources, will it mess you up?
+
+@edsrzf Well, if stuff like the ldb command-line tool made it into the unity.cc file then it probably shouldn't belong there. The main purpose of unity.cc is to allow rocksdb developers to know if they would break a unity build (for example, by introducing two variables at file-scope with the same name). We don't use the unity.cc file directly (we use this instead: https://github.com/ripple/rippled/blob/develop/src/ripple/unity/rocksdb.cpp).
+
+If the contents of unity.cc are changed, it would likely impair rocksdb developers' ability to know if certain changes have broken unity style builds.
+
+My suggestion for producing an amalgamation is to use your own .cc file instead of changing the unity.cc that is in the repository. Note that there are a couple of tools that help produce amalgamations. I've written one: https://github.com/vinniefalco/Amalgamate and there are a few others floating around the Internet. Using a scripted language like Python would make it even easier. Users could simply run the amalgamation script on a clean rocksdb repository and then use the resulting amalgamation.
+
+Note: The JUCE "core" module (and only the core module) in my Amalgamate tool had its license changed to a permissive license (rather than GPL). So my Amalgamate tool including the JUCE portion is fully compatible with permissive licenses. Visit http://juce.com for the latest license text.
+
+Thanks for the response.
+
+I don't plan to change unity.cc into an amalgamation, but generate an amalgamation from unity.cc. The only changes I'd make would be:
+- Change the .cc file inclusions to use `#include` with quotes instead of angle brackets
+- Get rid of the main function and compile as a library
+- Remove ldb files and any others that seem irrelevant
+
+It doesn't sound like any of those things would hurt the purpose of unity.cc.
+
+Your tool looks interesting, but perhaps a bit heavier than what I'm trying to come up with.
+
+@edsrzf The changes you listed seem benign
+

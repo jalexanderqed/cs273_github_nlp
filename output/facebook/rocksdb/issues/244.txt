@@ -1,0 +1,55 @@
+I have met difficulties for using the rocksdb. And when I tried to use a Hashskiplistrep, I can not open the db. And the docs is found helpless.
+I set the options as:
+
+rocksdb::Options opt = rocksdb::Options();
+opt.IncreaseParallelism(2);
+opt.create_if_missing = true;
+opt.max_open_files = 300000;
+auto prefix_extractor = NewFixedPrefixTransform(8);
+opt.prefix_extractor.reset(prefix_extractor);
+opt.memtable_factory.reset(NewHashSkipListRepFactory(bucket_count, skiplist_height, skiplist_branching_factor));
+opt.table_factory.reset(NewPlainTableFactory());
+rocksdb::Status s = rocksdb::DB::Open(opt, DBPath, &db);
+
+when run with this , the error come as:
+
+ db/memtable.cc:55: rocksdb::MemTable::MemTable(const rocksdb::InternalKeyComparator&, const rocksdb::Options&): Assertion `!should_flush_' failed.
+
+I am using the latest version of the RocksDB on ubuntu 14.04.
+Could any one help me? Thanks a lot!
+
+Can you try increasing write_buffer_size? I think the problem is that you configured memtable in such a way that even the empty memtable exceeds the memory limit (write_buffer_size) and needs to be flushed. What's your bucket_count?
+
+@igorcanadi  Yes,  thank you! And when I set the write_buffer_size to be 64M, the problem gone. and the bucket_count is set to be 1000. But I meet another problem, saying that:
+
+util/env_posix.cc:235: rocksdb::{anonymous}::PosixRandomAccessFile::PosixRandomAccessFile(const string&, int, const rocksdb::EnvOptions&): Assertion `!options.use_mmap_reads' failed.
+
+I found that the Envoptions can set use_mmap_reads to be true, but how can I make it take effect in the Env? I found no way to set a EnvOptions for Env variable.
+Thanks a lot!
+
+Are you running on 32-bit system?
+
+This should fix it https://reviews.facebook.net/D22419
+
+@igorcanadi Yes, I am running on a 32-bit system. But I am sorry to cannot follow you. How can the https://reviews.facebook.net/D22419 solve my problem? Could you please make a explain on that? Thank you very much!
+
+Once it lands, you won't get any more assertions
+
+@honglianglu does it work now?
+
+@igorcanadi thank you, it work now. as you have posted 
+" We're initializing PosixRandomAccessFile when use_mmap_reads is true OR when we're on 32-bit system, see: https://github.com/facebook/rocksdb/blob/master/util/env_posix.cc#L1075
+
+Therefore, when we're on 32-bit system and use_mmap_reads is false, we will hit the assertion."
+
+I have got about that, and I deleted the table_factory. Thanks a lot! 
+Then the document on how to use prefix hash should be updated,right? 
+
+Why would the document need to be updated?
+
+2014-03-27-RocksDB-Meetup-Siying-Prefix-Hash.pdf is useless!
+
+Are you saying it's useless on 32-bit system?
+
+Sorry, use_mmap_reads needs to be false. That is the default anyway.
+

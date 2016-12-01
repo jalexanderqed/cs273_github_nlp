@@ -1,0 +1,157 @@
+Hi, I'm new to rocksdb and we have a userspace NVMe driver that can access raw SSD device (see https://github.com/MicronSSD/unvme).  I would like to port rocksdb to run on this driver and have a couple questions:
+
+Does rocksdb access raw device or rely on a filesystem (i.e. like mysql)?
+Is there a device access layer in rocksdb that I can replace with a userspace driver?
+
+Thanks,
+Deyoung
+
+We reply on file system. The file system related logic is in https://github.com/facebook/rocksdb/blob/master/include/rocksdb/env.h . You can have your own implementation of the class. It might be the easiest way you can start with.
+
+Don't we also rely:
+- on OS page cache for performance as compressed blocks are there by default
+- support for unaligned reads (not aligned to sector boundary)
+
+On Thu, Feb 25, 2016 at 4:05 PM, Siying Dong notifications@github.com
+wrote:
+
+> We reply on file system. The file system related logic is in
+> https://github.com/facebook/rocksdb/blob/master/include/rocksdb/env.h .
+> You can have your own implementation of the class. It might be the easiest
+> way you can start with.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1016#issuecomment-189045436.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@mdcallag you are correct.
+
+What is status of support for direct IO? That might help here.
+
+On Thu, Feb 25, 2016 at 5:14 PM, Siying Dong notifications@github.com
+wrote:
+
+> @mdcallag https://github.com/mdcallag you are correct.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1016#issuecomment-189064950.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+I know @kradhakrishnan studied it a little bit. Not sure what he came up with.
+
+It would be great to make rocksdb have support for working with block-aligned DirectIO.
+
+Our disk layout is not aligned to device sector size, and hence it is not trivial to support O_DIRECT in our environment. It is not impossible either. I am currently working on a ENV that can support direct IO. For writes, it will relatively easy to fix RocksDB to send aligned writes (or probably it does already). For reads, we will end up copying data in user space. As for us relying on page cache and read ahead, we can solve the problem by using read ahead in ENV and bigger block cache in RocksDB. That's my thought and effort so far.
+
+I thought we already had option to do read ahead in ENV and that is
+optionally used for compaction.
+
+We rely on OS page cache to hold compressed pages. If we don't use it then
+we need to make sure that the RocksDB option to cache compressed blocks is
+robust and performant.
+
+On Fri, Feb 26, 2016 at 9:11 AM, Karthikeyan Radhakrishnan <
+notifications@github.com> wrote:
+
+> Our disk layout is not aligned to device sector size, and hence it is not
+> trivial to support O_DIRECT in our environment. It is not impossible
+> either. I am currently working on a ENV that can support direct IO. For
+> writes, it will relatively easy to fix RocksDB to send aligned writes (or
+> probably it does already). For reads, we will end up copying data in user
+> space. As for us relying on page cache and read ahead, we can solve the
+> problem by using read ahead in ENV and bigger block cache in RocksDB.
+> That's my thought and effort so far.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1016#issuecomment-189376373.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Just curious: are storage blocks typically 512 bytes or are they much much larger these days?
+
+512b or 4kb
+
+On Fri, Feb 26, 2016 at 9:24 AM, dhruba borthakur notifications@github.com
+wrote:
+
+> Just curious: are storage blocks typically 512 bytes or are they much much
+> larger these days?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1016#issuecomment-189380487.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@mdcallag two major feature missing of our current compressed block cache implementation vs. OS page cache:
+1) we don't support readahead now. So with compressed cache, we are unlikely to match the performance for iterating more than one block.
+2) compressed block cache cache in our block boundary, while OS page cache in page boundary. Physically we are doing page aligned reads, so compressed block cache will introduce more read I/O than OS page cache.
+Very likely we will need to implement some user level cache that can at least do 1) in near future. It is actually pretty challenging for us. And also two approaches to go: enhance compressed block cache, or build our own page cache in Env.
+
+FWIW, Windows port implements un-buffered I/O option where we use aligned buffers.  It does bypass OS cache and passes the buffer directly to the controller. We use this to make memory consumption predictable by configuring cache and potentially using a rate limiter to control the writes.
+
+Yes. We do have an option to do read ahead in the Env. I am not sure how well it works. And you are right, we need bigger and better compressed cache (not bigger block cache like I mentioned).
+
+From: Mark Callaghan <notifications@github.com<mailto:notifications@github.com>>
+Reply-To: facebook/rocksdb <reply@reply.github.com<mailto:reply@reply.github.com>>
+Date: Friday, February 26, 2016 at 9:14 AM
+To: facebook/rocksdb <rocksdb@noreply.github.com<mailto:rocksdb@noreply.github.com>>
+Cc: Karthikeyan Radhakrishnan <krad@fb.com<mailto:krad@fb.com>>
+Subject: Re: [rocksdb] Support for userspace driver (#1016)
+
+I thought we already had option to do read ahead in ENV and that is
+optionally used for compaction.
+
+We rely on OS page cache to hold compressed pages. If we don't use it then
+we need to make sure that the RocksDB option to cache compressed blocks is
+robust and performant.
+
+On Fri, Feb 26, 2016 at 9:11 AM, Karthikeyan Radhakrishnan <
+notifications@github.commailto:notifications@github.com> wrote:
+
+> Our disk layout is not aligned to device sector size, and hence it is not
+> trivial to support O_DIRECT in our environment. It is not impossible
+> either. I am currently working on a ENV that can support direct IO. For
+> writes, it will relatively easy to fix RocksDB to send aligned writes (or
+> probably it does already). For reads, we will end up copying data in user
+> space. As for us relying on page cache and read ahead, we can solve the
+> problem by using read ahead in ENV and bigger block cache in RocksDB.
+> That's my thought and effort so far.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1016#issuecomment-189376373.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.commailto:mdcallag@gmail.com
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/1016#issuecomment-189377217.
+
+Thank you for all the responses.  I think Mongo storage engine, a published interface, is what I was looking for.
+
+@kradhakrishnan I wonder what's the progress of your direct io work? I am interested to use it as well. Thanks.
+
+It is in the process of being landed and integrated. We will post about it when we have all the pieces checked in and available as part of a release.
+
+@kradhakrishnan Thanks! I saw current direct io in posix layer uses a buffer inside and copies the data, how about your coming DIO changes, what changes it will have to db layer? I am also asking another question on facebook forum, nobody answers it yet, whether or not compression block cache does aligned read. I think it should does, if we have block size set as device block size?
+

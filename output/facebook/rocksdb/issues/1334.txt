@@ -1,0 +1,49 @@
+We implemented a custom sstable, and our sstable need scan input two passes to achieve better compression, but through TableBuilder we can not scan input two passes, so we store the input data to a temporary file for second pass scan, this is very inefficient.
+
+Would you provide a way to allowing two pass scan, by any way, such as provide a rewind-able iterator, or provide an option to push all data by TableBuilder::Add(key, value) two passes.
+
+First option is possible but I am not sure how complicated will it be to implement, we always have an Iterator that we iterate over to send Key(), Value() to TableBuilder::Add(). but we have extra logic as well, in compaction for example we stop before reaching the end of the Iterator for example.
+
+Regarding the second option, if we keep all keys/values in memory and then push to TableBuilder, how will this be different from you creating another copy of the data inside your TableBuilder ?
+
+Is there a way to do it inside the table builder? If your file size is small (like level-based compaction or multi-level universal). Your table builder can cache all the data in a memory buffer while TableBuilder::Add() is called and generate the real outputs in TableBuilder::Finish().
+
+If the file is very large and doesn't fit memory, you can try to stream the data to an SST file by using SstFileWriter ( https://github.com/facebook/rocksdb/blob/master/include/rocksdb/sst_file_writer.h ) and then during TableBuilder::Finish(), you can read the data back, apply your global compression logic or something like that, and write to the real output file.
+
+Would that be a reasonable work-around?
+
+@siying Our sstable is optimized for large file, usually used for max level files, the file size is big. Now we write the data to a temp file in first pass scan(in TableBuilder::Add()), and perform second pass scan in TableBuilder::Finish(), SstFileWriter can not provide any improve.
+
+@IslamAbdelRahman Yes, I had read the code, option1 is fairly complex, but it is more elegant.
+
+option2 is less elegant, but it should be simpler, I didn't mean to save the data in memory by the caller of TableBuilder, I mean that the caller can backup the initial state(iterator positions ...) for second passes scan, and call Finish() 2 times -- if we have configed two pass scan somewhere.
+
+@rockeet what you do sounds like a good solution. If we add functions in table builder, we need to  have a good idea about how to use it in RocksDB code that writes to table builder. I don't see a clear way how RocksDB will make use of it. How do you suggest we should use it inside RocksDB?
+
+@siying For option1,  even TableBuilder is not needed, by adding a new method `virtual Status TableFactory::BuildSSTable(const TableBuilderOptions&, uint32_t column_family_id, InternalIterator& inputIter, WritableFileWriter* writer)`, calls to TableBuilderBuilder::Add.../Finish now create an input iterator and calling tableFactory->BuildSSTable( ... inputIter, ...). To decouple the existing logic on how to calling TableBuilderBuilder::Add, a plugable `filter` object on the `inputIter` can be used for this purpose.
+
+For option2, the caller may need backup the initial state(iterator positions ...), and calling TableBuilderBuilder::Add.../Finish two(if configed) times. This would work, but is a bit ugly.
+
+option1 is more elegant and should be prefered.
+
+@rockeet I'm not able to understand what you mean. Can you introduce the workflow of compaction job which make uses of the new functions?
+
+@rockeet I discussed with @siying, we had the following high-level proposal based on your ideas. It's a bit complex and we haven't thought through all the drawbacks yet, though.
+- Implement TwoPassTableBuilder subclass that wraps a regular TableBuilder, and a corresponding factory class
+- TwoPassTableBuilder stores a copy of the CompactionIterator at the first input key considered for the table
+- TwoPassTableBuilder::Add() does your special first-pass work and tracks the first/last key considered for the table
+- TwoPassTableBuilder::Finish() seeks the copied CompactionIterator's underlying InternalIterator to the first key considered for the table. Then it replays the CompactionIterator until reaching the last key considered for the table, feeding each key/val into the wrapped TableBuilder.
+
+@ajkr @siying This is a good solution, it suffices our need and need not make  big changes on existing compaction code. Thanks!
+
+@rockeet feel free to try it out and send pull request to us.
+
+@siying @ajkr I am working on this issue, now it almost works, but there is a serious problem:
+  In function `CompactionJob::ProcessKeyValueCompaction`, the same `CompactionIterator` object is used for multiple `TableBuilder` to produce multiple output SST files, it is hard to implement correct `position saving/restore` methods of `CompactionIterator` for this purpose:
+1. Save a key(with seq and type) as a seek position.
+2. Restore iterator position by a saved key.
+
+Would you help us?
+
+It's done, I make a dedicated `CompactionIterator` for second pass scan, so it's not needed to seek a position on `CompactionIterator`. I'll send a pull request when all are stable.
+

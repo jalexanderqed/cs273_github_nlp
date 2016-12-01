@@ -1,0 +1,5 @@
+  make preallocation inline with other writable files
+  make sure that we map no more than pre-allocated size.
+
+Travis failure seems unrelated
+

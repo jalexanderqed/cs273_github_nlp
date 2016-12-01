@@ -1,0 +1,125 @@
+I can reproduce this by the following step:
+0. start a thrift server (in java) which wraps a rocksdb instance using java api.
+1. send some request to put a couple keys into the db.
+2. send a request to do a prefix seek
+
+everything fine so far
+
+3 kill the server using control-C, and restart the server.
+4 redo 1 and 2, and I got the following core dump at server side:
+
+C  [librocksdbjni8260164094736835274..jnilib+0x93dbb]  rocksdb::BlockBasedFilterBlockReader::PrefixMayMatch(rocksdb::Slice const&, unsigned long long)+0x5b
+C  [librocksdbjni8260164094736835274..jnilib+0x9e4a3]  rocksdb::BlockBasedTable::PrefixMayMatch(rocksdb::Slice const&)+0x303
+C  [librocksdbjni8260164094736835274..jnilib+0x9fd95]  rocksdb::BlockBasedTable::BlockEntryIteratorState::PrefixMayMatch(rocksdb::Slice const&)+0x15
+C  [librocksdbjni8260164094736835274..jnilib+0xc2450]  rocksdb::(anonymous namespace)::TwoLevelIterator::Seek(rocksdb::Slice const&)+0x20
+C  [librocksdbjni8260164094736835274..jnilib+0xafa84]  rocksdb::MergingIterator::Seek(rocksdb::Slice const&)+0xf4
+C  [librocksdbjni8260164094736835274..jnilib+0x5579d]  rocksdb::DBIter::Seek(rocksdb::Slice const&)+0x27d
+C  [librocksdbjni8260164094736835274..jnilib+0x2057]  Java_org_rocksdb_RocksIterator_seek0+0x47
+j  org.rocksdb.RocksIterator.seek0(J[BI)V+0
+j  org.rocksdb.RocksIterator.seek([B)V+29
+
+I tried to do a db close before shutting down the server, but it does not fix the issue.
+
+this is how i created this db:
+
+```
+memtableMemoryBudget *= SizeUnit.MB;
+options = new Options();
+options.setCreateIfMissing(true)
+       // the following parameters selected based on
+       // ColumnFamilyOptions::OptimizeLevelStyleCompaction
+       // ----- begin ------
+       .setWriteBufferSize(memtableMemoryBudget / 4)
+       .setMinWriteBufferNumberToMerge(2)
+       .setMaxWriteBufferNumber(6)
+       .setLevelZeroFileNumCompactionTrigger(2)
+       .setTargetFileSizeBase((int)(memtableMemoryBudget / 8))
+       .setMaxBytesForLevelBase(memtableMemoryBudget)
+       .setCompactionStyle(CompactionStyle.LEVEL)
+       .setCompressionType(CompressionType.SNAPPY_COMPRESSION)
+       // ----- end ------
+       .useFixedLengthPrefixExtractor(prefixLength)
+       .setLevelZeroSlowdownWritesTrigger(20)
+       .setLevelZeroStopWritesTrigger(40)
+       .setMemTableConfig(
+           new HashSkipListMemTableConfig()
+               .setBucketCount(2000000))
+       .setTableFormatConfig(
+           new BlockBasedTableConfig()
+               .setHashIndexAllowCollision(false)
+               .setBlockCacheSize(blockCacheSize * SizeUnit.MB)
+               .setCacheNumShardBits(6)
+               .setFilter(new BloomFilter())
+               .setCacheIndexAndFilterBlocks(true))
+       .setMemtablePrefixBloomBits(100000000)
+       .setMemtablePrefixBloomProbes(6)
+       .setMaxOpenFiles(-1)
+       .setMaxBackgroundCompactions(4)
+       .setMaxBackgroundFlushes(1)
+       .createStatistics();
+
+options.getEnv().setBackgroundThreads(5, RocksEnv.COMPACTION_POOL);
+
+try {
+  BackupableDBOptions backupableDBOptions
+      = new BackupableDBOptions(backupPath, true, true, false, true, 0, 0);
+  db = BackupableDB.open(options, backupableDBOptions, dbPath);
+} catch (RocksDBException e) {
+  LOG.error("db creation failed " + e);
+}
+```
+
+siying helped me a bit on this, here is what we have found so far:
+1.  If we remove the line of setting a bloom filter, (i.e., .setFilter(new BloomFilter()) in my code), the problem goes away. i can kill the process and restart as many times as i want without having any issue.
+2. I tried using ldb tool to scan the db. it can get all the entries successfully. But in my server, when I seek the prefix, i still got the crash problem.
+
+this is the tarball of my db files (that have the core dump problem):
+
+https://reviews.facebook.net/F221895
+
+Can you please add some information about the environment and such stuff as well as with what version you faced that problem ?
+
+At least I cannot reproduce this one(using the current dev HEAD).
+
+thanks, i am on a mac os (Darwin Kernel Version 13.3.0). I checked out a version from rocksdb repo on last friday. This is my head when compiling the library.
+
+commit 4f65fbd1976b826476c9419727c9557eb9df1b50
+Author: sdong siying.d@fb.com
+Date:   Fri Oct 10 16:11:40 2014 -0700
+
+```
+WriteBatchWithIndex's iterator to support SeekToFirst(), SeekToLast() and Prev()
+```
+
+ok, i figured out the reason: setFilter(new BloomFilter()) is the problem.
+
+After I created a new BloomFilter instance, rocksdb java uses its native handle to set to c++ code. Since new BloomFilter will only create a temporary instance. it becomes invalid when c++ code uses it. 
+
+I added a bloom filter class member variable to store it, and pass this variable to the class, this solves the problem.
+
+@yhchiang why did you close this issue ?
+
+There exist two problems within the rocksjava code.
+
+Oops. Sorry.  I wrongly conclude that the issue has been resolved based on @shiyanxin's last comment.  Reopen the issue.
+
+I will provide a solution for the first problem this evening. Which is that BloomFilters are being disposed because the TableFormatConfig does not hold a reference to the BloomFilters instance. Which leads to freeing the underlying C++ instance.
+
+@shiyanxin can you test if https://github.com/facebook/rocksdb/pull/353 solves your problem ?
+
+There is also another problem present but i think that pull request solves the main one.
+
+@shiyanxin can you rerun the test with my pull request ?
+
+@yhchiang i added the solution to the other problem to this pull request. In the current version there is a problem of pointer ownership due to the `shared_ptr` used. The C++ code freed the `shared_ptr` independent of usage and existent Java references. That should also be solvd now.
+
+i think this looks fine. But does it mean i need to keep the option alive throughout the life of a db?
+
+No not explicitly the options instance is encapsulated within the database object on open.
+
+sounds good. thanks for fixing.
+
+@yhchiang shall i create a differential ?
+
+@fyrz: not for this small one :)  Have merged the pull request.  Thanks for the fix.
+

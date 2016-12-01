@@ -1,0 +1,8 @@
+while reader & writer belongs to different applications, but i want them to share the same rocksdb instance , any suggest will be appreciated;
+
+There is no support for that out of the box. You can assign a rocksdb instance to one process and get other processes communicating with it, or build a layer on top of rocksdb that would expose API calls to other processes.
+
+are you trying to use RocksDB as producer & consumer queue?
+
+thanks,i'll build a socket server on the rocksdb... 
+

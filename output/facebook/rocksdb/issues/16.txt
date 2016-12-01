@@ -1,0 +1,28 @@
+In INSTALL.md, installation command of gflags for Linux platform is missing.
+Without it, users will get the following error while compiling db/db_bench.cc.
+
+db/db_bench.cc:14:27: fatal error: gflags/gflags.h: No such file or directory
+# include <gflags/gflags.h>
+
+```
+                       ^
+```
+
+Hi @Kangmo, we actually have linked the instructions in the first bullet in INSTALL.md:
+
+  Install gflags. If you're on Ubuntu, here's a nice tutorial: (http://askubuntu.com/questions/312173/installing-gflags-12-04)
+
+On Ubuntu 12, libgflags-dev is not available, that's why I linked the complete tutorial.
+
+Good point, @igorcanadi. Definitely I missed the link you provided. 
+
+Because apt-get libgflags-dev works in Ubuntu 13, and even apt-get does not work in CentOS,
+How about I rewrite INSTALL.md to have different sections for (1) Ubuntu 12, (2) Ubuntu 13 (3) CentOS instead of simple Linux section?
+
+In user's perspective running apt-get is much quick and easy than downloading gflags and building it in Ubuntu 13.
+Also Newbies in CentOS may frustrated after running apt-get on CentOS. ;-)
+
+-Kangmo
+
+@Kangmo if you rewrote INSTALL.md that would be awesome.
+

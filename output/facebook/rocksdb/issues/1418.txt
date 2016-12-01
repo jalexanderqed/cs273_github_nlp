@@ -1,0 +1,10 @@
+
+@xh931076284 If you mean with Microsoft Windows binaries, then please see the CMakeLists.txt file for instructions. The current release on Maven Central has Windows binaries available if that is easier.
+
+@adamretter Yes, I do as the CMakeLists.txt described, and get the dll, I try to compile a jar used maven but failed.  Can you tell me to compile  a jar in windows. 
+I want to do this because I add some java native methods to java API and  need to re-compile a jar in windows.
+
+@xh931076284 Did you add `-DJNI=1` to your cmake build?
+
+@adamretter Yes, I did. 
+

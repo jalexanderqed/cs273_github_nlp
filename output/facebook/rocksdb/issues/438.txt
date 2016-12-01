@@ -1,0 +1,37 @@
+wiki page says rocksdb support jemalloc , how to enable it?
+
+Hmm, that's a good question. Check out how we do it for our internal build: https://github.com/facebook/rocksdb/blob/master/build_tools/fbcode_config.sh#L38-L39. You should be able to do similar thing with our open source compile. If you figure it out, would you mind sending us a pull request?
+
+Use of jemalloc might also require use of libunwind, which is a few lines
+below in the same file. Also note that the --whole-archive option doesn't
+just apply to the next library. It applies to all object files that follow.
+There is a --no-whole-archive flag used much further in that file. I am not
+sure if it should have been put immediately after the jemalloc or unwind
+libraries.
+
+http://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
+
+On Thu, Dec 18, 2014 at 2:00 AM, Igor Canadi notifications@github.com
+wrote:
+
+> Hmm, that's a good question. Check out how we do it for our internal
+> build:
+> https://github.com/facebook/rocksdb/blob/master/build_tools/fbcode_config.sh#L38-L39.
+> You should be able to do similar thing with our open source compile. If you
+> figure it out, would you mind sending us a pull request?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/438#issuecomment-67464622.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Attached diff: https://reviews.facebook.net/D36789
+
+Hey @xinxinsh ! You can now use jemalloc with RocksDB (check out https://github.com/facebook/rocksdb/commit/fd7a35731854528dde10deb3444a82ae4c1a9206)!
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

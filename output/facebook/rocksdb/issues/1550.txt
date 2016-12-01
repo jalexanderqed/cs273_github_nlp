@@ -1,0 +1,7 @@
+Currently, in the Direct I/O read mode, the last sector of the file, if not full, is not handled correctly. If the return value of pread is not multiplier of kSectorSize, we still go ahead and continue reading, even if the buffer is not aligned. With the commit, if the return value is not multiplier of kSectorSize, and all but the last sector has been read, we simply return.
+Now it should work.
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1550/files/82e1b539f59530e8d1f3342f24aa51c530fca7fc..ed58f04ba63734f4bef4bb1832b45dec708bbed3)
+
+@lightmark has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4209609).
+

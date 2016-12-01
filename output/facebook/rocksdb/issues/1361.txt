@@ -1,0 +1,132 @@
+I notice that the performence bench haven't be edited since Dec 2014. It should been changed after 2 years development. Can you provide latest official performence bench result?  
+
+I am not we can provide official results. We can provide results that will be specific to our hardware. Other people have different storage devices, CPU & RAM configurations. I hope we can provide better guidance on how to run the scripts including sizing information - for example:
+- to create an IO-bound database how big should the database be relative to RAM?
+- how many "user" threads should be used per CPU core
+
+See https://github.com/facebook/rocksdb/blob/master/tools/run_flash_bench.sh for a script to run the tests
+
+Thank you. The script will help a lot.
+I understand different data-size and hardware can result in huge difference in bench result. But a test result for different versions of rocksdb on the specific hardware do provide some information I think. After bench test, I can show you the result in case you are interested.
+
+I am interested in the same test and same hardware used for different
+versions of RocksDB to see what got better and worse.
+
+I used to run run_flash_bench.sh a lot
+
+On Thursday, September 29, 2016, wenduo notifications@github.com wrote:
+
+> Thank you. The script will help a lot.
+> I understand different data-size and hardware can result in huge
+> difference in bench result. But a test result for different versions of
+> rocksdb on the specific hardware do provide some information I think. After
+> bench test, I can show you the result in case you are interested.
+> 
+> —
+> You are receiving this because you commented.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1361#issuecomment-250393553,
+> or mute the thread
+> https://github.com/notifications/unsubscribe-auth/ABkKTYhrIGkSz9g54Dp-WKfUEWS1WPBpks5qu2s7gaJpZM4KIliV
+> .
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Ok we will push our result when we finish the test.
+
+This reminded me to repeat the tests on new hardware that I can use. I hope
+to share results too.
+
+On Fri, Sep 30, 2016 at 3:53 AM, Zongzhi Chen notifications@github.com
+wrote:
+
+> Ok we will push our result when we finish the test.
+> 
+> —
+> You are receiving this because you commented.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1361#issuecomment-250716123,
+> or mute the thread
+> https://github.com/notifications/unsubscribe-auth/ABkKTWS6G1Z5pdi8_tYPMbEBgas3he56ks5qvOolgaJpZM4KIliV
+> .
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Sorry for the delay. 
+I apply random-write bench test on rocks-3.11 and rocks-4.9. 
+
+Here are my test results and several questions about this.
+
+Machine info:
+CPU:        24 \* Intel(R) Xeon(R) CPU E5-2630 0 @ 2.30GHz
+CPUCache:   15360 KB
+MEM:    145182 MB
+SSD Device :     VO0300ECHPN
+
+Result on 1 thread random write:
+4.9 rocksdb args:
+./db_bench --benchmarks=fillrandom --use_existing_db=0 --disable_auto_compactions=0 --sync=0 --db=/data2/new-rocks --wal_dir=/data2/new-rocks --disable_data_sync=0 --num=250000000 --num_levels=6 --key_size=20 --value_size=1000 --block_size=4096 --cache_size=1073741824 --cache_numshardbits=6 --compression_max_dict_bytes=0 --compression_ratio=0.5 --compression_type=snappy --level_compaction_dynamic_level_bytes=true --bytes_per_sync=8388608 --cache_index_and_filter_blocks=0 --pin_l0_filter_and_index_blocks_in_cache=1 --benchmark_write_rate_limit=0 --hard_rate_limit=3 --rate_limit_delay_max_milliseconds=1000000 --write_buffer_size=134217728 --target_file_size_base=134217728 --max_bytes_for_level_base=1073741824 --verify_checksum=1 --delete_obsolete_files_period_micros=62914560 --max_grandparent_overlap_factor=8 --max_bytes_for_level_multiplier=8 --statistics=0 --stats_per_interval=1 --stats_interval_seconds=60 --histogram=1 --memtablerep=skip_list --bloom_bits=10 --open_files=-1 --max_background_compactions=16 --subcompactions=10 --max_write_buffer_number=8 --max_background_flushes=7 --level0_file_num_compaction_trigger=4 --level0_slowdown_writes_trigger=12 --level0_stop_writes_trigger=20 --threads=1 --memtablerep=vector --disable_wal=0 --seed=1478749799
+
+3.11 rocksdb args:
+./db_bench --benchmarks=fillrandom --use_existing_db=0 --disable_auto_compactions=0 --sync=0 --db=/data3/old-rocks --wal_dir=/data3/old-rocks --disable_data_sync=0 --num=250000000 --num_levels=6 --key_size=20 --value_size=1000 --block_size=4096 --cache_size=1073741824 --cache_numshardbits=6 --compression_max_dict_bytes=0 --compression_ratio=0.5 --compression_type=snappy --level_compaction_dynamic_level_bytes=true --bytes_per_sync=8388608 --cache_index_and_filter_blocks=0 --pin_l0_filter_and_index_blocks_in_cache=1 --benchmark_write_rate_limit=0 --hard_rate_limit=3 --rate_limit_delay_max_milliseconds=1000000 --write_buffer_size=134217728 --target_file_size_base=134217728 --max_bytes_for_level_base=1073741824 --verify_checksum=1 --delete_obsolete_files_period_micros=62914560 --max_grandparent_overlap_factor=8 --max_bytes_for_level_multiplier=8 --statistics=0 --stats_per_interval=1 --stats_interval_seconds=60 --histogram=1 --memtablerep=skip_list --bloom_bits=10 --open_files=-1 --max_background_compactions=16 --subcompactions=10 --max_write_buffer_number=8 --max_background_flushes=7 --level0_file_num_compaction_trigger=4 --level0_slowdown_writes_trigger=12 --level0_stop_writes_trigger=20 --threads=1 --memtablerep=vector --disable_wal=0 --seed=1478762839
+
+4.9 rocks result:
+fillrandom   :      52.130 micros/op 19182 ops/sec;   18.7 MB/s
+Microseconds per write:
+Count: 250000000 Average: 52.1298  StdDev: 6.51
+Min: 3  Median: 4.5573  Max: 77944343
+Percentiles: P50: 4.56 P75: 7.24 P99: 1141.17 P99.9: 1196.64 P99.99: 1995.66
+
+3.11 rocks result:
+fillrandom   :      41.690 micros/op 23986 ops/sec;   23.3 MB/s  
+ Microseconds per write:
+Count: 250000000 Average: 41.6903  StdDev: 15.64
+Min: 3  Median: 4.4640  Max: 86558878
+Percentiles: P50: 4.46 P75: 7.13 P99: 1122.63 P99.9: 1193.10 P99.99: 1269.12
+
+Result on 24 thread random write:
+
+4.9 rocks args:
+./db_bench --benchmarks=fillrandom --use_existing_db=0 --disable_auto_compactions=0 --sync=0 --db=/data3/new-rocks --wal_dir=/data3/new-rocks --disable_data_sync=0 --num=25000000 --num_levels=6 --key_size=20 --value_size=1000 --block_size=4096 --cache_size=1073741824 --cache_numshardbits=6 --compression_max_dict_bytes=0 --compression_ratio=0.5 --compression_type=snappy --level_compaction_dynamic_level_bytes=true --bytes_per_sync=8388608 --cache_index_and_filter_blocks=0 --pin_l0_filter_and_index_blocks_in_cache=1 --benchmark_write_rate_limit=0 --hard_rate_limit=3 --rate_limit_delay_max_milliseconds=1000000 --write_buffer_size=134217728 --target_file_size_base=134217728 --max_bytes_for_level_base=1073741824 --verify_checksum=1 --delete_obsolete_files_period_micros=62914560 --max_grandparent_overlap_factor=8 --max_bytes_for_level_multiplier=8 --statistics=0 --stats_per_interval=1 --stats_interval_seconds=60 --histogram=1 --memtablerep=skip_list --bloom_bits=10 --open_files=-1 --level0_file_num_compaction_trigger=4 --level0_slowdown_writes_trigger=12 --level0_stop_writes_trigger=20 --max_background_compactions=16 --subcompactions=10 --max_write_buffer_number=8 --max_background_flushes=7 --threads=24 --memtablerep=vector --disable_wal=0 --seed=1478891393 2>&1
+
+3.11 rocks args:
+./db_bench --benchmarks=fillrandom --use_existing_db=0 --disable_auto_compactions=0 --sync=0 --db=/data3/old-rocks --wal_dir=/data3/old-rocks --disable_data_sync=0 --num=25000000 --num_levels=6 --key_size=20 --value_size=1000 --block_size=4096 --cache_size=1073741824 --cache_numshardbits=6 --compression_max_dict_bytes=0 --compression_ratio=0.5 --compression_type=snappy --level_compaction_dynamic_level_bytes=true --bytes_per_sync=8388608 --cache_index_and_filter_blocks=0 --pin_l0_filter_and_index_blocks_in_cache=1 --benchmark_write_rate_limit=0 --hard_rate_limit=3 --rate_limit_delay_max_milliseconds=1000000 --write_buffer_size=134217728 --target_file_size_base=134217728 --max_bytes_for_level_base=1073741824 --verify_checksum=1 --delete_obsolete_files_period_micros=62914560 --max_grandparent_overlap_factor=8 --max_bytes_for_level_multiplier=8 --statistics=0 --stats_per_interval=1 --stats_interval_seconds=60 --histogram=1 --memtablerep=skip_list --bloom_bits=10 --open_files=-1 --level0_file_num_compaction_trigger=4 --level0_slowdown_writes_trigger=12 --level0_stop_writes_trigger=20 --max_background_compactions=16 --subcompactions=10 --max_write_buffer_number=8 --max_background_flushes=7 --threads=24 --memtablerep=vector --disable_wal=0 --seed=1479090182 2>&1
+
+4.9 rocks result:
+fillrandom   :      28.810 micros/op 34710 ops/sec;   33.8 MB/s
+Microseconds per write:
+Count: 600000000 Average: 691.4288  StdDev: 2.78
+Min: 4  Median: 101.4116  Max: 10717560
+Percentiles: P50: 101.41 P75: 118.67 P99: 6884.36 P99.9: 14842.62 P99.99: 150333.98
+
+3.11 rocks result:
+fillrandom   :      28.525 micros/op 35056 ops/sec;   34.1 MB/s  
+Microseconds per write:
+Count: 600000000 Average: 684.5720  StdDev: 6.99
+Min: 3  Median: 100.5199  Max: 10463640
+Percentiles: P50: 100.52 P75: 117.76 P99: 7196.01 P99.9: 15655.68 P99.99: 147864.33
+
+Here are my two questions:
+A. It seems that there are two main changes between the two version which influence performance on random-write.
+    1. 4.9 rocksdb use multi-thread subcompactions between level0 and level1.
+    2. 4.9 rocksdb writers write concurrently to memtable while 3.11-rocks use one writer write to memtable in the "as much as possible” way
+Based on the second change I can understand 3.11-rocks beats 4.9-rocks in 1-thread case. But in 24-thread case, 4.9-rocsks lose too. So what’s the motivation to make the second change.  
+B. This qps performance is much lower than our expectation(db engine usually more than 300000 we think), do I miss something when use db_bench ?
+
+Setting min_level_to_compress=3 should help.
+
+In the long run you have ingest X write-amp = compaction demand
+
+Your ingest is ~30MB/s. I will guess that your write-amp is ~10X. So compaction demand is ~300MB/s for writes and a fraction of that for reads. 
+
+You want 300,000 puts/second which would increase ingest to ~300MB/s and compaction demand to ~3G/s for writes and maybe 1G/s for reads. Is your storage that fast?
+
+Thanks for your reply.  My storages are not even close to that speed. I get your point and agree with you.
+The thing is we used to bench rocksdb using other tools. And the difference between that one and this result are huge. I think the difference comes from the data set and how we load them because it affects write-amp a lot.  
+

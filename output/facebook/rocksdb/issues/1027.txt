@@ -1,0 +1,46 @@
+hi, guys
+
+I have a problem that may need your help .
+
+I have 1 billion tags can be seen as read-only after initial bulk-load, so I want to know if there are any useful tricks to optimize the *_random read speed *_ in this particular case ?
+
+do you have any good ideas?
+
+Thanks ~
+
+Are the reads range or point queries?
+Is a point read for a key that doesn't exist frequent?
+
+On Fri, Mar 4, 2016 at 12:37 AM, Performanz notifications@github.com
+wrote:
+
+> hi, guys
+> 
+> I have a problem that may need your help .
+> 
+> I have 1 billion tags can be seen as read-only after initial bulk-load, so
+> I want to know if there are any useful tricks to optimize the *_random
+> read speed *_ in this particular case ?
+> 
+> do you have any good ideas?
+> 
+> Thanks ~
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1027.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Do a full compaction and reopen them as read-only DB will help to reduce CPU costs a little bit. But if your bottleneck is I/O, then nothing much you can do to improve it.
+
+hi, @mdcallag they are point queries and seem to be random, and we are trying to reduce the key num that are not used frequently.
+
+hi, @siying the random read speed seems to be ok after the SSD is used. IO is not the bottleneck now, and  I try to use RockDB to reduce the dependency on SSD and RAM which are of high cost, so you mean which read-only DB is worth recommending or change RocksDB to read-only mode? 
+
+For point queries, make sure you have a bloom filter.
+To reduce use of SSD, try to use zlib compression and leveled compaction.
+

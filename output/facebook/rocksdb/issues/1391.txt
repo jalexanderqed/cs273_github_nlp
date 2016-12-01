@@ -1,0 +1,26 @@
+OptionChangeMigration() to avoid full compaction if the old and new options indicate the same LSM setting.
+
+@yiwu-arbug has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4034124).
+
+Do we need to rebase this ?
+
+Let me rebase.
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1391/files/ab4e420e968567a33d1ede9d29d839451138208e..54e4351e462764a115ce905848b0f039da671f6d) - [changes since last import](https://github.com/facebook/rocksdb/pull/1391/files/ab4e420e968567a33d1ede9d29d839451138208e..54e4351e462764a115ce905848b0f039da671f6d)
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1391/files/54e4351e462764a115ce905848b0f039da671f6d..02b3e3985ce55d70f9192799fa2ac5fb248ff0eb) - [changes since last import](https://github.com/facebook/rocksdb/pull/1391/files/ab4e420e968567a33d1ede9d29d839451138208e..02b3e3985ce55d70f9192799fa2ac5fb248ff0eb)
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1391/files/02b3e3985ce55d70f9192799fa2ac5fb248ff0eb..1e3e82871020d2de1c7dc1bc2b2d681401d18eef) - [changes since last import](https://github.com/facebook/rocksdb/pull/1391/files/ab4e420e968567a33d1ede9d29d839451138208e..1e3e82871020d2de1c7dc1bc2b2d681401d18eef)
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1391/files/1e3e82871020d2de1c7dc1bc2b2d681401d18eef..9ed928e7a959ea9b3e404e6b325c64d6ee15084f) - [changes since last import](https://github.com/facebook/rocksdb/pull/1391/files/ab4e420e968567a33d1ede9d29d839451138208e..9ed928e7a959ea9b3e404e6b325c64d6ee15084f)
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1391/files/9ed928e7a959ea9b3e404e6b325c64d6ee15084f..e3a943e904dc983b0d6f1d8b573089858a157dab) - [changes since last import](https://github.com/facebook/rocksdb/pull/1391/files/ab4e420e968567a33d1ede9d29d839451138208e..e3a943e904dc983b0d6f1d8b573089858a157dab)
+
+Finally fixed the diff.
+
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4087944).
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1391/files/e3a943e904dc983b0d6f1d8b573089858a157dab..3cf65dfff2c9d687196a2854e82381c0a8723c78) - [changes since last import](https://github.com/facebook/rocksdb/pull/1391/files/e3a943e904dc983b0d6f1d8b573089858a157dab..3cf65dfff2c9d687196a2854e82381c0a8723c78)
+
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1391/files/3cf65dfff2c9d687196a2854e82381c0a8723c78..a1a641936ed7f60b134bc4b2869f6d329e4253d5) - [changes since last import](https://github.com/facebook/rocksdb/pull/1391/files/e3a943e904dc983b0d6f1d8b573089858a157dab..a1a641936ed7f60b134bc4b2869f6d329e4253d5)
+

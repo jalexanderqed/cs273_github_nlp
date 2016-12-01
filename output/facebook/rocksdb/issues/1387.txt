@@ -1,0 +1,9 @@
+This brings down write_batch_test immediately.
+Due to the fact that memory does not go away the code continues to operate on a destroyed internal iterator.
+
+@siying @IslamAbdelRahman If you do not mind, I will merge it
+
+Thanks @yuslepukhin, LGTM. I have a minor comment
+
+Oops, I missed @IslamAbdelRahman 's comment and merged it. I guess we should address it in a follow-up pull request.
+

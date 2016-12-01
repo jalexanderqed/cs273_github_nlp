@@ -1,0 +1,8 @@
+This is an implementation of non-exclusive locks for pessimistic transactions. It is relatively simple and does not prevent starvation (ie. it's possible that request for exclusive access will never be granted if there are always threads holding shared access). It is done by changing `KeyLockInfo` to hold an set a transaction ids, instead of just one, and adding a flag specifying whether this lock is currently held with exclusive access or not.
+
+Some implementation notes:
+- Some lock diagnostic functions had to be updated to return a set of transaction ids for a given lock, eg. `GetWaitingTxn` and `GetLockStatusData`.
+- Deadlock detection is a bit more complicated since a transaction can now wait on multiple other transactions. A BFS is done in this case, and deadlock detection depth is now just a limit on the number of transactions we visit.
+- Expirable transactions do not work efficiently with shared locks at the moment, but that's okay for now.
+@lth has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4239097).
+@lth updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1573/files/72e66bfb1258122e0fe0ca7aa176d2687327a37f..e451dc35c9d155b00644570b28507bd3462e6b04) - [changes since last import](https://github.com/facebook/rocksdb/pull/1573/files/72e66bfb1258122e0fe0ca7aa176d2687327a37f..e451dc35c9d155b00644570b28507bd3462e6b04)

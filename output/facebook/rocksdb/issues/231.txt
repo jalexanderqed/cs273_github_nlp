@@ -1,0 +1,118 @@
+I have implemented the Java API for Comparator and Slice.
+(I have also signed the Facebook Contributors Agreement)
+
+I offer two implementations which are selectable by a developer through implementing either of the abstract classes `org.rocksdb.Comparator` or `org.rocksdb.DirectComparator` for Comparators and likewise `org.rocksdb.Slice` or `org.rocksdb.DirectSlice` for Slices.
+
+The classes named Direct, use a DirectByteBuffer to transfer data between C++ and Java, and may be faster when large keys or values are used. The non-Direct classes simply use java byte arrays, and appear to be faster for small keys and values due to the lower object-creation overhead.
+
+Note: Using a `DirectComparator`, will result in receiving `DirectSlices`s in it's `compare` method callback.
+
+Non-Direct Example:
+
+``` java
+
+final Comparator myComparator = new TestComparator();
+...
+options.setComparator(myComparator);
+...
+
+public class TestComparator extends Comparator {
+    @Override
+    public String name() {
+      return "Test-Comparator";
+    }
+
+    @Override
+    public int compare(final Slice a, final Slice b) {
+      final byte[] keyA = getKey(a);
+      final byte[] keyB = getKey(b);
+      return new BigInteger(keyA).compareTo(new BigInteger(keyB));
+    }
+
+    private byte[] getKey(final Slice s) {
+      return s.data();
+    }
+  }
+
+...
+
+myComparator.dispose();
+```
+
+Direct Example:
+
+``` java
+
+final DirectComparator myComparator = new TestDirectComparator();
+...
+options.setComparator(myComparator);
+...
+
+public class TestDirectComparator extends DirectComparator {
+    @Override
+    public String name() {
+      return "Test-Direct-Comparator";
+    }
+
+    @Override
+    public int compare(final DirectSlice a, final DirectSlice b) {
+      final byte[] keyA = getKey(a);
+      final byte[] keyB = getKey(b);
+
+      return new BigInteger(keyA).compareTo(new BigInteger(keyB));
+    }
+
+    private byte[] getKey(final DirectSlice s) {
+      final byte[] key = new byte[KEY_LENGTH];
+      s.data().get(key);
+      return key;
+    }
+  }
+
+...
+
+myComparator.dispose();
+```
+
+I have not written any serious C++ for many years, so this was a bit of a challenge! I hope the code, is acceptable, let me know of any revisions you require. The only thing I know I am unsure of currently is line 139 of java/rocksjni/slice.cc.
+
+I have added the comments and javadoc as requested.
+
+As requested, I have also fixed the class type in org.rocksdb.AbstractSlice#startsWith.
+
+Just two very small outstanding issues as far as I am aware now. I could do with some advice on both of these please, and then hopefully we can get this merged?
+
+1) portal.h - JniUtil::copyString - regarding whether `std::string` construction creates a copy or not?
+
+2) slice.cc - clear0 - "please delete underlying data before calling clear." I need some clarification on how to do this?
+
+Thanks Adam.
+
+Hey adamretter,  thanks for your contribution.  This is a great stuff!  But we need to make sure everything work correctly before we can merge the request.  I have created a link to your diff to make the discussion easier.  You could also use `arc diff` command to submit a diff review :)
+
+https://reviews.facebook.net/D22269
+
+@ankgup87 : I'm not familiar with how third-party contributor get access into reviews.facebook.net.  Do you mind sharing tips with adamretter?
+
+JNIEnv::GetStringUTFChars may or may not create a copy, and different JRE implementation may do it differently.  While we are able to tell whether a specific GetStringUTFChars creates a copy via its last out value, we cannot control its copy behavior.
+
+@yhchiang regards JNIEnv::GetStringUTFChars are you suggesting specific parts of my code that I need to fix? or are you saying I need to fix that anywhere that I use it in some way?
+
+@adamretter: sorry for the confusion, I am trying to answer the (1) question you asked about JniUtil::CopyString().  JniUtil::CopyString() internally uses GetStringUTFChars(), which copy behavior is determined by JRE, meaning we can't really control when / whether Java would perform copy or not in GetStringUTFChars.
+
+http://stackoverflow.com/questions/22573602/getstringutfchars-and-its-string-copy-behavior
+
+Hey guys any update on this? I think I have addressed each of the concerns you had. If not do let me know, for ref the Phabricator page is here - https://reviews.facebook.net/D22779.
+
+I would like to get this merged, so that I could add further capabilities to the Java API such as 1) using Slice/DirectSlice in Get, 2) Adding support for Prefix Extractors, 3) Support for Column Families.
+
+One thing which i do not like on this is: Setting a comparator affects persisted RocksDB databases at creation time. So every tool(rocksdb shell, ldb) which is not written in Java cannot be used to interact with the database anymore.
+
+Or am i wrong ?
+
+@fyrz The limitation is not to do with Java. It is to do with using a custom Comparator whether from C++ or Java, the storage format is related to the comparator and so you must always use that comparator when working with the DB. Regards LDB etc, I did have the idea to create a JLDB which would allow you to specify the Java class of your custom comparator, likewise LDB could be adjusted to create an additional arg which would specify a shared library and custom comparator class name.
+
+@adamretter you are right. What i wanted to express is that by introducing this you loose the cross language synergies. But dont get me wrong im not saying the whole thing is a bad idea.
+
+jldb sounds great by the way ;)
+

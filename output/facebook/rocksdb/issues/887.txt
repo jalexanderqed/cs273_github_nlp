@@ -1,0 +1,83 @@
+I am new to this community, wanted  to try out different stuff using rocksdb. I downloaded the rocksdb package and have installed it on my centos 6. I was successfully able to provide all these commands.
+- make all
+  - make share_lib
+  - make static_lib
+    but all these produce ".0" files or  ".so " or ".a" files.  I am unsure as to how to execute or run. 
+    I wanted to tinker around so thought of looking into the examples. I am not sure how to run the c example and execute the same. There is no documentation as to how to run compile these and run these examples. 
+    Any insights on this is greatly appreciated. 
+
+Welcome @cnbscience ! Once you compile rocksdb with `make static_lib`, you can compile the simple example like this:
+`cd examples; make all`. That will generate bunch of binaries in the `examples/` directory!
+
+I also updated https://github.com/facebook/rocksdb/blob/master/examples/README.md
+
+Thank you for such a quick response, you guys are awesome.
+so that produces  c_simple_example.o which is the object file.  how do I link that to the rocksdb  librarry ?
+I am getting these errors
+c_simple_example.c:(.text+0x18): undefined reference to `rocksdb_options_create'
+c_simple_example.c:(.text+0x3e): undefined reference to`rocksdb_options_increase_parallelism'
+c_simple_example.c:(.text+0x4f): undefined reference to `rocksdb_options_optimize_level_style_compaction'
+c_simple_example.c:(.text+0x60): undefined reference to`rocksdb_options_set_create_if_missing'
+c_simple_example.c:(.text+0x7d): undefined reference to `rocksdb_open'
+c_simple_example.c:(.text+0xb8): undefined reference to`rocksdb_backup_engine_open'
+c_simple_example.c:(.text+0xe8): undefined reference to `rocksdb_writeoptions_create'
+c_simple_example.c:(.text+0x136): undefined reference to`rocksdb_put'
+c_simple_example.c:(.text+0x162): undefined reference to `rocksdb_readoptions_create'
+c_simple_example.c:(.text+0x18d): undefined reference to`rocksdb_get'
+c_simple_example.c:(.text+0x204): undefined reference to `rocksdb_backup_engine_create_new_backup'
+c_simple_example.c:(.text+0x232): undefined reference to`rocksdb_close'
+c_simple_example.c:(.text+0x23c): undefined reference to `rocksdb_restore_options_create'
+c_simple_example.c:(.text+0x264): undefined reference to`rocksdb_backup_engine_restore_db_from_latest_backup'
+c_simple_example.c:(.text+0x292): undefined reference to `rocksdb_restore_options_destroy'
+c_simple_example.c:(.text+0x2a7): undefined reference to`rocksdb_open'
+c_simple_example.c:(.text+0x2d9): undefined reference to `rocksdb_writeoptions_destroy'
+c_simple_example.c:(.text+0x2e5): undefined reference to`rocksdb_readoptions_destroy'
+c_simple_example.c:(.text+0x2f1): undefined reference to `rocksdb_options_destroy'
+c_simple_example.c:(.text+0x2fd): undefined reference to`rocksdb_backup_engine_close'
+c_simple_example.c:(.text+0x309): undefined reference to `rocksdb_close'
+
+Sorry, we don't continuously test `examples/`, so sometimes they're broken and we don't know. Can you please try now, after https://github.com/facebook/rocksdb/commit/e6e505a4d922ad63ff141b419d8e8aefdb852746?
+
+ok, may be I am doing something wrong. I tried it with the new update, it does create a c_simple_example.o , but then when I run the command  "g++ c_simple_example.c -o project" I get the following errors
+c_simple_example.c:(.text+0x13): undefined reference to `rocksdb_options_create'
+c_simple_example.c:(.text+0x39): undefined reference to`rocksdb_options_increase_parallelism'
+c_simple_example.c:(.text+0x4a): undefined reference to `rocksdb_options_optimize_level_style_compaction'
+c_simple_example.c:(.text+0x5b): undefined reference to`rocksdb_options_set_create_if_missing'
+c_simple_example.c:(.text+0x78): undefined reference to `rocksdb_open'
+c_simple_example.c:(.text+0xb3): undefined reference to`rocksdb_backup_engine_open'
+c_simple_example.c:(.text+0xde): undefined reference to `rocksdb_writeoptions_create'
+c_simple_example.c:(.text+0x12c): undefined reference to`rocksdb_put'
+c_simple_example.c:(.text+0x153): undefined reference to `rocksdb_readoptions_create'
+c_simple_example.c:(.text+0x17e): undefined reference to`rocksdb_get'
+c_simple_example.c:(.text+0x1f5): undefined reference to `rocksdb_backup_engine_create_new_backup'
+c_simple_example.c:(.text+0x223): undefined reference to`rocksdb_close'
+c_simple_example.c:(.text+0x228): undefined reference to `rocksdb_restore_options_create'
+c_simple_example.c:(.text+0x250): undefined reference to`rocksdb_backup_engine_restore_db_from_latest_backup'
+c_simple_example.c:(.text+0x27e): undefined reference to `rocksdb_restore_options_destroy'
+c_simple_example.c:(.text+0x293): undefined reference to`rocksdb_open'
+c_simple_example.c:(.text+0x2c5): undefined reference to `rocksdb_writeoptions_destroy'
+
+Looks like the problem is with the linking, not sure if there is anything that we can do to check that.
+
+`make all` should build c_simple_example: https://github.com/facebook/rocksdb/blob/master/examples/Makefile#L22
+
+it does compile and generate the binary "c_simple_example", but how to run this? 
+
+`./c_simple_example`
+
+I tried all that, it does throw me this error " ./c_simple_example: error while loading shared libraries: libgflags.so.2: cannot open shared object file: No such file or directory
+"
+
+Looks like something related to gflags ? I have tried updating the gflags.
+
+Looks like nothing works with the update as well.
+
+Anyways figured out the issue had to do 
+-sudo ldconfig -v
+then do a find "libgflags.so.2:" and add it to my library path
+-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gflags-2.0/.libs/libgflags.so.2
+then export the library. 
+recompile and run the program :).
+
+Closing the issue.
+

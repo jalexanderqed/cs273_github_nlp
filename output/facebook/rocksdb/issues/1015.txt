@@ -1,0 +1,6 @@
+We have some important features recently added. And these options are not available in RocksJava. We should add them.
+
+We should also add the ability to change options whilst in-flight from the Java API, i.e. `DB::SetOptions(options)`, as requested in the Reddit AMA here - https://www.reddit.com/r/IAmA/comments/47k1si/we_are_rocksdb_developers_ask_us_anything/d0direx
+
+Closed by https://github.com/facebook/rocksdb/pull/1243 and https://github.com/facebook/rocksdb/pull/1167
+

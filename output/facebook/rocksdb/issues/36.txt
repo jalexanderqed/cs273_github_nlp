@@ -1,0 +1,6 @@
+leveldb support -fno-excpetions, troubled when switch to rocksdb。
+
+Can you please provide more details?
+
+I need exception disabled rocksdb
+

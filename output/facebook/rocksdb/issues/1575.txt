@@ -1,0 +1,3 @@
+Fix division by zero in compaction_job.cc 
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4240818).
+@IslamAbdelRahman updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1575/files/903cd12ce77c762afd92f30435b915e2852322d9..45926163168cac20463eeb25238a5f59f62dd768) - [changes since last import](https://github.com/facebook/rocksdb/pull/1575/files/903cd12ce77c762afd92f30435b915e2852322d9..45926163168cac20463eeb25238a5f59f62dd768)

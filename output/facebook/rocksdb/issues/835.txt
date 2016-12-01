@@ -1,0 +1,3 @@
+`geHistogramData` should be `getHistogramData`
+https://github.com/facebook/rocksdb/blob/5cbb7e43e04e5827652ea51b6c5cf247dd82b9ad/java/src/main/java/org/rocksdb/Statistics.java
+

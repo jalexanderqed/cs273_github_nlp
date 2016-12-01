@@ -1,0 +1,61 @@
+Currently I was running the benchmark for RocksDB on SSD. The dataset is about 110G, every record size is about 1KB and operation ratio is 50% reading 50% writing. 
+
+There is a situation always happning, at first the throughput will over ten thousand and then fall to several thousand even several hundred, at that time, I notice that the read latency will increase significantly, and I think this is because of compaction happening from reading the DB log. And this unstable situation will happen again and again.
+
+I would like to get some suggestions for how to keep our throughput stable and make the performance optimized. Oh , I benchmark them using 32 read threads and 4 write threads. Here is my configuration as below:
+ Options.block_cache_size : 48 GB
+ Options.block_size : 32 KB
+ Options.write_buffer_size : 1024MB
+ Options.compression : 1
+ Options.max_open_files: 500000
+ Options.target_file_size_base : 512MB
+ Options.max_bytes_for_level_base : 1024MB
+ Options.level0_file_num_compaction_trigger: 4
+ Options.level0_slowdown_writes_trigger: 16
+ Options.level0_stop_writes_trigger: 64
+ Options.disableDataSync: 0
+ Options.max_background_compactions: 8
+ Options.max_write_buffer_number: 16
+ Options.rate_limit_delay_max_milliseconds: 1000
+ Options.arena_block_size:12800KB
+ Options.delete_obsolete_files_period_micros: 300000000
+ Options.disable_seek_compaction: 0
+ Options.min_write_buffer_number_to_merge: 4
+ Options.max_background_flushes: 2
+
+Thanks for your any comments!
+
+Some suggestions:
+write_buffer_size and target_file_size_base seem really big while max_bytes_for_level_base is too small comparing to their values. With this config, you will only have 2 L1 files (1024M / 512M). You can first try write_buffer_size = 128M, target_file_size_base = 128M, max_bytes_for_level_base = 1024M. Set level0_file_num_compaction_trigger = 8. The idea is to keep level0_file_num_compaction_trigger \*  write_buffer_size = max_bytes_for_level_base to minimize write amplification. max_write_buffer_number = 16 seems unnecessarily large, 2 or 4 should be enough. Leave alone with disable_seek_compaction, this option is going to deprecated and that is only useful for spinning disk. You should keep it disabled. min_write_buffer_number_to_merge can be 1 (default), any reason you set it to 4?
+
+block_size = 32 KB this can impact read amplification. Any reason you increase it from 4k (default) to 32k?
+
+@ljinfb 
+Thanks very much for your suggestions!
+
+I think you said "only hava 2 L1 files(1024M/512M)" means 2 L0 files,right? Because my configuration Options.max_bytes_for_level_multiplier = 10 , and I think the L1 max bytes may be 10240 MB.
+
+And I set min_write_buffer_number_to_merge as 4 because from the option.h description, if it is set as 1, then all write buffers are fushed to L0 as individual files and this increases read amplification because a get request has to check in all of these files. So I set is to 4.
+
+For block_size, this parameter can be changed dynamically and if it is set 4k, my maximum throughput would be lower.
+
+Anyway , I will try to run as your suggestions, and give the result to you within one hours. 
+
+Thanks a lot again
+
+@ljinfb 
+
+Just now I ran some benchmark with incresing my Options.max_bytes_for_level_multiplier = 102400 , then I found the compaction impcation is smaller .
+
+I will update the benchmark result later. 
+
+@AaronCsy Options.target_file_size_base and Options.max_bytes_for_level_base are for L1. You set them to 512M and 1024M, so it constrains to only 2 L1 files. Do you want to try to set smaller write buffer size and SST file size as I mentioned. I am afraid larger files can lead to bursty behavior during flush/compaction.
+
+It also helps to know the current IO utilization on your system during benchmark, your expected write/read throughput. You can use iostat to get the IO stats. A paste of your LOG file would also show us important information like current level tree structure / write amplification...
+
+@AaronCsy please take a look at https://github.com/facebook/rocksdb/wiki/RocksDB-Tuning-Guide
+
+Does it help you understand your issue? Can you provide feedback on usefulness? 
+
+@AaronCsy: I am closing the issue for now, but please feel free to reopen it if you would like to discuss further :)
+

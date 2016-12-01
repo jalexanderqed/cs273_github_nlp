@@ -1,0 +1,51 @@
+```
+“E:\project\build\rocksdb\rocksdb.sln”(默认目标) (1) ->
+“E:\project\build\rocksdb\java\rocksdbjni_je.vcxproj.metaproj”(默认目标) (35) ->
+“E:\project\build\rocksdb\java\rocksdbjni_je.vcxproj”(默认目标) (36) ->
+(ClCompile 目标) ->
+  e:\project\rocksdb\java\rocksjni\options.cc(2139): error C2440: “reinterpret_cast”: 无法从“int”转换为“jint” [E:\project\build\rocksdb\java\rocksdbjni_je
+.vcxproj]
+  e:\project\rocksdb\java\rocksjni\options.cc(2165): error C2440: “reinterpret_cast”: 无法从“jint”转换为“int32_t” [E:\project\build\rocksdb\java\rocksdbjn
+i_je.vcxpro
+j]
+  e:\project\rocksdb\java\rocksjni\options.cc(3401): error C2440: “reinterpret_cast”: 无法从“int”转换为“jint” [E:\project\build\rocksdb\java\rocksdbjni_je
+.vcxproj]
+  e:\project\rocksdb\java\rocksjni\options.cc(3428): error C2440: “reinterpret_cast”: 无法从“jint”转换为“int32_t” [E:\project\build\rocksdb\java\rocksdbjn
+i_je.vcxpro
+j]
+```
+@ananclub Would you be able to provide english translations of the errors?
+
+```
+e:\project\rocksdb\java\rocksjni\options.cc(2139): error C2440: “reinterpret_cast”:  can not convert from "int” to “jint” [E:\project\build\rocksdb\java\rocksdbjni_je.vcxproj]
+```
+
+and line `2165`, `3401`, `3428`
+
+@ananclub And how about which version of Windows and which version of Visual Studio?
+
+win7 x64 
+vs 2015 
+java 1.8
+
+@ananclub If I take this patch: https://github.com/facebook/rocksdb/pull/1446 and set `FAIL_ON_WARNINGS` as `OFF` and also this patch: https://github.com/facebook/rocksdb/pull/1452
+
+Then the following build works fine for me:
+
+``` cmd
+git clone https://github.com/facebook/rocksdb.git
+cd rocksdb
+mkdir build
+cd build
+cmake -G "Visual Studio 14 Win64" -DJNI=1 ..
+msbuild rocksdb.sln /p:Configuration=Release /m:4
+```
+
+Hopefully those two mentioned PRs will be merged soon.
+
+Does that help you?
+
+Note - Also you would be better compiling with Java 1.7, which is the officially supported version for RocksJava at present.
+
+@ananclub I am closing due to no response.
+

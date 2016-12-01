@@ -1,0 +1,54 @@
+I thought all the column families share one WAL, according to the wiki page about Column Families. Correct?
+
+Just after startup:
+
+```
+2014/07/20-13:46:27.666582 7f356d4a7700 [0] New memtable created with log file: #5
+2014/07/20-13:46:27.667030 7f356d4a7700 [1] New memtable created with log file: #5
+...
+```
+
+After a while:
+
+```
+2014/07/20-13:47:20.303093 7f356d4a7700 [default] New memtable created with log file: #135
+2014/07/20-13:47:20.303504 7f356d4a7700 [0] New memtable created with log file: #135
+2014/07/20-13:47:20.303906 7f356d4a7700 [1] New memtable created with log file: #135 
+...
+```
+
+Then:
+
+```
+2014/07/20-13:48:26.201852 7f356d4a7700 [96] New memtable created with log file: #154
+2014/07/20-13:48:26.254996 7f356d4a7700 [80] New memtable created with log file: #155
+2014/07/20-13:48:26.285804 7f356d4a7700 [13] New memtable created with log file: #156
+
+2014/07/20-13:59:15.708881 7f34d1266700 [96] Flushing memtable with next log file: 154
+```
+
+And column families no longer share one WAL. Does it make sense?
+
+I'm wondering maybe my setup is not tuned properly.
+My options:
+
+```
+128 column families
+target_file_size_base: 64M
+write_buffer_size: 64M
+max_total_wal_size: 4G
+```
+
+I'm glad to provide any details or logs, if you need.
+Thanks.
+
+@allenlz The column families still share the same WAL, although the messages are confusing. If there was any WAL write when the new memtable was created, new WAL will be created. The first few memtable creations were probably when there was no WAL writes. That way, since log 5 is empty, we don't have to create a new WAL when we create a new memtable.
+
+Please see my slides about column families here https://github.com/facebook/rocksdb/raw/gh-pages/talks/2014-03-27-RocksDB-Meetup-Igor-Column-Families.pdf
+Unfortunately, there was a lot of information in animations, which are gone in pdf format :(
+
+Let me know if you have any more questions.
+
+Thanks.
+After read the slides, I start to understand the meaning of rolling WAL.
+

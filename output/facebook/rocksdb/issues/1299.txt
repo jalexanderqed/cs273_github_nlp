@@ -1,0 +1,16 @@
+Hi,
+
+I have a application that stores small KV pair to rocksdb, the key and values are both quite small(100 - 200 bytes). Previously I'm using rocks4.2. The performance looks quite good and the memory usage is like ~4.6GB. Recently I upgraded to rocks4.8 and find the memory usage jumps to like ~12GB with the same load. Is there's any clues why the memory usage so high for 4.8? any options to reduce the memory usage there?
+
+I'm using only two basic turnings:
+- IncreaseParallelism()
+- OptimizeLevelStyleCompaction()
+
+thanks, -yuan
+
+We changed some default options. You can try call options.OldDefaults() before calling the function and see whether your old behavior comes back.
+
+I rethink about it. If you are using IncreaseParallelism() or/and OptimizeLevelStyleCompaction(), the option changes should be irrelevant. Can you compare the OPTIONS-xxx files generated using the new RocksDB with the old one and see what changed?
+
+thanks @siying for the help! I did some tests and find the  _soft_pending_compaction_bytes_limit_ seems quite suspicious. Will do more tests to verify here.
+

@@ -1,0 +1,22 @@
+Some wiki pages are missing:
+
+```
+https://github.com/facebook/rocksdb/wiki/Rocksdb-Table-Format
+https://github.com/facebook/rocksdb/wiki/Rocksdb-Architecture-Guide
+```
+
+Did you moved it or merge into other pages?
+
+Thanks
+
+https://github.com/facebook/rocksdb/wiki/Rocksdb-BlockBasedTable-Format
+https://github.com/facebook/rocksdb/wiki/PlainTable-Format
+
+https://github.com/facebook/rocksdb/wiki/RocksDB-Basics
+
+Thanks a lot.
+A lot of links from github/facebook/rocksdb or rocksdb.org(i.e. http://rocksdb.org/blog/521/lock/) are pointed to 'Rocksdb-Architecture-Guide'.
+Maybe it's better to create a link in the page 'https://github.com/facebook/rocksdb/wiki/Rocksdb-Table-Format'
+
+That's a good idea. I added the link to the new page on the old pages. Thanks!
+

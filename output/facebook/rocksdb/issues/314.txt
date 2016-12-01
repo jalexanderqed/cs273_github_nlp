@@ -1,0 +1,4 @@
+to avoid  error: ‘type’ may be used uninitialized 
+
+Thanks @wasa4587 !
+

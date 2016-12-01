@@ -1,0 +1,93 @@
+The iterator's valid_ flag was not always being correctly updated
+after a reverse seek.
+
+See also issue #636.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+Thanks for providing a potential fix.  Do you mind adding a minimum test where the test would fail without this fix while it passed with this fix?
+
+Hi, I would like to add a unit test but don't have the spare time right now due to sudden business with other work (the time it would take me is more to do with setting up and understanding the development/test environment than anything else).
+
+For example of such a test, iterate to the end of a non-empty iteration (so `valid_` is false), and then invoke `Prev`. At that point `Valid()` should be true but I think it will instead return false.
+
+@archiecobbs Any chance you will have time to add a test now?
+
+Sorry, I'm swamped with other stuff now and not really using RocksDB at the moment. Apologies for that.
+
+@archiecobbs Okay, so I tried your patch and I also wrote some tests to try and prove it. However if I understand correctly then to achieve the functionality that you are looking for would involve a much more complex patch.
+
+As you are not interested in pursuing this further, and adding such functionality is not on my own critical path, I am going to close this issue.
+
+My tests added to `db/db_iterator_test.cc` look like this:
+
+``` C++
+
+TEST_F(DBIteratorTest, PrevAfterNextAll) {
+  ASSERT_OK(Put("k1", "v1"));
+  ASSERT_OK(Put("k2", "v2"));
+  ASSERT_OK(Put("k3", "v3"));
+  ASSERT_OK(Put("k4", "v4"));
+  ASSERT_OK(Put("k5", "v5"));
+  dbfull()->Flush(FlushOptions());
+
+  ReadOptions read_options;
+  auto* iter = db_->NewIterator(read_options);
+
+  iter->SeekToFirst();
+  ASSERT_TRUE(iter->Valid());
+  ASSERT_EQ(iter->key(), "k1");
+  ASSERT_EQ(iter->value(), "v1");
+
+  // iterate through all key/value pairs
+  while(iter->Valid()) {
+    iter->Next();
+    ASSERT_OK(iter->status());
+  }
+  ASSERT_FALSE(iter->Valid());
+
+  // we are now past the last key/value pair, attempt to move to the previous
+  iter->Prev();
+  ASSERT_OK(iter->status());
+  ASSERT_EQ(iter->key(), "k5");
+  ASSERT_EQ(iter->value(), "v5");
+
+  delete iter;
+}
+
+TEST_F(DBIteratorTest, ManagedPrevAfterNextAll) {
+  ASSERT_OK(Put("k1", "v1"));
+  ASSERT_OK(Put("k2", "v2"));
+  ASSERT_OK(Put("k3", "v3"));
+  ASSERT_OK(Put("k4", "v4"));
+  ASSERT_OK(Put("k5", "v5"));
+  dbfull()->Flush(FlushOptions());
+
+  ReadOptions read_options;
+  read_options.managed = true;
+  auto* iter = db_->NewIterator(read_options);
+
+  iter->SeekToFirst();
+  ASSERT_TRUE(iter->Valid());
+  ASSERT_EQ(iter->key(), "k1");
+  ASSERT_EQ(iter->value(), "v1");
+
+  // iterate through all key/value pairs
+  while(iter->Valid()) {
+    iter->Next();
+    ASSERT_OK(iter->status());
+  }
+  ASSERT_FALSE(iter->Valid());
+
+  // we are now past the last key/value pair, attempt to move to the previous
+  iter->Prev();
+  ASSERT_OK(iter->status());
+  ASSERT_EQ(iter->key(), "k5");
+  ASSERT_EQ(iter->value(), "v5");
+
+  delete iter;
+}
+```
+

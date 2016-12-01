@@ -1,0 +1,46 @@
+From the bentch marks, we can see the bottleneck of rocksdb is also the write amplification. Write throughput is one tenth of the read throughput.
+The amplification can be calculated as 2_(N+1)_(L-1). N is Dn / Dn-1, Dn is the total data size of level n, which is 10 in leveldb. L is total level, which is lg (Total Data Size), may be 6 or 7.
+Because each key-value migrate to the highest level, it need to migrate L-1 times from Ln-1 to Ln. each migrate it need to read 1file in current level plus N files in higher level and write N+1 files in higher level.
+In the bentch mark test, write amplification may be just about 2_(10+1)_(6-1) = 110
+given the read throughput is much larger than write. There may be 2 strategies to reduce the amplification.
+1. Store more data in memory. if you store 80G data in memory and given N=10, then you need only one more level in disk. So the write amplification can be dramatically reduced. The shortcoming is that recovering the data in memory takes more time, may be about a minute. You can optimize the recover further.
+2. Change N, if you change N to 5, then L will be about 8, the amplification is 2_(5+1)_(8-1)=84. The short coming is that read speed will go down, may be only 3/4 of the origin.
+
+Your suggestions for reducing write-amp are valid. However getting more data into memory isn't trival. If you make the memtable huge then queries of it and inserts into it can be slow. An alternative is to keep old memtables in memory and then merge several of them to create a larger L0 file. RocksDB also has alternate memtable implementations where you sacrifice some features provided by the skip list to get better performance.
+
+Having spent a lot of time thinking about write-amplification this year, I am happy to read what others write about it. With RocksDB we now have LevelDB-style (leveled) and HBase-style compaction (universal). I think you are describing write-amp for leveled compaction above and write-amp for it is usually much worse than for universal. However, I don't understand why you include the "2*" term in the cost formula above. I think that might be doubling the write-amp that is likely to occur. The 2X will account for the reads & writes that can be done during compaction, but I call that compaction amplification, not write amplification.
+
+I use the following estimate for write-amp with leveled compaction when there are N levels -- L0, L1, L2, ... LN-1.
+- +1 for the redo log
+- +1 for the write to an L0 file
+- +1 for compaction to L1 assuming size(L0 files in compaction) == size(L1)
+- +10 for each level that follows assuming default growth ratio of 10 between levels was used
+
+So my estimate is 3 + 10*X where X is the number of levels excluding L0 and L1. If you use the --stats_per_interval and --stats_interval options with db_bench when doing a benchmark that writes data it will show the amount of reads and writes per level and the total write-amp and the value printed there tends to match the estimated cost I describe here.
+
+My calculation has included the read IO, so I include "2*" term.
+Given the speed of read/write is 126k/17k, just about 7.5, Then I think the io-amp is the bottleneck. Maybe making the memtable huge or keep more memtables in memory is a worthy strategy.
+
+And another non trivial strategy is to split range dynamicly like bigtable or hbase. Then it can keep the number of levels low.
+
+RocksDB has two compaction algorithms -- leveled and universal. leveled is what you we discussed earlier on this thread. universal is more like hbase and write amplification is much lower with it. Try db_bench --compaction_type=1. But we really need to provide more docs for it.
+
+We have added a new compaction algorithm called FIFO compaction:
+https://github.com/facebook/rocksdb/commit/6de6a066313876c0142db643a75272c3578b39f6
+
+FIFO compaction allows a database to behave more like a TTL-based cache where older entries are automatically purged. This setting can be configured such that write-amplification is really low, close to 1 or 2.
+
+Will there be any performance impact for using this FIFO compaction with level db?
+Basically, I want to know what are the trade-offs for doing this ?
+
+LevelDB?
+
+FIFO compaction is currently very low overhead and write amplification, but might increase space and read amplification. It is also TTL based, so it deletes oldest records automatically.
+
+Sorry, I mean Rocksdb :-)
+Thanks for the information. But, delete is very expensive in flash. Did you guys have any benchmark data (performace and WA induced) at scale on flash for the Rocksdb ?
+
+These are our performance benchmarks: https://github.com/facebook/rocksdb/wiki/Performance-Benchmarks
+
+Closing this since it's not really an issue. Please post in https://www.facebook.com/groups/rocksdb.dev/ if you wish to discuss this further.
+

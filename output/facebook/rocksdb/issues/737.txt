@@ -1,0 +1,4 @@
+Previously, calling it caused program abort.
+
+Thanks for fixing @mlin !
+

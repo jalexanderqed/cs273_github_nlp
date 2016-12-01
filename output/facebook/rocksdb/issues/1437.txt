@@ -1,0 +1,8 @@
+The current 10 millisecond waiting for test results may not be sufficient in some test environments. Increase it to 60 seconds and check the results for every 1 milliseond.
+
+Already reviewed: https://reviews.facebook.net/D65457
+
+@siying has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4099443).
+
+@ajkr it's a commit you've already reviewed. Please merge whenever you feel it's ready.
+

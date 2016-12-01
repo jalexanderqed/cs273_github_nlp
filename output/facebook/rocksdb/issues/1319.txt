@@ -1,0 +1,44 @@
+The break trace as below:
+
+```
+(gdb) bt
+#0  0x00000000004937db in rocksdb::DBImpl::WriteImpl(rocksdb::WriteOptions const&, rocksdb::WriteBatch*, rocksdb::WriteCallback*) () at /usr/local/gcc/include/c++/5.1.0/bits/atomic_base.h:396
+#1  0x00000000004952b4 in rocksdb::DBImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch*) () at db/db_impl.cc:4260
+#2  0x000000000043983b in writeDataEntryForFamily(rocksdb::DB*, HmsetEntry const&, unsigned long long, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) ()
+```
+
+the code of atomic_base.h:396 as blow:
+
+```
+      _GLIBCXX_ALWAYS_INLINE __int_type
+      load(memory_order __m = memory_order_seq_cst) const noexcept
+      {
+       memory_order __b = __m & __memory_order_mask;
+  __glibcxx_assert(__b != memory_order_release);
+  __glibcxx_assert(__b != memory_order_acq_rel);
+
+  return __atomic_load_n(&_M_i, __m);
+      }
+```
+
+Who can help me? Thank you.
+
+Is there a change that the you are trying to write to a DB that is just destroyed by another thread?
+
+Thanks very much, as you said, there is bug in my code. It works OK now.
+Can you tell me the reason why multi compact thread seem didn't work simultaneously? The detail as blow, which I had memtioned in `https://github.com/facebook/rocksdb/issues/1290` :
+
+```
+BTW, why multi compact thread seem didn't work simultaneously? From my observation, when rocksDB schedule one compact job ( the same as flush job), it will wake up one thread to work. And this thread will try to pick most compactions (or most imms) to deal, so when another compact or flush job wake up another thread, there is little thing to feed.
+The log like: 
+"2016/08/19-15:24:32.972161 7f55c8e9b700 (Original Log Time 2016/08/19-15:24:32.972144) Compaction nothing to do"
+
+or one flush job too much imm.
+
+And then, in order to improve compact speed, I have to improve multi-subcompact. But, another question trouble me. Sub-compaction seems didn't work too. 
+The log like:
+"num_subcompactions": 1
+
+Thanks very much, hope you tell me how to really improve compact speed as disk I/O is not limitation in my case.
+```
+

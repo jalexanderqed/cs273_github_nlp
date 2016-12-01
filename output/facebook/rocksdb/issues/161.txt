@@ -1,0 +1,20 @@
+Hi team rocksDB, 
+   I am getting authentication approval  issues while browsing code for review 
+ref link: https://reviews.facebook.net/18717 . Is this link internal to FB ? Phabricator authentication waiting for approval. Can some help me to resolve this issue ?
+
+This is not internal to Facebook. Maybe you need to verify your e-mail?
+
+cc @jamesgpearce 
+
+I am directly able to login to my Phabricator account. But with ref to link  https://reviews.facebook.net/18717 i am getting this issue Waiting for approval (Wait Patiently)
+
+Your URL is incorrect. Please use https://reviews.facebook.net/D18717 instead of https://reviews.facebook.net/18717
+
+Just in case you didn't notice, It misses a 'D' before 18717 in your link. Maybe it just a typo when posting.
+
+sorry for typo. I tried opening the link https://reviews.facebook.net/18717  but same issue. Even  created another account and completed the email verification with new account. I am able to login to my phabricator account. I can see verified account in queries window. But with link   https://reviews.facebook.net/18717  I am getting info log  "Your account has been created, but needs to be approved by an administrator. You'll receive an email once your account is approved."   
+
+You're still missing D in the link
+
+please reopen this issue if it is not yet solved....
+

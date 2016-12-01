@@ -1,0 +1,73 @@
+I'd like to speed up the construction of a large database by breaking it up into chunks and computing each piece in parallel on separate systems, then merging the results back together.
+
+It would _seem_ that there should be a way to just drop all the .sst files into the same directory and execute a compaction to obtain a fully-sorted database with the desired layout. However, there must be some kind of metadata associated with the .sst files, and obviously they need to have unique names or there would be collisions.
+
+Is there any way to pull an external .sst into rocksdb?
+
+Theoretically, you could just move the .sst files into the directory and recreate the MANIFEST file using RepairDB() API call. RepairDB() will regenerate the MANIFEST from the info it reads from .sst files. After you have a MANIFEST, you can open the DB normally and compact.
+
+RepairDB doesn't work with column families because that metadata can't be read from the .sst files themselves.
+
+Ok, this is interesting. I guess I'll still have a full compaction of the data at the end.
+
+I would actually recommend building a MergeDatabases() function. The function would just iterate over all databases and produce a new one. Should be only few lines of code.
+
+[Sorry if I am hijacking this thread, let me know if I should instead open a new issue]
+
+Reading this, I was wondering whether this can be used for designing some sort of bulk load from grid. Creating new SSTs on grid , shut down DB, copy grid SST files, RepairDB and db back in business. 
+- Now for column families , do you think it will be too complicated to do a similar thing but changing the MANIFEST to reflect the new files after the change.
+- Should I be looking at a very different approach for bulk load than this ?
+
+@jayadev It might be a good approach to bulk generation new DB. We have not been using this approach at Facebook, though.
+
+I'm not sure I understand your question about column families. The problem is that only MANIFEST knows the mapping from column families to files. If you tell us "this file is from this column family", it could definitely be doable.
+
+Can putting all the files into one directory and run RepairDB, will it work?
+
+To work with column families, we'd need to augment the SST to include the column familiy name, and then teach repair.cc to use it, right?  Would there be a problem with adding a new metadata block?
+
+@siying This sounds like a nice strategy, but compaction is _really_ slow. It's the biggest bottleneck in my use of rocksdb. For our application I take about 5 hours to generate the data to put into the db and 50 hours to compact/compress it. I'm using the bulk load pattern from the tests. The data generation is parallel, while the compaction is effectively single threaded. Benchmarking with gprof suggests that most of the time is spent in zlib compression routines. I really would like to speed this up as it's been quite difficult to iterate with a 3-day rebuild time on the system.
+
+And I would be happy not to compact at all but sorting while loading slows things by a factor of 2 and yields a db that is 5 times as big. Not an option as we need to fit the whole thing in memory and it's already 150-200G when compressed with zlib (800 or so when using faster compressors like snappy).
+
+1. do you want to insert all the newly (independently) generated database chunks into an existing database or do you want to insert them into an empty database?
+2. do all the newly (independently) generated database chunks have mutually-exclusive range of keys?
+
+If you're using bulk load optimization, that will optimize write amplification (how much data you write to disk), and unfortunately not performance. CompactRange() is still single-threaded unfortunately, although @rven1 is going to fix that soon.
+
+Bulk load will disable your compactions until the end. I actually found that you can get better performance if you compact as you go. That way compactions can continue in parallel, while a single L0->L1 compaction will be single-threaded.
+
+@igorcanadi have there been any updates on multi-threaded CompactRange()? I'm also seeing this as a bottleneck.
+
+No but now we have a patch that if you insert keys in sorted order, and issue a CompactRange() in the end, it can be just trivial move, without rewriting the data.
+
+@igorcanadi @siying What about running a bulk load, to insert all data, then simply selecting from that now-sorted (not-compacted) database and creating a new database while running compactions?
+
+It seems like a bit of extra work, but, it seems like a possible way of running compactions in parallel. 
+
+@Downchuck something you can give a try.
+
+@ekg Does the API AddSstFile() help your use case?https://github.com/facebook/rocksdb/wiki/Creating-and-Ingesting-SST-files
+
+I've stepped around this issue by building a custom in-memory database on
+top of succinct data structures from https://github.com/simongog/sdsl-lite.
+However, I may have need to use rocksdb as an intermediate in this process
+and when I do I'll look into the AddSstFile interface. Thanks!
+
+On Tue, Aug 9, 2016 at 1:51 AM dhruba borthakur notifications@github.com
+wrote:
+
+> @ekg https://github.com/ekg Does the API AddSstFile() help your use
+> case?
+> https://github.com/facebook/rocksdb/wiki/Creating-and-Ingesting-SST-files
+> 
+> —
+> You are receiving this because you were mentioned.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/issues/499#issuecomment-238412624,
+> or mute the thread
+> https://github.com/notifications/unsubscribe-auth/AAI4Ec3lpjGr8EvVVJSzfhSwhe6DXDIeks5qd8EQgaJpZM4DdXbb
+> .
+
+please reopen if needed.
+

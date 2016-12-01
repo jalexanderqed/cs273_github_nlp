@@ -1,0 +1,10 @@
+This commit adds support for using WriteBatchWithIndex (and its associated WBWIIterator) from the Java API.
+
+The Phabricator review is available here: https://reviews.facebook.net/D30891
+
+Hey @yhchiang any update on this?
+
+Hey @adamretter:  Sorry for the delay.  Was busying in some internal stuff in the past few days.  I will go through this sometimes today.
+
+Thanks very much @yhchiang 
+

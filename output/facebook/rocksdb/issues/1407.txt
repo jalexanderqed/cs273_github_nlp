@@ -1,0 +1,10 @@
+
+@domsj where do you get the undefine symbols error?
+
+Sorry should've been more clear in my description.
+In my ocaml binding for rocksdb I got an error while linking about these 'undefined symbols' after upgrading from rocksdb 4.3.1 to 4.11.2.
+So it looks like at some point between those 2 releases the implementations for these symbols were removed, but the declarations in c.h were not removed. This PR fixes that oversight.
+(If you grep for the symbols you'll only find them in c.h)
+
+Thank you for your contribution!
+

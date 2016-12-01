@@ -1,0 +1,30 @@
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+I'm fine with the code part of the change. However, by removing the parameter names, we will make it harder for users to understand what those parameters are. For example,
+
+```
+-  virtual bool KeyMayExist(const ReadOptions& options,
+-                           ColumnFamilyHandle* column_family, const Slice& key,
+-                           std::string* value, bool* value_found = nullptr) {
++  virtual bool KeyMayExist(const ReadOptions&,
++                           ColumnFamilyHandle*, const Slice&,
++                           std::string*, bool* value_found = nullptr) {
+```
+
+Users don't know the third parameter is key and the forth is value. So you may need to do something like:
+
+```
+ virtual bool KeyMayExist(const ReadOptions&,
+                         ColumnFamilyHandle*, const Slice& /* key */,
+                         std::string* /* value */, bool* value_found = nullptr) {
+```
+
+if you want to get the commit in.
+
+By the way, where did you get the warnings?
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+@siying agreed - in my project I include rocksdb/db.h and build with -Werror -Wunused-parameter, which fails with the current code; the rocksdb makefile also has -Wno-unused-parameter (which IMO should not be the case)
+

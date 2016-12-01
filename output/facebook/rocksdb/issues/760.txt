@@ -1,0 +1,31 @@
+1) There is no need to download and install the Snappy library twice
+just to get access to its header file during the compile phase.
+2) Ensure that the compression library headers files used during the
+compile phase are the same ones used to build the static library that
+is linked into the library.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Not a Makefile expert so very much interested in feedback.  Note that I don't think the LZ4 library currently gets linked into the static Java jar. That issue could be addressed the same way the Snappy library is currently handled, but, I was trying to formulate a cleaner solution.
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+Thanks for your contribution, @jwlent55.  I'm not a Makefile expert here either, but explicitly specify the library file sounds the right direction to me.  I will keep this request open for few days to see whether other people have some comments / feedback.
+
+I amended it to also stop downloading the zlib and bzip2 in the build-linux-centos.sh script.  I had done a lot of my testing in local mode - "rocksdbjavastatic" (i.e. where the OSX build should be created, but, for me was a fast way to create a linux64 build if I did not need to test the VitrualBox part). In that case the zlib and bzip2 libraries were already installed.  I forgot that in the VirtualBox builds those two libraries were downloaded and installed by the script.
+
+Strange.  Before the amend one of the tests suties failed. Nasty segmentation fault I think.  And it failed in a non static Java build test ("rocksdbjava" target).  I had tried to isolate my changes to the Makefile from that target.  In any event the amend should have nothing to do with the "rocksdbjava" target (change was to the build-linux-centos.sh script). Now the tests both pass. A little unsettling.
+
+@jwlent55, the Make files calls a script, build_tools/build_detect_platform, which executes this code block to determine weather or not to pass the -DSNAPPY argument to gcc while compiling the rocksdbjni.so file:
+
+$CXX $CFLAGS -x c++ - -o /dev/null 2>/dev/null  <<EOF
+      #include < snappy.h >
+      int main() {}
+EOF
+
+If the compiler cannot file snappy.h in the system's LD_LIBRARY_PATH, the .so won't be compiled with support for snappy functions (all invocations to snappy related functions are guarded by #ifdef snappy . The yum packages make snappy.h available in gcc's LD_LIBRARY_PATH . This also applies to the other *-devel packages that are yum installed .
+
+Thanks .
+
+ -- Vivek
+

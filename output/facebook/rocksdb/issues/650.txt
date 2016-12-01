@@ -1,0 +1,6 @@
+Hello, I'm interested in using WBWI from Rust, which requires adding support for it to the C API.
+
+Thanks!
+
+@dgrnbrg I previously added support for WBWI to the Java API. I guess you could look at that work and the conventions of the existing C API.
+

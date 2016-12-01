@@ -1,0 +1,16 @@
+We are using RocksDB 4.2 as a FIFO queue (or a time window). Each key is associated with the instant the key is produced. Then the queue will be scanned to find out all the keys produced at prior to a given instant.
+
+In most cases, the sst files do not overlap with each other, and they will be put in Level-1 with the trivial move. As these files does not overlap with the files produced later, they will not be selected in the background compaction performed later and cannot be deleted.  Finally, the performance of scanning degrades significantly.
+
+I don't know whether the problem is solved in the new version. Currently, the only method to work around this problem is to perform manual compactions where the trivial move is disallowed. Is there any method to disallow trivial move in background compaction?
+
+You can try two methods:
+1. See https://github.com/facebook/rocksdb/wiki/Implement-Queue-Service-Using-RocksDB
+2. You should try Universal style compaction, which is probably better suited for your case than level style compaction.
+
+Universal style compaction sees perfect in our cases.
+
+Thanks for your reply :)
+
+You can trigger manual full compaction periodically just to pass all the data through the compaction filter.
+

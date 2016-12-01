@@ -1,0 +1,4 @@
+There are two   memtablerep.h and two slice_tansform.h included in options.h
+
+Fixed https://github.com/facebook/rocksdb/commit/38feca4f35ca123d71d869b8f7bb814bf442ea12
+

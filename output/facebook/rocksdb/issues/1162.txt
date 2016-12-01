@@ -1,0 +1,24 @@
+Hey All, 
+
+Very new to RocksDB configuration and building under Visual Studio 12 2013 C++. After running in Debug mode through a VisStudio developer command line, I'm Currently running into some linker errors where I cannot find 
+
+gflags/glfags.h 
+
+My errors are coming out like this : 
+
+![image](https://cloud.githubusercontent.com/assets/7003288/15975749/7cfa943a-2f25-11e6-92ed-1ce18b93ae4a.png)
+
+And
+
+It seems I'm missing my Rocksdblib.lib file in my Debug folder.
+
+![image](https://cloud.githubusercontent.com/assets/7003288/15976011/c111555e-2f26-11e6-9667-865e4b6b3371.png)
+
+Any help would be appreciated!
+
+In thirdparty.inc, comment out the libraries you don't have. (very unlikely you have gflag in Windows). This is documented in step 1 in CMakeLists.txt.
+
+@HawleyJean do not define -DGFLAGS=1 on the Cmake command line if you do not have GFalgs to link to. If you do have it, then either edit thirdparty.inc OR override with env vars to set include and library paths to it.
+
+Thank you! Could I also ask about the Debug\rocksdblib.lib file? 
+

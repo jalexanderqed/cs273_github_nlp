@@ -1,0 +1,8 @@
+This fixed issue #93
+
+Summary:
+Change to store the return value from ftruncate().
+The reason is that ftruncate() has "warn_unused_result" attribute in some environment.
+
+tnx @yumiOS 
+

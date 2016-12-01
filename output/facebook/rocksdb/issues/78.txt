@@ -1,0 +1,21 @@
+This is the start of a pull request to motivate making the hash function configurable. CRC32C is currently "hard-coded" a bit in the library, so to do this will take a bit of refactoring that might be easier for one of the FB team to do?
+
+Anyway, with level style compaction and when not using compression or using compression only at higher levels, CRC32C is the highest or second highest function (after memcpy) in perf top.
+
+One step to reduce this is to make abd70ecc2b7fe02709955ef14905d1628581b306 configurable again, but ideally one wants some kind of hash checksum.
+
+Presenting xxHash from https://code.google.com/p/xxhash/
+
+$ ./db_bench -benchmarks crc32c,xxhash
+CPU: 4 \* Intel(R) Core(TM) i7-3540M CPU @ 3.00GHz
+crc32c: 1.311 micros/op 762735 ops/sec; 2979.4 MB/s (4K per op)
+xxhash: 0.601 micros/op 1664997 ops/sec; 6503.9 MB/s (4K per op)
+
+great request, especially for an in-memory database.
+
+we should start refactoring the rocksdb code to make checksum pluggable. 
+
+Also, @alberts, can you please review this PR: https://github.com/facebook/rocksdb/pull/82 (not sure why I can't mention you there)
+
+More complete code is in pull request #87.
+

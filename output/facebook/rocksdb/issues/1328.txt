@@ -1,0 +1,14 @@
+Fixes #1296 
+
+Since these memtable_factories are shared_ptrs, whenever options is destroyed the static pointer becomes invalid. Any further use of these functions uses an invalid pointer. I eliminated this pattern from the C api, since there isn't much benefit to this in the first place.
+
+ I also added a test that fails without the fix. I don't know if it's to trivial to include, though.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Hmmm, I've signed the CLA already. Does it take a while to propagate?
+
+I emailed that email address.
+
+Thanks @adamfaulkner 
+

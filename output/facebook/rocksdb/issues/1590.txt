@@ -1,0 +1,12 @@
+
+If we don't wait for the threads to finish after each run, the thread queue may not be empty while the next test starts to run, which can cause unexpected behaviors.
+
+Also make some of the relaxed read/write more restrict.
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1590/files/e08a5f161422bcc8c25a6d511138ac1b0a04b5dc..df7f6f48b4faec7bb0416d7a1824df0b480b1816)
+@siying updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1590/files/df7f6f48b4faec7bb0416d7a1824df0b480b1816..f723f20773cd2f4c3f48f281fb6f40c8c52eff5d)
+Do it after each test and restrict some relaxed read/write.
+@siying has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4245922).
+I am in favor of replacing std::thread and other primitives in most cases with instances of a threadpool instance which would dispose of threads on destruction as needed and do other things as necessary. It is also can be customized. It our project I did it because std::thread implementation made its use unsuitable for multi tenant instances as it allocated memory unpredictably.
+@yuslepukhin I think it's a good idea. We should do this cleaning up when we have time.
+
+This checking, however, is not related to thread destruction. This is to wait all of work items in the thread pool to finish, so it is orthogonal. 

@@ -1,0 +1,94 @@
+Hello and thanks for RocksDB,
+
+When log_write_bench is run with the `-bytes_per_sync` option, the option does not influence any *sync* behaviour.
+
+```
+> strace -e trace=write,sync_file_range ./log_write_bench -record_interval 0 -record_size 1048576 -num_records 11 -bytes_per_sync 2097152 2>&1 | egrep '^(sync|write.*XXXX)'
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+```
+
+Note, `log_write_bench` has https://github.com/facebook/rocksdb/pull/1373 applied.
+
+I suspect that this is because the `-bytes_per_sync` option now needs to be using a `WritableFileWriter` and not a `WritableFile`.
+
+With the diff below applied, it changes to:
+
+```
+> strace -e trace=write,sync_file_range ./log_write_bench -record_interval 0 -record_size 1048576 -num_records 11 -bytes_per_sync 2097152 2>&1 | egrep '^(sync|write.*XXXX)'
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+sync_file_range(0x3, 0, 0x200000, 0x2)  = 0
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+sync_file_range(0x3, 0x200000, 0x200000, 0x2) = 0
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+sync_file_range(0x3, 0x400000, 0x200000, 0x2) = 0
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+sync_file_range(0x3, 0x600000, 0x200000, 0x2) = 0
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 1048576) = 1048576
+sync_file_range(0x3, 0x800000, 0x200000, 0x2) = 0
+```
+
+( Note that the first 1MB is not synced as mentioned in `util/file_reader_writer.cc::WritableFileWriter::Flush()` )
+
+This diff also includes the fix from https://github.com/facebook/rocksdb/pull/1373
+
+```
+> diff -du util/log_write_bench.cc.orig util/log_write_bench.cc
+--- util/log_write_bench.cc.orig        2016-10-04 12:06:29.115122580 -0400
++++ util/log_write_bench.cc     2016-10-05 07:24:09.677037576 -0400
+@@ -14,6 +14,7 @@
+ #include <gflags/gflags.h>
+
+ #include "rocksdb/env.h"
++#include "util/file_reader_writer.h"
+ #include "util/histogram.h"
+ #include "util/testharness.h"
+ #include "util/testutil.h"
+@@ -38,19 +39,21 @@
+   env_options.bytes_per_sync = FLAGS_bytes_per_sync;
+   unique_ptr<WritableFile> file;
+   env->NewWritableFile(file_name, &file, env_options);
++  unique_ptr<WritableFileWriter> writer;
++  writer.reset(new WritableFileWriter(std::move(file), env_options));
+
+   std::string record;
+-  record.assign('X', FLAGS_record_size);
++  record.assign(FLAGS_record_size, 'X');
+
+   HistogramImpl hist;
+
+   uint64_t start_time = env->NowMicros();
+   for (int i = 0; i < FLAGS_num_records; i++) {
+     uint64_t start_nanos = env->NowNanos();
+-    file->Append(record);
+-    file->Flush();
++    writer->Append(record);
++    writer->Flush();
+     if (FLAGS_enable_sync) {
+-      file->Sync();
++      writer->Sync(false);
+     }
+     hist.Add(env->NowNanos() - start_nanos);
+```
+
+Thanks.
+
+The Travis CI job failure is because of errors in a java job (javadoc errors), and is not related to the change in this PR.
+
+Thank you for your contribution!
+

@@ -1,0 +1,23 @@
+The `%zu` and `%z` format specifiers do not work on Windows. This change replaces two instances of `%zu` that managed to sneak in with the `ROCKSDB_PRIszt` macro defined in each port header file.
+
+Looks good to me. Will merge after tests pass.
+
+There appears to be an pre-existing error causing the Travis build to fail. I'll try and fix it:
+https://travis-ci.org/facebook/rocksdb/jobs/145980146
+
+A fix is on the way: https://reviews.facebook.net/D60927
+
+@siying The travis build is failing because of the type error we already discussed, and I fixed a windows build error that's been hanging around for a while. It was caused by removing `port/port.h` from the includes of `sim_cache.cc` (not directly, through another file) in [this](https://github.com/facebook/rocksdb/commit/4b952535878c1c4c8c3722b9917517e335dd6641) commit. There is one test failing on appveyor, but since those have been failing consistently for a while, I can't really tell what introduced it. I can look into it and fix it in this PR if you like, or it can be handled in a separate PR.
+
+https://reviews.facebook.net/D60927 should have fixed the build error. Can you rebase your change?
+
+@siying Rebased and re-implemented my original fix for `sim_cache.cc`, which you and @kradhakrishnan were discussing. It works and is definitely cleaner.
+
+Thanks! I'll merge once the tests pass.
+
+@siying One of the Travis build tests seg-faulted. I have no idea why.
+
+No worries. It's definitely unrelated. I'm merging it.
+
+Thank you for your contribution!
+

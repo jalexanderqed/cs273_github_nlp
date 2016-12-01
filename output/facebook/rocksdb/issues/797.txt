@@ -1,0 +1,50 @@
+See https://github.com/facebook/rocksdb/issues/793 
+- Added GetPlainTableOptionsFromMap() for string option parser
+- Added corresponding test for GetPlainTableOptionsFromMap()
+
+Hi @siying , could you please review and merge this? 
+PlainTableOption support has been long missing in option helper, and we are now in need of this to experiment PlainTable. 
+Thank you. 
+
+Taking a look.
+
+It looks great to me, except the code style comments I posted, but I would wait for @yhchiang to take a look before merging as he recently worked on this file extensively.
+
+Thanks @siying  for reviewing this. 
+I will make another checkin to fix 
+1) naming convention from GetTableOptions() to table_options()
+2) const string for common strings
+
+Forgot @yhchiang is on PTO. Let me merge it, and please send the the follow-up change just after that.
+
+@yhchiang please feel free to take a look after you come back.
+
+Thank you :)
+
+@SherlockNoMad It breaks our internal CI:
+
+10:08:56 [ RUN      ] OptionsTest.GetColumnFamilyOptionsFromStringTest
+10:08:56 util/options_test.cc:602: Failure
+10:08:56 Value of: "PlainTable"
+10:08:56   Actual: 0x7ebc96
+10:08:56 Expected: new_cf_opt.table_factory->Name()
+10:08:56 Which is: 0x8480e3
+10:08:56 terminate called after throwing an instance of 'testing::internal::GoogleTestFailureException'
+10:08:56   what():  util/options_test.cc:602: Failure
+10:08:56 Value of: "PlainTable"
+10:08:56   Actual: 0x7ebc96
+10:08:56 Expected: new_cf_opt.table_factory->Name()
+10:08:56 Which is: 0x8480e3
+10:08:56 /bin/sh: line 7: 4097981 Aborted                 (core dumped) ./$t
+10:08:56 make: **\* [check] Error 1
+10:08:56 Build step 'Execute shell' marked build as failure
+10:08:56 Notifying upstream projects of job completion
+10:08:56 Email was triggered for: Failure - Any
+10:08:56 Sending email for trigger: Failure - Any
+10:08:56 Sending email to: leveldb@fb.com
+10:08:56 Finished: FAILURE
+
+Can you take a look? I may revert the diff if it can't be fixed after a few moments.
+
+https://reviews.facebook.net/D49767 should fix it.
+

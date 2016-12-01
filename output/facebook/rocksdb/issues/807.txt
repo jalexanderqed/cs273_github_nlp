@@ -1,0 +1,27 @@
+Hello @igorcanadi : is this the kind of thing you are looking for? You only wanted some of the methods of `Iterator` implemented so I have currently put in dummy methods for the other abstract methods but I could easily implement them too if required. 
+
+It will be great if we do not have to materialize the entire list in an in-memory vector, instead every call to Next()/Get() would  return the appropriate value from the current/next position of the internal iterator.
+
+Indeed, not materializing the list in an in-memory vector seems like a much better idea. Right now I am just trying to understand exactly what interface is required and I am trying to produce something that has the correct behaviour. I have some questions.
+
+First, why is it that you want an implementation of the `Iterator` interface (a C++ abstract class) yet you only want the methods `GetObject()` (not sure about the type -- I made a guess); `Next()`, `Valid()` and `Status()` ? What about the other methods `=0` methods? As I said above I have just put in dummy code for some of them and implemented the easy ones based (on the assumption of an implementation that just backs an in memory vector). I will continue to read the code in the repository to look for another example which has just four methods like this for an iterator.
+
+I'm uneasy about the type I have used to return the iterator from `SearchRadial` -- specifically the use of `GetIterator** geo_iterator` and I shall ponder a better way of doing things.
+
+I am also wondering if you actually want a `GeoIterator` abstract interface (in `geo_db.h`) and then a `GeoIteratorImpl` class with a concrete implementation (in `geodb_impl.h` and `geodb_impl.cc`). I think that is what makes most sense because then the `GeoIteratorImpl` can use the concrete data structures and representation known in `GeoDBImpl` without having to use an in memory vector to represent the coordinates.
+
+I shall make these changes, but advice on what to do for the other methods of `Iterator` that you don't want would be good, thanks.
+
+> then a GeoIteratorImpl class with a concrete implementation
+
+That makes complete sense to me. I will wait to hear from igor before making any changes
+
+Indeed, it is only now that the task is making sense to me :-)
+Before I could not understand why one would just want to return an iterator that wraps a vector since a vector is already iterable. However, returning an iterator that iterates over the underlying structure in a lazy manner does make a lot of sense. I shall wait on @igorcanadi 's advice. Of course, I am very happy to just wrap the iterator and be done with it -- I believe this is my last bootcamp activity :-)
+
+@satnam6502 No need to actually implement a Iterator interface -- Feel free to create GeoIterator abstract interface that will look like Iterator, but except key() and value() methods it would return GeoObject(). Something similar to Cursor interface in DocumentDB: https://github.com/facebook/rocksdb/blob/master/include/rocksdb/utilities/document_db.h#L35
+
+BTW, since you're internal, please use `arc diff` to send the patch. Check out more information about this on the internal task.
+
+Issue addressed via arc.
+

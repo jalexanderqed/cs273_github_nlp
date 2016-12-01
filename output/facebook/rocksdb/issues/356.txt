@@ -1,0 +1,22 @@
+BlockBasedTableConfig
+- ported Checksum
+- ported IndexType
+
+PlainTableConfig
+- added missing options
+- added EncodingType
+
+@yhchiang i removed the unnecessary import and rebased.
+
+@fyrz  Can you please add this diff to reviews.facebook.net so that we can easily discuss the diff? Thanks!
+
+@ankgup87 done see: https://reviews.facebook.net/D26595
+
+@fyrz: Made some inline comments in the diff, ping here just in case if you didn't notice that.  Nothing hurry :)
+
+@yhchiang ping review comments are in.
+
+@yhchiang anything new here ?
+
+LGTM.  Thanks for your contribution!
+

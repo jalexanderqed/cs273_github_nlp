@@ -1,0 +1,8 @@
+also hooked up WriteBatchInternal
+
+not sure if there were some caveats I'm not aware of in hooking this up, it just seemed missing. 
+
+the code lgtm, but can you make sure that your lines are shorter than 80 characters?
+
+@igorcanadi oops, was at 80 on a couple, sorry. updated
+

@@ -1,0 +1,12 @@
+In db_bench_tool.cc, the following code at the line 2707 clears the previous configuration of options.compression_per_level based upon the min_level_to_compression parameter. As a result, all the levels starting from L0 use the same compression type regardless to the min_level_to_compression parameter. After commenting out this statement, min_level_to_compression configuration works as expected in db_bench.
+
+if (FLAGS_min_level_to_compress >= 0) {
+options.compression_per_level.clear();
+}
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+Thanks, can you please remove the lines instead of commenting them
+

@@ -1,0 +1,248 @@
+I am seeing a strange problem which I am struggling to track down. Unfortunately the problem is non-deterministic, I have a suite of tests and if I run them 5 times, then the problem may only occur 3 times; It seems that **_sometimes**_ a NewIteratorWithBase taken on a Column Family for a WriteBatchWithIndex can miss some keys. 
+
+For background, I am working from Java and I have a WriteBatchWithIndex for which I take a NewIteratorWithBase on a Column Family. My column family holds serialized objects (of key/value pairs), the keys I store are composite with three parts
+1. object id (a UUID 128bits)
+2. unique key unit decoding length (stored as 4 bytes)
+3. unique key id (a hierarchical id like 1.1 or 1.1.1) which is decoded by using 2. so that a bytewise comparison will work.
+
+I have a custom comparator written in C++ which provides the ordering for my keys. It groups keys together by object id, by using memcmp on two different object ids, it also knows how to order the unique keys so that for example 1.1 comes before 1.1.1, and 1.1.2 comes before 1.2. This comparator is provided to the column family descriptor when opening the  database, the returned column family handle is used when I take a NewIteratorWithBase.
+
+When tracing my application, when I see the expected behavior the following events occur:
+
+```
+Storing object: 749b500f-9701-411e-a2a2-112bb9c855be
+Stored: 749b500f-9701-411e-a2a2-112bb9c855be:1
+Stored: 749b500f-9701-411e-a2a2-112bb9c855be:1.1
+Stored: 749b500f-9701-411e-a2a2-112bb9c855be:1.2
+Stored: 749b500f-9701-411e-a2a2-112bb9c855be:1.2.1
+
+....
+Removing object: 749b500f-9701-411e-a2a2-112bb9c855be
+Removed: 749b500f-9701-411e-a2a2-112bb9c855be:1
+Removed: 749b500f-9701-411e-a2a2-112bb9c855be:1.1
+Removed: 749b500f-9701-411e-a2a2-112bb9c855be:1.2
+Removed: 749b500f-9701-411e-a2a2-112bb9c855be:1.2.1
+```
+
+However, when I get errors, the trace shows that the following events occured:
+
+```
+Storing object: 749b500f-9701-411e-a2a2-112bb9c855be
+Stored: 749b500f-9701-411e-a2a2-112bb9c855be:1
+Stored: 749b500f-9701-411e-a2a2-112bb9c855be:1.1
+Stored: 749b500f-9701-411e-a2a2-112bb9c855be:1.2
+Stored: 749b500f-9701-411e-a2a2-112bb9c855be:1.2.1
+
+....
+Removing object: 749b500f-9701-411e-a2a2-112bb9c855be
+Removed: 749b500f-9701-411e-a2a2-112bb9c855be:1
+Removed: 749b500f-9701-411e-a2a2-112bb9c855be:1.1
+Removed: 749b500f-9701-411e-a2a2-112bb9c855be:1.2
+```
+
+**_Note**_ that the key/value pair `749b500f-9701-411e-a2a2-112bb9c855be:1.2.1` is not removed in the second trace.
+
+My code for removing an object looks like:
+
+``` java
+ObjectId objectId = object.getId();
+rocksLog.trace("Removing object: " + objectId.toString());
+
+RocksIterator baseIterator = rocks.newIterator(cf, readOptions);
+RocksIterator iterator = writeBatchWithIndex.newIteratorWithBase(cf, baseIterator);
+
+//seek to our objectId, iterate over all following key/value pairs that start with our objectId
+for (iterator.seek(objectId.serialize()); iterator.isValid() && ObjectKey.deserializeObjectId(iterator.key(), 0).startsWith(objectId); iterator.next()) {
+    writeBatchWithIndex.remove(cf, iterator.key());
+    rocksLog.trace("Removed: " + ObjectKey.deserialize(iterator.key(), 0).toString());
+}
+```
+
+Any ideas why I might see NewIteratorWithBase not always iterate all present keys? The thing that worries me is that running the same sequence of store and remove steps over and over again only shows the problem sometimes and not every time. Could this be a problem in my comparator, or is it more likely the problem is elsewhere in Rocks? I can share the comparator code if that helps.
+
+Perhaps this is a known issue that is already fixed? I am using revision `4a855c0` of RocksDB from May 18th 2015.
+
+Not familiar with the WriteBatchWithIndex.  @siying and @agiardullo: have you ever seen this issue in RocksDB C++ or have any idea on what might go wrong?
+
+@igorcanadi has more practical experience on using this class. 
+
+You are updating entries in WriteBatchWithIndex while iterating it? This is not a target use case and we don't have any unit test coverage to it. I'm not sure whether we support it. @igorcanadi @agiardullo  do you ever use WriteBatchWithIndex in this way?
+
+@siying Okay that is interesting. I can't really think of an efficient way to remove a set of keys which are composite (i.e. remove a set of keys by prefix) without iterating. I could construct a list of keys to remove first and then iterate the list, removing each one from the WriteBatchWithIndex, but that seems kinda indirect.
+
+@siying, I’ve personally never iterated through a wbwi while modifying it.  And not too familiar with the internals of this class to know whether this is supported.
+
+On May 28, 2015, at 10:51 AM, Adam Retter <notifications@github.com<mailto:notifications@github.com>> wrote:
+
+@siyinghttps://github.com/siying Okay that is interesting. I can't really think of an efficient way to remove a set of keys which are composite (i.e. remove a set of keys by prefix) without iterating. I could construct a list of keys to remove first and then iterate the list, removing each one from the WriteBatchWithIndex, but that seems kinda indirect.
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/616#issuecomment-106525889.
+
+@adamretter did you check for string termination issues ? Sounds somehow like one, we did also see such a behavior with Slices, if you remember that.
+
+@fyrz Sorry you might need to jog my memory a bit here. From the Java API side the keys and values are always byte[], where do you think I might have issues with C-style string termination?
+
+> You are updating entries in WriteBatchWithIndex while iterating it? This is not a target use case and we don't have any unit test coverage to it. I'm not sure whether we support it. @igorcanadi @agiardullo do you ever use WriteBatchWithIndex in this way?
+
+Yes, I think we are expected to support read-our-own-changes in mongo even while iterating, although I'm not sure how often that happens. Is there anything fundamentally hard about this problem? Can we add unit-tests and make sure we support it?
+
+@igorcanadi not sure. Need to check the codes and write unit tests for it.
+
+@siying @igorcanadi I have also started occasionally seeing SIGSEGV and I am wondering if this is related. When it occasionally occurs, it is always when I am removing from a `WriteBatchWithIndex` that I am iterating. My JVM crash report looks like - 
+
+```
+---------------  T H R E A D  ---------------
+
+Current thread (0x00007f8cba001800):  JavaThread "main" [_thread_in_native, id=4867, stack(0x0000000109043000,0x0000000109143000)]
+
+siginfo: si_signo: 11 (SIGSEGV), si_code: 1 (SEGV_MAPERR), si_addr: 0x0000000122cb13c3
+
+...
+
+Stack: [0x0000000109043000,0x0000000109143000],  sp=0x0000000109141618,  free space=1017k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  [librocksdbjni7349356084398018261..jnilib+0x1bc66]  eb::NativeDomKeyComparator::Compare(rocksdb::Slice const&, rocksdb::Slice const&) const+0x6
+C  [librocksdbjni7349356084398018261..jnilib+0x176862]  rocksdb::BaseDeltaIterator::UpdateCurrent()+0x42
+C  [librocksdbjni7349356084398018261..jnilib+0x176362]  rocksdb::BaseDeltaIterator::Next()+0x132
+J 1609  org.rocksdb.RocksIterator.next0(J)V (0 bytes) @ 0x000000010ae8ece8 [0x000000010ae8ec40+0xa8]
+```
+
+@adamretter your question is always really hard. Can you assert in your comparator to see whether the segfault was caused by we pass an invalid memory area, or the data is not correct?
+
+I'm just writing a unit test for this :)
+
+@siying Well you know, I am a Java guy and C++ is hard for me ;-) I have a plan to move away from my custom comparator, I think I can get my keys into a different shape so that they are bytewise comparable, doing so should then let us rule out my rusty C++ coding. In the mean time, I think maybe @igorcanadi will find something
+
+I read the codes a little bit and feel like it's not safe to do the way you do it:
+
+```
+//seek to our objectId, iterate over all following key/value pairs that start with our objectId
+for (iterator.seek(objectId.serialize()); iterator.isValid() && ObjectKey.deserializeObjectId(iterator.key(), 0).equals(objectId); iterator.next()) {
+    writeBatchWithIndex.remove(cf, iterator.key());
+    rocksLog.trace("Removed: " + ObjectKey.deserialize(iterator.key(), 0).toString());
+}
+```
+
+The reason is following: iterator.key() is a pointer pointing to internal buffer. The moment you do "remove", the buffer may get resized and technically the old buffer can get recycled immediately, this can be done before the updating is complete so it's not guaranteed what key is operated.
+
+You may try to copy out iterator.key() to a string and then execute the two statement inside the loop.
+
+Unfortunately (or, fortunately), everything works as expected: https://reviews.facebook.net/D39501
+
+Hopefully @siying found the problem in your code.
+
+@igorcanadi the way you delete row is not the same as @adamretter 's usage. If you delete using iterator.Entry().key, that will be similar. Still it depends on how malloc/free works to trigger wrong behavior, but valgrind might give a warning.
+
+I wasn't trying to map @adamretter usage, my goal is to verify that we can mutate and iterate at the same time.
+
+@igorcanadi 's test shows it is not safe to mutate the WriteBatchWithIndex while iterating through the iterator generated by NewIteratorWithBase(). We are going to fix it.
+
+@siying @igorcanadi Any update on this?
+
+I have found another problem pattern related to removal when iterating a `WriteBatchWithIndex`; Like the other issue,  this issue also only occurs occasionally:
+
+``` java
+ObjectId objectId = object.getId();
+rocksLog.trace("Removing object: " + objectId.toString());
+
+RocksIterator baseIterator = rocks.newIterator(cf, readOptions);
+RocksIterator iterator = writeBatchWithIndex.newIteratorWithBase(cf, baseIterator);
+
+//seek to our objectId, iterate over all following key/value pairs that start with our objectId
+for (iterator.seek(objectId.serialize()); iterator.isValid() && ObjectKey.deserializeObjectId(iterator.key(), 0).startsWith(objectId); iterator.next()) {
+
+    // accessing iterator.value() here is fine :-)
+
+    writeBatchWithIndex.remove(cf, iterator.key());
+
+    // accessing iterator.value() here *sometimes* returns byte[0] :-(
+}
+```
+
+@adamretter  "writeBatchWithIndex.remove(cf, iterator.key());" is not correctly. The right way is to copy out iterator.key() to a string, and then call writeBatchWithIndex.remove() with that string. 
+
+@siying Okay I am getting confused by two different things in this thread now I think:
+1. The comment from yourself:
+   "@igorcanadi 's test shows it is not safe to mutate the WriteBatchWithIndex while iterating through the iterator generated by NewIteratorWithBase(). We are going to fix it."
+
+Is this something you are still going to fix? and if so any idea when?
+1. Your most recent comment that:
+   "@adamretter "writeBatchWithIndex.remove(cf, iterator.key());" is not correctly. The right way is to copy out iterator.key() to a string, and then call writeBatchWithIndex.remove() with that string."
+
+Well regards this, I am using the Java API, which states for the `RocksIterator#key()`:
+
+"Return the key for the current entry.  The underlying storage for the returned slice is valid only until the next modification of the iterator."
+
+However if I look at the code in `java/rocksjni/iterator.cc` for `Java_org_rocksdb_RocksIterator_key0` I can see that it is using `SetByteArrayRegion` which as I understand it will always make a copy, and so it should be impossible for it to go out of scope in the Java side. The same seems to apply in `Java_org_rocksdb_RocksIterator_value0`.
+
+So I really can't understand how `iterator.key()` or `iterator.value()` can go out of scope if JNI is already making a copy of the underlying values?
+
+@adamretter oh we fixed the bug we found. Now we it passed all our existing tests. 
+
+Interesting then. What kind of problem did you see?
+
+@siying So if I understand you, you have fixed the issue that:
+
+> it is not safe to mutate the WriteBatchWithIndex while iterating through the iterator generated by NewIteratorWithBase()
+
+Is that correct?
+
+If so my only issue now is (2) above, i.e. `iterator.value()` seeming to disappear after `WBWI#remove` even though the JNI code seems to imply a copy.
+
+I reread your codes. Yes if you deleted the current key, current value() will be undefined if you read now. Why do you want to read the current key. You should do Next() and process the next key.
+
+@siying I am sorry you have lost me, is there a good day/time to catch you on IRC?
+
+@siying Thanks for your time in IRC I have learnt a few things :-)
+
+To help others that come across such issues let me explain what the problem I experienced was, given this example (with commented issue):
+
+``` java
+ObjectId objectId = object.getId();
+rocksLog.trace("Removing object: " + objectId.toString());
+
+RocksIterator baseIterator = rocks.newIterator(cf, readOptions);
+RocksIterator iterator = writeBatchWithIndex.newIteratorWithBase(cf, baseIterator);
+
+//seek to our objectId, iterate over all following key/value pairs that start with our objectId
+for (iterator.seek(objectId.serialize()); iterator.isValid() && ObjectKey.deserializeObjectId(iterator.key(), 0).startsWith(objectId); iterator.next()) {
+
+    // accessing iterator.value() here is fine :-)
+
+    writeBatchWithIndex.remove(cf, iterator.key());
+
+    // accessing iterator.value() here *sometimes* returns byte[0] :-(
+}
+```
+
+Calling `iterator.key()` or `iterator.value()` causes JNI to copy the value from C++ into a Java byte[]. So I assummed that I had a copy of the data, and so could not understand how the call to `writeBatchWithIndex.remove` was occasionally destroying my subsequence ability to access the key or value.
+
+The reason is that, JNI makes a copy of the underlying C++ value on **every** call to `iterator.key()` or `iterator.value()`. So the second time I called `iterator.value` (after `writeBatchWithIndex.remove`), JNI was making a fresh copy of the underlying C++ value, which is now empty, as it has been removed from the `writeBatchWithIndex`! Doh!
+
+Moral of the story, calls to `iterator.key()` and `iterator.value()` are not stable even within a `next()` statement, as things like `remove` can destroy them. This is unexpected behaviour for your typical Java developer who is used to Java Iterators.
+
+The fixed code would look like:
+
+``` java
+ObjectId objectId = object.getId();
+rocksLog.trace("Removing object: " + objectId.toString());
+
+RocksIterator baseIterator = rocks.newIterator(cf, readOptions);
+RocksIterator iterator = writeBatchWithIndex.newIteratorWithBase(cf, baseIterator);
+
+//seek to our objectId, iterate over all following key/value pairs that start with our objectId
+byte key[];
+for (iterator.seek(objectId.serialize()); iterator.isValid() && ObjectKey.deserializeObjectId((key = iterator.key()), 0).startsWith(objectId); iterator.next()) {
+
+    // accessing iterator.value() here is fine :-)
+    final byte[] value = iterator.value();
+
+    writeBatchWithIndex.remove(cf, key);
+
+    // if you want the value, use `value` here and not `iterator.value()`
+}
+```
+
+Can this issue be closed now? 
+

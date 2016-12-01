@@ -1,0 +1,59 @@
+Hi, 
+
+I am assuming that these two classes are missing in rocksdbjni.
+It would be great if I can achieve atomicity of my transaction using either TransactionDB or OptimisticTransactionDB.
+
+I request to add these two classes to rocksdbjni.
+It would be great if you have any planned release day for the new rocksdbjni with these (or one of these) classes.
+
+RocksDB rocks!!
+
+Hi @Kangmo I am already working on this and hope to have something in the next week or two.
+
+Thanks Adam, that is great news!
+
+2016년 6월 4일 토요일, Adam Retternotifications@github.com님이 작성한 메시지:
+
+> Hi @Kangmo https://github.com/Kangmo I am already working on this and
+> hope to have something in the next week or two.
+> 
+> —
+> You are receiving this because you were mentioned.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1151#issuecomment-223749674,
+> or mute the thread
+> https://github.com/notifications/unsubscribe/AAfJPyAfWyTyQwsPDVG4tw_NWB0HwhI6ks5qIVrHgaJpZM4IuFRw
+> .
+
+Hi Adam, is there a branch that I can test the two classes before the release? It would be great if there is any to try out these classes.
+
+Thanks for providing two classes in advance.
+
+Hi @adamretter, any progress on this feature? Would love to test it out on a project I am working on. Thanks very much.
+
+Hi @adamretter, I also would love to test it out, and waiting for this feature to keep RocksDB data consistent in my project, ScaleChain. 
+Thanks in advance for your effort on this issue, again.
+
+I am working on it. It's just taking a while I am afraid.
+
+The WIP is visible here https://github.com/adamretter/rocksdb/tree/java-transactions
+
+Hi @adamretter, thanks for the update. 
+
+I have some questions on the transaction feature.
+Just out of curiosity, does a transaction keep locks on keys?
+(Sorry I did not investigate the underlying C++ implementation)
+
+Example> 
+(1) Transaction A updates key1 
+(2) Transaction B updates key1 before Transaction A ends 
+
+Does transaction B wait for the lock on key1 held by Transaction A? 
+Does it support deadlock detection? 
+Does it support range rocks, or different kinds of isolation levels?
+Are all four ACID properties supported?
+
+Duplicate of https://github.com/facebook/rocksdb/issues/697
+
+@Kangmo You are best to look at the Transaction Samples: https://github.com/adamretter/rocksdb/tree/java-transactions/java/samples/src/main/java
+

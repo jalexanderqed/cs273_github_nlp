@@ -1,0 +1,4 @@
+Travis Java build is failing. Try to fix it.
+
+Merge the PR to unblock the release.  And yes, it's okay to not mentioned the two functions in the comment.
+

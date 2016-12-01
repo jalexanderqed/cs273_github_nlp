@@ -1,0 +1,117 @@
+Changed code is not anymore in the API. Methods to access those settings are also marked as deprecated. 
+
+Without setting those configuration attributes `arc lint` works as expected given both repositorys are updated to head and `pep8` is installed.
+
+Sure, let's try this. I think you also need to have cpplint installed. 
+
+@igorcanadi cpplint comes along via arc as py script. see: https://secure.phabricator.com/diffusion/ARC/browse/master/src/lint/linter/ArcanistCpplintLinter.php$6
+
+but pep8 is a software package
+
+Okay if I run `arc lint java/rocksjni` I now get the message:
+
+```
+OKAY  No lint warnings.
+```
+
+So that is good, no errors in the code of arc lint.
+However when I run `arc diff --update D22779` I get a lint warning for one of my files. Why do I not get that when I run `arc lint` directly? Are there some args that I need to know?
+
+@adamretter If you run `arc lint` from command-line you need to pass the file or a wildcard identifying multiple files to test it. At least im doing it that way. e.g. `arc lint java/org/rocksdb/*`
+
+@fyrz Ah ha thanks, I was rather assuming it would take a folder name. Stupid me!
+
+I still see some errors about undefined indexes, but they don't seem to cause any problems:
+
+```
+hollowcore:rocksdb aretter$ arc lint java/rocksjni/*
+[2014-10-07 17:28:05] ERROR 8: Undefined index: java/rocksjni/backupablejni.cc at [/Users/aretter/NetBeansProjects/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(string) called at [<linters>/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(string) called at [<arcanist>/src/lint/engine/ArcanistLintEngine.php:301]
+  #2 ArcanistLintEngine::run() called at [<arcanist>/src/workflow/ArcanistLintWorkflow.php:320]
+  #3 ArcanistLintWorkflow::run() called at [<arcanist>/scripts/arcanist.php:338]
+[2014-10-07 17:28:05] ERROR 8: Undefined index: java/rocksjni/comparator.cc at [/Users/aretter/NetBeansProjects/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(string) called at [<linters>/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(string) called at [<arcanist>/src/lint/engine/ArcanistLintEngine.php:301]
+  #2 ArcanistLintEngine::run() called at [<arcanist>/src/workflow/ArcanistLintWorkflow.php:320]
+  #3 ArcanistLintWorkflow::run() called at [<arcanist>/scripts/arcanist.php:338]
+[2014-10-07 17:28:05] ERROR 8: Undefined index: java/rocksjni/comparatorjnicallback.cc at [/Users/aretter/NetBeansProjects/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(string) called at [<linters>/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(string) called at [<arcanist>/src/lint/engine/ArcanistLintEngine.php:301]
+  #2 ArcanistLintEngine::run() called at [<arcanist>/src/workflow/ArcanistLintWorkflow.php:320]
+  #3 ArcanistLintWorkflow::run() called at [<arcanist>/scripts/arcanist.php:338]
+[2014-10-07 17:28:05] ERROR 8: Undefined index: java/rocksjni/comparatorjnicallback.h at [/Users/aretter/NetBeansProjects/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(string) called at [<linters>/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(string) called at [<arcanist>/src/lint/engine/ArcanistLintEngine.php:301]
+  #2 ArcanistLintEngine::run() called at [<arcanist>/src/workflow/ArcanistLintWorkflow.php:320]
+  #3 ArcanistLintWorkflow::run() called at [<arcanist>/scripts/arcanist.php:338]
+[2014-10-07 17:28:05] ERROR 8: Undefined index: java/rocksjni/env.cc at [/Users/aretter/NetBeansProjects/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(string) called at [<linters>/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(string) called at [<arcanist>/src/lint/engine/ArcanistLintEngine.php:301]
+  #2 ArcanistLintEngine::run() called at [<arcanist>/src/workflow/ArcanistLintWorkflow.php:320]
+  #3 ArcanistLintWorkflow::run() called at [<arcanist>/scripts/arcanist.php:338]
+[2014-10-07 17:28:05] ERROR 8: Undefined index: java/rocksjni/filter.cc at [/Users/aretter/NetBeansProjects/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(string) called at [<linters>/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(string) called at [<arcanist>/src/lint/engine/ArcanistLintEngine.php:301]
+  #2 ArcanistLintEngine::run() called at [<arcanist>/src/workflow/ArcanistLintWorkflow.php:320]
+  #3 ArcanistLintWorkflow::run() called at [<arcanist>/scripts/arcanist.php:338]
+[2014-10-07 17:28:05] ERROR 8: Undefined index: java/rocksjni/iterator.cc at [/Users/aretter/NetBeansProjects/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(string) called at [<linters>/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(string) called at [<arcanist>/src/lint/engine/ArcanistLintEngine.php:301]
+  #2 ArcanistLintEngine::run() called at [<arcanist>/src/workflow/ArcanistLintWorkflow.php:320]
+  #3 ArcanistLintWorkflow::run() called at [<arcanist>/scripts/arcanist.php:338]
+[2014-10-07 17:28:05] ERROR 8: Undefined index: java/rocksjni/memtablejni.cc at [/Users/aretter/NetBeansProjects/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(string) called at [<linters>/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(string) called at [<arcanist>/src/lint/engine/ArcanistLintEngine.php:301]
+  #2 ArcanistLintEngine::run() called at [<arcanist>/src/workflow/ArcanistLintWorkflow.php:320]
+  #3 ArcanistLintWorkflow::run() called at [<arcanist>/scripts/arcanist.php:338]
+[2014-10-07 17:28:05] ERROR 8: Undefined index: java/rocksjni/options.cc at [/Users/aretter/NetBeansProjects/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(string) called at [<linters>/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(string) called at [<arcanist>/src/lint/engine/ArcanistLintEngine.php:301]
+  #2 ArcanistLintEngine::run() called at [<arcanist>/src/workflow/ArcanistLintWorkflow.php:320]
+  #3 ArcanistLintWorkflow::run() called at [<arcanist>/scripts/arcanist.php:338]
+[2014-10-07 17:28:05] ERROR 8: Undefined index: java/rocksjni/portal.h at [/Users/aretter/NetBeansProjects/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(string) called at [<linters>/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(string) called at [<arcanist>/src/lint/engine/ArcanistLintEngine.php:301]
+  #2 ArcanistLintEngine::run() called at [<arcanist>/src/workflow/ArcanistLintWorkflow.php:320]
+  #3 ArcanistLintWorkflow::run() called at [<arcanist>/scripts/arcanist.php:338]
+[2014-10-07 17:28:05] ERROR 8: Undefined index: java/rocksjni/ratelimiterjni.cc at [/Users/aretter/NetBeansProjects/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(string) called at [<linters>/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(string) called at [<arcanist>/src/lint/engine/ArcanistLintEngine.php:301]
+  #2 ArcanistLintEngine::run() called at [<arcanist>/src/workflow/ArcanistLintWorkflow.php:320]
+  #3 ArcanistLintWorkflow::run() called at [<arcanist>/scripts/arcanist.php:338]
+[2014-10-07 17:28:05] ERROR 8: Undefined index: java/rocksjni/restorejni.cc at [/Users/aretter/NetBeansProjects/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(string) called at [<linters>/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(string) called at [<arcanist>/src/lint/engine/ArcanistLintEngine.php:301]
+  #2 ArcanistLintEngine::run() called at [<arcanist>/src/workflow/ArcanistLintWorkflow.php:320]
+  #3 ArcanistLintWorkflow::run() called at [<arcanist>/scripts/arcanist.php:338]
+[2014-10-07 17:28:05] ERROR 8: Undefined index: java/rocksjni/rocksjni.cc at [/Users/aretter/NetBeansProjects/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(string) called at [<linters>/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(string) called at [<arcanist>/src/lint/engine/ArcanistLintEngine.php:301]
+  #2 ArcanistLintEngine::run() called at [<arcanist>/src/workflow/ArcanistLintWorkflow.php:320]
+  #3 ArcanistLintWorkflow::run() called at [<arcanist>/scripts/arcanist.php:338]
+[2014-10-07 17:28:05] ERROR 8: Undefined index: java/rocksjni/slice.cc at [/Users/aretter/NetBeansProjects/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(string) called at [<linters>/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(string) called at [<arcanist>/src/lint/engine/ArcanistLintEngine.php:301]
+  #2 ArcanistLintEngine::run() called at [<arcanist>/src/workflow/ArcanistLintWorkflow.php:320]
+  #3 ArcanistLintWorkflow::run() called at [<arcanist>/scripts/arcanist.php:338]
+[2014-10-07 17:28:05] ERROR 8: Undefined index: java/rocksjni/statistics.cc at [/Users/aretter/NetBeansProjects/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(string) called at [<linters>/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(string) called at [<arcanist>/src/lint/engine/ArcanistLintEngine.php:301]
+  #2 ArcanistLintEngine::run() called at [<arcanist>/src/workflow/ArcanistLintWorkflow.php:320]
+  #3 ArcanistLintWorkflow::run() called at [<arcanist>/scripts/arcanist.php:338]
+[2014-10-07 17:28:05] ERROR 8: Undefined index: java/rocksjni/table.cc at [/Users/aretter/NetBeansProjects/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(string) called at [<linters>/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(string) called at [<arcanist>/src/lint/engine/ArcanistLintEngine.php:301]
+  #2 ArcanistLintEngine::run() called at [<arcanist>/src/workflow/ArcanistLintWorkflow.php:320]
+  #3 ArcanistLintWorkflow::run() called at [<arcanist>/scripts/arcanist.php:338]
+[2014-10-07 17:28:05] ERROR 8: Undefined index: java/rocksjni/write_batch.cc at [/Users/aretter/NetBeansProjects/rocksdb/linters/cpp_linter/FbcodeCppLinter.php:71]
+  #0 FbcodeCppLinter::getCppLintOutput(string) called at [<linters>/cpp_linter/FbcodeCppLinter.php:50]
+  #1 FbcodeCppLinter::lintPath(string) called at [<arcanist>/src/lint/engine/ArcanistLintEngine.php:301]
+  #2 ArcanistLintEngine::run() called at [<arcanist>/src/workflow/ArcanistLintWorkflow.php:320]
+  #3 ArcanistLintWorkflow::run() called at [<arcanist>/scripts/arcanist.php:338]
+>>> Lint for java/rocksjni/comparatorjnicallback.cc:
+```
+
+@adamretter that's fine. I also see them sometimes. I don't know what they mean. :)
+

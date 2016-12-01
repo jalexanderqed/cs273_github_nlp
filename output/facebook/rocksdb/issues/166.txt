@@ -1,0 +1,8 @@
+This is really pending for a long time, I would really appreciate if someone C++ savvy (more than me) could take a look. Thanks
+
+Is there a patch that you would like people to review?
+
+Unfortunately, no. I am comfortable with C and could give it a go, but my C++ is probably strong enough.
+
+This is done -- https://github.com/facebook/rocksdb/commit/df2701373d6247c540b8818e2c14c1b1f02c8cfe 
+

@@ -1,0 +1,29 @@
+after the make, I ran make check in rocksdb's directory,.
+
+Running testCountDelimDump...
+ERunning testCountDelimIDump...
+ERunning testDumpLoad...
+ERunning testHexPutGet...
+ERunning testInvalidCmdLines...
+.Running testMiscAdminTask...
+ERunning testSimpleStringPutGet...
+ERunning testStringBatchPut...
+ERunning testTtlPutGet...
+# E
+## ERROR: testCountDelimDump (**main**.LDBTestCase)
+
+Traceback (most recent call last):
+  File "tools/ldb_test.py", line 150, in testCountDelimDump
+    self.assertRunOK("batchput x.1 x1 --create_if_missing", "OK")
+  File "tools/ldb_test.py", line 82, in assertRunOK
+    expectedOutput, unexpected)
+  File "tools/ldb_test.py", line 54, in assertRunOKFull
+    params, shell=True)
+  File "tools/ldb_test.py", line 25, in my_check_output
+    (retcode, cmd))
+Exception: Exit code is not 0.  It is 1.  Command: ./ldb --db=/tmp/ldb_test_wWULQa/testdb batchput x.1 x1 --create_if_missing |grep -v "Created bg thread"
+
+Append /usr/local/lib to LD_LIBRARY_PATH make it work. I have libgflags.so and libsnappy,so in /usr/local/lib
+
+Tnx @beginnerlan. We need to have more prominent message during make when we can't find those libraries.
+

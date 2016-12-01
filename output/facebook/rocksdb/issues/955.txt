@@ -1,0 +1,13 @@
+These simple changes are required to allow builds on ppc64[le] systems
+consistent with X86. The Makefile now recognizes both ppc64 and ppc64le, and
+in the absence of PORTABLE=1, the code will be built analogously to the X86
+-march=native.
+
+Note that although GCC supports -mcpu=native -mtune=native on POWER, it
+doesn't work correctly on all systems. This is why we need to get the actual
+machine model from the AUX vector.
+
+I don't believe that the changes I proposed could lead to the type of error shown in the Travis CL build. I see that other pull requests that only modify comments have also failed. So I'm not sure how to resolve the test failure - please advise.
+
+Yeah, travis build is unstable at the moment. I think this is fine to merge. Thanks for your contribution!
+

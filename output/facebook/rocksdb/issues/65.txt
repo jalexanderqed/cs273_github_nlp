@@ -1,0 +1,36 @@
+It seems that there is a missing include with g++-4.7:
+
+```
+$ make CXX=g++-4.7
+g++-4.7 -g -Wall -Werror -I. -I./include -std=gnu++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_FALLOCATE_PRESENT -DGFLAGS -DZLIB -DBZIP2   -DHAVE_JEMALLOC -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c db/compaction.cc -o db/compaction.o 
+In file included from ./db/compaction.h:11:0,
+                 from db/compaction.cc:10:
+./db/version_set.h:437:3: error: 'atomic' in namespace 'std' does not name a type
+./db/version_set.h: In member function 'uint64_t rocksdb::VersionSet::LastSequence() const':
+./db/version_set.h:333:12: error: 'last_sequence_' was not declared in this scope
+./db/version_set.h:333:32: error: 'memory_order_acquire' is not a member of 'std'
+./db/version_set.h: In member function 'void rocksdb::VersionSet::SetLastSequence(uint64_t)':
+./db/version_set.h:338:5: error: 'last_sequence_' was not declared in this scope
+./db/version_set.h:339:29: error: 'memory_order_release' is not a member of 'std'
+make: *** [db/compaction.o] Error 1
+```
+
+Fixed with the following patch:
+
+```
+diff --git a/db/version_set.h b/db/version_set.h
+index 376b259..da23772 100644
+--- a/db/version_set.h
++++ b/db/version_set.h
+@@ -18,6 +18,7 @@
+ // synchronization on all accesses.
+
+ #pragma once
++#include <atomic>
+ #include <map>
+ #include <memory>
+ #include <set>
+```
+
+Tnx for the report! Fixed with https://github.com/facebook/rocksdb/commit/e57f0cc1a1c19537f221c74b0171880edb3d48e3
+

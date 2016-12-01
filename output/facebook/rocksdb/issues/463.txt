@@ -1,0 +1,19 @@
+Adding LOG parser and modify some logging parts to make it easier to parse.
+
+Mainly parse below 5 types:
+- CompactionEvent
+- FlushEvent
+- StatisticsEvent(from DB Stats)
+- OptionsEvent(Once, at the begging of LOG)
+- Delete Event
+
+I wonder where I should put parse_db_log.\* , so I temporarily put these files in utilities/parse_db_log.
+
+Nice job! Can you move parse_db_log.\* to tools/ directory? Also, can you run `make format` on the commit?
+
+@igorcanadi Thank you! I updated and run `make format`
+
+Hm. Are you sure you ran `make format`? I still see rows of 80+ characters and missing empty spaces after `if`...
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

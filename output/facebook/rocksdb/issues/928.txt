@@ -1,0 +1,140 @@
+@siying As we has discussed on the FB page, here's the instruction to repro the issue. 
+
+1) Sequentially insert 10 million keys to the DB
+2) Spawn a thread to keep overwriting the existing keys in random order
+3) Create an iterator to scan through the DB and count the number of keys found
+
+If regular iterator is used, exactly 10 million keys will be found.
+If tailing iterator is used, less than 10 million keys will be found.  (6092434 keys found in one repro)
+
+Config used:
+--num=10000000 --value_size=800 --block_size=4096 --cache_size=1048576  --open_files=500000 --write_buffer_size=134217728 --target_file_size_base=67108864 --max_write_buffer_number=3 --max_background_compactions=8 --max_bytes_for_level_base=10485760 --use_tailing_iterator=1
+
+This issue is likely to be related to compaction. When I reduce the background compaction thread to one, the issue went away. 
+
+Compaction is not the issue. Tailing iterators are supposed to use to read data in increasing order of keys. If keys are inserted in non-ascending order, you might miss keys. Also, this is for an insert-only workload.
+
+@rven1 
+
+> Also, this is for an insert-only workload.
+
+Does it mean that if new writes contain updates and deletes, tailing iterator won't work correctly?
+
+Not sure that this is mentioned at https://github.com/facebook/rocksdb/wiki/Tailing-Iterator
+
+Once again to emphasize, we are not expecting it to include all new records - only expecting it to include records that existed at the time of iterator creation.
+
+Could you give me the full command which you used for db_bench?
+I understand your use case and I will try to make it work.
+
+@SherlockNoMad  " 1) Sequentially insert 10 million keys to the DB" --
+Are these 10 million keys unique?
+
+@dhruba. Yes, the keys are unique. 
+
+Hi @rven1. The test program is modified based on db_bench. The code change is here https://github.com/SherlockNoMad/rocksdb/commit/d9cf7148bf8c9ad52d0d8a78ca678d31d5f1f56e 
+It does essentially what I described in the first post.
+
+The exact command used to repro that is 
+
+D:\db_bench_iter>db_bench_je --benchmarks=readseq --num=10000000 --threads=1 --value_size=800 --block_size=4096 --cache_size=1048576  --open_files=500000 --db=K:\data\IterTest --write_buffer_size=134217728 --target_file_size_base=67108864 --max_write_buffer_number=3 --max_background_compactions=8 --max_bytes_for_level_base=10485760 --use_existing_db=0 --use_tailing_iterator=1
+
+Hi @rven1.
+Have you got the repro? Do we have any updates on this issues?
+
+We found one problem. We are still working on it. Thanks.
+
+With only Sherlock's changes and a release build on Linux, I get 1,000,000 records:
+./db_bench --benchmarks=readseq --num=10000000 --threads=1 --value_size=800 --block_size=4096 --cache_size=1048576 --open_files=500000 --db=K:\data\IterTest --write_buffer_size=134217728 --target_file_size_base=67108864 --max_write_buffer_number=3 --max_background_compactions=8 --max_bytes_for_level_base=10485760 --use_existing_db=0 --use_tailing_iterator=1
+LevelDB:    version 4.4
+Date:       Tue Jan 12 13:50:34 2016
+CPU:        32 \* Intel(R) Xeon(R) CPU E5-2660 0 @ 2.20GHz
+CPUCache:   20480 KB
+Keys:       16 bytes each
+Values:     800 bytes each (400 bytes after compression)
+Entries:    10000000
+Prefix:    0 bytes
+Keys per prefix:    0
+RawSize:    7782.0 MB (estimated)
+FileSize:   3967.3 MB (estimated)
+Write rate: 0 bytes/second
+Compression: Snappy
+Memtablerep: skip_list
+
+## Perf Level: 0
+
+DB path: [K:dataIterTest]
+Number of records seen by iterator: 10000000
+readseq      :      25.430 micros/op 39323 ops/sec;   30.6 MB/s
+
+On a debug build, I hit an assertion failure which I am looking at.
+
+Hi @rven1.
+In your test, the iterator still found all the keys, which is not the problem we observed. 
+Could you please try running test a few more time? This problem happens intermediately. 
+Change setting to following might help you repro the problem more easily. 
+max_background_compactions=20 
+target_file_size_base=4194304
+
+Thank you. 
+
+I'll try it out. Thanks!
+
+I was able to reproduce it with your settings.
+ ./db_bench --benchmarks=readseq --num=10000000 --threads=1 --value_size=800 --block_size=4096 --cache_size=1048576 --open_files=500000 --db=K:\data\IterTest --write_buffer_size=134217728 --target_file_size_base=4194304 --max_write_buffer_number=3 --max_background_compactions=20 --max_bytes_for_level_base=1048576
+0 --use_existing_db=0 --use_tailing_iterator=1
+LevelDB:    version 4.4
+Date:       Thu Jan 14 16:37:14 2016
+CPU:        32 \* Intel(R) Xeon(R) CPU E5-2660 0 @ 2.20GHz
+CPUCache:   20480 KB
+Keys:       16 bytes each
+Values:     800 bytes each (400 bytes after compression)
+Entries:    10000000
+Prefix:    0 bytes
+Keys per prefix:    0
+RawSize:    7782.0 MB (estimated)
+FileSize:   3967.3 MB (estimated)
+Write rate: 0 bytes/second
+Compression: Snappy
+Memtablerep: skip_list
+
+## Perf Level: 0
+
+DB path: [K:dataIterTest]
+Number of records seen by iterator: 6033311
+readseq      :      39.142 micros/op 25547 ops/sec;   19.9 MB/s
+
+I ran the test in the debugger and found that the key values in the iterator and the count are lock step for a few hundred thousand rows and then diverges. I suspect that it is because there is an issue in the way we traverse the higher levels. This probably triggered the assertion failure in the debug build. I will keep you updated.
+
+Hi @rven1, do we have any update on this ?
+
+Hi @siying. Do we have any update on this?
+
+@SherlockNoMad  not yet. Are you blocking on it?
+
+Yes. We wish to have this feature at the earliest convenience. We are now using regular iterator as a work around, but we will need tailing iterator to avoid extra resources consumption. 
+
+@SherlockNoMad which resource consumption do you mean?
+
+Memory consumption. Stale sstfile will be blocked from deletion, index will remain in memory. 
+
+@SherlockNoMad  you can define a snapshot, and then iterate. Once a while, recreate the iterator to release the pinned resource. Would it work for you? It will be the expected way for the background scanning.
+
+Hello,
+
+Is there an update on this? I have a database for which a iterator->seek misses several keys when using a tailing iterator.
+This is an already existing database and no new data is inserted after opening the database.
+
+I use the java rocksdb 4.11.2 (but same was with 4.8.0).
+
+Here is the java code that creates it1 normal iterator and it2 tailing iterator:
+https://gist.github.com/xpromache/c816b402ca5bd423b3b27d35aaf3ffa8
+
+and seek of it2 skips some records found by the same seek of it1:
+it1.isValid: true it1.key: 0000014690F926B41BDFE4F5
+it2.isValid: true it2.key: 000001470EECE5241BDFC229
+
+It is a bug in ForwardIterator with fractional cascading. Now it has been fixed.
+
+https://reviews.facebook.net/D65559
+

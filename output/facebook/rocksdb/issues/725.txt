@@ -1,0 +1,4 @@
+Closes https://github.com/facebook/rocksdb/issues/724
+
+Thanks for the quick fix, adam!
+

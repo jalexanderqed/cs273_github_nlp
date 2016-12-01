@@ -1,0 +1,192 @@
+We are wondering about the operation of the bloom filters in rocksdb. It looks like the filter policy is a factory object that creates bloom filters on demand? To what does the bloom filter apply? The block right before it gets written out? Are the bloom filter contents stored on disk? Up to how many bloom filters can be consulted for a single fetch?
+
+Our (limited) understanding of the bloom filters is they work as follows:
+1. on a fetch, the files whose key space are candidate matches are put together in a list
+2. the bloom filter for the next file is consulted to determine a trivial reject
+3. if the bloom filter passes, a lookup is performed in the file
+4. go back to 2 until out of files or the key is found
+
+Is there a document that explains the operation of the bloom filters? Thanks
+
+More questions:
+Are the bloom filters kept in RAM even if the files are closed?
+Are they memory mapped when the file is opened?
+
+We should answer those questions and write them up in the Tuning Guide.
+
+Why are you teasing me!
+
+No tease, those are all great questions and I want to give them justice by giving good answers, for which we need a bit more time :)
+
+I just want to make sure that whoever answers this also adds it to Tuning Guide.
+
+More questions:
+
+It looks like the bloom filter is built write before the block is written out. Is this only for level 0 blocks? If yes, then won't higher level blocks require ever increasing amounts of memory to hold all the keys when building the filter? And if no then how does the bloom filter get built for higher level blocks? Is there a bloom filter on level 1 and above? Does rocksdb combine bloom filters from two level 0 blocks to form the level 1 bloom filter and if so where's the code (I can't find it)?
+
+@vinniefalco files in all levels are built in the same way, including the bloom filter. They should need similar amount of memory. Files in different levels are of similar size.
+
+@ljinfb  For large data sets, a file size multiplier pretty much has to be used. Otherwise, the number of files would be enormous. https://github.com/facebook/rocksdb/blob/master/include/rocksdb/options.h#L328-L331
+
+For large data sets, where files at high levels are very large, it seems there's no practical way to build the bloom filter. You'd either have to keep the bloom filters from the compacted files, which are too small, or have all the keys in memory, which is too large.
+
+My understanding was that compaction never needed to have everything in memory. This allows non-L0 files to be larger. But I can't see how this can work with the bloom filter API. The sane solution (assuming my understanding is correct) is to create a bloom filter sized for the output file and update it with each key, then write it out when the compaction is done. But the bloom filter API has no incremental method, requiring all keys to be in memory, making it unusable for large data sets.
+
+That means bloom filters require files that are small relative to memory. That means you can't use a size multiplier with bloom filters if your data set is large -- the case where you really need a size multiplier. (Unless I'm missing something, which I hope I am.)
+
+@JoelKatz it's possible to reduce the multiplier by having a larger
+max_bytes_for_level_base or you can stagger it by using
+max_bytes_for_level_multiplier_additional
+
+@VinnieFalco code is here:
+
+https://github.com/facebook/rocksdb/blob/18efdba8d538106497793f63c09c39e5768124ed/util/bloom.cc#L48-L74
+https://github.com/facebook/rocksdb/blob/c8e70e6bf862f589d2b38a95bac3f03206d44ba8/db/dbformat.cc#L134-L144
+https://github.com/facebook/rocksdb/blob/1242bfcad794e775f0f50515fb8f1d707411236f/table/filter_block.cc#L107-L131
+
+@donovanhide So it looks like, during compaction, all the keys are kept in memory -- if for no other reason, to build the bloom filter. This creates a painful problem for programs that have large data sets. You can't use small files, because you'll have too many of them and performance will degrade due to file open/close operations. But you can't use large files because compactions require all keys in a file to fit in memory.
+
+@JoelKatz I guess one solution is that the BloomFilter could use an iterator to get the keys sequentially for the two compacted source tables. Another might be to just not use a multiplier and choose a file size that makes sense for a reasonable file descriptor limit. 256MB sounds about right for up to 2TB, that is 8,192 files.
+Have you looked at Universal Style Compaction at all? I believe that is intended to offer more chronological locality. That is keys and values written around the same time stay together. I'm no expert on it, but this seems to be the right place to get an opinion :-)
+
+@donovanhide That's probably a reasonable compromise. It's not great because 256MB is awfully large for L0 (as multiple L0 files need to fit entirely in memory), but it's probably the best you can do. This also means that during compactions, there will be a much longer burst of I/O, producing bursty performance (huge latency spikes) of the database.
+
+RocksDB is described as being good for "large data sets", but to be honest, in the experience I've had using it as the back end for rippled, it seems not to be good for large data sets at all. The basic problem is that all the keys for all the input files to compaction have to fit in memory, so memory constrains the file size. And if you have too many files, random reads to the database become pitifully slow because they require multiple file open/close operations. That is, memory constrains the data set size, which is exactly what you _don't_ do in a tool designed for large data sets. The secondary problem is large bursts of saturated I/O (from compaction) that starve everything else.
+
+Universal compaction, if I understand correctly, is not that great for large data sets either, because the cost of a fetch is O(n), where n is the amount of data in the database. The number of files scales linearly with the database size, and the number of files you need to operate on per operation is a constant fraction of the number of files in the database. (Normally, that fraction decreases as files at higher levels cover narrow key ranges.)
+
+@JoelKatz my experience has been that due to the random distribution of keys in rippled's data model that most sst's are already open fairly soon after startup (assuming that they are serving history to peers). You can confirm this by grep'ping the output of lsof for ".sst". With a high ulimit -n setting, the files shouldn't get opened more than once. I don't fully understand the relationship between level 0 size and the count of them that get compacted into a level 1 file. It is a bit hard sometimes to grasp which config options relate to which part of the process :-)
+
+Edit: I guess I'd also add that rippled uses effectively unordered keys. Every compaction isn't really doing useful work, seeing as the freshly minted level just has keys closer together, which doesn't help random access particularly. Perhaps there is no need to go above Level 1?
+
+If you have  a 1 TB database and file size is 64 MB, then you will have a total of 16000 files. This is a very small number of most modern systems. Set ulimit and Options.max_open_files to be 16000, and you will have no additional random access penalty for ur database.
+
+What is the performance comparison of rocksdb (including other LSM based implementations) when using hard drives versus SSDs?
+
+I don't get the assertions about all keys needing to fit into memory. More
+context would help. Compaction reads from N streams for files, computes a
+few things over the current points in the N streams (merges keys, updates
+bloom filter) and then writes out one or a few files (more streaming). The
+working memory required for compaction is not large, a few MB is sufficient
+assuming sufficient storage IO throughput.
+
+I have done benchmarks to compare RocksDB on good flash vs a good disk
+array. While the disk array was limited to ~2000 IOPs, for Put-only
+benchmarks that are mostly a test of compaction, RocksDB on the disk array
+was much closer to flash/SSD than for read heavy benchmarks. The flash vs
+disk performance difference is much less for mostly sequential workloads.
+
+The compaction input doesn't have to be in memory for performance if you
+have sufficient IO capacity. RocksDB has blocks in files and the block size
+is configurable. Blocks are the unit at which reads are done for user
+queries and compaction. For user queries it can be good for blocks to be
+small (8k or so with flash/ssd, 64k or so with disk). But for compaction
+read performance you might prefer to use larger blocks.
+
+RocksDB also allows for posix_fadvise to be used so that readahead is not
+done during user queries and is done during compaction reads. This might
+help when a small block size is used.
+
+The block size is the pre-compression size. So a 4k block size with
+compression is likely to mean a much smaller than 4k block on disk. So
+maybe an 8k block is a better choice when you are getting 2X compression.
+Note that decompression adds latency when blocks are read.
+
+On Sun, Aug 24, 2014 at 12:13 PM, Vinnie Falco notifications@github.com
+wrote:
+
+> What is the performance comparison of rocksdb (including other LSM based
+> implementations) when using hard drives versus SSDs?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/239#issuecomment-53203684.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@mdcallag We don't get it either. It seems completely gratuitous and unnecessary. There is no code to add a key to an existing bloom filter or create a bloom filter sized for a particular number of keys without having to know which keys those are yet. There is only code to create a bloom filter, given all the keys. So, during compaction, the bloom filter must be created in one shot after the set of keys is known and cannot be maintained incrementally during the compaction.
+
+But now that I look at the code, it appears that it creates multiple bloom filters for the same file. But it seems it doesn't do this incrementally either -- creating all the bloom filters after compaction is done.
+
+I need to read code because that doesn't sound right.
+
+On Mon, Aug 25, 2014 at 7:38 AM, JoelKatz notifications@github.com wrote:
+
+> @mdcallag https://github.com/mdcallag We don't get it either. It seems
+> completely gratuitous and unnecessary. There is no code to add a key to an
+> existing bloom filter or create a bloom filter sized for a particular
+> number of keys without having to know which keys those are yet. There is
+> only code to create a bloom filter, given all the keys. So, during
+> compaction, the bloom filter must be created in one shot after the set of
+> keys is known and cannot be maintained incrementally during the compaction.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/239#issuecomment-53272116.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+https://github.com/facebook/rocksdb/wiki/Rocksdb-BlockBasedTable-Format#filter-meta-block
+
+Looks like a series of bloom filters for each block exists for each table. In other words, a single .sst file has many blocks and many bloom filters. The key scan involved in bloom filter creation only requires all keys for a block to be in memory.
+
+I feel like different people in the thread are talking about different things. Here are some comments:
+
+(1) like @JoelKatz said, bloom filter is always per file, not per level. A bloom filter block is written as soon as a file is written. Bloom filter is never used as input to generate other bloom filters.
+
+(2) like @donovanhide said, building a bloom filter does not need to cache all the keys of a file in memory. The bloom filter is actually per data block, so it caches all the keys of a data block when building a file. (we are adding a new bloom filter format for all the keys of a file: https://reviews.facebook.net/D20979 , with this feature, hashes of all keys will be stored in memory when building a file, but read performance will be better)
+
+(3) bloom filter of a file needs to be loaded into memory before querying it. Technically, a user doesn't need the memory for all the bloom filters when opening a DB. You can choose putting bloom filter block into block cache by using BlockBasedTableOptions::cache_index_and_filter_blocks=true, or cap number of files to open by setting options.max_open_files. But in reality, to make sure bloom filter works as expected, you probably want them to be all cached in memory.
+
+Can we get a wiki page that describes what is per-data block today vs the
+new bloom filter format? This isn't the first time I have been described by
+the RocksDB bloom filter.
+
+On Mon, Aug 25, 2014 at 10:42 AM, Siying Dong notifications@github.com
+wrote:
+
+> I feel like different people in the thread are talking about different
+> things. Here are some comments:
+> 
+> (1) like @JoelKatz https://github.com/JoelKatz said, bloom filter is
+> always per file, not per level. A bloom filter block is written as soon as
+> a filter is written. Bloom filter is never used as input to generate other
+> bloom filters.
+> 
+> (2) building a bloom filter does not need to cache all the keys of a file
+> in memory. The bloom filter is actually per data block, so it caches all
+> the keys of a data block when building a file. (we are adding a new bloom
+> filter format for all the keys of a file:
+> https://reviews.facebook.net/D20979 , with this feature, hashes of all
+> keys will be cached when building a file, but the performance will be
+> better)
+> 
+> (3) bloom filter of a file needs to be loaded into memory before querying
+> it. Technically, a user doesn't need the memory for all the bloom filters
+> when opening a DB. You can choose putting bloom filter block into block
+> cache by using BlockBasedTableOptions::cache_index_and_filter_blocks=true,
+> or cap number of files to open by setting options.max_open_files. But in
+> reality, to make sure bloom filter works as expected, you probably want
+> them to all cached in memory.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/239#issuecomment-53297990.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@mdcallag sure we should do that.
+
+Long overdue, but I added a section on bloom filters to the Tuning guide: https://github.com/facebook/rocksdb/wiki/RocksDB-Tuning-Guide#bloom-filters. Let me know if there's anything you'd like me to add.
+
+With that, closing out this issue.
+

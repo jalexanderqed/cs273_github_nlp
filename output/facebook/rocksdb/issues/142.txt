@@ -1,0 +1,21 @@
+RocksDB won't build if you happen to have checked it out in a path containing spaces.
+
+``` sh
+$ mkdir ~/with\ spaces
+$ cd ~/with\ spaces
+$ git clone https://github.com/facebook/rocksdb.git
+$ make -C rocksdb
+```
+
+```
+/bin/sh: 1: export: spaces/rocksdb: bad variable name
+make: Entering directory `/home/mlin/with spaces/rocksdb'
+Makefile:24: build_config.mk: No such file or directory
+make: *** No rule to make target `build_config.mk'.  Stop.
+make: Leaving directory `/home/mlin/with spaces/rocksdb'
+```
+
+This commit fixes it by quoting some path names in `Makefile` and `build_detect_platform`.
+
+Thanks!
+

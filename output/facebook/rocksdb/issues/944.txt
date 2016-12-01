@@ -1,0 +1,24 @@
+I am trying to install RocksDB in Ubuntu 15.04 but i am getting the below error??? 
+
+RocksDB/rocksdb-4.1# make all
+  GEN      util/build_version.cc
+  CC       util/crc32c.o
+util/crc32c.cc: In function ‘void rocksdb::crc32c::Fast_CRC32(uint64_t_, const uint8_t__)’:
+util/crc32c.cc:319:39: error: ‘_mm_crc32_u64’ was not declared in this scope
+   *l = _mm_crc32_u64(_l, LE_LOAD64(_p));
+                                       ^
+Makefile:1133: recipe for target 'util/crc32c.o' failed
+make: *_\* [util/crc32c.o] Error 1
+
+Help me to get out of this error to install Rocksdb
+
+Are you attempting to do a 32-bit build?  There was a pull request recently to address this problem with the 32-bit build, as this function does not exist when building for 32-bit.  The pull hasn't actually been merged yet as there was a question about whether it was correct for big-endian platforms, but you can see the code changes here: https://github.com/facebook/rocksdb/pull/929#issuecomment-169784734.
+
+If you are not attempting a 32-bit build, the _mm_crc32_u64 should be there when SSE extensions are turned on, which I thought was the default.
+
+Whoops - that was a link to the comments.  The actual changes are here: https://github.com/facebook/rocksdb/pull/929/files
+
+yeah. I am attempting 32-bit. Please give me a clear solution to rectify it.
+
+I believe the pull request I referenced yesterday was approved and you should be able to update and recompile.  Please note that at this time 32-bit is not directly supported by the dev team here and you are on your own when building it that way.  If you come across anything that needs to be fixed we would love to have your changes.
+

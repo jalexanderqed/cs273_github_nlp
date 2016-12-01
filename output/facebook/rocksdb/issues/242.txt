@@ -1,0 +1,73 @@
+This eliminates the need to remember to call PERF_TIMER_STOP when a section has
+been timed. This allows more useful design with the perf timers and enables
+possible return value optimizations. Simplistic example:
+
+``` c++
+class Foo {
+  public:
+    Foo(int v) : m_v(v);
+  private:
+    int m_v;
+}
+
+Foo makeFrobbedFoo(int *errno)
+{
+  *errno = 0;
+  return Foo(1);
+}
+
+Foo bar(int *errno)
+{
+  PERF_TIMER_INIT(some_timer);
+
+  return makeFrobbedFoo(errno);
+}
+
+int main(int argc, char[] argv)
+{
+  Foo f;
+  int errno;
+
+  f = bar(&errno);
+
+  if (errno)
+    return -1;
+  return 0;
+}
+```
+
+After bar() is called, perf_context.some_timer would be incremented as if
+Stop(&perf_context.some_timer) was called at the end, and the compiler is still
+able to produce optimizations on the return value from makeFrobbedFoo() through
+to main().
+
+This is great, looks much cleaner!
+
+Updated with some commits that should address your concerns, @igorcanadi.
+
+Do we need to squash this too?
+
+lgtm, except one comment :)
+
+Can we please squash this?
+
+@igorcanadi Fixed that last issue. If it looks good, I'll squash and get this ready for a merge.
+
+lgtm, please squash and i'll merge
+
+Squashed.
+
+Cheers!
+
+Thanks @tdfischer ! Now back to https://github.com/facebook/rocksdb/pull/249, which I'm very excited about :)
+
+Github says "We can’t automatically merge this pull request."
+
+Can you please rebase?
+
+Rebased. Should be good to go.
+
+Does this need to go into hyperleveldb and leveldb as well?
+
+@vinniefalco I think this is rocksdb-only code. https://github.com/facebook/rocksdb/pull/249 should go into leveldb i think.
+

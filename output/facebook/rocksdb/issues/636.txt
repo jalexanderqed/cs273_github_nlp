@@ -1,0 +1,313 @@
+I can reliably generate SEGV on Mac OS X using the Java API.
+
+In my application I can tolerate exactly 0% application segfaults so this is a serious problem :)
+
+But first, let me digress for a dumb but important question...
+
+When a project gives you a Java API that is based on a JNI wrapper around some shared library, the project can take one of two stances:
+1. The project guarantees that as long as your Java code uses only the public (or protected) API's, then no matter how your Java code behaves, there will be no segfaults.
+2. The project guarantees that as long as your Java code uses only the public (or protected) API's _and follows certain rules_, then no matter how your Java code behaves, there will be no segfaults.
+
+Which is the case with the RocksDB Java API? I'm hoping the answer is (1), but if the answer is (2), would you please precisely document those _certain rules_ on the wiki somewhere? And if the answer is (1), that would be nice to document as well, so that when people encounter a segfault they don't waste time trying to find the bug in their own code. Thanks.
+
+Now back to the bug report...
+
+Here is how I can reproduce this crash. Note, you may need to install these packages `ant`, `ant-contrib`, `ivy` (I used [brew](http://brew.sh/); if you have trouble getting the build to work email me please).
+
+```
+$ git clone -b rocksdb-segv git@github.com:archiecobbs/jsimpledb.git
+$ cd jsimpledb
+$ ANT_OPTS=-Xmx4g ant -Dcoverage= tests
+```
+
+When I do this the test runs for a while spitting out log messages and then hangs (output stops). At that time CPU utilization usually goes to 100%.
+
+Then I hit CTRL-C  and there is usually a `hs_err_pidXXX.log` file sitting there. Sometimes only kill -9 works.
+
+Mac OS X 10.9.5. MacBook pro with retina screen. Either Java 1.7.0_45 or Java 1.8.0_40.
+
+On 64 bit Linux with java 1.7.0_55 the same thing happens, except there is no JVM crash. However, kill -9 is still required.
+
+Possibly same thing as issue #547?
+
+Note... this is a unit test for a project that layers a bunch of other stuff on top of RocksDB, so the crash reproduction is not at all boiled down. I'm hoping however that it will still be helpful, especially for someone who knows how to easily apply instrumentation to the JNI interface or whatever.
+
+```
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  SIGSEGV (0xb) at pc=0x000000012bff21cf, pid=71067, tid=29459
+#
+# JRE version: Java(TM) SE Runtime Environment (8.0_40-b25) (build 1.8.0_40-b25)
+# Java VM: Java HotSpot(TM) 64-Bit Server VM (25.40-b25 mixed mode bsd-amd64 compressed oops)
+# Problematic frame:
+# C  [librocksdbjni4956544259350114831..jnilib+0x101cf]  Java_org_rocksdb_RocksDB_iterator__JJ+0x1f
+#
+# Failed to write core dump. Core dumps have been disabled. To enable core dumping, try "ulimit -c unlimited" before starting Java again
+#
+# If you would like to submit a bug report, please visit:
+#   http://bugreport.java.com/bugreport/crash.jsp
+# The crash happened outside the Java Virtual Machine in native code.
+# See problematic frame for where to report the bug.
+#
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x00007fa3c1b47800):  JavaThread "Random[2]" [_thread_in_native, id=29459, stack(0x000000012c484000,0x000000012c584000)]
+
+siginfo: si_signo: 11 (SIGSEGV), si_code: 1 (SEGV_MAPERR), si_addr: 0x0000000000000000
+
+Registers:
+RAX=0x000000010f5a1e98, RBX=0x000000012be35018, RCX=0x00007fa3c3855c90, RDX=0x0000000000000000
+RSP=0x000000012c583380, RBP=0x000000012c5833c0, RSI=0x000000012c5833d0, RDI=0x00007fa3c1b479f8
+R8 =0x00000006c021dd88, R9 =0x00000007c01331f0, R10=0x000000010f5a1eb8, R11=0x00000000d8047f53
+R12=0x0000000000000000, R13=0x000000012c583500, R14=0x00000007c012f440, R15=0x00007fa3c1b47800
+RIP=0x000000012bff21cf, EFLAGS=0x0000000000010202, ERR=0x0000000000000004
+  TRAPNO=0x000000000000000e
+
+Top of Stack: (sp=0x000000012c583380)
+0x000000012c583380:   6000000000000101 00007fa3c3855c60
+0x000000012c583390:   0000000000000000 0000000000000000
+0x000000012c5833a0:   00000000d8047f53 00000007c0134f00
+0x000000012c5833b0:   00000007c01331f0 00000006c021dd88
+0x000000012c5833c0:   000000012c583410 000000010f5a1f2a
+0x000000012c5833d0:   00000006c0052870 000000012c583400
+0x000000012c5833e0:   000000012be35018 0000000000000000
+0x000000012c5833f0:   00007fa3c3855c90 000000010f5a1e98
+0x000000012c583400:   000000012c5834f8 0000000000000283
+0x000000012c583410:   00000000d800a50e 000000010f6d51b8
+0x000000012c583420:   000000078e12d7e8 00000006c021dd88
+0x000000012c583430:   00000007c0134f00 00000007c01331f0
+0x000000012c583440:   00000007c0134500 00000006c021dd88
+0x000000012c583450:   000000078e12d800 00000006c0052870
+0x000000012c583460:   000000078e12d828 000000012befe680
+0x000000012c583470:   000000012c5834d8 000000012befcfe0
+0x000000012c583480:   000000012befcfe0 000000012c5834f8
+0x000000012c583490:   000000010f193ac3 000000010f1775d0
+0x000000012c5834a0:   000000078e12d710 000000012c583560
+0x000000012c5834b0:   000000012c5834f8 00000000000000b9
+0x000000012c5834c0:   0000000000000000 000000012befe606
+0x000000012c5834d0:   000000012c583588 00007fa3c1b47800
+0x000000012c5834e0:   000000012c583560 000000010f179aa4
+0x000000012c5834f0:   000000010f179aa4 000000010f179aa4
+0x000000012c583500:   000000078e12d7e8 00000006c021dd88
+0x000000012c583510:   0000000000000009 00000006c0de6398
+0x000000012c583520:   000000012c583510 000000012befe579
+0x000000012c583530:   000000012c583588 000000012beff0d8
+0x000000012c583540:   000000012bf45d80 000000012befe680
+0x000000012c583550:   000000012c583500 000000012c583590
+0x000000012c583560:   000000076ded6138 000000010f6fedc4
+0x000000012c583570:   0000000000000000 000000078e12d710 
+
+Instructions: (pc=0x000000012bff21cf)
+0x000000012bff21af:   00 55 48 89 e5 48 81 e4 e0 ff ff ff 48 83 ec 40
+0x000000012bff21bf:   c5 f8 10 01 c4 e3 7d 18 41 10 01 c5 fc 29 04 24
+0x000000012bff21cf:   48 8b 02 48 8d 34 24 48 89 d7 c5 f8 77 ff 90 90
+0x000000012bff21df:   00 00 00 48 89 ec 5d c3 66 0f 1f 84 00 00 00 00 
+
+Register to memory mapping:
+
+RAX=0x000000010f5a1e98 is at entry_point+24 in (nmethod*)0x000000010f5a1d10
+RBX={method} {0x000000012be35018} 'iterator' '(JJ)J' in 'org/rocksdb/RocksDB'
+RCX=0x00007fa3c3855c90 is an unknown value
+RDX=0x0000000000000000 is an unknown value
+RSP=0x000000012c583380 is pointing into the stack for thread: 0x00007fa3c1b47800
+RBP=0x000000012c5833c0 is pointing into the stack for thread: 0x00007fa3c1b47800
+RSI=0x000000012c5833d0 is pointing into the stack for thread: 0x00007fa3c1b47800
+RDI=0x00007fa3c1b479f8 is an unknown value
+R8 =0x00000006c021dd88 is an oop
+org.jsimpledb.kv.rocksdb.SnapshotRocksDBKVStore 
+ - klass: 'org/jsimpledb/kv/rocksdb/SnapshotRocksDBKVStore'
+R9 =0x00000007c01331f0 is pointing into metadata
+R10=0x000000010f5a1eb8 is at entry_point+56 in (nmethod*)0x000000010f5a1d10
+R11=0x00000000d8047f53 is an unknown value
+R12=0x0000000000000000 is an unknown value
+R13=0x000000012c583500 is pointing into the stack for thread: 0x00007fa3c1b47800
+R14=0x00000007c012f440 is pointing into metadata
+R15=0x00007fa3c1b47800 is a thread
+
+
+Stack: [0x000000012c484000,0x000000012c584000],  sp=0x000000012c583380,  free space=1020k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  [librocksdbjni4956544259350114831..jnilib+0x101cf]  Java_org_rocksdb_RocksDB_iterator__JJ+0x1f
+J 1250  org.rocksdb.RocksDB.iterator(JJ)J (0 bytes) @ 0x000000010f5a1f2a [0x000000010f5a1e80+0xaa]
+J 1517 C2 org.jsimpledb.kv.AbstractKVStore.getAtMost([B)Lorg/jsimpledb/kv/KVPair; (48 bytes) @ 0x000000010f6d51b8 [0x000000010f6d4a40+0x778]
+
+Java frames: (J=compiled Java code, j=interpreted, Vv=VM code)
+J 1250  org.rocksdb.RocksDB.iterator(JJ)J (0 bytes) @ 0x000000010f5a1eb8 [0x000000010f5a1e80+0x38]
+J 1517 C2 org.jsimpledb.kv.AbstractKVStore.getAtMost([B)Lorg/jsimpledb/kv/KVPair; (48 bytes) @ 0x000000010f6d51b8 [0x000000010f6d4a40+0x778]
+j  org.jsimpledb.kv.KVPairIterator.hasNext()Z+33
+J 1540 C1 org.jsimpledb.kv.mvcc.MutableView$RangeIterator.findNext()Z (505 bytes) @ 0x000000010f6fedc4 [0x000000010f6fea60+0x364]
+J 1517 C2 org.jsimpledb.kv.AbstractKVStore.getAtMost([B)Lorg/jsimpledb/kv/KVPair; (48 bytes) @ 0x000000010f6d52a4 [0x000000010f6d4a40+0x864]
+J 1315 C1 org.jsimpledb.kv.util.ForwardingKVStore.getAtMost([B)Lorg/jsimpledb/kv/KVPair; (11 bytes) @ 0x000000010f5c58d4 [0x000000010f5c5720+0x1b4]
+j  org.jsimpledb.kv.KVDatabaseTest$RandomTask.test()V+522
+j  org.jsimpledb.kv.KVDatabaseTest$RandomTask.run()V+1
+v  ~StubRoutines::call_stub
+
+---------------  P R O C E S S  ---------------
+
+Java Threads: ( => current thread )
+  0x00007fa3c3155800 JavaThread "SIGTERM handler" daemon [_thread_blocked, id=24807, stack(0x000000012c587000,0x000000012c687000)]
+  0x00007fa3c292e800 JavaThread "SIGINT handler" daemon [_thread_blocked, id=34127, stack(0x000000012ad8d000,0x000000012ae8d000)]
+  0x00007fa3c425c800 JavaThread "Random[21]" [_thread_in_native, id=26391, stack(0x000000012da10000,0x000000012db10000)]
+  0x00007fa3c48e7800 JavaThread "Random[20]" [_thread_in_native, id=33035, stack(0x000000012d90d000,0x000000012da0d000)]
+  0x00007fa3c4329000 JavaThread "Random[11]" [_thread_in_native, id=23319, stack(0x000000012cebd000,0x000000012cfbd000)]
+=>0x00007fa3c1b47800 JavaThread "Random[2]" [_thread_in_native, id=29459, stack(0x000000012c484000,0x000000012c584000)]
+  0x00007fa3c4823800 JavaThread "Service Thread" daemon [_thread_blocked, id=22275, stack(0x000000012b3a4000,0x000000012b4a4000)]
+  0x00007fa3c4010000 JavaThread "C1 CompilerThread3" daemon [_thread_blocked, id=21763, stack(0x000000012b2a1000,0x000000012b3a1000)]
+  0x00007fa3c4806800 JavaThread "C2 CompilerThread2" daemon [_thread_blocked, id=21251, stack(0x000000012b19e000,0x000000012b29e000)]
+  0x00007fa3c4805800 JavaThread "C2 CompilerThread1" daemon [_thread_blocked, id=20739, stack(0x000000012b09b000,0x000000012b19b000)]
+  0x00007fa3c4804000 JavaThread "C2 CompilerThread0" daemon [_thread_blocked, id=20227, stack(0x000000012af98000,0x000000012b098000)]
+  0x00007fa3c1830000 JavaThread "Signal Dispatcher" daemon [_thread_blocked, id=19715, stack(0x000000012ae95000,0x000000012af95000)]
+  0x00007fa3c4800000 JavaThread "Finalizer" daemon [_thread_blocked, id=14595, stack(0x000000012ac47000,0x000000012ad47000)]
+  0x00007fa3c4002000 JavaThread "Reference Handler" daemon [_thread_blocked, id=14083, stack(0x000000012ab44000,0x000000012ac44000)]
+  0x00007fa3c2802800 JavaThread "main" [_thread_blocked, id=6403, stack(0x000000010d0b1000,0x000000010d1b1000)]
+
+Other Threads:
+  0x00007fa3c205b800 VMThread [stack: 0x000000012aa41000,0x000000012ab41000] [id=13571]
+  0x00007fa3c482c800 WatcherThread [stack: 0x000000012b4a7000,0x000000012b5a7000] [id=22787]
+
+VM state:not at safepoint (normal execution)
+
+VM Mutex/Monitor currently owned by a thread: None
+
+Heap:
+ PSYoungGen      total 1246208K, used 750856K [0x000000076ab00000, 0x00000007c0000000, 0x00000007c0000000)
+  eden space 1094656K, 55% used [0x000000076ab00000,0x000000078ffe13a8,0x00000007ad800000)
+  from space 151552K, 92% used [0x00000007ad800000,0x00000007b6060df0,0x00000007b6c00000)
+  to   space 151552K, 0% used [0x00000007b6c00000,0x00000007b6c00000,0x00000007c0000000)
+ ParOldGen       total 1384448K, used 857417K [0x00000006c0000000, 0x0000000714800000, 0x000000076ab00000)
+  object space 1384448K, 61% used [0x00000006c0000000,0x00000006f4552690,0x0000000714800000)
+ Metaspace       used 10893K, capacity 11026K, committed 11264K, reserved 1058816K
+  class space    used 1238K, capacity 1267K, committed 1280K, reserved 1048576K
+```
+
+@archiecobbs at the moment we have situation 2 in the Java API of RocksDB. We are going to improve a lot on how things are implemented but currently it is implemented that way.
+
+One of these rules is that you need to guarantee that there is no `iterator` before the corresponding `db` is going to be closed. If you do so you hit a guaranteed segmentation fault.
+
+Thanks for that info. I will look forward to the improved JNI implementation and wiki documentation.
+
+I'm pretty sure my code properly closes all iterators before closing the snapshot or db instance from whence they came (it tracks them explicitly in order to ensure this happens).
+
+And in any case, it looks like `AbstractRocksIterator` contains code that protects against that happening anyway:
+
+```
+protected void disposeInternal() {
+  synchronized (parent_) {
+    assert (isInitialized());
+    if (parent_.isInitialized()) {
+      disposeInternal(nativeHandle_);
+    }
+  }
+}
+```
+
+So in this case, I don't think the crash is due to iterators being closed after their 'parents'.
+
+@archiecobbs the problem is that you can`t even close a rocksdb instance without hitting an assertion before that code hits.
+
+Can you narrow down the portion of code responsible for it ? Also it would be interesting to see results with enabled assertions and `-Xcheck:jni`.
+
+@fyrz Assertions are already enabled (this is a TestNG unit test).
+
+I tried adding `Xcheck:jni` but that didn't change anything.
+
+FYI, the crash always seems to occur within `org.rocksdb.RocksDB.iterator(JJ)J` and the bad memory address is always zero.
+
+I have been trying to figure this out and have some clues.
+
+First, the trouble always occurs with reverse iterators. So I started inspecting the code and noticed the following difference between how `SeekToLast` and `SeekToFirst` are handled in `managed_iterator.cc`:
+
+```
+void ManagedIterator::SeekToLast() {
+  MILock l(&in_use_, this);
+  if (NeedToRebuild()) {
+    RebuildIterator();
+  }
+  assert(mutable_iter_ != nullptr);
+  mutable_iter_->SeekToLast();
+  if (mutable_iter_->status().ok()) {
+    UpdateCurrent();
+  }
+}
+
+void ManagedIterator::SeekToFirst() {
+  MILock l(&in_use_, this);
+  SeekInternal(Slice(), true);
+}
+
+void ManagedIterator::SeekInternal(const Slice& user_key, bool seek_to_first) {
+  if (NeedToRebuild()) {
+    RebuildIterator();
+  }
+  assert(mutable_iter_ != nullptr);
+  if (seek_to_first) {
+    mutable_iter_->SeekToFirst();
+  } else {
+    mutable_iter_->Seek(user_key);
+  }
+  UpdateCurrent();
+}
+```
+
+Notice how `UpdateCurrent()` is always invoked by `SeekToFirst()`, but it is only conditionally invoked by `SeekToLast()`. This seems like it might be incorrect; in particular, `this.valid_` is not being updated. 
+
+There is a similar inconsistency between `Prev()` and `Next()`.... `Next()` always invokes `UpdateCurrent()` but `Prev()` does not.
+
+I don't understand the code well enough yet to know if this is a real bug. Can somebody who does check whether these inconsistencies are intended?
+
+More specifics on possible bug scenarios:
+- `SeekToLast()` does not appear to clear the `_valid` flag if `mutable_iter_->SeekToLast()` fails
+- `Prev()` does not appear to clear the `_valid` flag if `mutable_iter_->Prev()` fails.
+
+I tested pull request #641 but it did not help. This makes sense because it looks like the `ManagedIterator` class is not being used during my test.
+
+You need to set options managed when you create the iterator to get managed_iterators. It is false by default.  
+
+Thanks. I am taking a break from this for now.
+
+I've tried building a simpler test case but had no luck - I can't get it to crash.
+
+As things currently stand, the Java version of RocksDB is simply not usable.
+
+Segfaults are unacceptable, and unfortunately I don't have a well-defined set of rules to follow that will guarantee no segfaults in RocksDB. I have added assertions to the code to verify things are not being disposed in the wrong order, and those assertions are all passing.
+
+So either there's some other unwritten rule that I'm breaking, or it's a RocksDB bug.
+
+In the former case I have no way to infer or test that broken rule.
+
+In the latter case I don't have 3 months to spend deciphering unfamiliar C++ code -- something I was hoping to avoid by using Java in the first place.
+
+@archiecobbs you can't use `ManagedIterator` in RocksJava because it's not exposed at the moment. You are using the `default` iterator.
+
+I understand that. The `ManagedIterator` stuff is a red herring, even though it has its own, different bug: see pull request.
+
+This bug, which has nothing to do with `ManagedIterator` is still valid and 100% reproducible.
+
+Thanks.
+
+@archiecobbs I've never been able to create a test case that proves it, but I think there could be a condition in the Java code that causes finalize() to be called prematurely.  I saw different results as I played with differed GC settings, where G1 was almost unusable (SEGV) and CMS was better. 
+
+The use of finalize() to do cleanup is not ideal even just for the extra GC overhead.  Switching to a PhantonReference model for cleanup would be much better.
+
+Are you able to compile to code yourself to do a test?  I'd be curious if you have a repeatable case if commenting out the finalize() method in RocksObject.java and ensuring that you call dispose() yourself fixes the issue (and proves or disproves my theory).
+
+@DerekSchenk Some feedback on your question...
+
+I ran the test with a version of `RocksObject.java` that simply had the `dispose()` line in `finalize()` commented out. This did not seem to change the results.
+
+When I run the test (either with or without the `finalize()` tweak), the result varies.
+
+The most common failure is this: the test appears to hang, but in fact there are two or three test threads running with CPU at 100%. Hitting CTRL-\ to generate a stack trace shows the threads are usually (but not always) doing work in RocksDB native code, often `RocksIterator.seek0()` or `RocksIterator.prev0()` (but never `RocksIterator.next0()`). Then it (usually) eventually runs out of memory.
+
+It's possible that the SEGV's are from the JVM poorly handing out of memory situations, instead of RocksDB itself. Maybe we're running out of system heap instead of Java heap, which might cause this?
+
+On some occasions, I get an assertion failure which appears to be due to a RocksDB iterator returning a value out of order while doing a reverse iteration. I've filed issue #682 for this ... these two bugs could very well have the same underlying cause, because in both cases `prev()` is involved.
+
+After applying the fix in #648 (duplicated by #682), I'm no longer able to reproduce this problem.
+
+So it appears that here's what was happening: the iterator bug was causing the test to go into a loop that was eating up all of memory, and the JVM then either crashed with a SEGV or hanged.
+
+It's also possible some other fix recently applied fixed this issue for another reason. In any case, the test case seems to work properly now, so I'm closing this bug. Thanks!
+

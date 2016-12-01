@@ -1,0 +1,15 @@
+I was reading a guide on reading SpatialDB values. 
+
+The errors I've run into is in regards to the render class. What extension in rocksdb path does render come from?
+
+![image](https://cloud.githubusercontent.com/assets/7003288/16347765/d52ac12a-3a24-11e6-8d4c-d9f314373dc2.png)
+
+Where Cursor is rocksdb::spatial::SpatialDBOptions::Cursor , 
+where does Render reside ?
+
+@igorcanadi : The SpatialDB blog post at http://rocksdb.org/blog/author/icanadi/ mentions that there is a Render function that is invoked. Can we make it explicit that the Render function is 'outside' of rocksdb?
+
+Done:
+
+![screen shot 2016-06-29 at 8 52 44 am](https://cloud.githubusercontent.com/assets/1091023/16459184/dd2d899c-3dd6-11e6-8ec5-fe4c0d834ec2.png)
+

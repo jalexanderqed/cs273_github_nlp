@@ -1,0 +1,209 @@
+Hi,
+
+I've been observing the behaviour of rocksdb when used in conjunction with the rippled project. Recently an option has been added to permit the use of snappy compression and while grep-ing the LOG file to witness the compression gains I noticed that  the amplification figures seem high. Here's a snippet from the log showing some level 5 compactions where compression is occurring for the first time and also where compression has already occurred:
+
+```
+2014/05/16-14:56:03.645657 19b8ff000 compacted to: files[0 0 39 194 937 3804 392 ], 148.5 MB/sec, level 5, files in(1, 4) out(2) MB in(1.4, 393.1) out(187.3), read-write-amplify(416.0) write-amplify(133.9) OK
+2014/05/16-15:05:06.355783 19b8ff000 compacted to: files[0 0 24 198 936 3802 392 ], 196.2 MB/sec, level 5, files in(1, 4) out(2) MB in(1.4, 388.1) out(184.7), read-write-amplify(398.9) write-amplify(128.3) OK
+2014/05/16-16:16:35.044224 19b8ff000 compacted to: files[0 0 37 193 940 3802 392 ], 122.2 MB/sec, level 5, files in(1, 4) out(4) MB in(0.4, 376.4) out(376.9), read-write-amplify(1686.4) write-amplify(843.1) OK
+2014/05/16-16:46:39.179892 19b8ff000 compacted to: files[0 0 20 197 939 3802 392 ], 109.8 MB/sec, level 5, files in(1, 3) out(3) MB in(0.4, 330.0) out(330.4), read-write-amplify(1701.1) write-amplify(850.5) OK
+```
+
+Here's where the rocksdb options are being set in the codebase:
+https://github.com/ripple/rippled/blob/develop/src/ripple_core/nodestore/backend/RocksDBFactory.cpp#L101-L164
+For my instance, from where the above LOG snippet comes, I've used these settings:
+
+```
+open_files=6000
+filter_bits=12
+compression=1
+cache_mb=256
+file_size_mb=8
+file_size_mult=2
+```
+
+I was wondering if you had any optimisation suggestions for this scenario? Keys are always 32 bytes in length and values can be variable length usually between 100 bytes and 8000 bytes, but average at just under 500 bytes. The whole database is about 500GB and consists of 5380 .sst files. Bear in mind that rippled currently uses version 2.5.fb, but there are plans to catch up to the latest release.
+
+Thanks for any help!
+
+Hey @donovanhide, are you comfortable sharing more of your LOG file? There are some other useful information in there.
+
+No problem, if you are happy to receive a 1.2MB email attachment? Just ping me at my name and gmail.com and I'll send it straight on to you. Thanks!
+
+@donovanhide for some reason files produced by a single compaction are very variable in size. Example:
+
+```
+2014/05/16-11:51:19.217240 19b8ff000 Table was constructed:
+basic properties: # data blocks=106; # entries=762; raw key size=30480; raw average key size=40.000000; raw value size=417035; raw average value size=547.290026; data block size=210520; index block size=3127; filter block size=1678; (estimated) table size==215325; filter policy name=N/A;
+user collected properties: kDeletedKeys=0;
+2014/05/16-11:51:19.217902 19b8ff000 Generated table #942009: 762 keys, 215112 bytes
+2014/05/16-11:51:19.526205 19b8ff000 Table was constructed:
+basic properties: # data blocks=8879; # entries=67500; raw key size=2700000; raw average key size=40.000000; raw value size=34063501; raw average value size=504.644459; data block size=16778590; index block size=251833; filter block size=143138; (estimated) table size==17173561; filter policy name=N/A;
+user collected properties: kDeletedKeys=0;
+2014/05/16-11:51:19.545122 19b8ff000 Generated table #942010: 67500 keys, 17117689 bytes
+```
+
+First file is only 762 entries while the second one has 67500. To fix this, try increasing max_grandparent_overlap_factor, maybe even to 100. Let us know if that helped.
+
+Also, is there a reason you use only one compaction thread? There is value in using more concurrency, especially if your CPU has more cores. Here's an example how to do it: https://github.com/facebook/rocksdb/blob/master/util/options.cc#L540
+
+Hi Igor,
+thanks for looking :-) I'm guessing the variable size in files is due to target_file_size_multiplier being set? Level 6 files are huge and lower level files are progressively smaller. Not sure if this is a good idea?
+
+https://github.com/ripple/rippled/blob/29d1d5f06261a93c5e94b4011c7675ff42443b7f/src/ripple_core/nodestore/backend/RocksDBFactory.cpp#L138
+
+I think the singular compaction thread is a misunderstanding of the thread configuration:
+
+https://github.com/ripple/rippled/blob/29d1d5f06261a93c5e94b4011c7675ff42443b7f/src/ripple_core/nodestore/backend/RocksDBFactory.cpp#L152-L155
+
+What is a good expected value for read-write-amplify and write-amplify outputs?
+
+No, I'm talking about variable size on a single level. You have both small and big files on the single level (2 and 3 mostly). Increasing grandparent_overlap_factor should help.
+
+Different file sizes on different levels should be OK. We usually set file size multiplier to be 1, though (default).
+
+From the LOG file you sent me, you're using only one thread:
+
+```
+2014/05/16-11:44:57.056209 7fff7a806310              Options.max_background_compactions: 1
+2014/05/16-11:44:57.056210 7fff7a806310                  Options.max_background_flushes: 0
+```
+
+Write amplify for a single compaction should be below 10. Write amplify for the whole system in the stable state should be around 70 (number of levels times 10). I don't have much operational experience with RocksDB, so take this values with a pinch of salt.
+
+If you want to reduce write amplification (especially if you can shard your data), take a look at Universal compaction. Good place to start: https://github.com/facebook/rocksdb/wiki/Rocksdb-Architecture-Guide
+
+This is great advice, thank you! The single thread is for compactions and flushes is due to my omitting the 'high_threads' rippled config, which is my error. I'll try out your suggestions and report back. Thanks again!
+
+To help tune better: can you pl tell us:
+1.How much memory do you have on your machine?
+2. How many rocksdb database (each of 500 GB) do you plan to run on a single machine?
+3. How many cpus on your machine?
+
+How much disk space on your machine can rocksdb use to store the 500 GB of database? 
+
+@donovanhide you might also want to add: 
+
+```
+ options.max_background_compactions = keyValues["bg_threads"].getIntValue();
+```
+
+here: https://github.com/ripple/rippled/blob/29d1d5f06261a93c5e94b4011c7675ff42443b7f/src/ripple_core/nodestore/backend/RocksDBFactory.cpp#L144
+
+Hi @dhruba,
+
+rippled is a peer to peer application, intended to be run on a variety of machines, so a fixed configuration is hard to specify. My machine is a quadcore sandybridge 2.8GHz iMac with 32GB of RAM and a 1TB Samsung SSD dedicated to a single 500GB database (which with snappy compression gradually kicking in now as compactions occur, will probably fall to 250GB). 
+
+I'm not personally having stalling issues, but I believe this has been a problem for Ripple Labs instances which have high client load. I don't know for certain their configuration, but I believe they are running on EC2 EBS volumes, rather than SSD and this perhaps means the amplification is more of an issue for their instances.
+
+Hope that helps! 
+
+@igorcanadi Yep, that is going in my rippled pull request :-)
+
+Hi Donovan, if you run into any stalling issues, please do let us know, and send us LOG files from your db.  Running rocksdb at scale do need config tuning based on your workload and we would like to help you out. Please re-open this case if you run into any problems.
+
+Hi @dhruba,
+
+have been doing some further benchmarking and here are some stats from the LOG file showing L0 stalls which are slowing insertions down:
+
+https://gist.github.com/donovanhide/116b1b1e7897c8ace84a
+
+The following config was used which helps with read speeds
+
+```
+            rocksdb::Options options;
+            options.OptimizeLevelStyleCompaction(512 * 1024 * 1024);
+            options.IncreaseParallelism(4);
+            options.prefix_extractor.reset(rocksdb::NewFixedPrefixTransform(32));
+            rocksdb::BlockBasedTableOptions table_options;
+            table_options.index_type =
+                rocksdb::BlockBasedTableOptions::kHashSearch;
+            table_options.filter_policy.reset(
+                rocksdb::NewBloomFilterPolicy(10));
+            options.table_factory.reset(
+                NewBlockBasedTableFactory(table_options));
+            options.memtable_factory.reset(rocksdb::NewHashSkipListRepFactory());
+```
+
+the following is used for the WriteOptions on a db.Write() call.
+
+```
+        rocksdb::WriteOptions options;
+        options.disableWAL = true;
+```
+
+Any ideas what could be causing the high L0 stall? The benchmark is writing 32 bytes keys with values length in the range of 128 to 2048 bytes which is typical of the rippled workload. Any help much appreciated!
+
+Assuming this uses leveled compaction then L0 stalls occur when data can't
+be moved out of L0 as fast as it arrives. Disabling wal writes, or writing
+wal but not doing sync just means that data arrives even faster. That will
+make L0 stalls more likely. Data has to be moved out of the L1 as fast as
+it arrives in the L0 and L0->L1 compaction doesn't run concurrent with
+L1->L2 compaction.
+
+On Fri, Oct 31, 2014 at 5:41 AM, Donovan Hide notifications@github.com
+wrote:
+
+> Hi @dhruba https://github.com/dhruba,
+> 
+> have been doing some further benchmarking and here are some stats from the
+> LOG file showing L0 stalls which are slowing insertions down:
+> 
+> https://gist.github.com/donovanhide/116b1b1e7897c8ace84a
+> 
+> The following config was used which helps with read speeds
+> 
+> ```
+>         rocksdb::Options options;
+>         options.OptimizeLevelStyleCompaction(512 * 1024 * 1024);
+>         options.prefix_extractor.reset(rocksdb::NewFixedPrefixTransform(32));
+>         rocksdb::BlockBasedTableOptions table_options;
+>         table_options.index_type =
+>             rocksdb::BlockBasedTableOptions::kHashSearch;
+>         table_options.filter_policy.reset(
+>             rocksdb::NewBloomFilterPolicy(10));
+>         options.table_factory.reset(
+>             NewBlockBasedTableFactory(table_options));
+>         options.memtable_factory.reset(rocksdb::NewHashSkipListRepFactory());
+> ```
+> 
+> the following is used for the WriteOptions on a db.Write() call.
+> 
+> ```
+>     rocksdb::WriteOptions options;
+>     options.disableWAL = true;
+> ```
+> 
+> Any ideas what could be causing the high L0 stall? The benchmark is
+> writing 32 bytes keys with values length in the range of 128 to 2048 bytes
+> which is typical of the rippled workload. Any help much appreciated!
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/152#issuecomment-61254425.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@donovanhide it looks like you're writing data to RocksDB faster than RocksDB can process. For experimental purposes, would you try removing the hash index? I remember a while ago that hash index slowed down compaction, thus slowing down L0->L1 compaction, which limited the concurrency of the system. Also, can you please set `min_write_buffer_number_to_merge = 1` (OptimizeLevelStyleCompaction() sets this to 2, not sure if that's optimal)?
+
+What is your disk I/O utilization? 
+
+@donovanhide I just had a discussion with coworker about your results. So when you bombard RocksDB with writes (as you do in the benchmark), RocksDB will eventually go bottom up. Unfortunately, we still don't have a good system of smoothly stalling writes, but we're working on it.
+
+What I suggest you to do is to define a write rate you want from RocksDB to handle (first try with 1/20 of disk bandwidth -- we should be able to handle that much). Then, write a benchmark that will write to RocksDB using that write rate, with occasional, short-lived write bursts. That benchmark will better represent your workload and give you results that are more meaningful.
+
+@igorcanadi That sounds like a plan. I realise the benchmark is slightly artificial; to be honest it's not the write speed that is important, it's the creation of a very large set of sst's with different block indexing options and level compaction settings, to see how we can get the best read speeds for different access patterns. Getting fast writes means that the read benchmark can start a lot sooner. Is rate_limiter.h suitable for achieving a capped write rate?
+
+rate_limiter as we use it today is not rate limiting write rate -- it's for rate limiting compaction and flush IO :)
+
+It should be possible to reuse the code to also achieve good consistent DB::Write() rate, but this code is not yet there. Are you using db_bench for benchmarking?
+
+cc @ljinfb 
+
+Hi @igorcanadi , thanks for the answer. No I'm not using db_bench, but have read it for inspiration :-) I've got a benchmark which runs as part of rippled's unit tests. I'll see if I can get a friendly write_limiter up and running.
+
+Great! Let me know if you need anything. We also have #rocksdb channel on freenode if you need real-time help :)
+

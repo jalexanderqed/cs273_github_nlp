@@ -1,0 +1,12 @@
+…mic libraries included
+
+in the Java jar.  Also build the linux libraries using the portable flag to fix a problem with
+the linux32 build and improve the general portability of the RocksDB dynamic libraries.
+==> linux32: util/crc32c.cc:318:39: error: ‘_mm_crc32_u64’ was not declared in this scope
+
+Here is what we have so far related to https://github.com/facebook/rocksdb/issues/606. Not sure this is the best way to address this issue.  Just trying to document what we have tried.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thanks for the fix.  I will cherry-pick it into 3.13 and make the release again.
+

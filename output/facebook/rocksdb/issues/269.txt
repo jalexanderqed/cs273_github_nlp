@@ -1,0 +1,12 @@
+1, const qualifiers on return types make no sense and will trigger a compile warning: warning: type qualifiers ignored on function return type [-Wignored-qualifiers]
+
+2, class HistogramImpl has virtual functions and thus should have a virtual destructor
+
+3, with some toolchain, the macro __STDC_FORMAT_MACROS is predefined and thus should be checked before define
+
+Thanks for the fixes. Just out of curiosity, which compiler do you use?
+
+We use Red Hat Developer Toolset 2 (gcc 4.8.2) with a in-house build system named typhoon-blade. It is open sourced here: https://github.com/chen3feng/typhoon-blade 
+
+I heard that this build system is very similar to the in-house build system in facebook: fbmake.
+

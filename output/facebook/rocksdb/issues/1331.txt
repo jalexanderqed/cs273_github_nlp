@@ -1,0 +1,13 @@
+that i try to write a MemTableRep implement used fixed memory block ...
+so how do i notify rocksdb this MemTableRep is full ?
+
+I don't think there is a way to tell that to RocksDB, but you can return a big value in ApproximateMemoryUsage() to tell RocksDB that it should schedule a flush for this memtable.
+
+What are you trying to achieve ? Do you want RocksDB to stop sending more writes to your memtable if the memory limit for this table is reached ?
+
+ahhh you got it .
+can i use malloc/free/realloc for alloc memory ?
+and return total size in ApproximateMemoryUsage()
+
+@mm304321141 yes you can. You can manage memory in whatever way you want.
+

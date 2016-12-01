@@ -1,0 +1,25 @@
+Summary:
+1. Add multi-get JNI bindings
+2. Unit-tests for multi-get
+
+make rocksdbjava
+make sample
+
+Reviewers: haobo, yhchiang, sdong, dhruba, rsumbaly, zzbennett, swapnilghike
+
+Reviewed By: yhchiang
+
+CC: leveldb
+
+Differential Revision: https://reviews.facebook.net/D18369
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Hello @ankgup87, in case you haven't sign up at https://code.facebook.com/cla.  Would you mind trying to sign up?  I will accept the merge later on.  Let me know if you encounter any problem.
+
+Strange.! I had signed it before. Can you please check if all is good now?
+
+Not sure how to check this for people other than myself, but in my case when I try to sign up, it will show the following message, indicating that I have been registered.  Do you see similar message as follows?
+
+"The 'GitHub' value has been registered on this form before. If you would like to update an existing contributor account, please email cla@fb.com with your details."
+

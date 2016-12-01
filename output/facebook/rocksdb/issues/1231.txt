@@ -1,0 +1,33 @@
+quoting the las argument of string REGEXP REPLACE function
+
+@yuslepukhin Could you give me an opinion on the changes to `CMakeLists.txt` for Windows please?
+
+@adamretter @clumsy I think this change is OK and the quotes are necessary.
+On the other hand this code is a copy of what runs in the main CMake file. I believe that the parent CMake vars are accessible in the included CMake projects. Thus if these changes are made in the parent CMake we might be able to keep one copy of the code and run it once. Disclaimer: I did not test this change.
+
+@yuslepukhin What parent CMake file did you mean?
+As far as I've read the quotes are indeed harmless, but I would not recommend making more changes that is necessary.
+As for the provided patch - this is all that has allowed me to make a CMake build via Lion on my OS X.
+
+@clumsy This CMake is included into CMakeLists.txt off the root on line 309 when you invoke CMake with -DJNI=1 and so it gets built along with everything else.
+
+However, it is up to you. Neither Travis nor AppVeor are invoked for this PR somehow. I would love someone to run those. Other than that I could merge it.
+
+@clumsy I am sorry, this is the parent CMake, I am reading this wrong. So if someone would test this on Windows, I could merge it.
+
+@yuslepukhin Ok, I thought I started seeing things :)
+I agree that it would be perfect is someone can run this too.
+I tried the build on Windows (Visual Studio 2015) - it was fine.
+If someone else tries it on Windows - it should be good enough.
+
+BTW, are there any plans of making the CMake build cross-platform?
+
+@clumsy There is an effort that I supposed to contribute to but I have been swamped lately with work. https://github.com/facebook/rocksdb/pull/1135
+
+I will try to verify the change when I get a minute today
+
+Thanks, I can participate in cross-platform build initiative from the OS X side.
+Do you keep the current state in a public branch or that PR is all we have as of now?
+
+Closes https://github.com/facebook/rocksdb/issues/1230
+

@@ -1,0 +1,12 @@
+C++ API has API for creating SST file and ingesting the SST file into rocksdb. (https://github.com/facebook/rocksdb/wiki/Creating-and-Ingesting-SST-files) However, rocksdbjni has no API for that. For bulk-loading data into rocksdb, it is very efficient way, thus, Java needs to implement this API.
+
+if you have a patch that implements these APIs in Java, please consider contributing it back to this github repo.
+
+@dhruba Yes, I am working on this issue.
+
+Thanks @ijsong, Please submit a java API pull request and I will review it
+
+@IslamAbdelRahman will  Java API for SstFileWriter be merged to the which version of rocksdb?
+
+@xh931076284, Next time we cut the branch it will be RocksDB 4.13
+

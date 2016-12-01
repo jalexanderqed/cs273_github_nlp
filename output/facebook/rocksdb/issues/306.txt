@@ -1,0 +1,8 @@
+fix cast style to cpp static_cast
+
+Can we just print this using PRIu64?
+
+@igorcanadi yes, thanks for your suggestion.
+
+Txn!
+

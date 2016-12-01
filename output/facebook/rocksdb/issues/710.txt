@@ -1,0 +1,18 @@
+OptimizeLevelStyleCompaction unconditionally defaulted to kSnappyCompression,
+which is a problem if it's not supported. Checks for and uses it, LZ4, or no
+compression if neither are around.
+
+Tnx for your contribution. Did you sign CLA?
+
+I haven't signed the CLA yet. I'll get back to you on that - need to make sure I can sign it (or have it signed on my behalf).
+
+> I haven't signed the CLA yet. I'll get back to you on that - need to make sure I can sign it (or have it signed on my behalf).
+
+Let us know if you have any questions or concerns.
+
+> Reformatted. BTW, do you run the code through a tool or spot-check on code review? Just curious...
+
+We do run tests through phabricator, a tool we use for code review. We call them linters and you can try it out with `arc lint`. You might need to install arcanist first: https://secure.phabricator.com/book/phabricator/article/arcanist/
+
+For code formatting, we also have a tool `make format`. Try it out :)
+

@@ -1,0 +1,4 @@
+Unless I'm missing something, the new "Full" bloom filter doesn't seem to be available from the C API.  `NewBloomFilterPolicy(int)` was extended with a `bool use_block_based_builder = true` argument, but the C API still has only `rocksdb_filterpolicy_create_bloom(int)`.
+
+I can submit a pull request for this.  My strategy will be to create another C function for creating full bloom filters (so as not to break compatibility with clients).  Let me know if there's a more preferred way.
+

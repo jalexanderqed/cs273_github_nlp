@@ -1,0 +1,11 @@
+crc32c: choose function in static initialization
+
+Before: 4.430 micros/op 225732 ops/sec; 881.8 MB/s (4K per op)
+After: 4.125 micros/op 242425 ops/sec; 947.0 MB/s (4K per op)
+
+But we want to choose on the machine that is running rocksdb vs the machine on which u compile rocksdb
+
+Static initialization happens when the code executes?
+
+That's right Albert, so ur patch looks fine
+

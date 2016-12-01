@@ -1,0 +1,89 @@
+Summary:
+- Deprecated RateLimiterConfig and GenericRateLimiterConfig
+- Introduced RateLimiter
+
+Closes https://github.com/facebook/rocksdb/pull/549
+
+@yhchiang Okay so I have re-studied the code and the documentation of `shared_ptr` and I think I now have a better (simpler and correct understanding of it).
+
+So to summarise my understanding of the problem with new/delete of `shared_ptr` and a possible fix:
+
+## java/rocksjni/ratelimiterjni.cc
+
+``` C++
+32: jlong Java_org_rocksdb_RateLimiter_newRateLimiterHandle(
+33:     JNIEnv* env, jclass jclazz, jlong jrate_bytes_per_second,
+34:     jlong jrefill_period_micros, jint jfairness) {
+35:   auto* rate_limiter = rocksdb::NewGenericRateLimiter(
+36:       static_cast<int64_t>(jrate_bytes_per_second),
+37:       static_cast<int64_t>(jrefill_period_micros),
+38:       static_cast<int32_t>(jfairness));
+39: 
+40:   // TODO(AR) `ptr_sptr_rate_limiter` is never deleted :-(
+41:   std::shared_ptr<rocksdb::RateLimiter> *ptr_sptr_rate_limiter =
+42:     new std::shared_ptr<rocksdb::RateLimiter>;
+43:   *ptr_sptr_rate_limiter = std::shared_ptr<rocksdb::RateLimiter>(rate_limiter);
+44: 
+45:   return reinterpret_cast<jlong>(ptr_sptr_rate_limiter);
+46: }
+```
+1. Line 35 allocates memory for `sizeof(RateLimiter)` and then constructs the `RateLimiter` object in the allocated storage.
+2. Line 41 allocates the memory for `sizeof(std::shared_ptr<rocksdb::RateLimiter>)` and then constructs the `shared_ptr` object in the allocated storage.
+3. Line 43 Constructs a _stack_ scoped `shared_ptr` and calls the assignment operator to share the ownership of `rate_limiter` with `ptr_sptr_rate_limiter`;
+4. Line 45, we provide the memory address of `ptr_sptr_rate_limiter` to Java.
+   
+   ``` C++
+   53: void Java_org_rocksdb_RateLimiter_disposeInternal(
+   54:     JNIEnv* env, jobject jobj, jlong jhandle) {
+   55:   // TODO(AR) `ptr_sptr_rate_limiter` is never deleted :-(
+   56:   std::shared_ptr<rocksdb::RateLimiter> *handle =
+   57:       reinterpret_cast<std::shared_ptr<rocksdb::RateLimiter> *>(jhandle);
+   58:   handle->reset();
+   59: }
+   ```
+5. Line 56 retrieves the memory address of `ptr_sptr_rate_limiter`, and casts it to a pointer to a `shared_ptr`.
+6. Line 58 releases the ownership of the `rate_limiter` by this `shared_ptr`.
+   
+   The problem is that in (6) whilst the underlying memory allocated to `RateLimiter` in (1) will be reclaimed eventually, the _pointer to the_ `shared_ptr` (created in (2)) is never cleaned up, instead of `handle->reset()`, we should most likely do `delete handle`; which is safe as a copy is made in (7).
+   
+   The documentation for `shared_ptr states`:
+   
+   > Several shared_ptr objects may own the same object. The object is destroyed and its memory deallocated when either of the following happens:
+   > the last remaining shared_ptr owning the object is destroyed;
+   > the last remaining shared_ptr owning the object is assigned another pointer via operator= or reset().
+   > The object is destroyed using delete-expression or a custom deleter that is supplied to shared_ptr during construction.
+   
+   ## java/rocksjni/options.cc
+   
+   ``` C++
+   3618: void Java_org_rocksdb_DBOptions_setRateLimiter(
+   3619:     JNIEnv* env, jobject jobj, jlong jhandle, jlong jrate_limiter_handle) {
+   3620:   std::shared_ptr<rocksdb::RateLimiter> *pRateLimiter =
+   3621:       reinterpret_cast<std::shared_ptr<rocksdb::RateLimiter> *>(
+   3622:           jrate_limiter_handle);
+   3623:   reinterpret_cast<rocksdb::DBOptions*>(jhandle)->
+   3624:       rate_limiter = *pRateLimiter;
+   3625: }
+   ```
+7. Line 3635, dereferences the `shared_ptr` `pRateLimiter` and then copy assigns it to `DBOptions->rate_limiter`, `DBOptions` now has it's own `shared_ptr`.
+
+@adamretter.  Thanks for double checking that.  Yes, I think your understanding is correct.  As the shared_ptrs of RateLimiter already take care of the ownership of RateLimiter, deleting the handle (the pointer to the share_ptr) is safe after its share_ptr releases its ownership of RateLimiter (i.e. after handle->reset() is called).
+
+I think we can go ahead and delete handle :)
+
+@yhchiang If I understand correctly, we can skip calling `handle->reset()` as calling `delete handle` will first invoke the destructor of the `shared_ptr` which also removes the ownership (before reclaiming the memory). Do you agree?
+
+@adamretter: No I don't agree :p.  Remember handle is a pointer of shared_ptr instead of a shared_ptr.  By calling `delete handle`, you only delete the pointer of smart_ptr.  The equivalent call you mentioned should be `delete *handle` instead.  So just keep the current `handle->reset()` :).
+
+Hmm, after rethinking about this, I think I am wrong on the last question.  Deleting a pointer of shared_ptr should invoke the destructor of shared_ptr, which essentially release the ownership of its underlying instance.
+
+But I do suggest to keep the handle->reset() just to keep it crystal clear to prevent someone unsober like me questioning about not handling the shared_ptr :p.
+
+So go ahead and update the diff, @adamretter!  I will merge it once it's done!
+
+@yhchiang Done. It's ready to go...
+
+Awesome!  I am giving it a final review pass!
+
+LGTM.  Ship it!
+

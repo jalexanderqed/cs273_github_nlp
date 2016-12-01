@@ -1,0 +1,103 @@
+I'm trying to use Mongo-rocks CentOS 7 RPMs and I think I'm hitting an issue with the rate limiter in rocksdb:
+
+```
+# gdb --args mongod -f /etc/mongod.conf
+GNU gdb (GDB) Red Hat Enterprise Linux 7.6.1-64.el7
+Copyright (C) 2013 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "x86_64-redhat-linux-gnu".
+For bug reporting instructions, please see:
+<http://www.gnu.org/software/gdb/bugs/>...
+Reading symbols from /usr/bin/mongod...done.
+(gdb) run
+Starting program: /bin/mongod -f /etc/mongod.conf
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib64/libthread_db.so.1".
+2015-08-17T12:51:16.931+0000 I STORAGE  Compression: snappy
+2015-08-17T12:51:16.931+0000 I STORAGE  MaxWriteMBPerSec: 1024
+2015-08-17T12:51:16.931+0000 I STORAGE  Crash safe counters: 0
+[New Thread 0x7ffff0286700 (LWP 27044)]
+
+Program received signal SIGILL, Illegal instruction.
+0x000000000150b881 in CalculateRefillBytesPerPeriod (this=0x2496000, rate_bytes_per_sec=1073741824) at ./util/rate_limiter.h:63
+warning: Source file is more recent than executable.
+63      return rate_bytes_per_sec * refill_period_us_ / 1000000.0;
+Missing separate debuginfos, use: debuginfo-install mongodb-org-server-3.0.4-1.el7.x86_64
+(gdb)
+```
+
+Hmmm. This looks like the rocksdb was compiled with PORTABLE flag set turned off (which is the default). When PORTABLE flag is turned off, we compile RocksDB to optimize for native architecture. This makes the binary work only on that specific architecture.
+
+Thanks a lot for the quick answer. I'll try to recompile myself under the same machine (vagrant instance) to see what happens.
+
+Open candid question: Is it worth it to disable the PORTABLE? does it really squeeze more performance in a significant way?
+
+The biggest gain from using PORTABLE=0 is with CRC32: https://github.com/facebook/rocksdb/blob/master/util/crc32c.cc#L318. When we compile on SSE4.2 architecture we use a crc32 machine instruction, which makes checksumming much much faster.
+
+Out of curiosity, I've tried running the thing in two different computers and enabled virtualbox support for SSE4.1/4.2 (checked in /proc/cpuinfo) but got the same result. I guess some other option only available on high-end xeon's in Amazon is being used.
+
+I will wait for my ongoing mongo-rocks build to finish and try again.
+
+Yeah -march=native enables all kinds of things. You can try `-march=sse4.2` to only enable sse4.2 support.
+
+It seems the original issue could be solved, as it proceeds further down in the startup, but it still fails:
+
+```
+# gdb --args ./mongod -f /etc/mongod.conf
+GNU gdb (GDB) Red Hat Enterprise Linux 7.6.1-64.el7
+Copyright (C) 2013 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "x86_64-redhat-linux-gnu".
+For bug reporting instructions, please see:
+<http://www.gnu.org/software/gdb/bugs/>...
+Reading symbols from /usr/src/mongo/mongod...done.
+(gdb) run
+Starting program: /usr/src/mongo/./mongod -f /etc/mongod.conf
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib64/libthread_db.so.1".
+2015-08-17T19:28:53.594+0000 I STORAGE  Compression: snappy
+2015-08-17T19:28:53.594+0000 I STORAGE  MaxWriteMBPerSec: 256
+2015-08-17T19:28:53.594+0000 I STORAGE  Engine custom option: max_background_compactions=8;block_based_table_factory={checksum=kxxHash};level_compaction_dynamic_level_bytes=true
+2015-08-17T19:28:53.594+0000 I STORAGE  Crash safe counters: 0
+warning: bind_ip of 0.0.0.0 is unnecessary; listens on all ips by default
+[New Thread 0x7ffff0285700 (LWP 11943)]
+
+Program received signal SIGTRAP, Trace/breakpoint trap.
+0x00007ffff77a7ffb in raise (sig=5) at ../nptl/sysdeps/unix/sysv/linux/pt-raise.c:37
+37    return INLINE_SYSCALL (tgkill, 3, pid, THREAD_GETMEM (THREAD_SELF, tid),
+```
+
+in log:
+
+```
+----- BEGIN BACKTRACE -----
+{"backtrace":[{"b":"400000","o":"BCA669"},{"b":"400000","o":"B752A1"},{"b":"400000","o":"B5B95A"},{"b":"400000","o":"9BBC82"},{"b":"400000","o":"9C5D21"},{"b":"400000","o":"6E8FFB"},{"b":"400000","o":"471082"},{"b":"400000","o":"40AD64"},{"b":"7FFFF67AE000","o":"21AF5"},{"b":"400000","o":"46EDD1"}],"processInfo":{ "mongodbVersion" : "3.0.4-pre-", "gitVersion" : "b98fe56a33dd9e3131bcc0232a92de44fb119ec2", "uname" : { "sysname" : "Linux", "release" : "3.10.0-123.el7.x86_64", "version" : "#1 SMP Mon Jun 30 12:09:22 UTC 2014", "machine" : "x86_64" }, "somap" : [ { "elfType" : 2, "b" : "400000", "buildId" : "D7F46A6FC9BAD60504798134E82E14056FECAE2B" }, { "b" : "7FFFF88FA000", "elfType" : 3, "buildId" : "D7952DC468957C2B14B6BB79E613D48BA1224706" }, { "b" : "7FFFF7BC6000", "path" : "/lib64/libz.so.1", "elfType" : 3, "buildId" : "E45643F27F3B3E960F3691AFC6EC27A98EF7B46B" }, { "b" : "7FFFF79B6000", "path" : "/lib64/libbz2.so.1", "elfType" : 3, "buildId" : "E31FA8F847E049A7AB920BA0AAD2113C080B2CC8" }, { "b" : "7FFFF779A000", "path" : "/lib64/libpthread.so.0", "elfType" : 3, "buildId" : "18562EE0363BC9BD7101610BD86469AA426D0C44" }, { "b" : "7FFFF7592000", "path" : "/lib64/librt.so.1", "elfType" : 3, "buildId" : "8832E3070AB0758762836EEC8FCDDEDEF8235340" }, { "b" : "7FFFF738E000", "path" : "/lib64/libdl.so.2", "elfType" : 3, "buildId" : "B7C4BC0854BF5DE16B535353B38235CA42349C1E" }, { "b" : "7FFFF7087000", "path" : "/lib64/libstdc++.so.6", "elfType" : 3, "buildId" : "405EACD649720B8668FFBBA197CBF030A7EF6296" }, { "b" : "7FFFF6D85000", "path" : "/lib64/libm.so.6", "elfType" : 3, "buildId" : "D70EAB176DDA46DE292FEB8208A0E8A6718BAF3B" }, { "b" : "7FFFF6B6F000", "path" : "/lib64/libgcc_s.so.1", "elfType" : 3, "buildId" : "5D3D7256AE68BCFF41E312A24825ED80ECA88A73" }, { "b" : "7FFFF67AE000", "path" : "/lib64/libc.so.6", "elfType" : 3, "buildId" : "78186287BBA77069A056A5CCBEB14B7FD2CA3A4B" }, { "b" : "7FFFF7DDC000", "path" : "/lib64/ld-linux-x86-64.so.2", "elfType" : 3, "buildId" : "4EADCA6CB82E0A85EDB87C15B5E3980742514501" } ] }}
+ mongod(_ZN5mongo15printStackTraceERSo+0x29) [0xfca669]
+ mongod(_ZN5mongo10logContextEPKc+0xE1) [0xf752a1]
+ mongod(_ZN5mongo17invariantOKFailedEPKcRKNS_6StatusES1_j+0xDA) [0xf5b95a]
+ mongod(_ZN5mongo11RocksEngineC2ERKSsb+0x12B2) [0xdbbc82]
+ mongod(+0x9C5D21) [0xdc5d21]
+ mongod(_ZN5mongo23GlobalEnvironmentMongoD22setGlobalStorageEngineERKSs+0x30B) [0xae8ffb]
+ mongod(_ZN5mongo13initAndListenEi+0x422) [0x871082]
+ mongod(main+0x134) [0x80ad64]
+ libc.so.6(__libc_start_main+0xF5) [0x7ffff67cfaf5]
+ mongod(+0x46EDD1) [0x86edd1]
+-----  END BACKTRACE  -----
+```
+
+OK, the issue now is related to compression, so I'm closing this one and keep investigating myself... @igorcanadi thanks a lot for the hint! I guess I should have checked #690 before. 
+
+No worries. Let me know if you see any other issues!
+
+@flozano what makes you think this is related to compression? Can you copy/paste the error message? It is likely because RocksDB was compiled without support for snappy. Try `sudo apt-get install libsnappy-dev` before you compile RocksDB. Or you can try running MongoRocks with `--rocksdbCompression=none`
+
+That was the reason, RocksDB was compiled without support for snappy or zlib. I should have been more specific in the comment above :+1: 
+
+The remaining issue now is that mongorocks RPMs don't work very well, but that's already reported in https://github.com/mongodb-partners/mongo-rocks/issues/9 
+

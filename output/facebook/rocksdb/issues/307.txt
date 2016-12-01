@@ -1,0 +1,228 @@
+undefined reference to `google::FlagRegisterer::FlagRegisterer(char const*, char const*, char const*, char const*, void*, void*)'
+undefined reference to`google::RegisterFlagValidator(int const_, bool (_)(char const_, int))'
+undefined reference to `google::FlagRegisterer::FlagRegisterer(char const_, char const_, char const_, char const_, void_, void_)'
+undefined reference to `google::SetUsageMessage(std::string const&)'
+undefined reference to`google::ParseCommandLineFlags(int_, char***, bool)'
+
+Hmmm. Which version of gflags are you running?
+
+gflags-2.1.0.1, thank you for your reply!
+在 2014/9/24 0:28, Igor Canadi 写道:
+
+> Hmmm. Which version of gflags are you running?
+> 
+> —
+> Reply to this email directly or view it on GitHub 
+> https://github.com/facebook/rocksdb/issues/307#issuecomment-56548272.
+
+## 
+
+Best Regards !
+
+*PanFengfeng
+
+*
+
+State Key Laboratory of Computer Architecture,
+
+Institute of Computing Technology,
+
+Chinese Academy of Sciences
+
+Address:
+
+1005D,No 6. Kexueyuan South Road
+
+Haidian District, Beijing, China, 100190
+
+Email:
+
+panfengfeng@ict.ac.cn mailto:panfengfeng@ict.ac.cn or 
+panfengfeng@ncic.ac.cn mailto:panfengfeng@ncic.ac.cn
+
+Can you c/p your build output?
+
+when i run "make", then the error is as follows:
+
+db/db_bench.o: In function `__static_initialization_and_destruction_0':
+/home/panfengfeng/rocksdb-master/db/db_bench.cc:400: undefined reference 
+to`google::RegisterFlagValidator(int const_, bool (_)(char const_, int))'
+/home/panfengfeng/rocksdb-master/db/db_bench.cc:405: undefined reference 
+to `google::FlagRegisterer::FlagRegisterer(char const_, char const_, 
+char const_, char const_, void_, void_)'
+/home/panfengfeng/rocksdb-master/db/db_bench.cc:416: undefined reference 
+to `google::FlagRegisterer::FlagRegisterer(char const_, char const_, 
+char const_, char const_, void_, void_)'
+/home/panfengfeng/rocksdb-master/db/db_bench.cc:418: undefined reference 
+to `google::FlagRegisterer::FlagRegisterer(char const_, char const_, 
+char const_, char const_, void_, void_)'
+/home/panfengfeng/rocksdb-master/db/db_bench.cc:423: undefined reference 
+to `google::FlagRegisterer::FlagRegisterer(char const_, char const_, 
+char const_, char const_, void_, void_)'
+/home/panfengfeng/rocksdb-master/db/db_bench.cc:426: undefined reference 
+to `google::FlagRegisterer::FlagRegisterer(char const_, char const_, 
+char const_, char const_, void_, void_)'
+db/db_bench.o:/home/panfengfeng/rocksdb-master/db/db_bench.cc:428: more 
+undefined references to `google::FlagRegisterer::FlagRegisterer(char 
+const_, char const_, char const_, char const_, void_, void_)' follow
+db/db_bench.o: In function `__static_initialization_and_destruction_0':
+/home/panfengfeng/rocksdb-master/db/db_bench.cc:561: undefined reference 
+to`google::RegisterFlagValidator(double const_, bool (_)(char const_, 
+double))'
+/home/panfengfeng/rocksdb-master/db/db_bench.cc:564: undefined reference 
+to `google::RegisterFlagValidator(double const*, bool (*)(char const*, 
+double))'
+/home/panfengfeng/rocksdb-master/db/db_bench.cc:567: undefined reference 
+to`google::RegisterFlagValidator(int const_, bool (_)(char const_, int))'
+/home/panfengfeng/rocksdb-master/db/db_bench.cc:570: undefined reference 
+to `google::RegisterFlagValidator(int const_, bool (_)(char const_, int))'
+/home/panfengfeng/rocksdb-master/db/db_bench.cc:574: undefined reference 
+to `google::RegisterFlagValidator(int const*, bool (*)(char const*, int))'
+/home/panfengfeng/rocksdb-master/db/db_bench.cc:577: undefined reference 
+to`google::RegisterFlagValidator(int const_, bool (_)(char const_, int))'
+/home/panfengfeng/rocksdb-master/db/db_bench.cc:580: undefined reference 
+to `google::FlagRegisterer::FlagRegisterer(char const_, char const_, 
+char const_, char const_, void_, void_)'
+/home/panfengfeng/rocksdb-master/db/db_bench.cc:583: undefined reference 
+to `google::RegisterFlagValidator(int const_, bool (_)(char const_, int))'
+/home/panfengfeng/rocksdb-master/db/db_bench.cc:586: undefined reference 
+to `google::RegisterFlagValidator(int const*, bool (*)(char const*, int))'
+db/db_bench.o: In function`main':
+/home/panfengfeng/rocksdb-master/db/db_bench.cc:2750: undefined 
+reference to `google::SetUsageMessage(std::string const&)'
+/home/panfengfeng/rocksdb-master/db/db_bench.cc:2751: undefined 
+reference to`google::ParseCommandLineFlags(int_, char_*_, bool)'
+collect2: error: ld returned 1 exit status
+make: *_\* [db_bench] Error 1
+
+在 2014/9/24 1:03, Igor Canadi 写道:
+
+> Can you c/p your build output?
+> 
+> —
+> Reply to this email directly or view it on GitHub 
+> https://github.com/facebook/rocksdb/issues/307#issuecomment-56553743.
+
+## 
+
+Best Regards !
+
+*PanFengfeng
+
+*
+
+State Key Laboratory of Computer Architecture,
+
+Institute of Computing Technology,
+
+Chinese Academy of Sciences
+
+Address:
+
+1005D,No 6. Kexueyuan South Road
+
+Haidian District, Beijing, China, 100190
+
+Email:
+
+panfengfeng@ict.ac.cn mailto:panfengfeng@ict.ac.cn or 
+panfengfeng@ncic.ac.cn mailto:panfengfeng@ncic.ac.cn
+
+I need g++ invocation
+
+Do you need this? 
+
+g++ db/db_bench.o db/builder.o db/c.o db/column_family.o db/compaction.o db/compaction_picker.o db/db_filesnapshot.o db/db_impl.o db/db_impl_debug.o db/db_impl_readonly.o db/db_iter.o db/dbformat.o db/file_indexer.o db/filename.o db/forward_iterator.o db/internal_stats.o db/log_reader.o db/log_writer.o db/memtable.o db/memtable_list.o db/merge_helper.o db/merge_operator.o db/repair.o db/table_cache.o db/table_properties_collector.o db/transaction_log_impl.o db/version_edit.o db/version_set.o db/write_batch.o table/adaptive_table_factory.o table/block.o table/block_based_table_builder.o table/block_based_table_factory.o table/block_based_table_reader.o table/block_builder.o table/block_hash_index.o table/block_prefix_index.o table/bloom_block.o table/cuckoo_table_builder.o table/cuckoo_table_factory.o table/cuckoo_table_reader.o table/filter_block.o table/flush_block_policy.o table/format.o table/iterator.o table/merger.o table/meta_blocks.o table/plain_table_builder.o table/plain_table_factory.o table/plain_table_index.o table/plain_table_key_coding.o table/plain_table_reader.o table/table_properties.o table/two_level_iterator.o util/arena.o util/auto_roll_logger.o util/blob_store.o util/bloom.o util/build_version.o util/cache.o util/coding.o util/comparator.o util/crc32c.o util/db_info_dummper.o util/dynamic_bloom.o util/env.o util/env_hdfs.o util/env_posix.o util/filter_policy.o util/hash.o util/hash_cuckoo_rep.o util/hash_linklist_rep.o util/hash_skiplist_rep.o util/histogram.o util/iostats_context.o util/ldb_cmd.o util/ldb_tool.o util/log_buffer.o util/logging.o util/murmurhash.o util/options.o util/options_builder.o util/perf_context.o util/rate_limiter.o util/skiplistrep.o util/slice.o util/statistics.o util/status.o util/string_util.o util/sync_point.o util/thread_local.o util/vectorrep.o util/xxhash.o utilities/backupable/backupable_db.o utilities/document/document_db.o utilities/document/json_document.o utilities/geodb/geodb_impl.o utilities/merge_operators/put.o utilities/merge_operators/string_append/stringappend.o utilities/merge_operators/string_append/stringappend2.o utilities/merge_operators/uint64add.o utilities/redis/redis_lists.o utilities/spatialdb/spatial_db.o utilities/ttl/db_ttl_impl.o utilities/write_batch_with_index/write_batch_with_index.o port/stack_trace.o port/port_posix.o  ./util/testutil.o   -o db_bench  -lgflags -lpthread -lrt -lgflags -lz 
+
+Do you need this?
+
+g++ db/db_bench.o db/builder.o db/c.o db/column_family.o db/compaction.o 
+db/compaction_picker.o db/db_filesnapshot.o db/db_impl.o 
+db/db_impl_debug.o db/db_impl_readonly.o db/db_iter.o db/dbformat.o 
+db/file_indexer.o db/filename.o db/forward_iterator.o 
+db/internal_stats.o db/log_reader.o db/log_writer.o db/memtable.o 
+db/memtable_list.o db/merge_helper.o db/merge_operator.o db/repair.o 
+db/table_cache.o db/table_properties_collector.o 
+db/transaction_log_impl.o db/version_edit.o db/version_set.o 
+db/write_batch.o table/adaptive_table_factory.o table/block.o 
+table/block_based_table_builder.o table/block_based_table_factory.o 
+table/block_based_table_reader.o table/block_builder.o 
+table/block_hash_index.o table/block_prefix_index.o table/bloom_block.o 
+table/cuckoo_table_builder.o table/cuckoo_table_factory.o 
+table/cuckoo_table_reader.o table/filter_block.o 
+table/flush_block_policy.o table/format.o table/iterator.o 
+table/merger.o table/meta_blocks.o table/plain_table_builder.o 
+table/plain_table_factory.o table/plain_table_index.o 
+table/plain_table_key_coding.o table/plain_table_reader.o 
+table/table_properties.o table/two_level_iterator.o util/arena.o 
+util/auto_roll_logger.o util/blob_store.o util/bloom.o 
+util/build_version.o util/cache.o util/coding.o util/comparator.o 
+util/crc32c.o util/db_info_dummper.o util/dynamic_bloom.o util/env.o 
+util/env_hdfs.o util/env_posix.o util/filter_policy.o util/hash.o 
+util/hash_cuckoo_rep.o util/hash_linklist_rep.o util/hash_skiplist_rep.o 
+util/histogram.o util/iostats_context.o util/ldb_cmd.o util/ldb_tool.o 
+util/log_buffer.o util/logging.o util/murmurhash.o util/options.o 
+util/options_builder.o util/perf_context.o util/rate_limiter.o 
+util/skiplistrep.o util/slice.o util/statistics.o util/status.o 
+util/string_util.o util/sync_point.o util/thread_local.o 
+util/vectorrep.o util/xxhash.o utilities/backupable/backupable_db.o 
+utilities/document/document_db.o utilities/document/json_document.o 
+utilities/geodb/geodb_impl.o utilities/merge_operators/put.o 
+utilities/merge_operators/string_append/stringappend.o 
+utilities/merge_operators/string_append/stringappend2.o 
+utilities/merge_operators/uint64add.o utilities/redis/redis_lists.o 
+utilities/spatialdb/spatial_db.o utilities/ttl/db_ttl_impl.o 
+utilities/write_batch_with_index/write_batch_with_index.o 
+port/stack_trace.o port/port_posix.o  ./util/testutil.o   -o db_bench  
+-lgflags -lpthread -lrt -lgflags -lz
+在 2014/9/24 1:06, Igor Canadi 写道:
+
+> I need make invocation
+> 
+> —
+> Reply to this email directly or view it on GitHub 
+> https://github.com/facebook/rocksdb/issues/307#issuecomment-56554181.
+
+## 
+
+Best Regards !
+
+*PanFengfeng
+
+*
+
+State Key Laboratory of Computer Architecture,
+
+Institute of Computing Technology,
+
+Chinese Academy of Sciences
+
+Address:
+
+1005D,No 6. Kexueyuan South Road
+
+Haidian District, Beijing, China, 100190
+
+Email:
+
+panfengfeng@ict.ac.cn mailto:panfengfeng@ict.ac.cn or 
+panfengfeng@ncic.ac.cn mailto:panfengfeng@ncic.ac.cn
+
+Yes, but not the final call, I need g++ when it compiles the .cc files
+
+an example:
+g++ -g -Wall -Werror -Wsign-compare -I. -I./include -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_ATOMIC_PRESENT -DROCKSDB_FALLOCATE_PRESENT -DGFLAGS=google -DZLIB   -DHAVE_JEMALLOC -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c table/block_based_table_builder.cc -o table/block_based_table_builder.o 
+since making rocksdb does not succeed, so i can no t use the librocksdb.a to compile my own program! 
+
+Just do `make release` to compile librocksdb.a. It should not depened on gflags, so you're fine.
+
+This is probably gflags breaking backwards compatibility once again.
+
+Thank you! I will have a try! 
+
+were u able to make it compile panfengfeng ?
+
+yes, i can make it compile, and it all depends on your version of linux and gcc
+
+Close the issue, but please feel free to reopen if the problem still exists
+

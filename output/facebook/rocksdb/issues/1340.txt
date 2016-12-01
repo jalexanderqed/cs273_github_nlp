@@ -1,0 +1,41 @@
+The latest version seems require jre1.7 at least, while our product environment is jdk1.6.
+Thanks!
+
+The answer seems to be 4.5.1. So close this issue. 
+
+RocksDB has required Java 7 for some time (after Java 6 went EOL). The last release version compiled with Java 7 is `3.7.0`.
+
+You may have some luck compiling later versions yourself with Java 6 (with minor tweaks), however officially we are supporting Java 7+ since release `3.8.0`+
+
+Thanks a lot. It really helps!
+
+3.7.0 works well in my application
+
+Hi, one more question: 
+  I cloned the project and try use branch '4.0.fb' with Java6, and I modified the pom file 'java/rocksjni.pom' like this: 
+
+```
+-        <project.build.source>1.7</project.build.source>
+-        <project.build.target>1.7</project.build.target>
++        <project.build.source>1.6</project.build.source>
++        <project.build.target>1.6</project.build.target>
+```
+
+The progress was completed with jar file: 'java/target/rocksdbjni-4.0.1-linux64.jar'.
+But when I run my application by put it under lib directory, it crashed with error log: 
+
+```
+Exception in thread "main" java.lang.UnsupportedClassVersionError: 
+org/rocksdb/RocksDB : Unsupported major.minor version 51.0
+```
+
+Which step is wrong?
+
+Thanks a lot!
+
+I have given up on trying Java6. So close it.
+
+Thanks 👍 
+
+@cndaimin You should use the Makefile based build and ensure that you are using the correct version of `javac`. Your error indicates that you compiled with javac from Java 7.
+

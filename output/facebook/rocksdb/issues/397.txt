@@ -1,0 +1,6 @@
+Expose GetIntProperty methods to RocksJava. As the integer(64-Bit)
+value is no integer in Java the method is aligned with the return
+type which is long.
+
+https://reviews.facebook.net/D28965
+

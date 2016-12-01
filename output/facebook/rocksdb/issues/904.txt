@@ -1,0 +1,78 @@
+hi.
+Today, I find my disk used 90%.So I use "delete" API to delete old dates.I only delete 30 days ago dates.After 9 hours ，my program core dump. When it restart ,rocksdb open fail.I find "sst" files lost.If sst file's num  is more than max_open_files,  rocksdb will delete db?
+
+LOG has error info:
+
+2015/12/28-14:44:05.055091 7f52b51b7700 [ERROR] [JOB 2534] Failed to delete /media/ssd/sentryd/dataV3/171720.sst type=2 #171720 -- IO error: /media/ssd/sentryd/dataV3/171720.sst: No such file or directory
+2015/12/28-14:44:05.055110 7f52b51b7700 EVENT_LOG_v1 {"time_micros": 1451285045055104, "job": 2534, "event": "table_file_deletion", "file_number": 171720, "status": "IO error: /media/ssd/sentryd/dataV3/171720.sst: No such file or directory"}
+2015/12/28-14:44:05.059226 7f52b51b7700 [ERROR] [JOB 2534] Failed to delete /media/ssd/sentryd/dataV3/171719.sst type=2 #171719 -- IO error: /media/ssd/sentryd/dataV3/171719.sst: No such file or directory
+2015/12/28-14:44:05.059248 7f52b51b7700 EVENT_LOG_v1 {"time_micros": 1451285045059241, "job": 2534, "event": "table_file_deletion", "file_number": 171719, "status": "IO error: /media/ssd/sentryd/dataV3/171719.sst: No such file or directory"}
+2015/12/28-14:44:05.063744 7f52b51b7700 [ERROR] [JOB 2534] Failed to delete /media/ssd/sentryd/dataV3/171718.sst type=2 #171718 -- IO error: /media/ssd/sentryd/dataV3/171718.sst: No such file or directory
+
+[Uploading LOG.zip…]()
+
+I find a problem. rocksdb will delete the files which it can't find in MANIFEST.Then if MANIFEST is anomalies ， sst files will be deleted.
+
+Which RocksDB release are you using?
+
+3.14   maybe not release.
+I can use 4.1 release,but I can't confirm whether the bug is solved.
+
+I can't see your logs to further investigate. We did have a known bug can cause data loss which was in about 3.13 but it will only be triggered if WAL sync is used. Do you sync WAL?
+
+[LOG.zip](https://github.com/facebook/rocksdb/files/73770/LOG.zip)
+
+ options.IncreaseParallelism();
+    options.OptimizeLevelStyleCompaction();
+    options.create_if_missing=true;
+    m_prefixLen=sizeof(uint64_t)+sizeof(uint32_t);
+    if(m_prefixLen>0){
+        options.prefix_extractor.reset(rocksdb::NewFixedPrefixTransform(m_prefixLen));
+    }
+    rocksdb::BlockBasedTableOptions table_options;
+    table_options.index_type = rocksdb::BlockBasedTableOptions::kHashSearch;
+    options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
+    options.memtable_factory.reset(rocksdb::NewHashLinkListRepFactory());
+    options.merge_operator.reset(new DataMergeOperator);
+Status s = DBWithTTL::Open(options, strDbPath, &dbWithTTL, 86400*30);
+
+The above is my code.I put key only use:
+s= dbWithTTL->Merge(WriteOptions(),sKey, sValue);
+
+If sync WAL  default is false, I didn't use it.
+
+I found there is a code, I'm not sure whether related to this problem.
+https://github.com/facebook/rocksdb/commit/3e0700e1ea293131bf3a6a546ff393d90d4d7223#diff-71a34e2e4e097b44064da7d3a2b68bd8R547
+
+Hi, siying! what we did is just delete data a few weeks ago. The version of rocksdb we used is 3.14. v3.14 is very close to v3.13.1, but different with v4.1. We have 2 machines sufferd data missing. One of them just lost about 20 sst files and always corrupted when open db with TTL. Another one lost mass of data. we began to have 4000+ sst files, but only 20+ sst files remained and this db can open successful with TTL. I tryed to repair the db of first one, but crashed with coredump. I find out that the code in function of 'DBImpl::FindObsoleteFiles' is diffent between v3.14 and v4.1. I want to know wither the code in v3.13.1 can cause data lost.
+
+By the way, we close process with command 'kill -9'. Is this operate can make  'MENIFEST-xxx'  broken?
+
+@siying 
+
+I found that both of the two machines are all lost data when process abnormal closed. One is crashed and another is closed by 'kill -9'. I doubt the 'MENIFEST-xxx' file had been broken when process abnormal closed. when process restart again, it scan db directory and delete all sst files not in the MENIFEST.
+
+```
+s = env_->FileExists(CurrentFileName(dbname_));
+if (s.IsNotFound()) {
+  if (db_options_.create_if_missing) {//one of machine enter this logic and create new db, but why 'current' not exist?
+    s = NewDB();
+    is_new_db = true;
+    if (!s.ok()) {
+      return s;
+    }
+  } else {
+       ....
+  }
+```
+
+@siying
+
+Sorry for the delay. I'm just back from vacations. Now I can open the logs you pasted. I'll take a further look at the logs today.
+
+@q96456 the log file you posted doesn't contain any error message. Can you find the first log file containing the error message and post it?
+
+@wumuzi520 I can't think of a way "kill -9" can cause current file missing. We issue rename() from a temp file to <db>/CURRENT file. Not sure how we can get to a state that there is no such a file.
+
+If you store LOG files in the same directory, you should be able to tell it by looking at old logs to tell whether a brand new DB was created.
+

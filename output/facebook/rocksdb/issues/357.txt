@@ -1,0 +1,22 @@
+- Makefile did not cleanup after test
+- Crossbuild sets explicit JDK6 which is wrong because Java7 dependencies were introduced lately.
+
+@yhchiang can you please look at this.
+
+I see that the Travis-CI build is failing because of the test suite. This seems to be an intermittent problem, sometimes (but not always) when I run the test suite locally it also fails. I don't know if this is a test suite problem or an underlying Rocks issue. However I would suggest this should be fixed as a priority, if we can't rely on the test suite, well that is a a big problem.
+
+@adamretter We will fix it ASAP
+
+Fixed -- https://github.com/facebook/rocksdb/commit/90f156402c4b74f05fb86834401ab96cc018cf03
+
+@adamretter @fyrz can you guys add java test to travis build?
+
+@igorcanadi Thanks for the fix, I have sent a pull-request for Travis.
+
+@igorcanadi can you merge this one also it solves some issues with the last additions.
+
+@adamretter can you please review @fyrz's patch? :)
+
+@fyrz: thanks for the patch.  The diff looks good to me.
+Not sure what goes wrong in Travis, but I can successfully build it on my machine.
+

@@ -1,0 +1,14 @@
+Someone should also publish a 3.7.0 version in the 3.7.0 release branch.
+
+Can we somehow get this info from `include/rocksdb/version.h`? We would like to have a single source of truth if possible.
+
+@igorcanadi have a solution here will update later this day.
+
+@igorcanadi i tested this version on centos 6.5 and works here fine
+
+whos currently publishing the mvn artifacts ? anyone of the fb guys ?
+
+Not sure, I think it's linkedin guys?
+
+Thanks, this looks good, I'm merging this.
+

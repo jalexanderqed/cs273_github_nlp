@@ -1,0 +1,6 @@
+It seems that on some FS we get more blocks than we ask for. This is already handled when checking the allocated number of blocks, but after the file is closed it checks for an exact number of blocks, which fails on my machine.
+
+I changed the test to add one full page to the size, then calculate the expected number of blocks and check if the actual number of blocks is less or equal to that.
+
+Tnx @lalinsky !
+

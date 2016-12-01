@@ -1,0 +1,15 @@
+I made two small changes so that it could compile on Linux s390x (IBM's mainframe) out of the box. I'm wondering if it can be merged into the base code so that I don't have to maintain a separate fork. Thanks.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thanks Igor!
+
+On Mon, Feb 29, 2016 at 4:13 PM, Igor Canadi notifications@github.com
+wrote:
+
+> Merged #1020 https://github.com/facebook/rocksdb/pull/1020.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/pull/1020#event-571857674.
+

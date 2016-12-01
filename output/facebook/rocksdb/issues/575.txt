@@ -1,0 +1,305 @@
+Added a byte by byte XOR merge operator, and a corresponding test in
+db/db_bench. Also added two bash scripts to facilitate benchmarks and document properties.
+
+Signed-off-by: Pooya Shareghi shareghi@gmail.com
+
+I needed to compare the performance of the merge operator vs a corresponding read-modify-write at the application level. For this comparison I needed to know both write performance, as well as read performance.
+
+To make things simple, the benchmarks I decided to run both XOR array of bytes, one using the RocksDB merge operator, and the other by doing Read-Modify-Write at the application level.
+
+The cpp_mergeRandom_readRandom.sh benchmark does
+
+1M merges using the XOR merge operator on random keys
+1M reads of the same keys
+The cpp_xorUpdateRandom_readRandom.sh benchmark does
+
+1M read-xor-writes at the application level on random keys
+1M reads of the same keys
+To facilitate the above tests, I added two bash scripts in the benchmark directory. The bash scripts are well documented and contain most parameters that can be passed to db_bench. I hope they can be used as templates later on for other benchmarks (instead of passing a gigantic set of parameters on the commandline).
+
+Do you have results to share?
+
+My machine is not very fast (doesn't have SSDs) and therefore not a good place to run these benchmarks. I do not have a free production machine to run the benchmarks at the moment. I can share the results of running benchmarks on my Dev machine, but I am not sure that would make for a good comparison.
+
+OK, I will run this on my HW after your change is pushed.
+
+On Wed, Apr 15, 2015 at 5:45 AM, Pooya Shareghi notifications@github.com
+wrote:
+
+> My machine is not very fast (doesn't have SSDs) and therefore not a good
+> place to run these benchmarks. I do not have a free production machine to
+> run the benchmarks at the moment. I can share the results of running
+> benchmarks on my Dev machine, but I am not sure that would make for a good
+> comparison.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/pull/575#issuecomment-93054258.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Here are some of the result I have from before. Parameters:
+
+```
+entries: 1M
+key size: 2 bytes
+value size: 4 KB
+compaction threads: 1
+flush threads: 1
+memtable size: 1 MB
+L0 size: 2 MB
+```
+
+| Experiment | Phase1: RMW/Merge | Phase2: Read | DB Size |
+| --- | --- | --- | --- |
+| E1: RMW - 4KB value - Empty DB | Average: 122.1693 StdDev: 484.81 P99: 1177.52 | Average: 9.0384 StdDev: 1.61 P99: 11.65 | 368209920 |
+| E2: RMW - 512B value - Existing DB | Average: 123.9269 StdDev: 800.47 P99: 1178.24 | Average: 3.4208 StdDev: 1.12 P99: 4.85 | 441774080 |
+| E3: MergeOpr 4KB value - Empty DB | Average: 97.0453 StdDev: 319.28 P99: 1176.28 | Average: 14.2939 StdDev: 8.20 P99: 44.20 | 384577536 |
+| E4: MergeOpr - 512B value - Existing DB | Average: 9.1247 StdDev: 88.40 P99: 147.90 | Average: 21.6103 StdDev: 6.40 P99: 38.86 | 404176896 |
+
+@mdcallag after applying the parallelism you suggested, I am getting a massive skew for the merge operator write performance. Looks there is too much contention either during compaction, or flushing. Have a look at the new P99: 130588.24 vs the old P99: 1176.28.
+
+| Experiment | Phase1: RMW/Merge | Phase2: Read | DB Size |
+| --- | --- | --- | --- |
+| Rerun E3: MergeOpr 4KB value - Empty DB | Average: 95.5435 StdDev: 2236.81 P99: 130588.24 | Average: 19.2686  StdDev: 13.85  P99.99: 115.33 | 450383872 |
+
+Compaction IO stats have per-level stall counters to show where the stalls
+are, and there is also a "Stalls(Count)" line. Can you share that. See
+https://gist.github.com/mdcallag/cf2e4941a80ba27f0f69
+
+For merge-only workload you should be able to saturate the ingest rate (get
+a peak) at 1 thread with --sync=0. From your config I see the WAL is
+disable (that is OK) but also --disable_data_sync=1. I strongly prefer
+disable_data_sync=0. You are exposing yourself to unexpected behavior from
+buffer pool flushing otherwise.
+
+Disk is fine for compaction IO as long as don't do many random reads for
+queries.
+
+FYI - I have updated tools/run_flash_bench.sh to include merge tests. One
+only does merge, another does merge from 1 thread and point reads from N
+threads, another does merge from 1 thread and range reads from N threads.
+Here is example output from a server with pure-flash and 40 hyperthread
+cores. --sync=0 during the tests (no WAL sync on Write). There are some bad
+outliers per the p99.99 results and that is worse when I switch to
+--sync=1, have yet to debug.
+https://gist.github.com/mdcallag/273287f7ee6c1a033ce2
+
+On Wed, Apr 15, 2015 at 7:19 AM, Pooya Shareghi notifications@github.com
+wrote:
+
+> @mdcallag https://github.com/mdcallag after applying the parallelism
+> you suggested, I am getting a massive skew for the merge operator write
+> performance. Looks there is too much contention either during compaction,
+> or flushing. Have a look at the new P99: 130588.24 vs the old P99: 1176.28.
+>   Experiment Phase1: RMW/Merge Phase2: Read DB Size   Rerun E3: MergeOpr
+> 4KB value - Empty DB Average: 95.5435 StdDev: 2236.81 P99: 130588.24 Average:
+> 19.2686 StdDev: 13.85 P99.99: 115.33 450383872
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/pull/575#issuecomment-93090615.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Old result (1 flush and 1 compaction thread)
+
+```
+** Compaction Stats [default] **
+Level   Files   Size(MB) Score Read(GB)  Rn(GB) Rnp1(GB) Write(GB) Wnew(GB) Moved(GB) W-Amp Rd(MB/s) Wr(MB/s) Comp(sec) Comp(cnt) Avg(sec) Stall(sec) Stall(cnt) Avg(ms)     RecordIn   RecordDrop
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  L0     4/0         11   2.0      0.0     0.0      0.0       3.8      3.8       0.0   0.0      0.0    837.8         5      1449    0.003       0.11       1643    0.06            0            0
+  L1     2/0          3   0.8      4.8     3.8      1.1       4.7      3.6       0.0   1.2    539.5    522.8         9       272    0.034       1.71       1885    0.91       986244            0
+  L2    10/0          9   1.1      3.2     1.4      1.8       3.1      1.3       2.2   2.2    542.9    524.2         6       560    0.011       1.70       2036    0.83       367216            0
+  L3    13/0         19   1.2      5.4     2.0      3.3       5.2      1.8       1.5   2.5    425.9    409.0        13       901    0.014       1.61       2183    0.74       534488            0
+  L4    23/0         38   1.2      5.6     1.9      3.7       5.3      1.5       1.4   2.8    504.4    471.7        11       855    0.013       1.38       2418    0.57       497818            0
+  L5    44/1         76   1.1      9.8     2.7      7.1       9.0      1.9       0.2   3.4    495.8    457.0        20      1268    0.016       0.97       2637    0.37       702271            0
+  L6   111/0        222   0.0     14.5     2.0     12.6      12.7      0.2       0.0   6.4    525.6    460.0        28       965    0.029       0.00          0    0.00       519883            0
+ Sum   207/1        378   0.0     43.4    13.8     29.6      43.7     14.2       5.3  11.5    478.9    482.9        93      6270    0.015       7.47      12802    0.58      3607920            0
+ Int     0/0          0   0.0      2.6     0.8      1.8       2.6      0.8       0.3  11.7    433.2    433.2         6       369    0.017       0.43        747    0.58       208046            0
+Flush(GB): accumulative 3.790, interval 0.221
+Stalls(secs): 0.105 level0_slowdown, 0.000 level0_numfiles, 0.001 memtable_compaction, 0.000 leveln_slowdown_soft, 7.367 leveln_slowdown_hard
+Stalls(count): 570 level0_slowdown, 2 level0_numfiles, 1071 memtable_compaction, 3792 leveln_slowdown_soft, 7367 leveln_slowdown_hard
+```
+
+New result (4 flush and 4 compaction threads)
+
+```
+** Compaction Stats [default] **
+Level    Files   Size(MB) Score Read(GB)  Rn(GB) Rnp1(GB) Write(GB) Wnew(GB) Moved(GB) W-Amp Rd(MB/s) Wr(MB/s) Comp(sec) Comp(cnt) Avg(sec) Stall(cnt)  KeyIn KeyDrop
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  L0      0/0          0   0.0      0.0     0.0      0.0       3.7      3.7       0.0   0.0      0.0    601.3         6      1987    0.003       3479       0      0
+  L1      2/0          4   1.0      4.9     3.7      1.2       4.8      3.6       0.0   1.3    131.0    127.7        39       333    0.116       1863    971K      0
+  L2      5/0          9   1.1      3.7     1.9      1.7       3.6      1.9       1.6   1.8    111.9    109.2        34       759    0.044       1725    508K      0
+  L3     14/2         21   1.1      5.4     2.3      3.0       5.2      2.2       1.2   2.2    126.4    122.0        44      1030    0.042       1680    610K      0
+  L4     28/8         44   0.9      7.0     2.4      4.6       6.6      2.0       0.9   2.8    111.4    105.6        64      1069    0.060       1555    618K      0
+  L5     48/2         78   1.2      9.8     2.5      7.2       9.0      1.7       0.3   3.5    121.4    111.4        82      1165    0.071       1820    660K      0
+  L6    119/0        236   0.0     12.5     2.0     10.6      10.8      0.2       0.0   5.5    131.5    113.0        98       938    0.104          0    511K      0
+ Sum    216/12       392   0.0     43.3    14.9     28.4      43.7     15.3       4.1  11.7    121.0    122.1       367      7281    0.050      12122   3880K      0
+ Int      0/0          0   0.0      2.6     0.9      1.7       2.6      0.9       0.2  12.0    129.4    129.5        20       438    0.046        749    231K      0
+Flush(GB): cumulative 3.725, interval 0.215
+Stalls(count): 1698 level0_slowdown, 1420 level0_numfiles, 361 memtable_compaction, 3760 leveln_slowdown_soft, 4883 leveln_slowdown_hard
+```
+
+@mdcallag can you share the parameters you used for your merge test?
+
+BTW, @mdcallag , if you think that your set of shell scripts are more general, we can simply decline this pull request. I was not aware of your scripts when I started working on this. You may remember the other ticket I opened. I needed to evaluate the RMW vs Merge read performance. We decided to stick with RMW since it has a much better and more predictable read performance, and that is critical in our specific usecase. I thought I can contribute back my scripts, but only if they are useful to others.
+
+I want tools/benchmark.sh and tools/run_flash_bench.sh to be general
+purpose. They are improving and I use them frequently.
+
+I don't like stalls. If you have stalls can you explain what the workload
+needs to do at a high/logical level (type of operations, desired rate of
+work, amount of concurrency, size of key & value) and I will create a task
+for us to look at whether we get stalls on my internal HW, and then what is
+needed to avoid them.
+
+On Wed, Apr 15, 2015 at 10:24 AM, Pooya Shareghi notifications@github.com
+wrote:
+
+> BTW, @mdcallag https://github.com/mdcallag , if you think that your set
+> of shell scripts are more general, we can simply decline this pull request.
+> I was not aware of your scripts when I started working on this. You may
+> remember the other ticket I opened. I needed to evaluate the RMW vs Merge
+> read performance. We decided to stick with RMW since it has a much better
+> and more predictable read performance, and that is critical in our specific
+> usecase. I thought I can contribute back my scripts, but only if they are
+> useful to others.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/pull/575#issuecomment-93135327.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Since the initial benchmark results (above) were not very good, I did not test on real production data. We decided not to continue with the merge operator for two reasons:
+1. The cpp benchmarks for the simple XOR merge of random arrays of 4K bytes had a bad read performance and huge write outliers.
+2. In our usecase, we needed to implement the merge operator in java. Obviously, on top of the stalls we would have to deal with the JNI performance hit as well. Since RockJava does not currently support this, after several weeks of coding, I added JNI support for Java merge operators in my RockDB fork. At that point, I had also finished with the CPP benchmarks above. Given the CPP performance results, and considering the potential extra latency from JNI calls. I decided not to continue benchmarking. So, I do not have clean Java benchmark results for the java merge operator at the moment.
+
+Anyways, thanks for trying to look into the cause of stalls.
+
+@mdcallag Are you also working on the java benchmarks?
+
+I will pass on the Java benchmarks. I will do this via db_bench. Can I use
+what you have in the shell scripts as the typical workload?
+
+On Thu, Apr 16, 2015 at 3:09 AM, Pooya Shareghi notifications@github.com
+wrote:
+
+> @mdcallag https://github.com/mdcallag Are you also working on the java
+> benchmarks?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/pull/575#issuecomment-93507935.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Yes, that would be typical.
+
+Will you submit a pull request limited to the xor merge operator? I want to
+use that in tools/run_flash_bench.sh
+
+On Mon, Apr 20, 2015 at 12:49 PM, Pooya Shareghi notifications@github.com
+wrote:
+
+> Yes, that would be typical.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/pull/575#issuecomment-94551979.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Results in 3 URLs.
+- part 1 has summary and data for 1M keys, 4kb values -
+  https://gist.github.com/mdcallag/f207bf5373825e6324a3
+- part 2 has data for 2B keys, 400b values -
+  https://gist.github.com/mdcallag/028ce55e370fdddd9fee
+- part 3 has command lines for 1M keys, 4kb values -
+  https://gist.github.com/mdcallag/1b39a8da7afb80b832ff
+
+Saw an odd result at high concurrency where updaterandom became faster than
+overwrite. Didn't expect that because of updaterandom has more overhead
+from the reads. Will file a task to look at that.
+
+On Fri, Apr 24, 2015 at 3:28 PM, MARK CALLAGHAN mdcallag@gmail.com wrote:
+
+> Will you submit a pull request limited to the xor merge operator? I want
+> to use that in tools/run_flash_bench.sh
+> 
+> On Mon, Apr 20, 2015 at 12:49 PM, Pooya Shareghi <notifications@github.com
+> 
+> > wrote:
+> > 
+> > Yes, that would be typical.
+> > 
+> > —
+> > Reply to this email directly or view it on GitHub
+> > https://github.com/facebook/rocksdb/pull/575#issuecomment-94551979.
+> 
+> ## 
+> 
+> Mark Callaghan
+> mdcallag@gmail.com
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Sorry for the long delay. I can get back on this on Monday.
+
+Hello @pshareghi, are you still working on this request?  The patch looks good to me, and I've approved and left some comments in the diff.  Once you've rebased and included those comments. should be good to go.
+
+Hi @yhchiang, thanks for following up. I rebased and made the changes you suggested, then force pushed the result using git. For some reason I cannot use arcenist, I get the following error on every arc commend I run from my rocksdb directory (note that both my arc and libphutil are up-to-date). 
+
+```
+arc --trace help                                  ⏎
+libphutil loaded from '/opt/libphutil/src'.
+arcanist loaded from '/opt/arcanist/src'.
+Config: Reading user configuration file "/home/pooya/.arcrc"...
+Config: Did not find system configuration at "/etc/arcconfig".
+Working Copy: Reading .arcconfig from "/home/pooya/workspace/rocksdb-facebook/.arcconfig".
+Working Copy: Path "/home/pooya/workspace/rocksdb-facebook/benchmark" is part of `git` working copy "/home/pooya/workspace/rocksdb-facebook".
+Working Copy: Project root is at "/home/pooya/workspace/rocksdb-facebook".
+Config: Did not find local configuration at "/home/pooya/workspace/rocksdb-facebook/.git/arc/config".
+Loading phutil library from '/home/pooya/workspace/rocksdb-facebook/arcanist_util'...
+
+[2015-06-14 00:42:58] EXCEPTION: (PhutilMissingSymbolException) Failed to load class or interface 'ArcanistBaseWorkflow': the class or interface 'ArcanistBaseWorkflow' is not defined in the library map for any loaded phutil library. If this symbol was recently added or moved, your library map may be out of date. You can rebuild the map by running 'arc liberate'. For more information, see: http://www.phabricator.com/docs/phabricator/article/libphutil_Libraries_User_Guide.html at [<phutil>/src/__phutil_library_init__.php:25]
+arcanist(head=master, ref.master=7d15b85a1bc0), arcanist_util(head=facebook-master, ref.master=e42afb78eb18, ref.facebook-master=119486b7db45), phutil(head=master, ref.master=92882eb9404d)
+  #0 __phutil_autoload(string)
+  #1 spl_autoload_call(string) called at [<arcanist_util>/config/FacebookArcanistConfiguration.php:4]
+  #2 include_once(string) called at [<phutil>/src/moduleutils/PhutilBootloader.php:219]
+  #3 PhutilBootloader::executeInclude(string) called at [<phutil>/src/moduleutils/PhutilBootloader.php:209]
+  #4 PhutilBootloader::loadLibrarySource(string, string) called at [<phutil>/src/symbols/PhutilSymbolLoader.php:366]
+  #5 PhutilSymbolLoader::loadSymbol(array) called at [<phutil>/src/symbols/PhutilSymbolLoader.php:242]
+  #6 PhutilSymbolLoader::selectAndLoadSymbols() called at [<phutil>/src/__phutil_library_init__.php:22]
+  #7 __phutil_autoload(string)
+  #8 spl_autoload_call(string) called at [<arcanist>/scripts/arcanist.php:176]
+```
+
+Looks like your arc is not able to find the config file.  Can I first know whether you have the .arcconfig file under your rocksdb directory?
+https://github.com/facebook/rocksdb/blob/master/.arcconfig
+
+`/home/pooya/workspace/rocksdb-facebook/.arcconfig` is there, and its content is correct.
+
+I do not have `/home/pooya/workspace/rocksdb-facebook/.git/arc/` however.
+
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4084562).
+

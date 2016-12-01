@@ -1,0 +1,7 @@
+This is the case for `rockdb/java` JNI cmake project
+I suggest using `file(MAKE_DIRECTORY ${DIR})`
+
+Fixed by: https://github.com/facebook/rocksdb/pull/1219
+
+Closed by https://github.com/facebook/rocksdb/pull/1219
+

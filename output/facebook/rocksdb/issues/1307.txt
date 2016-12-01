@@ -1,0 +1,18 @@
+I remeber it is mentioned in the wiki  that the size of index block would too large  if the corresponding SST file is too big. Is there a good way can be used  to solve the problem?
+
+The size of the index block depends on the target_file_size_base and block_size. You can decrease target_file_size_base or increase block_size to make the index block fit in memory.
+
+That's correct, another parameter you can tune is BlockBasedTableOptions::index_block_restart_interval, by default it's 1, you can change this value to something like 16 which will decrease the size of index_block by using prefix encoding compression
+
+@IslamAbdelRahman @dhruba  If set cache_index_and_filter_blocks  to true, index and filter blocks will be stored in block cache and can be paged out. Is this option can be used to decrease the size of index block to a certain extent?
+
+Why is your SST file so large? Do you use universal compaction with num_levels=1?
+
+@siying No, We use level-style compaction with num_levels=6. After series of compactions, SST file will become much  bigger with lots of data compacted into it. 
+
+@IslamAbdelRahman @dhruba Hi, the size fo index block pre-loaded into memory would be  also  too large when lots of SST files opened simultaneously. The options above-mentioned can work well too, Is it right?
+
+@xh931076284, Yes these options will affect the uncompressed size of the block which will be in memory.
+
+@IslamAbdelRahman What's the function of cache_index_and_filter_blocks?  
+

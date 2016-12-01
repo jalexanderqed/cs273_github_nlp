@@ -1,0 +1,15 @@
+[Line 115](https://github.com/facebook/rocksdb/blob/f8c505b23a92cf06c94ec371903ed90befa8bfcc/java/samples/src/main/java/RocksDBSample.java#L115) should be
+
+```
+db = RocksDB.open(options, db_path);
+```
+
+instead of
+
+```
+db = RocksDB.open(options, db_path_not_found);
+```
+
+Thanks for pointing this out.  Fixed :)
+https://github.com/facebook/rocksdb/commit/727684bf976a72d1a35508647ba57e2b62c5e2f0
+

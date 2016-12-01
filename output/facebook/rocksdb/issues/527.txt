@@ -1,0 +1,45 @@
+I have a database that I'd like to keep entirely in RAM. It will fit quite easily (it's 150G on disk and I have 250G of RAM available), so in theory this shouldn't be a problem. However, I don't have root access on the system in order to set up a ramfs filesystem into which I can cache the db. I could probably get similar performance by modifying the linux memory subsystem's caching options, but again I don't have root access.
+
+Is there an option I could give to rocksdb on open that will load/cache the entire db in memory. My target user base is unlikely to have root access on their systems.
+
+Today is your lucky day: https://github.com/facebook/rocksdb/blob/master/include/rocksdb/env.h#L872
+
+@igorcanadi Could we add the detail of this to the Wiki please?
+
+Commit comment is too short
+https://github.com/facebook/rocksdb/commit/be016613c25b84c776182b55ed3503edb16e494f
+
+On Mon, Mar 9, 2015 at 8:56 AM, Adam Retter notifications@github.com
+wrote:
+
+> @igorcanadi https://github.com/igorcanadi Could we add the detail of
+> this to the Wiki please?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/527#issuecomment-77881385.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
++1 for documenting on the wiki.
+
+Do I just set my options.env to this?
+
+For example, this triggers a failure to open the db:
+
+``` c++
+db_options.env = rocksdb::NewMemEnv(db_options.env);
+// later
+s = rocksdb::DB::OpenForReadOnly(db_options, name, &db);
+// s.ok() == false
+```
+
+Is there an example of how to use this?
+
+It's really not clear to me how this is supposed to work. Am I misunderstanding something basic about this interface? Is there an working example I could follow?
+
+What is the failure you get? This is the correct usage.
+

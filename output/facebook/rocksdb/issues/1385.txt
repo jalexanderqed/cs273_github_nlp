@@ -1,0 +1,20 @@
+@yhchiang This may or may not help
+
+Let's wait until the test completed :p
+
+@yhchiang Okay so that fixed the Linux build, the Mac build requires something else, so I am just asking the Travis guys about that...
+
+https://github.com/travis-ci/travis-ci/issues/6716
+
+Thanks for importing. If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4045402).
+
+@yhchiang so?
+
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4098424).
+
+LGTM.
+
+The Land to Master seems not responding.  Anyone happens to know why?
+
+It's landing: https://phabricator.intern.facebook.com/D4098424
+

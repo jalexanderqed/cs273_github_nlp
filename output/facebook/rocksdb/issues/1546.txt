@@ -1,0 +1,11 @@
+Travis now is building for ldb tests. Disable for now to unblock other tests while we are investigating.
+We disable them everywhere, not just in travis. is that the intention ?
+
+@IslamAbdelRahman are you using check_some anywhere else?
+
+@siying Oh no, I did not recognize that. LGTM
+
+@siying has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4209404).
+
+Still not correct...
+

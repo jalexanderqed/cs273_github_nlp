@@ -1,0 +1,46 @@
+@rven1 @siying @igorcanadi Attempt number two. My apologies for a wrong fix first. Please, review.
+
+@rven1 Generally, the code might expect that that vector always has enough of the size according to the number of levels but apparently this is not the case and there might be another place there the bug is. On a side note operator[] is an unchecked access and it is usually used in a loop which is bounded by the size of that same vector but through out the code it is not the case.
+
+Can you assert that leveliters.size >= level
+And verify that it deosn’t fail.
+In RebuildIterator,  there is a reserve and the new number of levels will always be the same as what is reserved, since we don’t change the number of levels
+
+From: Dmitri Smirnov <notifications@github.com<mailto:notifications@github.com>>
+Reply-To: facebook/rocksdb <reply@reply.github.com<mailto:reply@reply.github.com>>
+Date: Monday, November 16, 2015 at 4:24 PM
+To: facebook/rocksdb <rocksdb@noreply.github.com<mailto:rocksdb@noreply.github.com>>
+Cc: Venkatesh Radhakrishnan <rven@fb.com<mailto:rven@fb.com>>
+Subject: [rocksdb] Make sure level_iters_has correct size before [] assignment (#834)
+
+@rven1https://github.com/rven1 @siyinghttps://github.com/siying @igorcanadihttps://github.com/igorcanadi Attempt number two. My apologies for a wrong fix first. Please, review.
+
+---
+
+You can view, comment on, or merge this pull request online at:
+
+  https://github.com/facebook/rocksdb/pull/834
+
+Commit Summary
+-   Make sure level_iters_has correct size before [] assignment
+
+File Changes
+-   M db/forward_iterator.cchttps://github.com/facebook/rocksdb/pull/834/files#diff-0 (8)
+
+Patch Links:
+-   https://github.com/facebook/rocksdb/pull/834.patch
+-   https://github.com/facebook/rocksdb/pull/834.diff
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/pull/834.
+
+@rven1 I can do that. However, that will fail probably. And the reason for that is reserve() is not the right function to use because it allocates memory but does not create elements to which you can assign. So the size will remain 0 the the acccess check will be out of bounds. resize() is a better choice which will init the vector with zeros.
+
+@rven1 so if you find the problem there then my changes are not necessary and you could add asserts yourself.
+
+@rven1 I just looked and yes, it is the problem. Change reserve() to resize() on line 499.
+
+@rven1 is fixing it: https://reviews.facebook.net/D50835
+
+Our valgrind build was failing because of other issues so we didn't realize the regression.
+

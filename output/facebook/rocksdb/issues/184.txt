@@ -1,0 +1,15 @@
+that's the formula i used ,but it seems do not work well. sometimes,the real value may be higher then the estimated one.
+ `block_cache + write_buffer_size*max_write_buffer_number`
+
+thanks.
+
+How much higher did you see?
+
+about 1.5 times . so i want to know the max memory usage that rocksdb will take .
+
+Of the memory not included in the formula, indexes for SST tables are likely the biggest part, but it depends on data and Options.max_open_files. 
+
+@zhenchuan you can store indexes in block cache by setting BlockBasedTableOptions::cache_index_and_filter_blocks. That way, your formula is likely to be correct.
+
+thanks for all of you,i'll try it .
+

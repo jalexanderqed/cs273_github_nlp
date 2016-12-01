@@ -1,0 +1,4 @@
+Can we  create cf   at runtime？
+
+yes. db->CreateColumnFamily()
+

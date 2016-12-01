@@ -1,0 +1,26 @@
+In file db/write_thread.cc, function `WriteThread::LinkOne`
+
+```
+  Writer* writers = newest_writer_.load(std::memory_order_relaxed);
+  while (true) {
+    w->link_older = writers;
+    if (newest_writer_.compare_exchange_strong(writers, w)) {
+```
+
+I think `Writer* writers = newest_writer_.load(std::memory_order_relaxed);` should in `while` block, if `newest_writer_.compare_exchange_strong` return false first, it will return false forever.
+
+CC @nbronson 
+
+@nbronson explained to me offline.
+
+With compare_exchange_strong():
+
+Compare and exchange contained value (strong)
+Compares the contents of the contained value with expected:
+- if true, it replaces the contained value with val (like store).
+- if false, it replaces expected with the contained value.
+
+http://www.cplusplus.com/reference/atomic/atomic/compare_exchange_strong/
+
+So the code is correct.
+

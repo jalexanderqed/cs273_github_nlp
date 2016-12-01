@@ -1,0 +1,22 @@
+cmakelist.txt runs "git" to detect git related information. That only works for cloned source tree. For download of a official release package, that does not work.
+Be specific, the following line will cause error:
+
+string(REGEX REPLACE "[^0-9a-f]+" "" GIT_SHA ${GIT_SHA})
+
+This is because GIT_SHA is empty. And the variable is not quoted.
+
+Another error is this line:
+
+COMMAND echo "const char\* rocksdb_build_git_datetime = \"rocksdb_build_git_datetime:${GIT_DATE_TIME}\";" >> ${BUILD_VERSION_CC}
+
+In my environment, this cause error below:
+
+ The filename, directory name, or volume label syntax is incorrect.
+
+It seems to be caused by the colon in time string.
+
+@allspace Would you like to propose a patch?
+
+@yuslepukhin I created fix for date time here. Are you OK with that? Can I create pull request? Basically the problem is that date and time utilities are producing different result on different platforms. I used powershell. I know it is not optimal, but it works...
+koldat/rocksdb@680d95df4fb97cce4013ce04a88e1d52c9a580f7
+

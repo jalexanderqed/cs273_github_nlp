@@ -1,0 +1,28 @@
+All  the  read  and write opertion are blocked 。 the  process seems deadlock.
+
+There is  the  thread  stack info
+#0  0x0000003864a0b5bc in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+#1  0x000000000050468d in rocksdb::port::CondVar::Wait (this=Unhandled dwarf expression opcode 0xf3
+
+) at port/port_posix.cc:83
+#2  0x00000000005365d5 in WaitInternal (this=0x7f6aa95e5448) at util/instrumented_mutex.cc:50
+#3  rocksdb::InstrumentedCondVar::Wait (this=0x7f6aa95e5448) at util/instrumented_mutex.cc:38
+#4  0x0000000000503855 in rocksdb::WriteThread::EnterWriteThread (this=0x11682a8, w=<value optimized out>, expiration_time=0) at db/write_thread.cc:22
+#5  0x00000000004c74b3 in rocksdb::DBImpl::Write (this=0x1168000, write_options=..., my_batch=0x7f6aa95e5688) at db/db_impl.cc:3044
+
+Is this the only thread? Can you send the stacks of other threads? Can you send us your LOG file?
+
+threads  have the some stacks .  The WARN LOG is 
+"[default] Stopping writes because we have 4 immutable memtables (waiting for flush), max_write_buffer_number is set to 4"
+
+the rocksdb options about flush  and  compaction are 
+Options.max_background_compactions: 8
+Options.max_background_flushes: 8
+
+why does rocksdb stop flush immutable memtables  to sst ?
+how can i slove the problem.
+
+This has been solved in 3.11 release (https://github.com/facebook/rocksdb/commit/b0fdda4ff07f2cc52b1f1ed77cfac47e02a86b96 is the commit). Can you please try verifying if this has been solved for you?
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

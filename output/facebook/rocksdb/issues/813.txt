@@ -1,0 +1,30 @@
+When a new SSTable is generated during compaction, the # entry in the file is accumulated in the counter: VersionStorageInfo::accumulated_num_non_deletions_. 
+However, when the stale files are deleted after compaction finished, the deleted entries are not decrease from counter. 
+
+This is FYI. I will fix this.
+
+CC @yhchiang 
+
+Hey @SherlockNoMad.  Sorry for my late reply.  The stats collected there is to compute the historical average value size overtime and thus not deleting those counter when removing files is on purposed.
+
+Or, are you building any logic based on this numbers where you need the counters reflect the current status instead of historical status?
+
+Hi @yhchiang.
+DBImpl::GetProperty("rocksdb.estimate-num-keys", value) should return the estimated number of keys in a column family. 
+In its actually implementation, it returns accumulated_num_non_deletions_ - accumulated_num_deletions_ as the estimated number of key. (see version_set.cc @GetEstimatedActiveKeys() )
+This estimation is inaccurate as it's actually historical accumulated number of key written to the DB. 
+
+We do need a counter to reflect the current number of keys in DB. 
+Do you have any suggestion for this? 
+
+Hi @yhchiang. Since accumulated_num_non_deletions_ is intended to hold the historical accumulated value, I would advocate for adding a new variable to hold the current_num_non_delection.
+What do you think?
+
+Hey @SherlockNoMad: I think that makes sense.  Are you interested in submitting a patch for this?  Or we can provide a patch for this.
+
+Hi @yhchiang, I already submitted the PR https://github.com/facebook/rocksdb/pull/815 
+
+LGTM.  Thanks for the fix!  I have merged the patch into master.
+
+@yhchiang @siying Thank you for reviewing this. :)
+

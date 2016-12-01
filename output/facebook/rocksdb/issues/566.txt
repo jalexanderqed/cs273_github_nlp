@@ -1,0 +1,45 @@
+Has anyone had this problem when trying to run valgrind on a program built with rocksdb?
+
+``` text
+vex amd64->IR: unhandled instruction bytes: 0x8F 0xEA 0xF8 0x10 0xC9 0x3 0x1D 0x0
+==32477== valgrind: Unrecognised instruction at address 0x5b284e.
+==32477==    at 0x5B284E: rocksdb::NewLRUCache(unsigned long, int, int) (cache.cc:167)
+==32477==    by 0x5B2B0F: rocksdb::NewLRUCache(unsigned long) (cache.cc:529)
+==32477==    by 0x5826C0: rocksdb::BlockBasedTableFactory::BlockBasedTableFactory(rocksdb::BlockBasedTableOptions const&) (block_based_table_factory.cc:36)
+```
+
+I'm perplexed. Making everything worse, I can run valgrind on another system, but it reports no errors and the segfault I'm trying to trace never happens on it.
+
+Just to check whether it is the problem of valgrind version compatibility with RocksDB. If you run "make valgrind_check" in RocksDB's build, does it pass?
+
+It does not:
+
+``` text
+$ make valgrind_check
+  CCLD     perf_context_test
+db/perf_context_test.o: In function `rocksdb::ProfileQueries(bool)':
+/nfs/users/nfs_e/eg10/vg/rocksdb/db/perf_context_test.cc:232: undefined reference to `rocksdb::ThreadStatusUtil::TEST_SetStateDelay(rocksdb::ThreadStatus::StateType, int)'
+/nfs/users/nfs_e/eg10/vg/rocksdb/db/perf_context_test.cc:251: undefined reference to `rocksdb::ThreadStatusUtil::TEST_SetStateDelay(rocksdb::ThreadStatus::StateType, int)'
+/nfs/users/nfs_e/eg10/vg/rocksdb/db/perf_context_test.cc:261: undefined reference to `rocksdb::ThreadStatusUtil::TEST_SetStateDelay(rocksdb::ThreadStatus::StateType, int)'
+collect2: error: ld returned 1 exit status
+make: *** [perf_context_test] Error 1
+```
+
+Can you run "make clean" before running "make valgrind_check"?
+
+Yes, this runs for a while then I get:
+
+``` text
+==13083== ERROR SUMMARY: 4681 errors from 4681 contexts (suppressed: 2 from 2)           
+/bin/sh: line 2: 13083 Illegal instruction     valgrind --error-exitcode=2 --leak-check= 
+full ./$t                                                                                
+```
+
+I can try to see if this happens again.
+
+@ekg is it possible that the valgrind is built using different tool chain dependencies than RocksDB? I see similar issues if valgrind is built using different glibc or so.
+
+@ekg is this also in perf_context_test?
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

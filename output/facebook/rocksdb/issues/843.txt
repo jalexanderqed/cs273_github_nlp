@@ -1,0 +1,200 @@
+I have a use-case where sequential read throughput is of primary importance. In order to benchmark RocksDB, I created 10 million records worth of dummy data. In this data the key is always 32 bytes long (an md5 hash) and the value part is around 300 to 500 bytes. The value part is a serialized JSON map which has english data (randomly generated).
+
+I loaded this data into a RocksDB database with the following parameters (8MB block size, 128MB target file size, LZ4 compression and no bloom filters). After loading in bulk mode, I compacted to make sure everything is in order for efficient iteration.
+
+At this point, I used `ldb` to `scan` through the whole database and measured the total time taken and rate. Here are the results
+
+``` bash
+time ldb --db=testdb scan | pv -blrac > /dev/null
+  10M [ 778k/s] [ 778k/s]
+
+real    0m12.845s
+user    0m13.100s
+sys     0m5.964s
+```
+
+> NOTE: the `pv` command measures progress of the command and does not add any significant overhead (any CPU occupied by it is anyway on a different core and it did not max out that other core).
+
+To get an idea of what the best possible throughput would be on my hardware. I dumped all the records into a plain file and compressed it using lz4 command line tool (I made sure to not use lz4hc just like I had within RocksDB configuration). Here are the results for iterating through the data in this file.
+
+``` bash
+time cat testdb.lz4 | lz4c -d | pv -lracb > /dev/null
+  10M [1.96M/s] [1.96M/s]
+
+real    0m5.114s
+user    0m3.568s
+sys     0m1.968s
+```
+
+As you can see from the above, the plain file iteration was 2.5x times faster than RocksDB iteration. I understand that there is some processing overhead within RocksDB owing to its higher internal complexity but I was expecting a much lower multiplier.
+
+I badly want to avoid writing a new abstraction to handle my specific use-case and just want to tune RocksDB to yield better performance if possible.
+
+What does the CPU profile show? Since your DB is probably cached in your benchmark, your performance is likely limited by CPU.
+
+How did you compile RocksDB? You might be using debug version of the binary, which makes it much slower.
+
+Which platform do you use? If you use Linux, for sequential read use case, make sure you have options.advise_random_on_open=false, to get OS page cache read ahead enabled.
+
+@igorcanadi I see the CPU usage for `ldb` hovering around 110% (in top. I guess it is >100% due to some parallelization during read operation within RocksDB). I did make sure to have my dataset cached in RAM by running the command multiple times. In summary, it does look bottlenecked on CPU. I compiled RocksDB release 4.0 using "make all". I've always assumed that this would provide me with an optimized build.
+
+@siying I am on Linux. I will try the test again with your suggestion. Thanks.
+
+@prashanthellina oh if it is bottleneck on CPU, then the parameter will not help. You can try to tune parameters related to LSM tree to generate less sorted runs. You may also try to increase block size to reduce const overhead of reading each blocks. But in general, if everything is in memory, RocksDB may never be able to match the speed of streaming one file.
+
+@prashanthellina `make all` doesn't provide optimized release. Check out the first line here: https://github.com/facebook/rocksdb/blob/master/INSTALL.md
+
+Please compile rocksdb using `make release`
+
+@igorcanadi Oh! I will try this right away. The INSTALL.md I got as a part of the 4.0 release did not make a mention of this though.
+
+That's possible, we only added it recently, sorry about that :) I wonder how many people actually end up running debug builds in their production :(
+
+@igorcanadi I am glad I found out during benchmarking :) Thank you pointing this out :+1: 
+
+I tried building using "make release" and produced an `ldb` binary and repeated the test but I still see the same slowdown.
+
+As per @siying's suggestion, I tried increasing block size but that also did not help.
+
+I am curious as to what in RocksDB could be causing this much of slowdown. Also, I think this is a general use-case that others might need too. Will such support be within the scope of RocksDB (or even within the realm of possibility considering the generality you'd want to maintain)?
+
+@igorcanadi As an aside, when I did "make release", the shared object was not produced. I used to generate that using "make shared_lib". How do I get the shared lib with optimizations turned on?
+
+@igorcanadi Please ignore the question about the shared lib in release mode. INSTALL.md says explicitly that it is built in release mode.
+
+Just to be paranoic, can you pl provide the following:
+1. amount of RAM on the machine
+2. The size of data by doing a "du -s testdb"
+3. The size of data in the file "ls -l testdb.lz4"
+4. The distribution of data and the number and size of all sst files in the db "ls -lR testDB"
+5. The first 500 lines from the file testdb/LOG that shows the parameters that you are using for the test.
+
+@dhruba Here is the info you asked for. Please let me know if you need access to the actual data files. It will take a while to upload but I can do it if it will help you in debugging.
+
+``` bash
+du -sh testdb
+2.4G    testdb
+
+du -s testdb
+2508304 testdb
+```
+
+``` bash
+ls -l testdb.lz4
+-rw-r--r-- 1 root root 2406468395 Nov 19 17:36 testdb.lz4
+
+ls -lh testdb.lz4
+-rw-r--r-- 1 root root 2.3G Nov 19 17:36 testdb.lz4
+```
+
+``` bash
+cat /proc/meminfo
+MemTotal:       32630460 kB
+MemFree:         6375392 kB
+MemAvailable:   15646088 kB
+Buffers:          147400 kB
+Cached:          9216628 kB
+```
+
+``` bash
+ls -lR testdb
+testdb:
+total 2516492
+-rw-r--r-- 1 root root         0 Nov 19 17:19 000003.log
+-rw-r--r-- 1 root root 271181850 Nov 19 17:29 000144.sst
+-rw-r--r-- 1 root root 271193467 Nov 19 17:29 000145.sst
+-rw-r--r-- 1 root root 271156030 Nov 19 17:29 000146.sst
+-rw-r--r-- 1 root root 271179933 Nov 19 17:29 000147.sst
+-rw-r--r-- 1 root root 271200640 Nov 19 17:29 000148.sst
+-rw-r--r-- 1 root root 271184466 Nov 19 17:29 000149.sst
+-rw-r--r-- 1 root root 271196925 Nov 19 17:29 000150.sst
+-rw-r--r-- 1 root root 271180814 Nov 19 17:30 000151.sst
+-rw-r--r-- 1 root root 271176053 Nov 19 17:30 000152.sst
+-rw-r--r-- 1 root root 123555718 Nov 19 17:30 000153.sst
+-rw-r--r-- 1 root root        16 Nov 19 17:19 CURRENT
+-rw-r--r-- 1 root root        37 Nov 19 17:19 IDENTITY
+-rw-r--r-- 1 root root         0 Nov 19 17:19 LOCK
+-rw-r--r-- 1 root root     12902 Nov 19 17:32 LOG
+-rw-r--r-- 1 root root    332610 Nov 19 17:30 LOG.old.1447950737275076
+-rw-r--r-- 1 root root     12902 Nov 19 17:32 LOG.old.1447950750313951
+-rw-r--r-- 1 root root     17381 Nov 19 17:30 MANIFEST-000005
+```
+
+The DB has 10 million records of randomly generated data. Here are a few records. The keys are md5 hashes so I would expect they are distributed evenly. Note that the key is stored in the JSON value under "id" field.
+
+``` json
+{"City":"Port Breanaborough","Country":"Georgia","Desc":"Coaegresco unde aestas vinculum. Solvo adeptio commodi animi vulgus explicabo deficio vorago. Tempus quasi recusandae adeptio quam error volup cruciamentum.","Email":"beth@watsica.name","JobTitle":"Future Factors Liason","Name":"Alan O'Connell","PhoneNumber":"067.355.2016","State":"Delaware","StreetAddress":"6273 Waters Heights","UserName":"ryan","id":"0000023f507999464aa2b78875b7e5d6"}
+{"City":"Wisozkmouth","Country":"Pakistan","Desc":"Summisse ago quia. Cogito placeat accedo eaque beneficium. Corroboro attero suppellex.","Email":"marguerite.littel@konopelskihudson.biz","JobTitle":"Principal Directives Designer","Name":"Ricky Kautzer","PhoneNumber":"(328)724-7847","State":"Connecticut","StreetAddress":"000 Heathcote Ports","UserName":"danyka","id":"0000071c69e6b287096827a4173c94c1"}
+{"City":"Mattside","Country":"Turkmenistan","Desc":"Censura et tutis expedita. Paulatim sit vestigium. Ea accusantium aliquam est et.","Email":"eliezer@rennerklein.com","JobTitle":"Regional Communications Officer","Name":"Marlon Wisozk","PhoneNumber":"340-858-6112 x004","State":"Kansas","StreetAddress":"8150 D'Amore Parks","UserName":"isabell","id":"000009891526c0ade7180f8423792063"}
+{"City":"Jeanmouth","Country":"Israel","Desc":"Repellendus adsidue velut. Qui solus demum ubi ut tremo succurro. Ullam rerum officiis ullam sit vultuosus voluptate neque.","Email":"van_beier@daniel.info","JobTitle":"National Accounts Specialist","Name":"Pasquale Goyette","PhoneNumber":"1-141-867-3674 x255","State":"Arizona","StreetAddress":"718 Predovic Crossroad","UserName":"modesta_emard","id":"00000ce845c00cbf0686c992fc369df4"}
+{"City":"North Irwin","Country":"Greece","Desc":"Aestivus cohibeo sublime vorago aliquam ultio traho. Capio quae curatio excepturi bardus cubo cena consequatur. Acidus peccatus reiciendis et.","Email":"ian@pollich.net","JobTitle":"Central Markets Liason","Name":"Winona Howell","PhoneNumber":"1-702-828-5406 x773","State":"New Jersey","StreetAddress":"336 Murray Prairie","UserName":"karolann.hyatt","id":"00000f7264c27ba6fea0c837ed6aa0aa"}
+{"City":"Tracymouth","Country":"Somalia","Desc":"Laborum talis totidem id auditor. Cinis cimentarius tracto optio laborum. Vorax id terebro nobis exercitationem.","Email":"teagan_marquardt@johnson.org","JobTitle":"District Marketing Orchestrator","Name":"Alvena O'Keefe","PhoneNumber":"048.368.8436 x3026","State":"Delaware","StreetAddress":"82442 Sadye Ramp","UserName":"ivah","id":"0000104cd168386a335ba6bf6e32219d"}
+{"City":"West Eliane","Country":"Fiji","Desc":"Laudantium solum iusto quis ea speculum hic abduco. At timor antepono et nesciunt arceo aperio distinctio. Amitto velit spiritus.","Email":"evans@walter.name","JobTitle":"Product Communications Orchestrator","Name":"Olaf Marvin","PhoneNumber":"1-704-417-5835","State":"Tennessee","StreetAddress":"587 Reid Streets","UserName":"hershel_windler","id":"000010d95384a6ba3d57dd870e7b337c"}
+{"City":"Lake Sharonland","Country":"Chile","Desc":"Magni suasoria sperno charisma verbera facilis. Statua censura aspernatur sono sumptus consequatur. Comparo non canonicus terminatio consectetur et audax charisma.","Email":"arnulfo@hyatt.name","JobTitle":"District Directives Representative","Name":"Ryann Bins PhD","PhoneNumber":"472-518-4843 x88780","State":"Minnesota","StreetAddress":"6732 Yundt Crest","UserName":"gina","id":"0000174d1d38072889d47e51b587a10c"}
+{"City":"Janessaberg","Country":"Pakistan","Desc":"Temporibus rerum quas denego voluptates. Nisi voluptatem vulnero molestiae magnam. Architecto et sono solum adipisci coadunatio ustilo.","Email":"mary.grady@hintz.com","JobTitle":"International Research Agent","Name":"Ms. Jammie Cormier","PhoneNumber":"1-041-154-4453 x82328","State":"Michigan","StreetAddress":"125 Fisher Greens","UserName":"carlo","id":"0000180e94707c0d90547614c17076bf"}
+{"City":"East Don","Country":"Kenya","Desc":"Bellum certus laboriosam ut. Enim decet repudiandae iusto eum cornu. Distinctio degusto ager spectaculum temporibus sequi vis creber.","Email":"micaela@russel.org","JobTitle":"Chief Infrastructure Agent","Name":"Aleen Bergstrom","PhoneNumber":"578-548-5556 x5762","State":"Pennsylvania","StreetAddress":"44143 Bill Harbors","UserName":"kristina","id":"00001816d766bb450f138ce3721f8f78"}
+```
+
+I've captured the first 500 LOG lines in this gist - https://gist.github.com/prashanthellina/a46d43f976c899bb30e2
+
+I ran the timings again
+
+``` bash
+time cat testdb.lz4 | lz4c -d > /dev/null
+real    0m3.546s
+user    0m2.772s
+sys     0m1.008s
+
+time ldb --db=testdb scan > /dev/null
+real    0m9.148s
+user    0m8.628s
+sys     0m0.512s
+```
+
+I would like feedback from other RocksDb developers on the settings of these four params and if it is worthwhile to change them for this workload:
+
+Options.allow_mmap_reads = 0 (if we do mmaps = 1 and do not use a block cache)
+Options.table_cache_numshardbits = 4 (increase it to 6? for lesser  lock contention)
+Options.no_block_cache: 0 (shall we set it to 1 so that there is no block cache)
+Options.block_size  8MB (increase to some higher number, e.g. 256 MB?)
+
+Prashant: when you are running your benchmark, can you pl verify that no writes are happening (by doing a iostat -xkcd 2) from another window concurrently?
+
+With `ldb scan` you're also timing the opening of the database -- when you open the database a lot of things happen: we create a new MANIFEST file, recover the log, flush the memtable file, etc etc. Ideally you would wait for the database to warmup before issuing scans.
+
+@dhruba I ran the test again while monitoring for writes using iostat. I did see some writes very briefly (I suspect to LOG given that it was only a few kB/s). I have uploaded the files to a location you can access. I'd like to share this URL with you privately instead of pasting here - Can you please tell me how I can reach you?
+
+I will try modifying `ldb` command source with these settings and report the numbers.
+
+@igorcanadi Is there a way I separate the time taken for warmup and the actual scan? I am using the `ldb` tool.
+
+not with the ldb tool. check out https://github.com/facebook/rocksdb/tree/master/examples
+
+@igorcanadi Will attempt a test that will ignore setup time of db.
+
+@dhruba I tried my previous test with the settings you proposed (except 256MB block size) and the timing went up to 15s.
+
+@dhruba I compacted db to make block size 256MB and got scan timings. Strangely the time has ballooned up to 62s!
+
+@dhruba Options.allow_mmap_reads = 1, Options.table_cache_numshardbits = 6, Options.no_block_cache: 0, block_size=8MB produced a marginal improvement (around 0.3s). I am going to now try isolating db setup time for actual scan time.
+
+@igorcanadi @dhruba I collected timings by excluding db setup from the measurement (timer starts just before iterator creation and ends on iterator closure). It appears very negligible amount of time was being spent in db setup (<0.2s) in this case (I guess because db is already compacted?). The iteration time still remains approximately the same as previous measurements. One thing that I noticed is that when I commented out fprintf (for outputting kv data to stdout), the total time dropped to 5 seconds from 9 seconds (almost a 50% drop). However, the baseline test (using lz4c decompression) does include time taken by that tool to write to stdout so not sure this matters at all. In summary, there is still around a 2.0 to 2.5x difference in iteration speed between lz4c baseline and RocksDB.
+
+@prashanthellina, I was working recently on some experiments that showed that if the data is hot the time of copying data from blocks is significant (1). I am not sure if this is the case here but since you mentioned that removing printf improved the performance then it maybe related.
+
+Can you try to apply this patch https://reviews.facebook.net/differential/diff/247971/ and see if this improved the performance ? I am also interested in getting a copy of the db, can you please send it to me at tec[at]fb[dot]com
+
+(1) https://reviews.facebook.net/D48999
+
+@IslamAbdelRahman I sent an email with access info for the data files. I am compiling your patch. Will report timings once done.
+
+@IslamAbdelRahman Your patch helped! The timing is now down to 5.3s. Now RocksDB (ldb) is only 50% slower than the baseline case. 
+
+Good stuff Islam!
+
+Prashant: is a 50% degradation compared to raw files acceptable for your use-case?
+
+@dhruba That is a definite yes. While in an ideal world, the difference in perf can be much lesser, the decision to use RocksDB for my use-case is easily made as I can avoid writing code to manage data on the disk myself.
+
+Thank you everyone in helping to get to the bottom of this.
+

@@ -1,0 +1,62 @@
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Hey @saghmrossi, can you try submitting this as a diff through review.facebook.net? It should be as easy as running `arc diff` once you install phabricator utils (http://phabricator.org/)
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+What should I put as "test plan", "reviewers", and "subscribers"?
+
+On Mon, Sep 29, 2014 at 5:04 PM, Igor Canadi notifications@github.com
+wrote:
+
+> Hey @saghmrossi https://github.com/saghmrossi, can you try submitting
+> this as a diff through review.facebook.net? It should be as easy as
+> running arc diff once you install phabricator utils (
+> http://phabricator.org/)
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/pull/320#issuecomment-57229688.
+
+test plan -- how you verified that your change works. You probably compiled it, added some unit tests, checked if get and put works...?
+
+reviewers: put 'igor', that me
+
+subscribers: leveldb
+
+I'm getting the following error after saving the revision message:
+
+PHP Fatal error:  Call to undefined method
+FacebookFbcodeLintEngine::getPEP8WithTextOptions()
+in rocksdb/linters/lint_engine/FacebookFbcodeLintEngine.php on line 39
+
+I checked the code, and that method doesn't seem to exist in the class,
+although I can't find its superclass defined anywhere after grepping the
+rocksdb repo, so I'm not sure if this is a config error on my end or an
+error in the code.
+
+On Mon, Sep 29, 2014 at 5:25 PM, Igor Canadi notifications@github.com
+wrote:
+
+> test plan -- how you verified that your change works. You probably
+> compiled it, added some unit tests, checked if get and put works...?
+> 
+> reviewers: put 'igor', that me
+> 
+> subscribers: leveldb
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/pull/320#issuecomment-57232556.
+
+@saghmrossi see: https://github.com/facebook/rocksdb/issues/238 that helped me.
+
+I just tried running the patch update; it ran successfully, but I'm still getting the issue. Was it checking out the past commit that got it working for you?
+
+I checked out both revisions which are mentioned in https://github.com/facebook/rocksdb/issues/238 (some where in the middle of the issues comments) and did after that a `arc patch` and then `arc diff` (but for me the revision was created beforehand). For you an `arc diff` should be sufficient.
+
+Thanks, all working now (I think!)
+
+moved to phabricator, so closing this.
+

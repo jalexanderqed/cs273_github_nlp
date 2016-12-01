@@ -1,0 +1,4 @@
+If user did not call SstFileWriter::Finish() or called Finish() but it failed.
+We need to abandon the builder, to avoid destructing it while it's open
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4171660).
+

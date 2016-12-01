@@ -1,0 +1,11 @@
+This replaces a mishmash of pointers in the Block and BlockContents classes with
+std::unique_ptr. It also changes the semantics of BlockContents to be limited to
+use as a constructor parameter for Block objects, as it owns any block buffers
+handed to it.
+
+Previous discussion here: https://github.com/tdfischer/rocksdb/pull/1
+
+I'm really excited about the code cleanup from this patch. It will make things easier to debug. Thanks for your contributions @tdfischer !
+
+Closing due to a new branch that goes further than this and also closes memory leaks.
+

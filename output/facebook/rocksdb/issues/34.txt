@@ -1,0 +1,12 @@
+Hi,
+I have general question but dont know wher to ask this:
+How is RocksDB compared with Redis?
+
+I have not run any benchmarks comparing the two. If you do run any benchmarks, can you pl share it with us?
+
+I simply asking about functionality and their support and reliability from a developer perspective.
+
+I have not run benchmarks on redis, so I cannot comment on its reliability. But RocksDB is highly reliable and is guaranteed to not have any "silent data loss".
+
+@dhruba Thanks a lot.
+

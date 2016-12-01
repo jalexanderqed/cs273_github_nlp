@@ -1,0 +1,46 @@
+
+I do not know of any such plans yet.
+
+Okey, Thanks.
+
+@xh931076284 “raft + rocksdb + consistent hash“ can make a distributed nosql  :  )
+
+@niukey Thank you, We are doing the work.
+
+@xh931076284  the work will be a open project ?
+
+@xh931076284 @niukey   we are developing a project combine "raft + rocksdb + consistent hash"  ![zepplin](https://github.com/baotiao/zeppelin). 
+
+Sounds interesting. Please share more details about it when you are ready.
+
+On Thu, Sep 1, 2016 at 10:11 PM, Zongzhi Chen notifications@github.com
+wrote:
+
+> @xh931076284 https://github.com/xh931076284 @niukey
+> https://github.com/niukey we are developing a project combine "raft +
+> rocksdb + consistent hash" [image: zepplin]
+> https://github.com/baotiao/zeppelin.
+> 
+> —
+> You are receiving this because you are subscribed to this thread.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1311#issuecomment-244284665,
+> or mute the thread
+> https://github.com/notifications/unsubscribe-auth/ABkKTTXbzpG35-Rere7ANGbRTRq8Z-d7ks5ql6_qgaJpZM4JxXjU
+> .
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@niukey Yes. It's just begining.
+
+@xh931076284 @baotiao @niukey are you at the same company?
+
+No.
+
+@xh931076284 both or @baotiao and you are implementing "raft + rocksdb + consistent hash"?
+
+Yes,we do.
+

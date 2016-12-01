@@ -1,0 +1,14 @@
+  Add missing file from CMake that breaks a build
+  Add port include to options_parser that makes use of snprintf
+  Is there a way to enforce CMake additions for internal changes that seem to come
+  w/o a PR?
+  Add notifications for daily appveyor
+
+> Is there a way to enforce CMake additions for internal changes that seem to come w/o a PR?
+
+Yes, we should find a way to trigger apveyor builds on Phabricator. As a reference, this is how we currently trigger builds in our internal Jenkins:
+https://github.com/facebook/rocksdb/blob/master/arcanist_util/unit_engine/FacebookFbcodeUnitTestEngine.php
+https://github.com/facebook/rocksdb/blob/master/arcanist_util/config/FacebookArcanistConfiguration.php#L32
+
+Something similar can also work with Apveyor.
+

@@ -1,0 +1,14 @@
+Hi,
+
+I noticed that CompactionFilterV2 and its factory methods are deprecated in 3.13. When we try to upgrade to 4.1, it caused our service (which is built on top of RocksDB) break, and we still rely on it for some internal use cases. I wonder if we can have a patch to add it back? This can definitely help since we don't need to make a large amount of change on our side :)
+
+Thanks! 
+
+Hi @shuzhang1989. What are you using CompactionFilterV2 for? We decided to remove it because 1) we thought nobody was using it, 2) it added significant performance penalty and 3) all of the CompactionFilterV2 uses were able to migrate to normal CompactionFilter
+
+@igorcanadi We are using CompactionFilterV2 because of its ability to filter a set of keys. Our solution has some prefix grouping support that we rely on CompactionFilterV2. if we migrate to use compactionfilter, we need to do some internal API change.
+
+@igorcanadi We discussed internally and decided to move to CompactionFilterV1. Thanks for the information :)
+
+That's great! You should also see some performance boost ;)
+

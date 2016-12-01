@@ -1,0 +1,12 @@
+This commit makes the code to skip empty data blocks a bit clearer.
+
+I have to admit that I don't understand the iterator code 100%, but I think my change makes sense and also `make check` passes locally.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+What are the next steps? 
+
+I'm closing this issue. This is really core functionality and although I find it sad, I can see the point of not changing it (even if tests pass).
+

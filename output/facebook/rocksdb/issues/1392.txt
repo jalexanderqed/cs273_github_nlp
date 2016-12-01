@@ -1,0 +1,11 @@
+
+LGTM. Can you explain a little bit why the change is needed?
+
+@yiwu-arbug when different instances of the database live in separate memory pools then function local statics area allocated from a pool that is associated with that instances. When instance goes away so is the memory pool and then a global object is left hanging in the air. globals do not have that problem.
+
+Thank you! Will merge after contbuild finishes.
+
+@yiwu-arbug Just wondering if Tavis is in fact doing anything
+
+@yuslepukhin seems Travis is having trouble. Let me merge anyway since AppVeyor build passes.
+

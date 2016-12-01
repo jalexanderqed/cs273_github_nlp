@@ -1,0 +1,8 @@
+I noticed something odd. If I manually compact the db twice, then the size of the compacted SST is about 20% lower. (In one test 2.2G vs. 2.7G.) More oddly, the output of ls -sh and ls -lh don't agree, with the latter showing 2.2G in both cases.
+
+Is this to be expected?
+
+Can't think of any reason. Is it possible for you to paste the information logs for both runs here?
+
+Unfortunately. I don't really have capacity to reproduce the problem chase down the LOG files. It looks like the block size and data size are different. Maybe the single-pass compaction is overestimating required space and reserving it somehow, which is resolved in the second? It's not a big issue, but this thread might help in the future if someone else has more serious issues with this.
+

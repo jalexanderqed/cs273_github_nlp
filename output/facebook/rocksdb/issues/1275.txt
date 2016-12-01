@@ -1,0 +1,12 @@
+Added `RocksDB#singleDelete` and renamed/deprecated `RocksDB#remove` -> `RocksDB#delete`
+
+https://reviews.facebook.net/D62043
+
+Thank you for adding this support! 
+
+@yhchiang 
+Is it available in a release yet? 
+https://mvnrepository.com/artifact/org.rocksdb/rocksdbjni/4.11.2 is the latest but does not have these new changes.
+Thanks!
+
+@hari-rangarajan I think @IslamAbdelRahman told me that it will be in the upcoming 4.13.

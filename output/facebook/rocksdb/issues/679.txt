@@ -1,0 +1,18 @@
+While making *.vcxproj on win32 configuration using cmake, it calls commands that produces additional CR-LF output. In the result, the following compilation faults.:
+
+```
+  const char* rocksdb_build_git_datetime = "rocksdb_build_git_datetime:03.08.2015
+  The filename, directory name, or volume label syntax is incorrect.
+  The filename, directory name, or volume label syntax is incorrect.
+C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppCommon.targets(170,5): error MSB6006: "cmd.exe" exited with code 123. [C:\lib\contrib\rocksdb\build\GenerateBuildVersion.vcxproj]
+```
+
+The solution is to write after the next string
+`string(CONCAT GIT_DATE_TIME ${DATE} ${TIME})`
+these two lines
+`string(REGEX REPLACE "\n" "" GIT_DATE_TIME ${GIT_DATE_TIME})`
+`string(REGEX REPLACE "\r" "" GIT_DATE_TIME ${GIT_DATE_TIME})`
+in CMakeLists.txt
+
+The same behavior occures when build for x64 with > cmake -G "Visual Studio 14 Win64" <. The proposed solution works fine.
+

@@ -1,0 +1,128 @@
+we recently updated our rocksdb build, and noticed that there is a continuous memory grow even after setting the jvm option for max heap size. The previous version of our build does not have such problem. We are not sure this is absolutely due to the new build yet since we also have a few other application level changes (although the new build is still our current biggest suspect).
+
+ While investigating other possibilities, I just want to bring this up  in case there is an known issue of a memory leak in some version of rocksdb java. 
+
+Can someone let me know if you have any insights into this? Or how we can debug such memory leak in rocksdb java. (we used to yourkit to profile our application, but it does not include the c++ part)
+
+@shiyanxin which version did you use beforehand which version are you using now ? What kind of features are you using ?
+
+with the latest rocksdb jni, we found the following memory usage pattern
+
+![image](https://cloud.githubusercontent.com/assets/3445465/5176898/e8ea00e6-7404-11e4-88b4-d02e901f84c0.png)
+
+memory keeps climbing until stables at 48GB or so, and jvm min heap size and max heap size is set to be equal to 16G, and we did some java heap profiling (also look at /proc/pid/smaps) and verified java heap memory usage is small (1GB). so our question is what cause this type of memory behavior, and it actually caused one oom_killer killing the process before we explicitly specify jvm heap size parameters.
+
+Our usage for rocksdb, is mostly read in key, deserialize the value and merge with some new request data, and write back to the same key, we called some backup functions frequently as well. 
+
+Old jni was about 2 months ago (sorry that we forgot the exact version), and latest one we took about 1.5 weeks ago for some new functionalities for backup.
+
+@bayesian as a short notice i monitored now the last 3 hours memory consumption of a java program(using the latest version of rocks) (over)writing one key/value pair to a database and reading contents from the database. Residential memory is after 3 hours still the same like at the very beginning. In a further step i will also test BackupEngine. Will keep you posted.
+
+Do you have also a diagram on java heap usage ? I would expect that also to have a linear growth. If so i would check if you are freeing Java objects holding native references appropriately.
+
+@bayesian : what is the workload that you are running?
+@fyrz : thanks for looking into this one....
+
+@dhruba , the workload is overwrite heavy, about a few hundred overwrites per sec on average, on peak, could be up to 1k (over)writes per sec.  
+
+there are also some prefix scan queries as well, with low qps (< 20); we did delta backup on regular basis (10 mins) to build a replica on top of zookeeper.
+
+@fyrz, unfortunately we might not have the heap usage diagram. 
+
+@bayesian i did measurements here today and ran about 600million overwrites with read/write and did each 100k operations  a backup while purging every backup than the last. I noticed no increase in memory usage resident size stayed the same.
+
+Can you extract somehow the portions and how you used Rocks ?
+
+I have an idea what might be the cause of such behavior. Assuming youre initializing a lot of RocksJava objects which are backed by native allocations. You might ran than in such a situation if you do not actively dispose those objects. Because garbage collection will not often run while having 1gb application heap usage and 16gb spare.
+
+Btw do you use RocksJava merge functionality ?
+
+we do not use the merge functionality. 
+
+your hypothesis makes sense. What can we do to verify it?
+
+In case this may help, here is how we set up the option for the db (memtableMemoryBudget is 1G, and blockCacheSize is 32768):
+
+```
+  options.setCreateIfMissing(true)
+         // the following parameters selected based on
+         // ColumnFamilyOptions::OptimizeLevelStyleCompaction
+         // ----- begin ------
+         .setWriteBufferSize(memtableMemoryBudget / 4)
+         .setMinWriteBufferNumberToMerge(2)
+         .setMaxWriteBufferNumber(6)
+         .setLevelZeroFileNumCompactionTrigger(2)
+         .setTargetFileSizeBase((int)(memtableMemoryBudget / 8))
+         .setMaxBytesForLevelBase(memtableMemoryBudget)
+         .setCompactionStyle(CompactionStyle.LEVEL)
+         .setCompressionType(CompressionType.SNAPPY_COMPRESSION)
+         // ----- end ------
+         .useFixedLengthPrefixExtractor(prefixLength)
+         .setLevelZeroSlowdownWritesTrigger(20)
+         .setLevelZeroStopWritesTrigger(40)
+         .setMemTableConfig(
+             new HashSkipListMemTableConfig()
+                 .setBucketCount(2000000))
+         .setTableFormatConfig(
+             new BlockBasedTableConfig()
+                 .setHashIndexAllowCollision(false)
+                 .setBlockCacheSize(blockCacheSize * SizeUnit.MB)
+                 .setCacheNumShardBits(6)
+                 .setFilter(bloomFilter)
+                 .setCacheIndexAndFilterBlocks(false))
+         .setMemtablePrefixBloomBits(100000000)
+         .setMemtablePrefixBloomProbes(6)
+         .setMaxOpenFiles(-1)
+         .setMaxBackgroundCompactions(4)
+         .setMaxBackgroundFlushes(1)
+         .createStatistics();
+```
+
+our usage of rocksdb:
+
+1) overwrite:
+
+void processRequest(request) {
+synchronized(lock) {
+    byte[] data = storage.get(key);
+    DataUnit unit = new DataUnit();
+    deserializer.get().deserialize(unit, data);
+    process(unit, request);
+   byte[] updatedData = serializer.get().serialize(unit);
+   storage.put(key, updatedData);
+}
+1. restore db while running:
+   //dispose, close old db
+   // restoreDBFromLatestBackup then dispose RestoreBackupableDB/RestoreOptions
+   // open BackupableDB.
+2.  backup db while running
+   db.createNewBackup(true);
+   db.purgeOldBackups(7);
+3. prefix scan:
+   RocksIterator it;
+   for (it = db.seek(prefixToSeek); it.valid(); it.next()) {
+   //process data
+   }
+   it.dispose;
+
+@bayesian @shiyanxin one final question. Did you guys invent the backup/restore code with the new RocksJava version or was this previously also in your code ?
+
+added recently, old version rocksdb jni does not expose backup version, etc.. we use that to implement a live replica for a rocksdb service cluster for reliability (one master, and multiple slave architecture)
+
+@bayesian im benchmarking currently the cause. Probably i will have something in the next days which you can test for verification. If i notice a leak.
+
+@bayesian:  Thank you for reporting this.  If you could find the minimum code block from your application that can reproduce the leak, that would be very helpful!
+@fyrz: Thanks for helping on this. 
+
+@bayesian any news here ?
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+
+@bayesian I am closing this issue as there have been no recent updates from the reporter of the issue.
+
+@adamretter it would be good to at least mention what these "recent updates" are.
+
+Or did you mean "no" instead of "now"?
+
+@manojlds Indeed I meant "no", I have corrected above...
+

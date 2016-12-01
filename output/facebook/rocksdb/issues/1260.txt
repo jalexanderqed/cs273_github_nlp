@@ -1,0 +1,20 @@
+I can not find API to set `delay_write_rate` in RocksJava? Is it not supported?
+
+@xh931076284 I assume you mean`DBOptions::delayed_write_rate`? If so then, no that does not yet seem to be in the Java API, but if you need it, it would be very simple to add it.
+
+Yes.We had test the performance of rocksdb and rocksdbjava,and found the significant difference between the two,so,I want to try to find the reason.But so far,We have not found where is the time to spend in calling rocksdbjava? Can you help me?
+
+@adamretter I have added a setDelayedWriteRate function to java api, and it works well . Thank you.
+
+@xh931076284 Will you send a PR for that?
+
+What is PR? 
+
+@xh931076284 A Pull Request. i.e. if you have made those changes locally to RocksJava, would you consider contributing them back to the project?
+
+@adamretter Yes, it's my honor.
+
+what should I do for it?
+
+@xh931076284 Probably start by reading this - https://help.github.com/articles/using-pull-requests/
+

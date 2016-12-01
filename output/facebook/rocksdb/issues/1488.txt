@@ -1,0 +1,22 @@
+
+@yiwu-arbug has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4157784).
+
+@hercule24 updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1488/files/02be24b979daf16ef916554702f9c6f46021b12a..796b620e61f4aab45257aabbe50482aa6beb5074) - [changes since last import](https://github.com/facebook/rocksdb/pull/1488/files/02be24b979daf16ef916554702f9c6f46021b12a..796b620e61f4aab45257aabbe50482aa6beb5074)
+
+@hercule24 updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1488/files/796b620e61f4aab45257aabbe50482aa6beb5074..6b437b8a37b57a1f7763155de3af50d31dffbd81) - [changes since last import](https://github.com/facebook/rocksdb/pull/1488/files/796b620e61f4aab45257aabbe50482aa6beb5074..6b437b8a37b57a1f7763155de3af50d31dffbd81)
+
+Will merge after build success.
+
+It's weird that the `db_block_cache_test` passed on my machine
+
+where do you see `db_block_cache_test` is failing?
+
+The `Some checks were not successful` information stated below
+
+If you scroll to the bottom of https://travis-ci.org/facebook/rocksdb/jobs/175212806 it shows "No space left on device". Something wrong with Travis and not related to your change.
+
+We also need to keep an eye on the sandcastle build here: https://phabricator.intern.facebook.com/D4157784
+But the job seems to be queueing for a long time.
+
+cc @siying not sure if you'll have any comment on the change.
+

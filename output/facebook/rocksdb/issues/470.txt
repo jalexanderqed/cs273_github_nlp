@@ -1,0 +1,24 @@
+Does the Java API support the concept of getting all records after a certain point in time?
+
+The RocksDB documents read:
+
+"Incremental Backups and Replication need to be able to find and tail all the recent changes to the database. The API GetUpdatesSince allows an application to tail the RocksDB transaction log." from https://github.com/facebook/rocksdb/wiki/RocksDB-Basics
+
+The GetUpdatesSince API does not seem to be available in the RocksDB Java API. Is there another way to do this in Java?
+
+You can use currently a tailing iterator on a RocksDB database. In contrast to the GetUpdatesSince functionality rows are read and not batches of updates which would probably lead to a huge performance decrease if used for replication.
+
+I will push that to the top of my list for the next Java API additions.
+
+@fyrz Tailing iterator will give you keys in key-order, not in insert-order, right? So you can't really use it for replication.
+
+(unless your updates are sequential)
+
+@igorcanadi you are right.
+
+@RichardHightower i will raise a pull-request this evening(GMT+1) most of the functionality is done some minor improvements remain. So probably it will be available in 3.10.0
+
+@RichardHightower  https://github.com/facebook/rocksdb/pull/474
+
+@RichardHightower  the pull request is in (on master). I close this issue, please reopen if there is some problem with that.
+

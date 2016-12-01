@@ -1,0 +1,17 @@
+Currently the members `enum Code` and `code()` of the `Status` class are private. To find out what error occurred, it is necessary to call a series of member functions like `Status::IsCorruption`. Not only is this inconvenient, but it breaks the use case where one wants to pass the raw error number for diagnostics and logging when integrating with an enclosing wrapper. Unless there is a very good reason, I can't think of why we'd want these members private.
+
+I also don't see a good reason to keep them private. https://github.com/facebook/rocksdb/commit/c07c9606edcc79907a24dbe3febff8ee0aa8512f
+
+I would rather use the Status.toString() to pass into diagnostics and error messages rather than the Status.code. This should work, isn't it? 
+
+@dhruba While `Status::ToString()` serves a useful function, it is nice to be able to retrieve the numeric code. In the application I am working on, the return value of `Status::code()` is being added to a base "custom error" constant and passed up the call chain using an existing infrastructure that is based on integral return values. Modifying this infrastructure to use a string instead would be problematic.
+
+See:
+https://github.com/ripple/rippled/blob/develop/src/ripple_core/nodestore/backend/RocksDBFactory.cpp#L227
+
+@dhruba what's your concern regarding Status::code()?
+
+I have no problem with this patch, except that we the public api called Status not exposes a mapping to an integer while there was no such expectation earlier. 
+
+Since this is a C++ library, I believe it makes sense to use `std::error_code`. Or at the very least, if pre-C++11 support is desired to model the API of the `Status` object after `error_code`. Since the `error_code` API allows for mapping error conditions to well known enumerations, it follows that making such a mapping part of the public API of `Status` is well advised.
+

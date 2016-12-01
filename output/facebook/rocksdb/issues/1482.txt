@@ -1,0 +1,13 @@
+Summary: enhancing sst_dump to be able to parse internal key
+
+Test Plan: ran --help, and with good/bad key
+
+Reviewers: siying
+@siying has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4154175).
+
+LGTM, can you include example output in the commit message ?
+
+@anirbanr-fb updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1482/files/144186b3c45d9ed9e4e0f6eaa441b5dbce5ddb27..b4d7e0dc840c068031a801ac97dba6bd2cda56f7) - [changes since last import](https://github.com/facebook/rocksdb/pull/1482/files/144186b3c45d9ed9e4e0f6eaa441b5dbce5ddb27..b4d7e0dc840c068031a801ac97dba6bd2cda56f7)
+
+improved commit message. Added a bit more robustness, by catching exceptions.
+

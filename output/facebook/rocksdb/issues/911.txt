@@ -1,0 +1,9 @@
+@siying 
+This fixes the build failure of hdfs environment.
+
+Thanks @shuzhang1989 
+
+@IslamAbdelRahman updated. 
+
+Thanks
+

@@ -1,0 +1,31 @@
+This code doesn't compile when bzip2 is installed but zlib is not. Regardless is it not correct to use Z_BUF_ERROR here.
+
+see http://www.bzip.org/1.0.3/html/low-level.html
+
+  int old_sz =0, new_sz =0;
+  while(_stream.next_in != nullptr && _stream.avail_in != 0) {
+    int st = BZ2_bzCompress(&_stream, BZ_FINISH);
+    switch (st) {
+      case BZ_STREAM_END:
+        break;
+      case BZ_FINISH_OK:
+        // No output space. Increase the output space by 20%.
+        // (Should we fail the compression since it expands the size?)
+        old_sz = output->size();
+        new_sz = (int)(output->size() \* 1.2);
+        output->resize(new_sz);
+        // Set more output.
+        _stream.next_out = (char _)&(_output)[old_sz];
+        _stream.avail_out = new_sz - old_sz;
+        break;
+      case Z_BUF_ERROR:
+      default:
+        BZ2_bzCompressEnd(&_stream);
+        return false;
+    }
+  }
+
+And BZip2_Uncompress uses Z_OK and Z_BUF_ERROR which also come from zlib. Those references should be changed to BZ_\* equivalents.
+
+Tnx Mark, I fixed the problem.
+

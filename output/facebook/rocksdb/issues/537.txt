@@ -1,0 +1,31 @@
+If I run
+`make all`
+and then run
+`make rocksdbjava`
+I get the following error.
+
+```
+make[1]: Leaving directory `/home/pshareghi/workspace/rocksdb-stable/java'
+rm -f ./java/target/librocksdbjni-linux64.so
+g++  -g -W -Wextra -Wall -Wsign-compare -Wshadow -Wno-unused-parameter -Werror -I. -I./include -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_FALLOCATE_PRESENT -DSNAPPY -DGFLAGS=google -DZLIB -DBZIP2 -march=native   -DHAVE_JEMALLOC -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -Wnon-virtual-dtor -I./java/. -I/usr/lib/jvm/jdk1.6.0_34//include/ -I/usr/lib/jvm/jdk1.6.0_34//include/linux -shared -fPIC -o ./java/target/librocksdbjni-linux64.so ./java/rocksjni/*.cc db/builder.o db/c.o db/column_family.o db/compaction.o db/compaction_job.o db/compaction_picker.o db/db_filesnapshot.o db/dbformat.o db/db_impl.o db/db_impl_debug.o db/db_impl_readonly.o db/db_iter.o db/file_indexer.o db/filename.o db/flush_job.o db/flush_scheduler.o db/forward_iterator.o db/internal_stats.o db/log_reader.o db/log_writer.o db/managed_iterator.o db/memtable_allocator.o db/memtable.o db/memtable_list.o db/merge_helper.o db/merge_operator.o db/repair.o db/table_cache.o db/table_properties_collector.o db/transaction_log_impl.o db/version_builder.o db/version_edit.o db/version_set.o db/wal_manager.o db/write_batch.o db/write_controller.o db/write_thread.o port/stack_trace.o port/port_posix.o table/adaptive_table_factory.o table/block_based_filter_block.o table/block_based_table_builder.o table/block_based_table_factory.o table/block_based_table_reader.o table/block_builder.o table/block.o table/block_hash_index.o table/block_prefix_index.o table/bloom_block.o table/cuckoo_table_builder.o table/cuckoo_table_factory.o table/cuckoo_table_reader.o table/flush_block_policy.o table/format.o table/full_filter_block.o table/get_context.o table/iterator.o table/merger.o table/meta_blocks.o table/plain_table_builder.o table/plain_table_factory.o table/plain_table_index.o table/plain_table_key_coding.o table/plain_table_reader.o table/table_properties.o table/two_level_iterator.o util/arena.o util/auto_roll_logger.o util/bloom.o util/build_version.o util/cache.o util/coding.o util/comparator.o util/crc32c.o util/db_info_dumper.o util/dynamic_bloom.o util/env.o util/env_hdfs.o util/env_posix.o util/file_util.o util/filter_policy.o util/hash.o util/hash_cuckoo_rep.o util/hash_linklist_rep.o util/hash_skiplist_rep.o util/histogram.o util/instrumented_mutex.o util/iostats_context.o utilities/backupable/backupable_db.o utilities/convenience/convenience.o utilities/checkpoint/checkpoint.o utilities/compacted_db/compacted_db_impl.o utilities/document/document_db.o utilities/document/json_document_builder.o utilities/document/json_document.o utilities/geodb/geodb_impl.o utilities/leveldb_options/leveldb_options.o utilities/merge_operators/put.o utilities/merge_operators/string_append/stringappend2.o utilities/merge_operators/string_append/stringappend.o utilities/merge_operators/uint64add.o utilities/redis/redis_lists.o utilities/spatialdb/spatial_db.o utilities/ttl/db_ttl_impl.o utilities/write_batch_with_index/write_batch_with_index.o util/event_logger.o util/ldb_cmd.o util/ldb_tool.o util/log_buffer.o util/logging.o util/memenv.o util/murmurhash.o util/mutable_cf_options.o util/options_builder.o util/options.o util/options_helper.o util/perf_context.o util/rate_limiter.o util/skiplistrep.o util/slice.o util/sst_dump_tool.o util/statistics.o util/status.o util/string_util.o util/sync_point.o util/thread_local.o util/thread_status_impl.o util/thread_status_updater.o util/thread_status_updater_debug.o util/thread_status_util.o util/thread_status_util_debug.o util/vectorrep.o util/xfunc.o util/xxhash.o -lpthread -lrt -lsnappy -lz -lbz2 
+/usr/bin/ld: db/builder.o: relocation R_X86_64_32 against `.rodata' can not be used when making a shared object; recompile with -fPIC
+db/builder.o: error adding symbols: Bad value
+collect2: error: ld returned 1 exit status
+make: *** [rocksdbjava] Error 1
+```
+
+To resolve the issue I have to run
+`make clean`
+before executing 
+`make rocksdbjava`
+which means most of what `make all` generated have to be deleted and only some of them will be regenerated.
+## Suggestion
+
+Somhow the rocksdbjava target needs to find out (or know) if the object files it needs are compiled with -fPIC or not. An easy solution would be to have rocksdbjava create a file called `compiledWithfPIC` anytime it runs. The other non-java targets should delete this file when they are executed. This way, if the file does not exist, rocksdbjava target will know that it has to delete the object files and recompile them with -fPIC.
+
+Thanks for reporting this!  We are currently working on a solution to have those java generated .o files stored in a separate directory.  In this way we can have stateless Makefile to keep c++ and java binaries independent.  Should have the fix soon.
+
+The issue should be addressed once @meyering's patch is pushed (https://reviews.facebook.net/D36645.)  Feel free to let me know if the patch works / not works after it has been pushed.
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

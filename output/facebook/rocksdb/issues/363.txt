@@ -1,0 +1,19 @@
+This provides support for getting an iterator on a WriteBatch by means of a callback Handler.
+
++1 Slowly we`re gettin a really nice Java API :)
+
+@adamretter we should open an enhancement issue about the packaging and testing issue given all our additions the org.rocksdb package seems to be somehow a dump for files... Did you have time to think about maven testing ?
+
+@adamretter can you please provide some basic tests ? Not that fancy ones but a couple of tests describing the expected behavior.
+
+@adamretter Can you please add this diff to reviews.facebook.net so that we can easily discuss the diff? Thanks!
+
+Created a diff review here: https://reviews.facebook.net/D27567.  Please feel free to author it and continue, @adamretter :)
+
+Btw, it seems the unit-test is missing.  Would you mind adding one?
+
+Should be ready to rock now. I have added the test case as requested and addressed each of the code-review comments. Thanks
+
+@adamretter: The diff LGTM.  Thanks for the contribution.
+@fyrz: Thank you for reviewing the diff :)
+

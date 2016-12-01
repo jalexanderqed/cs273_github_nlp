@@ -1,0 +1,40 @@
+Found with clang-3.7:
+
+```
+backupable_db.cc:526:21: warning: moving a temporary object prevents copy elision [-Wpessimizing-move]
+    backups_.insert(std::move(
+                    ^
+backupable_db.cc:526:21: note: remove std::move call here
+    backups_.insert(std::move(
+                    ^~~~~~~~~~
+backupable_db.cc:626:30: warning: moving a temporary object prevents copy elision [-Wpessimizing-move]
+  auto ret = backups_.insert(std::move(
+                             ^
+backupable_db.cc:626:30: note: remove std::move call here
+  auto ret = backups_.insert(std::move(
+                             ^~~~~~~~~~
+2 warnings generated.
+json_document.cc:310:10: warning: moving a local object in a return statement prevents copy elision [-Wpessimizing-move]
+  return std::move(ans);
+         ^
+json_document.cc:310:10: note: remove std::move call here
+  return std::move(ans);
+         ^~~~~~~~~~   ~
+json_document.cc:333:10: warning: moving a local object in a return statement prevents copy elision [-Wpessimizing-move]
+  return std::move(ans);
+         ^
+json_document.cc:333:10: note: remove std::move call here
+  return std::move(ans);
+         ^~~~~~~~~~   ~
+2 warnings generated.
+wal_manager.cc:332:27: warning: moving a temporary object prevents copy elision [-Wpessimizing-move]
+      log_files.push_back(std::move(std::unique_ptr<LogFile>(
+                          ^
+wal_manager.cc:332:27: note: remove std::move call here
+      log_files.push_back(std::move(std::unique_ptr<LogFile>(
+                          ^~~~~~~~~~
+1 warning generated.
+```
+
+I believe this was fixed by 73b175a.  Can you please rebase and let us know if you still see any issues?
+

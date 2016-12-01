@@ -1,0 +1,13 @@
+We should close the fd, before overriding it. This bug was
+introduced by f89caa127baa086cb100976b14da1a531cf0e823
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+**If you are contributing on behalf of someone else (eg your employer)**: the individual CLA is not sufficient - use https://developers.facebook.com/opensource/cla?type=company instead. Contact cla@fb.com if you have any questions.
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+@siying has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4214101).
+I don't understanding why initially we wanted to open the file twice. @kradhakrishnan can you answer that?
+That is old code nothing got to do with my changes AFAIK. I don't know why the file is tried with two syscalls. Also, the leaks seems generic not really related to O_DIRECT. 
+@kradhakrishnan look at https://reviews.facebook.net/D57393 .
+I don't remember why I exactly wrote this way. I can understand why I re-open the first call with FILE abstraction since probably there is no way to open O_DIRECT there. The others can be written to avoid not opening twice. 
+This fix looks good to me. I am puzzled how our tsan/asan testing missed these fd leaks . At a later point, the code can be re-written to avoid these double opens. Also, we need to figure why FILE (fopen) is used which is the reason why the double opening started.
+@xiaosuo Thank you for catching the issue and fixing it.

@@ -1,0 +1,35 @@
+Hi,
+we're experiencing an odd problem in our RocksDB database: some SST files are deleted while still being listed in the manifest (it happened 4/5 times in the past month, so it's not an one-off).
+
+RocksDB log (only the lines mentioning 389425):
+
+```
+2015/10/10-23:47:12.610730 7f962b77e700 EVENT_LOG_v1 {"time_micros": 1444513632610720, "job": 2583, "event": "table_file_deletion", "file_number": 389425}
+2015/10/10-23:47:12.652879 7fa7f8d6c700 [WARN] Compaction error: IO error: /path/to/db/389425.sst: No such file or directory
+2015/10/10-23:47:12.652884 7fa7f8d6c700 (Original Log Time 2015/10/10-23:47:12.652829  [default] compacted to: base level 3 max bytes base 57283145 files[4 0 0 2 30 240 1727] max score 1.00, MB/sec: 1957.6 rd, 252.8 wr, level 3, files in(6, 0) out(1) MB in(123.7, 0.0) out(16.0), read-write-amplify(1.1) write-amplify(0.1) IO error: /path/to/db/389425.sst: No such file or directory, records in: 400250, records dropped: 5064
+2015/10/10-23:47:12.652890 7fa7f8d6c700 [ERROR] Waiting after background compaction error: IO error: /path/to/db/389425.sst: No such file or directory, Accumulated background error counts: 1
+```
+
+We're using RocksDB via the Java JNI interface, in multiple clusters (for a total of > 300 boxes). The on-disk DB is ~60GB per box, and we do 10MB of writes every 20 seconds (I don't have stats about the number of written keys).
+
+There is a nightly job deleting ~1/400th of the keys, and so far the issue has only happened during this mass-deletion.
+
+In case it's relevant, we only have a single write and/or delete call running at a time (they are performed via Java synchronized methods).
+
+We tried writing a stress test to reproduce the issue in a controlled environemnt, but without success.
+
+Let me know if there is anything we can do to help debugging this issue (we can run a patched RocksDB/JNI, but it will have to run in production to have any chance of catching the issue).
+
+Thanks in advance,
+Mattia
+
+Which version of RocksDB are you using? Are you doing fsync for writes?
+
+We're using 3.13.1 without fsync
+
+@mbarbon sorry for the delay. In 3.13 we had a bug where we had a chance to lose a file when you're using fsync-on-commit. We quickly detected the issue in our shadow environment and released the fix in 3.13.1 (i don't think we ever released 3.13 publicly).
+
+So it's a bit weird that you guys are seeing similar issue in 3.13.1 even without fsync-on-commit. 3.13.1 has been running at Facebook for a while and there were no similar reports.
+
+Could you please share your entire `LOG` file? That will help us to see which operations were happening concurrently and we'll hopefully be able to identify and fix the issue.
+

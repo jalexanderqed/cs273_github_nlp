@@ -1,0 +1,14 @@
+Please consider this PR for **[clib](https://github.com/clibs/clib)** support! Let me know if there are any questions :+1:!
+
+Thanks in advance :smile:!
+
+\- Jonathan
+
+What will the clib support enable for our users?
+
+Can you also please our licence in package.json?
+
+@jonathanmarvens do you still want this patch to be merged?
+
+Closing this for now because it went stale. @jonathanmarvens please reopen it once you address the comment (add our license to package.json)
+

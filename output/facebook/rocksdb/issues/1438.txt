@@ -1,0 +1,14 @@
+Summary: Changed BuildTable() (used for flush) to (1) add range
+tombstones to the aggregator, which is used by CompactionIterator to
+determine which keys can be removed; and (2) add aggregator's range
+tombstones to the table that is output for the flush.
+
+Test Plan: flush_job_test, also tested together with end-to-end tests in
+D63927
+
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4100025).
+
+ping @yhchiang 
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1438/files/97c58e761aec491c11a297c708b9b98b4710c255..2ac9f6c72d8c89b02e471954c49d6442de33ba12) - [changes since last import](https://github.com/facebook/rocksdb/pull/1438/files/97c58e761aec491c11a297c708b9b98b4710c255..2ac9f6c72d8c89b02e471954c49d6442de33ba12)
+

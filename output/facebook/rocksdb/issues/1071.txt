@@ -1,0 +1,25 @@
+Hi,
+
+In our Java app we would like to pause and resume Rocks compaction from time to time (for example, in order to do our own EBS snapshot).
+
+Are those APIs available on JNI interface? I did a quick search and could not find any.
+If they are not in JNI, are they available in the original C/C++ APIs? Any plan to add them to JNI?
+
+Or, is there any other way to achieve what we are trying to do on Java side?
+
+Thanks,
+Sam
+
+@sam-guo If they are available in the C++ API and you can point me to the methods, I will happily add wrappers to the Java API for you.
+
+Hi adamretter,
+
+I did a grep and saw these 2 functions:
+
+./db/db_impl.cc:Status DBImpl::PauseBackgroundWork()
+./db/db_impl.cc:Status DBImpl::ContinueBackgroundWork()
+
+that I think will work. Could you add them to the Java API?
+
+Thanks!
+

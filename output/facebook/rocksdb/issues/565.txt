@@ -1,0 +1,55 @@
+db->CompactRange(nullptr, nullptr)  sometime case a coredump. And  there are long time  for   reopen  db .     there  are   gdb info:
+#0  0x000000376ac32925 in raise () from /lib64/libc.so.6
+#1  0x000000376ac34105 in abort () from /lib64/libc.so.6
+#2  0x000000376ac2ba4e in __assert_fail_base () from /lib64/libc.so.6
+#3  0x000000376ac2bb10 in __assert_fail () from /lib64/libc.so.6
+#4  0x000000000047dda2 in rocksdb::DBImpl::RunManualCompaction (this=this@entry=0x1828800, cfd=cfd@entry=0x17b0a80, input_level=input_level@entry=4,
+
+```
+output_level=output_level@entry=4, output_path_id=output_path_id@entry=0, begin=begin@entry=0x0, end=end@entry=0x0) at db/db_impl.cc:1881
+```
+#5  0x0000000000491a7d in rocksdb::DBImpl::CompactRange (this=0x1828800, column_family=<optimized out>, begin=0x0, end=0x0, reduce_level=false,
+
+```
+target_level=-1, target_path_id=0) at db/db_impl.cc:1671
+```
+#6  0x00000000005217bd in rocksdb::StackableDB::CompactRange (this=this@entry=0x1738630, column_family=<optimized out>, begin=<optimized out>,
+
+```
+end=end@entry=0x0, reduce_level=reduce_level@entry=false, target_level=-1, target_path_id=target_path_id@entry=0)
+at ./include/rocksdb/utilities/stackable_db.h:132
+```
+#7  0x000000000049a00c in rocksdb::DB::CompactRange (this=0x1738630, begin=<optimized out>, end=0x0, reduce_level=false, target_level=<optimized out>,
+
+```
+target_path_id=0) at ./include/rocksdb/db.h:360
+```
+
+@superwood can you tell us what was the last commit in your build? I want to find the line based on line number.
+
+the last commit:
+
+commit 1fdd726a8254c13d0c66d8db8130ad17c13d7bcc
+Author: Igor Canadi icanadi@fb.com
+Date:   Wed Oct 8 10:04:12 2014 -0700
+
+```
+Hotfix RocksDB 3.5
+
+Summary: We'll release this as 3.5.1
+
+Test Plan: Tested in master
+
+Reviewers: tnovak, yhchiang, sdong, ljin
+
+Reviewed By: ljin
+
+Subscribers: leveldb
+
+Differential Revision: https://reviews.facebook.net/D24639
+```
+
+This issue was fixed by https://github.com/facebook/rocksdb/commit/2fb1fea30fd027bbd824a26b682d04d91a8661dc in September of last year. Any reason you're not running newer version of RocksDB?
+
+Also, when running in production, please compile rocksdb by using `make release`. That will turn off assertions and greatly improve performance.
+

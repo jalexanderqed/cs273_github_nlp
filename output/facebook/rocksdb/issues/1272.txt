@@ -1,0 +1,20 @@
+Rocksdb currently has many references to std::map.emplace_back()
+which is not implemented in gcc 4.7, but valid in gcc 4.8. Confirmed that
+it did not build with gcc 4.7, but builds fine with gcc 4.8
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+Cool. Ready once again.
+
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4078562).
+
+Hey @adamretter. Sorry I must have missed the message. Updated the string in the doc.
+
+@nipunn1313 updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1272/files/2477259bc5ef0f845ac7ca4ad02f016f568b09f5..7486af7dd597d48b46477c361be0ed4a5e7af070)
+
+@nipunn1313 Thanks for your contribution :-)
+
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4101385).
+

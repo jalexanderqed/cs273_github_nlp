@@ -1,0 +1,21 @@
+Hallo,
+I have posted this thread in stackoverflow. I am getting no answer and I hope you can help me (and others) with  the probelm.
+http://stackoverflow.com/questions/31872945/rocksdb-fails-to-create-more-than-one-database-instance-concurrently
+Thanks.
+
+As Adam mentioned on stackoverflow, you shouldn't have the same database open multiple times.  I'm not sure what you are intending to do, but if you want to have separate databases, you should use a unique DBPath for each instance.  If you want to have multiple threads accessing the same databases, you can open the instance once and setup a ThreadPool in your Env.
+
+Aha. I thought I can access the database with different instances. Ok I will try to do it  using a thread pool. Thanks
+
+I have just updated the code, adding an environment. Could you guys please take a look at it ? I need for my Bachelorthesis and its very important. Thanks.
+
+@bafla133 I am more of a Java guy than a C++ guy so I can't be much help here. Perhaps you could try the IRC channel, people tend to be more active in there on the US timezone.
+
+Ok. Thanks :)
+
+I had another related question guys.
+I could do what I wanted, while having multiple databases. This means one environment with multiple databases. Every processor has one database.
+What about duplicates ? do I need to use a flag or a parameter to avoid duplicates? Would every database run for itself without considering the duplicates in other databases ?
+
+Across databases, you have to manage duplicates yourself
+

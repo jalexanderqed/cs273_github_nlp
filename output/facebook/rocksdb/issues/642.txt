@@ -1,0 +1,409 @@
+Let's use this issue to track the efforts to improve write throughput to mem tables.
+
+As a discussion with @guyg8, I'll work on branch `sdong_write` and port necessary from branch `write_throughput`, which contains changes @guyg8 made. Hopefully branch `sdong_write`  can have a running codes after a week and let's see whether there can be any improvements.
+
+Let me report some status here.
+
+I built a prototype of parallel writer in memtable insert. The basic work flow is:
+1. The first writer (call leader in this context) wakes up and build the write batch group
+2. It writes updates of the write batch group to WAL
+3. It wakes up all writer threads for the write batch group
+4. Each thread woken independently update mem table for their updates. The concurrency of mem table and arena are solved using lock-free-skip-list and concurrent-arena built by @guyg8.
+
+Some initial results. 
+I use value_size=0 to test effective of this approach. Having a value size bigger than 100 byte can easily generate more than 100MB/s ingestion rate even by single thread, so it's not the concern. I disabled automatic compaction so that all files will be piled as L0 files and the bottleneck is for sure mem table insert rate.
+
+Here is a sample benchmark query I run:
+
+./db_bench -benchmarks=fillrandom -threads=16 -batch_size=64 -memtablerep="lock_free_skip_list" -value_size=0 --num=3000000 -level0_slowdown_writes_trigger=9999 -level0_stop_writes_trigger=9999 -disable_auto_compactions --max_write_buffer_number=8 -max_background_flushes=8
+
+Here is the observation. if -batch_size=1 (means we only update one key for one write request), multi-thread inserting to mem table is not helping at all. With write_batch=1, normal single writer skip list generates about 392K ops/s, or 6.0MB/s, while with 16 threads, it is even worse: 136K ops/s, 2.1 MB/s
+
+The likely reason is the communication costs of those threads, like maintaining the waiting queue and wait for leader's instruction. Not sure how much we can optimize on codes' level.
+
+On the other hand, if batch size is 8 or up, we can clearly see an improvement of total ingestion rate by using more threads (although not linearly). With -batch_size=64, 32 threads will generate 1.75M ops/s with 26.8MB/s, while single thread skip list can only generate 855K ops/s with 13.0MB. Worth noting that if running lock-free-skip-list in single writer mode, it can only generate 642K ops/s with 9.8MB.
+
+Finally, @guyg8 here is a question for you: I saw neither lock-free-skip-list, nor concurrent arena pass ThreadSanitizer checks. We usually keep our code base clean with ThreadSanitizer. I'm not sure whether they are false positive or real data race. But usually even if it is false positive, we rewrite the codes so that ThreadSanitizer can understand it is correct. Can you try to fix that? When you build RocksDB from clean you can set COMPILE_WITH_TSAN and it will be enabled.
+
+ThreadSanitizer's algorithm is designed for blocking-based synchronization (like locks). (Because its “happens-before-relation” is similar to http://dl.acm.org/citation.cfm?id=1542490). 
+It is expected that ThreadSanitizer  reports data-races for the lock-free-skip-list and the concurrent arena because they are both based on lock-less synchronization.
+
+The lock-free-skip-list is designed to work on weak memory models (including the c++11 memory model), so this should not be a problem.
+
+I still want to make sure  that the concurrent arena also works on weak memory models (I don't remember the code)– I’ll do it early next week.
+
+@guyg8 from my understanding of TSAN, if you use atomic object TSAN will not complain in many cases. We do have low-lock codes (search compare_exchange for example) in current code base and we make them pass TSAN too. You can give a try.
+
+@guyg8 another question. I want to make sure I did something correct. I compiled the branch of `write_throughput` and run a write-only test with this commend:
+
+./db_bench -benchmarks=fillrandom -threads=32 -batch_size=1 -memtablerep="lock_free_skip_list" -value_size=0 --num=1000000 -level0_slowdown_writes_trigger=9999 -level0_stop_writes_trigger=9999 -disable_auto_compactions --max_write_buffer_number=8 -max_background_flushes=8 --disable_wal -concurrent_writes --write_buffer_size=160000000
+
+I only see a throughput of 798 ops/second, 12.2MB/s. Though running 32 threads, it is only 2.7 times faster than RocksDB master with single thread skip list:
+
+./db_bench -benchmarks=fillrandom -threads=1 -batch_size=1 -memtablerep="skip_list" -value_size=0 --num=1000000 -level0_slowdown_writes_trigger=9999 -level0_stop_writes_trigger=9999 -disable_auto_compactions --max_write_buffer_number=8 -max_background_flushes=8 --disable_wal --write_buffer_size=160000000
+
+which generates 301K ops/s 4.6MB. If I further shrink the write buffer size to 4MB, it can be further improved to 475 ops/s (`write_throughput` cannot use small write buffer size as it will flush very soon, probably because of concurrent arena). The performance improvement is down to only 1.68X, even if using 32 threads v. 1 thread.
+
+Is the performance expected, or did I run it incorrectly.
+
+TSAN reports on data races that are identified at runtime. Any program with “X.compare_exchange” (in which "X.compare_exchange" is really needed) contains a data race.
+
+In particular, it is easy to find data-races in the master branch of rocksdb.
+Here is a (partial) output example:
+
+-bash-4.1$ ./db_bench --benchmarks=readwhilewriting,noOne  --num=2 --threads=8  --duration=20 -memtablerep="skip_list"
+LevelDB:    version 3.11
+Date:       Sun Jun 28 15:55:47 2015
+CPU:        16 \* Intel(R) Xeon(R) CPU           E5620  @ 2.40GHz
+CPUCache:   12288 KB
+Keys:       16 bytes each
+Values:     100 bytes each (50 bytes after compression)
+Entries:    2
+Prefix:    0 bytes
+Keys per prefix:    0
+RawSize:    0.0 MB (estimated)
+FileSize:   0.0 MB (estimated)
+Writes per second: 0
+Compression: snappy
+Memtablerep: skip_list
+Perf Level: 0
+WARNING: Optimization is disabled: benchmarks unnecessarily slow
+
+## WARNING: Assertions are enabled; benchmarks unnecessarily slow
+
+DB path: [/tmp/rocksdbtest-80289/dbbench]
+==================ops
+WARNING: ThreadSanitizer: data race (pid=25436)
+  Read of size 1 at 0x7d560000e41a by thread T5:
+    #0 rocksdb::GetVarint32Ptr(char const_, char const_, unsigned int_) /home/ggolan/rocksdb_master28_6_15/rocksdb/./util/coding.h:109 (exe+0x00000003fdbf)
+    #1 rocksdb::GetLengthPrefixedSlice(char const_) /home/ggolan/rocksdb_master28_6_15/rocksdb/./util/coding.h:253 (exe+0x000000155271)
+    #2 rocksdb::MemTable::KeyComparator::operator()(char const_, char const_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/db/memtable.cc:172 (exe+0x000000150f78)
+    #3 rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::KeyIsAfterNode(char const\* const&, rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::Node_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:278 (exe+0x00000024e8b3)
+    #4 rocksdb::SkipList<char const_, rocksdb::MemTableRep::KeyComparator const&>::FindGreaterOrEqual(char const\* const&, rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::Node*_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:304 (exe+0x00000024e0e7)
+    #5 rocksdb::SkipList<char const_, rocksdb::MemTableRep::KeyComparator const&>::Iterator::Seek(char const\* const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:247 (exe+0x00000024d3f6)
+    #6 rocksdb::(anonymous namespace)::SkipListRep::Iterator::Seek(rocksdb::Slice const&, char const_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/skiplistrep.cc:105 (exe+0x000000316206)
+    #7 rocksdb::(anonymous namespace)::SkipListRep::Get(rocksdb::LookupKey const&, void_, bool (_)(void_, char const_)) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/skiplistrep.cc:49 (exe+0x000000315da9)
+    #8 rocksdb::MemTable::Get(rocksdb::LookupKey const&, std::string_, rocksdb::Status_, rocksdb::MergeContext_, unsigned long_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/memtable.cc:530 (exe+0x00000015285e)
+    #9 rocksdb::MemTable::Get(rocksdb::LookupKey const&, std::string_, rocksdb::Status_, rocksdb::MergeContext_) /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/memtable.h:174 (exe+0x0000000fbc24)
+    #10 rocksdb::DBImpl::GetImpl(rocksdb::ReadOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, std::string_, bool_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:2841 (exe+0x0000000ea7bb)
+    #11 rocksdb::DBImpl::Get(rocksdb::ReadOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, std::string_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:2758 (exe+0x0000000ea38d)
+    #12 rocksdb::DB::Get(rocksdb::ReadOptions const&, rocksdb::Slice const&, std::string_) /home/ggolan/rocksdb_master28_6_15/rocksdb/./include/rocksdb/db.h:222 (exe+0x0000000fa677)
+    #13 rocksdb::Benchmark::ReadRandom(rocksdb::ThreadState_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:2839 (exe+0x0000000500c5)
+    #14 rocksdb::Benchmark::ReadWhileWriting(rocksdb::ThreadState_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3057 (exe+0x000000051c78)
+    #15 rocksdb::Benchmark::ThreadBody(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1943 (exe+0x00000004a457)
+    #16 rocksdb::(anonymous namespace)::StartThreadWrapper(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1958 (exe+0x000000236c5e)
+
+  Previous write of size 1 at 0x7d560000e41a by thread T1:
+    #0 rocksdb::EncodeVarint32(char_, unsigned int) ??:0 (exe+0x00000022885a)
+    #1 rocksdb::MemTable::Add(unsigned long, rocksdb::ValueType, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/memtable.cc:331 (exe+0x000000151564)
+    #2 rocksdb::(anonymous namespace)::MemTableInserter::PutCF(unsigned int, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/write_batch.cc:366 (exe+0x0000001b5205)
+    #3 rocksdb::WriteBatch::Iterate(rocksdb::WriteBatch::Handler_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/db/write_batch.cc:145 (exe+0x0000001b4319)
+    #4 rocksdb::WriteBatchInternal::InsertInto(rocksdb::WriteBatch const_, rocksdb::ColumnFamilyMemTables_, bool, unsigned long, rocksdb::DB_, bool) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/write_batch.cc:537 (exe+0x0000001b622e)
+    #5 rocksdb::DBImpl::WriteImpl(rocksdb::WriteOptions const&, rocksdb::WriteBatch_, rocksdb::WriteCallback_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:3581 (exe+0x0000000eeb49)
+    #6 rocksdb::DBImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:3340 (exe+0x0000000ed6b3)
+    #7 rocksdb::DB::Put(rocksdb::WriteOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:4169 (exe+0x0000000f23e5)
+    #8 rocksdb::DBImpl::Put(rocksdb::WriteOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:3321 (exe+0x0000000ed51f)
+    #9 rocksdb::DB::Put(rocksdb::WriteOptions const&, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/./include/rocksdb/db.h:178 (exe+0x0000000fa4b9)
+    #10 rocksdb::Benchmark::BGWriter(rocksdb::ThreadState_, PutOrMerge) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3105 (exe+0x0000000520c3)
+    #11 rocksdb::Benchmark::ReadWhileWriting(rocksdb::ThreadState_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3059 (exe+0x000000051c92)
+    #12 rocksdb::Benchmark::ThreadBody(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1943 (exe+0x00000004a457)
+    #13 rocksdb::(anonymous namespace)::StartThreadWrapper(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1958 (exe+0x000000236c5e)
+
+  Location is heap block of size 2616 at 0x7d560000dc00 allocated by main thread:
+    #0 operator new(unsigned long) /home/ggolan/scratch/gcc/src/gcc-4.8.3/libsanitizer/tsan/tsan_interceptors.cc:416 (libtsan.so.0+0x00000001d1d2)
+    #1 rocksdb::ColumnFamilyData::ConstructNewMemtable(rocksdb::MutableCFOptions const&, unsigned long) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/column_family.cc:485 (exe+0x00000008e374)
+    #2 rocksdb::ColumnFamilyData::CreateNewMemtable(rocksdb::MutableCFOptions const&, unsigned long) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/column_family.cc:493 (exe+0x00000008e44a)
+    #3 rocksdb::VersionSet::CreateColumnFamily(rocksdb::ColumnFamilyOptions const&, rocksdb::VersionEdit_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/version_set.cc:3171 (exe+0x0000001905b5)
+    #4 rocksdb::VersionSet::Recover(std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, bool) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/version_set.cc:2195 (exe+0x000000189e83)
+    #5 rocksdb::DBImpl::Recover(std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, bool, bool) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:870 (exe+0x0000000df4b9)
+    #6 rocksdb::DB::Open(rocksdb::DBOptions const&, std::string const&, std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, std::vector<rocksdb::ColumnFamilyHandle_, std::allocatorrocksdb::ColumnFamilyHandle* >_, rocksdb::DB__) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:4275 (exe+0x0000000f305f)
+    #7 rocksdb::DB::Open(rocksdb::Options const&, std::string const&, rocksdb::DB__) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:4205 (exe+0x0000000f27d9)
+    #8 rocksdb::Benchmark::OpenDb(rocksdb::Options const&, std::string const&, rocksdb::DBWithColumnFamilies_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:2534 (exe+0x00000004e016)
+    #9 rocksdb::Benchmark::Open(rocksdb::Options*) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:2481 (exe+0x00000004d81f)
+    #10 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1723 (exe+0x000000048659)
+    #11 main /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3867 (exe+0x00000003753e)
+
+  Thread T5 (tid=25441, running) created by main thread at:
+    #0 pthread_create /home/ggolan/scratch/gcc/src/gcc-4.8.3/libsanitizer/tsan/tsan_interceptors.cc:729 (libtsan.so.0+0x00000001ef48)
+    #1 rocksdb::(anonymous namespace)::PosixEnv::StartThread(void (_)(void_), void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1969 (exe+0x000000236cff)
+    #2 rocksdb::Benchmark::RunBenchmark(int, rocksdb::Slice, void (rocksdb::Benchmark::_)(rocksdb::ThreadState*)) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1999 (exe+0x00000004a9f5)
+    #3 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1905 (exe+0x00000004a00d)
+    #4 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1723 (exe+0x000000048659)
+    #5 main /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3867 (exe+0x00000003753e)
+
+  Thread T1 (tid=25437, running) created by main thread at:
+    #0 pthread_create /home/ggolan/scratch/gcc/src/gcc-4.8.3/libsanitizer/tsan/tsan_interceptors.cc:729 (libtsan.so.0+0x00000001ef48)
+    #1 rocksdb::(anonymous namespace)::PosixEnv::StartThread(void (_)(void_), void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1969 (exe+0x000000236cff)
+    #2 rocksdb::Benchmark::RunBenchmark(int, rocksdb::Slice, void (rocksdb::Benchmark::_)(rocksdb::ThreadState*)) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1999 (exe+0x00000004a9f5)
+    #3 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1905 (exe+0x00000004a00d)
+    #4 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1723 (exe+0x000000048659)
+    #5 main /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3867 (exe+0x00000003753e)
+
+# SUMMARY: ThreadSanitizer: data race /home/ggolan/rocksdb_master28_6_15/rocksdb/./util/coding.h:109 rocksdb::GetVarint32Ptr(char const_, char const_, unsigned int*)
+
+==================ops
+WARNING: ThreadSanitizer: data race (pid=25436)
+  Read of size 1 at 0x7d560000e42a by thread T7:
+    #0 memcmp /home/ggolan/scratch/gcc/src/gcc-4.8.3/libsanitizer/tsan/tsan_interceptors.cc:470 (libtsan.so.0+0x00000001d94b)
+    #1 rocksdb::Slice::compare(rocksdb::Slice const&) const /home/ggolan/rocksdb_master28_6_15/rocksdb/./include/rocksdb/slice.h:132 (exe+0x00000003d212)
+    #2 rocksdb::(anonymous namespace)::BytewiseComparatorImpl::Compare(rocksdb::Slice const&, rocksdb::Slice const&) const /home/ggolan/rocksdb_master28_6_15/rocksdb/util/comparator.cc:31 (exe+0x000000228d19)
+    #3 rocksdb::InternalKeyComparator::Compare(rocksdb::Slice const&, rocksdb::Slice const&) const /home/ggolan/rocksdb_master28_6_15/rocksdb/db/dbformat.cc:73 (exe+0x0000000d8561)
+    #4 rocksdb::MemTable::KeyComparator::operator()(char const_, char const_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/db/memtable.cc:174 (exe+0x000000150faf)
+    #5 rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::KeyIsAfterNode(char const\* const&, rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::Node_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:278 (exe+0x00000024e8b3)
+    #6 rocksdb::SkipList<char const_, rocksdb::MemTableRep::KeyComparator const&>::FindGreaterOrEqual(char const\* const&, rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::Node*_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:304 (exe+0x00000024e0e7)
+    #7 rocksdb::SkipList<char const_, rocksdb::MemTableRep::KeyComparator const&>::Iterator::Seek(char const\* const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:247 (exe+0x00000024d3f6)
+    #8 rocksdb::(anonymous namespace)::SkipListRep::Iterator::Seek(rocksdb::Slice const&, char const_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/skiplistrep.cc:105 (exe+0x000000316206)
+    #9 rocksdb::(anonymous namespace)::SkipListRep::Get(rocksdb::LookupKey const&, void_, bool (_)(void_, char const_)) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/skiplistrep.cc:49 (exe+0x000000315da9)
+    #10 rocksdb::MemTable::Get(rocksdb::LookupKey const&, std::string_, rocksdb::Status_, rocksdb::MergeContext_, unsigned long_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/memtable.cc:530 (exe+0x00000015285e)
+    #11 rocksdb::MemTable::Get(rocksdb::LookupKey const&, std::string_, rocksdb::Status_, rocksdb::MergeContext_) /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/memtable.h:174 (exe+0x0000000fbc24)
+    #12 rocksdb::DBImpl::GetImpl(rocksdb::ReadOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, std::string_, bool_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:2841 (exe+0x0000000ea7bb)
+    #13 rocksdb::DBImpl::Get(rocksdb::ReadOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, std::string_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:2758 (exe+0x0000000ea38d)
+    #14 rocksdb::DB::Get(rocksdb::ReadOptions const&, rocksdb::Slice const&, std::string_) /home/ggolan/rocksdb_master28_6_15/rocksdb/./include/rocksdb/db.h:222 (exe+0x0000000fa677)
+    #15 rocksdb::Benchmark::ReadRandom(rocksdb::ThreadState_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:2839 (exe+0x0000000500c5)
+    #16 rocksdb::Benchmark::ReadWhileWriting(rocksdb::ThreadState_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3057 (exe+0x000000051c78)
+    #17 rocksdb::Benchmark::ThreadBody(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1943 (exe+0x00000004a457)
+    #18 rocksdb::(anonymous namespace)::StartThreadWrapper(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1958 (exe+0x000000236c5e)
+
+  Previous write of size 1 at 0x7d560000e42a by thread T1:
+    [failed to restore the stack]
+
+  Location is heap block of size 2616 at 0x7d560000dc00 allocated by main thread:
+    #0 operator new(unsigned long) /home/ggolan/scratch/gcc/src/gcc-4.8.3/libsanitizer/tsan/tsan_interceptors.cc:416 (libtsan.so.0+0x00000001d1d2)
+    #1 rocksdb::ColumnFamilyData::ConstructNewMemtable(rocksdb::MutableCFOptions const&, unsigned long) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/column_family.cc:485 (exe+0x00000008e374)
+    #2 rocksdb::ColumnFamilyData::CreateNewMemtable(rocksdb::MutableCFOptions const&, unsigned long) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/column_family.cc:493 (exe+0x00000008e44a)
+    #3 rocksdb::VersionSet::CreateColumnFamily(rocksdb::ColumnFamilyOptions const&, rocksdb::VersionEdit_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/version_set.cc:3171 (exe+0x0000001905b5)
+    #4 rocksdb::VersionSet::Recover(std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, bool) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/version_set.cc:2195 (exe+0x000000189e83)
+    #5 rocksdb::DBImpl::Recover(std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, bool, bool) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:870 (exe+0x0000000df4b9)
+    #6 rocksdb::DB::Open(rocksdb::DBOptions const&, std::string const&, std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, std::vector<rocksdb::ColumnFamilyHandle_, std::allocatorrocksdb::ColumnFamilyHandle* >_, rocksdb::DB__) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:4275 (exe+0x0000000f305f)
+    #7 rocksdb::DB::Open(rocksdb::Options const&, std::string const&, rocksdb::DB__) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:4205 (exe+0x0000000f27d9)
+    #8 rocksdb::Benchmark::OpenDb(rocksdb::Options const&, std::string const&, rocksdb::DBWithColumnFamilies_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:2534 (exe+0x00000004e016)
+    #9 rocksdb::Benchmark::Open(rocksdb::Options*) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:2481 (exe+0x00000004d81f)
+    #10 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1723 (exe+0x000000048659)
+    #11 main /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3867 (exe+0x00000003753e)
+
+  Thread T7 (tid=25443, running) created by main thread at:
+    #0 pthread_create /home/ggolan/scratch/gcc/src/gcc-4.8.3/libsanitizer/tsan/tsan_interceptors.cc:729 (libtsan.so.0+0x00000001ef48)
+    #1 rocksdb::(anonymous namespace)::PosixEnv::StartThread(void (_)(void_), void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1969 (exe+0x000000236cff)
+    #2 rocksdb::Benchmark::RunBenchmark(int, rocksdb::Slice, void (rocksdb::Benchmark::_)(rocksdb::ThreadState*)) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1999 (exe+0x00000004a9f5)
+    #3 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1905 (exe+0x00000004a00d)
+    #4 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1723 (exe+0x000000048659)
+    #5 main /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3867 (exe+0x00000003753e)
+
+  Thread T1 (tid=25437, running) created by main thread at:
+    #0 pthread_create /home/ggolan/scratch/gcc/src/gcc-4.8.3/libsanitizer/tsan/tsan_interceptors.cc:729 (libtsan.so.0+0x00000001ef48)
+    #1 rocksdb::(anonymous namespace)::PosixEnv::StartThread(void (_)(void_), void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1969 (exe+0x000000236cff)
+    #2 rocksdb::Benchmark::RunBenchmark(int, rocksdb::Slice, void (rocksdb::Benchmark::_)(rocksdb::ThreadState*)) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1999 (exe+0x00000004a9f5)
+    #3 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1905 (exe+0x00000004a00d)
+    #4 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1723 (exe+0x000000048659)
+    #5 main /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3867 (exe+0x00000003753e)
+
+# SUMMARY: ThreadSanitizer: data race /home/ggolan/rocksdb_master28_6_15/rocksdb/./include/rocksdb/slice.h:132 rocksdb::Slice::compare(rocksdb::Slice const&) const
+
+# 
+
+WARNING: ThreadSanitizer: data race (pid=25436)
+  Read of size 8 at 0x7fa2b870c7e8 by thread T8:
+    #0 rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::KeyIsAfterNode(char const\* const&, rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::Node_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:278 (exe+0x00000024e89a)
+    #1 rocksdb::SkipList<char const_, rocksdb::MemTableRep::KeyComparator const&>::FindGreaterOrEqual(char const\* const&, rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::Node*_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:304 (exe+0x00000024e0e7)
+    #2 rocksdb::SkipList<char const_, rocksdb::MemTableRep::KeyComparator const&>::Iterator::Seek(char const\* const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:247 (exe+0x00000024d3f6)
+    #3 rocksdb::(anonymous namespace)::SkipListRep::Iterator::Seek(rocksdb::Slice const&, char const_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/skiplistrep.cc:105 (exe+0x000000316206)
+    #4 rocksdb::(anonymous namespace)::SkipListRep::Get(rocksdb::LookupKey const&, void_, bool (_)(void_, char const_)) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/skiplistrep.cc:49 (exe+0x000000315da9)
+    #5 rocksdb::MemTable::Get(rocksdb::LookupKey const&, std::string_, rocksdb::Status_, rocksdb::MergeContext_, unsigned long_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/memtable.cc:530 (exe+0x00000015285e)
+    #6 rocksdb::MemTable::Get(rocksdb::LookupKey const&, std::string_, rocksdb::Status_, rocksdb::MergeContext_) /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/memtable.h:174 (exe+0x0000000fbc24)
+    #7 rocksdb::DBImpl::GetImpl(rocksdb::ReadOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, std::string_, bool_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:2841 (exe+0x0000000ea7bb)
+    #8 rocksdb::DBImpl::Get(rocksdb::ReadOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, std::string_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:2758 (exe+0x0000000ea38d)
+    #9 rocksdb::DB::Get(rocksdb::ReadOptions const&, rocksdb::Slice const&, std::string_) /home/ggolan/rocksdb_master28_6_15/rocksdb/./include/rocksdb/db.h:222 (exe+0x0000000fa677)
+    #10 rocksdb::Benchmark::ReadRandom(rocksdb::ThreadState_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:2839 (exe+0x0000000500c5)
+    #11 rocksdb::Benchmark::ReadWhileWriting(rocksdb::ThreadState_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3057 (exe+0x000000051c78)
+    #12 rocksdb::Benchmark::ThreadBody(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1943 (exe+0x00000004a457)
+    #13 rocksdb::(anonymous namespace)::StartThreadWrapper(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1958 (exe+0x000000236c5e)
+
+  Previous write of size 8 at 0x7fa2b870c7e8 by thread T1:
+    [failed to restore the stack]
+
+  Location is heap block of size 419432 at 0x7fa2b8700000 allocated by thread T1:
+    #0 operator new[](unsigned long) /home/ggolan/scratch/gcc/src/gcc-4.8.3/libsanitizer/tsan/tsan_interceptors.cc:419 (libtsan.so.0+0x00000001d272)
+    #1 rocksdb::Arena::AllocateNewBlock(unsigned long) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/arena.cc:157 (exe+0x00000021d530)
+    #2 rocksdb::Arena::AllocateFallback(unsigned long, bool) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/arena.cc:80 (exe+0x00000021d19e)
+    #3 rocksdb::Arena::AllocateAligned(unsigned long, unsigned long, rocksdb::Logger_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/arena.cc:150 (exe+0x00000021d4c5)
+    #4 rocksdb::MemTableAllocator::AllocateAligned(unsigned long, unsigned long, rocksdb::Logger_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/memtable_allocator.cc:38 (exe+0x000000150533)
+    #5 rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::NewNode(char const\* const&, int) /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:202 (exe+0x00000024da03)
+    #6 rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::Insert(char const\* const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:435 (exe+0x00000024d853)
+    #7 rocksdb::(anonymous namespace)::SkipListRep::Insert(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/skiplistrep.cc:31 (exe+0x000000315cd0)
+    #8 rocksdb::MemTable::Add(unsigned long, rocksdb::ValueType, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/memtable.cc:340 (exe+0x000000151683)
+    #9 rocksdb::(anonymous namespace)::MemTableInserter::PutCF(unsigned int, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/write_batch.cc:366 (exe+0x0000001b5205)
+    #10 rocksdb::WriteBatch::Iterate(rocksdb::WriteBatch::Handler_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/db/write_batch.cc:145 (exe+0x0000001b4319)
+    #11 rocksdb::WriteBatchInternal::InsertInto(rocksdb::WriteBatch const_, rocksdb::ColumnFamilyMemTables_, bool, unsigned long, rocksdb::DB_, bool) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/write_batch.cc:537 (exe+0x0000001b622e)
+    #12 rocksdb::DBImpl::WriteImpl(rocksdb::WriteOptions const&, rocksdb::WriteBatch_, rocksdb::WriteCallback_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:3581 (exe+0x0000000eeb49)
+    #13 rocksdb::DBImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:3340 (exe+0x0000000ed6b3)
+    #14 rocksdb::DB::Put(rocksdb::WriteOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:4169 (exe+0x0000000f23e5)
+    #15 rocksdb::DBImpl::Put(rocksdb::WriteOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:3321 (exe+0x0000000ed51f)
+    #16 rocksdb::DB::Put(rocksdb::WriteOptions const&, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/./include/rocksdb/db.h:178 (exe+0x0000000fa4b9)
+    #17 rocksdb::Benchmark::BGWriter(rocksdb::ThreadState_, PutOrMerge) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3105 (exe+0x0000000520c3)
+    #18 rocksdb::Benchmark::ReadWhileWriting(rocksdb::ThreadState_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3059 (exe+0x000000051c92)
+    #19 rocksdb::Benchmark::ThreadBody(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1943 (exe+0x00000004a457)
+    #20 rocksdb::(anonymous namespace)::StartThreadWrapper(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1958 (exe+0x000000236c5e)
+
+  Thread T8 (tid=25444, running) created by main thread at:
+    #0 pthread_create /home/ggolan/scratch/gcc/src/gcc-4.8.3/libsanitizer/tsan/tsan_interceptors.cc:729 (libtsan.so.0+0x00000001ef48)
+    #1 rocksdb::(anonymous namespace)::PosixEnv::StartThread(void (_)(void_), void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1969 (exe+0x000000236cff)
+    #2 rocksdb::Benchmark::RunBenchmark(int, rocksdb::Slice, void (rocksdb::Benchmark::_)(rocksdb::ThreadState*)) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1999 (exe+0x00000004a9f5)
+    #3 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1905 (exe+0x00000004a00d)
+    #4 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1723 (exe+0x000000048659)
+    #5 main /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3867 (exe+0x00000003753e)
+
+  Thread T1 (tid=25437, running) created by main thread at:
+    #0 pthread_create /home/ggolan/scratch/gcc/src/gcc-4.8.3/libsanitizer/tsan/tsan_interceptors.cc:729 (libtsan.so.0+0x00000001ef48)
+    #1 rocksdb::(anonymous namespace)::PosixEnv::StartThread(void (_)(void_), void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1969 (exe+0x000000236cff)
+    #2 rocksdb::Benchmark::RunBenchmark(int, rocksdb::Slice, void (rocksdb::Benchmark::_)(rocksdb::ThreadState*)) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1999 (exe+0x00000004a9f5)
+    #3 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1905 (exe+0x00000004a00d)
+    #4 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1723 (exe+0x000000048659)
+    #5 main /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3867 (exe+0x00000003753e)
+
+# SUMMARY: ThreadSanitizer: data race /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:278 rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::KeyIsAfterNode(char const\* const&, rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::Node*) const
+
+==================ops
+WARNING: ThreadSanitizer: data race (pid=25436)
+  Read of size 1 at 0x7fa2b8711f68 by thread T8:
+    #0 memcmp /home/ggolan/scratch/gcc/src/gcc-4.8.3/libsanitizer/tsan/tsan_interceptors.cc:470 (libtsan.so.0+0x00000001d94b)
+    #1 rocksdb::Slice::compare(rocksdb::Slice const&) const /home/ggolan/rocksdb_master28_6_15/rocksdb/./include/rocksdb/slice.h:132 (exe+0x00000003d212)
+    #2 rocksdb::(anonymous namespace)::BytewiseComparatorImpl::Compare(rocksdb::Slice const&, rocksdb::Slice const&) const /home/ggolan/rocksdb_master28_6_15/rocksdb/util/comparator.cc:31 (exe+0x000000228d19)
+    #3 rocksdb::InternalKeyComparator::Compare(rocksdb::Slice const&, rocksdb::Slice const&) const /home/ggolan/rocksdb_master28_6_15/rocksdb/db/dbformat.cc:73 (exe+0x0000000d8561)
+    #4 rocksdb::MemTable::KeyComparator::operator()(char const_, char const_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/db/memtable.cc:174 (exe+0x000000150faf)
+    #5 rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::KeyIsAfterNode(char const\* const&, rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::Node_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:278 (exe+0x00000024e8b3)
+    #6 rocksdb::SkipList<char const_, rocksdb::MemTableRep::KeyComparator const&>::FindGreaterOrEqual(char const\* const&, rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::Node*_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:303 (exe+0x00000024e0aa)
+    #7 rocksdb::SkipList<char const_, rocksdb::MemTableRep::KeyComparator const&>::Iterator::Seek(char const\* const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:247 (exe+0x00000024d3f6)
+    #8 rocksdb::(anonymous namespace)::SkipListRep::Iterator::Seek(rocksdb::Slice const&, char const_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/skiplistrep.cc:105 (exe+0x000000316206)
+    #9 rocksdb::(anonymous namespace)::SkipListRep::Get(rocksdb::LookupKey const&, void_, bool (_)(void_, char const_)) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/skiplistrep.cc:49 (exe+0x000000315da9)
+    #10 rocksdb::MemTable::Get(rocksdb::LookupKey const&, std::string_, rocksdb::Status_, rocksdb::MergeContext_, unsigned long_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/memtable.cc:530 (exe+0x00000015285e)
+    #11 rocksdb::MemTable::Get(rocksdb::LookupKey const&, std::string_, rocksdb::Status_, rocksdb::MergeContext_) /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/memtable.h:174 (exe+0x0000000fbc24)
+    #12 rocksdb::DBImpl::GetImpl(rocksdb::ReadOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, std::string_, bool_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:2841 (exe+0x0000000ea7bb)
+    #13 rocksdb::DBImpl::Get(rocksdb::ReadOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, std::string_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:2758 (exe+0x0000000ea38d)
+    #14 rocksdb::DB::Get(rocksdb::ReadOptions const&, rocksdb::Slice const&, std::string_) /home/ggolan/rocksdb_master28_6_15/rocksdb/./include/rocksdb/db.h:222 (exe+0x0000000fa677)
+    #15 rocksdb::Benchmark::ReadRandom(rocksdb::ThreadState_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:2839 (exe+0x0000000500c5)
+    #16 rocksdb::Benchmark::ReadWhileWriting(rocksdb::ThreadState_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3057 (exe+0x000000051c78)
+    #17 rocksdb::Benchmark::ThreadBody(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1943 (exe+0x00000004a457)
+    #18 rocksdb::(anonymous namespace)::StartThreadWrapper(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1958 (exe+0x000000236c5e)
+
+  Previous write of size 1 at 0x7fa2b8711f68 by thread T1:
+    [failed to restore the stack]
+
+  Location is heap block of size 419432 at 0x7fa2b8700000 allocated by thread T1:
+    #0 operator new[](unsigned long) /home/ggolan/scratch/gcc/src/gcc-4.8.3/libsanitizer/tsan/tsan_interceptors.cc:419 (libtsan.so.0+0x00000001d272)
+    #1 rocksdb::Arena::AllocateNewBlock(unsigned long) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/arena.cc:157 (exe+0x00000021d530)
+    #2 rocksdb::Arena::AllocateFallback(unsigned long, bool) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/arena.cc:80 (exe+0x00000021d19e)
+    #3 rocksdb::Arena::AllocateAligned(unsigned long, unsigned long, rocksdb::Logger_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/arena.cc:150 (exe+0x00000021d4c5)
+    #4 rocksdb::MemTableAllocator::AllocateAligned(unsigned long, unsigned long, rocksdb::Logger_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/memtable_allocator.cc:38 (exe+0x000000150533)
+    #5 rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::NewNode(char const\* const&, int) /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:202 (exe+0x00000024da03)
+    #6 rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::Insert(char const\* const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:435 (exe+0x00000024d853)
+    #7 rocksdb::(anonymous namespace)::SkipListRep::Insert(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/skiplistrep.cc:31 (exe+0x000000315cd0)
+    #8 rocksdb::MemTable::Add(unsigned long, rocksdb::ValueType, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/memtable.cc:340 (exe+0x000000151683)
+    #9 rocksdb::(anonymous namespace)::MemTableInserter::PutCF(unsigned int, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/write_batch.cc:366 (exe+0x0000001b5205)
+    #10 rocksdb::WriteBatch::Iterate(rocksdb::WriteBatch::Handler_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/db/write_batch.cc:145 (exe+0x0000001b4319)
+    #11 rocksdb::WriteBatchInternal::InsertInto(rocksdb::WriteBatch const_, rocksdb::ColumnFamilyMemTables_, bool, unsigned long, rocksdb::DB_, bool) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/write_batch.cc:537 (exe+0x0000001b622e)
+    #12 rocksdb::DBImpl::WriteImpl(rocksdb::WriteOptions const&, rocksdb::WriteBatch_, rocksdb::WriteCallback_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:3581 (exe+0x0000000eeb49)
+    #13 rocksdb::DBImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:3340 (exe+0x0000000ed6b3)
+    #14 rocksdb::DB::Put(rocksdb::WriteOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:4169 (exe+0x0000000f23e5)
+    #15 rocksdb::DBImpl::Put(rocksdb::WriteOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:3321 (exe+0x0000000ed51f)
+    #16 rocksdb::DB::Put(rocksdb::WriteOptions const&, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/./include/rocksdb/db.h:178 (exe+0x0000000fa4b9)
+    #17 rocksdb::Benchmark::BGWriter(rocksdb::ThreadState_, PutOrMerge) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3105 (exe+0x0000000520c3)
+    #18 rocksdb::Benchmark::ReadWhileWriting(rocksdb::ThreadState_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3059 (exe+0x000000051c92)
+    #19 rocksdb::Benchmark::ThreadBody(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1943 (exe+0x00000004a457)
+    #20 rocksdb::(anonymous namespace)::StartThreadWrapper(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1958 (exe+0x000000236c5e)
+
+  Thread T8 (tid=25444, running) created by main thread at:
+    #0 pthread_create /home/ggolan/scratch/gcc/src/gcc-4.8.3/libsanitizer/tsan/tsan_interceptors.cc:729 (libtsan.so.0+0x00000001ef48)
+    #1 rocksdb::(anonymous namespace)::PosixEnv::StartThread(void (_)(void_), void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1969 (exe+0x000000236cff)
+    #2 rocksdb::Benchmark::RunBenchmark(int, rocksdb::Slice, void (rocksdb::Benchmark::_)(rocksdb::ThreadState*)) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1999 (exe+0x00000004a9f5)
+    #3 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1905 (exe+0x00000004a00d)
+    #4 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1723 (exe+0x000000048659)
+    #5 main /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3867 (exe+0x00000003753e)
+
+  Thread T1 (tid=25437, running) created by main thread at:
+    #0 pthread_create /home/ggolan/scratch/gcc/src/gcc-4.8.3/libsanitizer/tsan/tsan_interceptors.cc:729 (libtsan.so.0+0x00000001ef48)
+    #1 rocksdb::(anonymous namespace)::PosixEnv::StartThread(void (_)(void_), void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1969 (exe+0x000000236cff)
+    #2 rocksdb::Benchmark::RunBenchmark(int, rocksdb::Slice, void (rocksdb::Benchmark::_)(rocksdb::ThreadState*)) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1999 (exe+0x00000004a9f5)
+    #3 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1905 (exe+0x00000004a00d)
+    #4 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1723 (exe+0x000000048659)
+    #5 main /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3867 (exe+0x00000003753e)
+
+# SUMMARY: ThreadSanitizer: data race /home/ggolan/rocksdb_master28_6_15/rocksdb/./include/rocksdb/slice.h:132 rocksdb::Slice::compare(rocksdb::Slice const&) const
+
+# 
+
+WARNING: ThreadSanitizer: data race (pid=25436)
+  Read of size 1 at 0x7fa2b873feae by thread T7:
+    #0 rocksdb::GetVarint32Ptr(char const_, char const_, unsigned int_) /home/ggolan/rocksdb_master28_6_15/rocksdb/./util/coding.h:109 (exe+0x00000003fdbf)
+    #1 rocksdb::GetLengthPrefixedSlice(char const_) /home/ggolan/rocksdb_master28_6_15/rocksdb/./util/coding.h:253 (exe+0x000000155271)
+    #2 rocksdb::MemTable::KeyComparator::operator()(char const_, char const_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/db/memtable.cc:173 (exe+0x000000150f8c)
+    #3 rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::KeyIsAfterNode(char const\* const&, rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::Node_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:278 (exe+0x00000024e8b3)
+    #4 rocksdb::SkipList<char const_, rocksdb::MemTableRep::KeyComparator const&>::FindGreaterOrEqual(char const\* const&, rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::Node*_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:303 (exe+0x00000024e0aa)
+    #5 rocksdb::SkipList<char const_, rocksdb::MemTableRep::KeyComparator const&>::Iterator::Seek(char const\* const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:247 (exe+0x00000024d3f6)
+    #6 rocksdb::(anonymous namespace)::SkipListRep::Iterator::Seek(rocksdb::Slice const&, char const_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/skiplistrep.cc:105 (exe+0x000000316206)
+    #7 rocksdb::(anonymous namespace)::SkipListRep::Get(rocksdb::LookupKey const&, void_, bool (_)(void_, char const_)) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/skiplistrep.cc:49 (exe+0x000000315da9)
+    #8 rocksdb::MemTable::Get(rocksdb::LookupKey const&, std::string_, rocksdb::Status_, rocksdb::MergeContext_, unsigned long_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/memtable.cc:530 (exe+0x00000015285e)
+    #9 rocksdb::MemTable::Get(rocksdb::LookupKey const&, std::string_, rocksdb::Status_, rocksdb::MergeContext_) /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/memtable.h:174 (exe+0x0000000fbc24)
+    #10 rocksdb::DBImpl::GetImpl(rocksdb::ReadOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, std::string_, bool_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:2841 (exe+0x0000000ea7bb)
+    #11 rocksdb::DBImpl::Get(rocksdb::ReadOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, std::string_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:2758 (exe+0x0000000ea38d)
+    #12 rocksdb::DB::Get(rocksdb::ReadOptions const&, rocksdb::Slice const&, std::string_) /home/ggolan/rocksdb_master28_6_15/rocksdb/./include/rocksdb/db.h:222 (exe+0x0000000fa677)
+    #13 rocksdb::Benchmark::ReadRandom(rocksdb::ThreadState_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:2839 (exe+0x0000000500c5)
+    #14 rocksdb::Benchmark::ReadWhileWriting(rocksdb::ThreadState_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3057 (exe+0x000000051c78)
+    #15 rocksdb::Benchmark::ThreadBody(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1943 (exe+0x00000004a457)
+    #16 rocksdb::(anonymous namespace)::StartThreadWrapper(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1958 (exe+0x000000236c5e)
+
+  Previous write of size 8 at 0x7fa2b873fea8 by thread T1:
+    [failed to restore the stack]
+
+  Location is heap block of size 419432 at 0x7fa2b8700000 allocated by thread T1:
+    #0 operator new[](unsigned long) /home/ggolan/scratch/gcc/src/gcc-4.8.3/libsanitizer/tsan/tsan_interceptors.cc:419 (libtsan.so.0+0x00000001d272)
+    #1 rocksdb::Arena::AllocateNewBlock(unsigned long) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/arena.cc:157 (exe+0x00000021d530)
+    #2 rocksdb::Arena::AllocateFallback(unsigned long, bool) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/arena.cc:80 (exe+0x00000021d19e)
+    #3 rocksdb::Arena::AllocateAligned(unsigned long, unsigned long, rocksdb::Logger_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/arena.cc:150 (exe+0x00000021d4c5)
+    #4 rocksdb::MemTableAllocator::AllocateAligned(unsigned long, unsigned long, rocksdb::Logger_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/memtable_allocator.cc:38 (exe+0x000000150533)
+    #5 rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::NewNode(char const\* const&, int) /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:202 (exe+0x00000024da03)
+    #6 rocksdb::SkipList<char const*, rocksdb::MemTableRep::KeyComparator const&>::Insert(char const\* const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/./db/skiplist.h:435 (exe+0x00000024d853)
+    #7 rocksdb::(anonymous namespace)::SkipListRep::Insert(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/skiplistrep.cc:31 (exe+0x000000315cd0)
+    #8 rocksdb::MemTable::Add(unsigned long, rocksdb::ValueType, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/memtable.cc:340 (exe+0x000000151683)
+    #9 rocksdb::(anonymous namespace)::MemTableInserter::PutCF(unsigned int, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/write_batch.cc:366 (exe+0x0000001b5205)
+    #10 rocksdb::WriteBatch::Iterate(rocksdb::WriteBatch::Handler_) const /home/ggolan/rocksdb_master28_6_15/rocksdb/db/write_batch.cc:145 (exe+0x0000001b4319)
+    #11 rocksdb::WriteBatchInternal::InsertInto(rocksdb::WriteBatch const_, rocksdb::ColumnFamilyMemTables_, bool, unsigned long, rocksdb::DB_, bool) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/write_batch.cc:537 (exe+0x0000001b622e)
+    #12 rocksdb::DBImpl::WriteImpl(rocksdb::WriteOptions const&, rocksdb::WriteBatch_, rocksdb::WriteCallback_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:3581 (exe+0x0000000eeb49)
+    #13 rocksdb::DBImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:3340 (exe+0x0000000ed6b3)
+    #14 rocksdb::DB::Put(rocksdb::WriteOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:4169 (exe+0x0000000f23e5)
+    #15 rocksdb::DBImpl::Put(rocksdb::WriteOptions const&, rocksdb::ColumnFamilyHandle_, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_impl.cc:3321 (exe+0x0000000ed51f)
+    #16 rocksdb::DB::Put(rocksdb::WriteOptions const&, rocksdb::Slice const&, rocksdb::Slice const&) /home/ggolan/rocksdb_master28_6_15/rocksdb/./include/rocksdb/db.h:178 (exe+0x0000000fa4b9)
+    #17 rocksdb::Benchmark::BGWriter(rocksdb::ThreadState_, PutOrMerge) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3105 (exe+0x0000000520c3)
+    #18 rocksdb::Benchmark::ReadWhileWriting(rocksdb::ThreadState_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3059 (exe+0x000000051c92)
+    #19 rocksdb::Benchmark::ThreadBody(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1943 (exe+0x00000004a457)
+    #20 rocksdb::(anonymous namespace)::StartThreadWrapper(void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1958 (exe+0x000000236c5e)
+
+  Thread T7 (tid=25443, running) created by main thread at:
+    #0 pthread_create /home/ggolan/scratch/gcc/src/gcc-4.8.3/libsanitizer/tsan/tsan_interceptors.cc:729 (libtsan.so.0+0x00000001ef48)
+    #1 rocksdb::(anonymous namespace)::PosixEnv::StartThread(void (_)(void_), void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1969 (exe+0x000000236cff)
+    #2 rocksdb::Benchmark::RunBenchmark(int, rocksdb::Slice, void (rocksdb::Benchmark::_)(rocksdb::ThreadState*)) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1999 (exe+0x00000004a9f5)
+    #3 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1905 (exe+0x00000004a00d)
+    #4 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1723 (exe+0x000000048659)
+    #5 main /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3867 (exe+0x00000003753e)
+
+  Thread T1 (tid=25437, running) created by main thread at:
+    #0 pthread_create /home/ggolan/scratch/gcc/src/gcc-4.8.3/libsanitizer/tsan/tsan_interceptors.cc:729 (libtsan.so.0+0x00000001ef48)
+    #1 rocksdb::(anonymous namespace)::PosixEnv::StartThread(void (_)(void_), void_) /home/ggolan/rocksdb_master28_6_15/rocksdb/util/env_posix.cc:1969 (exe+0x000000236cff)
+    #2 rocksdb::Benchmark::RunBenchmark(int, rocksdb::Slice, void (rocksdb::Benchmark::_)(rocksdb::ThreadState*)) /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1999 (exe+0x00000004a9f5)
+    #3 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1905 (exe+0x00000004a00d)
+    #4 rocksdb::Benchmark::Run() /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:1723 (exe+0x000000048659)
+    #5 main /home/ggolan/rocksdb_master28_6_15/rocksdb/db/db_bench.cc:3867 (exe+0x00000003753e)
+
+SUMMARY: ThreadSanitizer: data race /home/ggolan/rocksdb_master28_6_15/rocksdb/./util/coding.h:109 rocksdb::GetVarint32Ptr(char const_, char const_, unsigned int*)
+
+As far as I understand, TSAN should be used to find unexpected data-races. Notice that (almost) every multi-threaded program has some data-races (e.g., the implementation of the mutex itself contains data-races).
+
+Regarding class “ConcurrentArena” and class “Arena”.
+In ConcurrentArena, we assume that the read-only methods of Arena can be “safely” called without any synchronization. I am not sure that such assumption is a good idea; therefore I want to rewrite ConcurrentArena’s code such that it will not assume anything about the multi-threaded semantics of class Arena.
+
+Regarding the question about performance.
+The results of your experiment make sense. What is the configuration of your machine (i.e. # of CPU chips, # of cores, # of HW threads)?
+In a similar experiment (on an Intel machine with 2 CPUs, 8 cores, 16 HW threads) running 16 threads is 3.7x faster than RocksDB with 1 thread.
+We don’t see linear scalability because of the communication between the CPUs/cores.  It is possible to improve the scalability of “write_throughput” by optimizing its synchronization (e.g., by avoid using the mutex in “ConcurrentWrite”), but probably we will not be able to achieve linear scalability.
+
+Send a code review: https://reviews.facebook.net/D41373
+

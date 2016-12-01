@@ -1,0 +1,18 @@
+- Adjusted HashLinkedList to 3.6.0
+- Adjusted SkipList to 3.6.0
+- Introduced a memtable test
+
+Test:
+`make rocksdbjava`
+`make jtest`
+
+@yhchiang i didnt port cukoo cause igorcanadi meant this kind of memtable is still experimental. As long as this feature is experimental and other mandatory features are not in i would like to skip porting it.
+
+@yhchiang shall i create a differential ?
+
+@fyrz: yes, you can skip cuckoo.
+
+@yhchiang anything new here ?
+
+Nice catch-up.  Thanks for the contribution!
+

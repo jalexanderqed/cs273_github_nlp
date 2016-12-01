@@ -1,0 +1,18 @@
+`1>d:\workspace\rocksdb\memtable\hash_cuckoo_rep.cc(43): error C2610: 'rocksdb::`anonymous-namespace'::CuckooStep::CuckooStep(rocksdb::`anonymous-namespace'::CuckooStep &&)' : is not a special member function which can be defaulted```
+
+That is because VS 2013 does not support this C++11 feature.  See https://msdn.microsoft.com/en-us/library/dn457344.aspx.
+
+`Visual Studio does not support defaulted move constructors or move-assignment operators as the C++11 standard mandates. For more information, see the Defaulted and Deleted functions section of Support For C++11/14/17 Features (Modern C++).`
+
+And in `java/CMakeLists.txt`,  `org.rocksdb.RateLimiter` is missing.
+
+@zedware I added the missing class here - https://github.com/facebook/rocksdb/pull/1382
+
+@zedware I wonder if we need to change the code, or if we should just require a more modern version of Visual Studio. @yuslepukhin Any thoughts on this?
+
+VS 2015 should support this C++11 feature, see http://en.cppreference.com/w/cpp/compiler_support, R-value references, v3.0. But I failed to install it on my Windows 7.
+
+The most recent versions of Rocksdb will not build with VS 13. There is not a way around it.
+
+@yuslepukhin Okay, we should update the CMake.txt file then to make that clear.
+

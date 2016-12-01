@@ -1,0 +1,87 @@
+This commit includes the support for the following functionalities:
+- Single Get/Put operations
+- WriteBatch operations
+- Single iterator functionality
+- Open database with column families
+- Open database with column families Read/Only
+- Create column family
+- Drop column family
+- Properties of column families
+- Listing of column families
+- Fully backwards comptabile implementation
+- Multi Iterator support
+- MultiGet
+- KeyMayExist
+- Option to create missing column families on open
+
+In addition there is are two new Tests:
+- Test of ColumnFamily functionality
+- Test of Read only feature to open subsets of column families
+- Basic test to test the KeyMayExist feature
+
+What is not supported currently using RocksJava:
+- Custom ColumnFamilyOptions
+
+I decided to file a pull request w/o the missing two features to omit
+some merging trouble.
+
+The following targets work as expected:
+- make rocksdbjava
+- make jtest
+
+Test environment: Ubuntu 14.04(LTS, x64), Java 1.7.0_65(OpenJDK IcedTea 2.5.2), g++ 4.8.2, kernel 3.13.0-35-generix
+
+Hey @fyrz, thanks for adding column family support to RocksDB Java!  This is a great stuff.  To make the reviewing process of this big diff a little bit easier, you mind using the `arc diff` command to create a diff for review (something like what I did here in https://reviews.facebook.net/D24159?)
+
+But please feel free to let me know if you encounter any problem on `arc diff` or if it's adding too much work on your side.  Thank you :)
+
+This is awesome, thanks @fyrz !
+
+Any update on this. In phabricator there are all style issues cleared up. I would really like to have this and #323 merged. Both block me somehow in extending the JavaAPI further. 
+
+Added testing code will update the differential at home in the evening(CET).
+
+Hey @fyrz, I am start reviewing those important and big Java pull requests.  Please allow me some time to go over it since we don't want to get something wrong.  Will try to get all of them reviewed at least one pass by next Monday.  Thanks for your patience.
+
+@yhchiang no problem. Meanwhile i take care about JavaDoc.
+
+Left some comments inside https://reviews.facebook.net/D24159:
+
+In c++ rocksdb, the list of ColumnFamilyHandle is managed on the user side where DB::Open() has a out-value for the list of ColumnFamilyHandles:
+
+```
+static Status Open(const DBOptions& db_options, const std::string& name,
+             const std::vector<ColumnFamilyDescriptor>& column_families,
+             std::vector<ColumnFamilyHandle*>* handles, DB** dbptr);
+```
+
+and DB::Get() and DB::Put() use ColumnFamilyHandle to specify a column family:
+
+```
+virtual Status Get(const ReadOptions& options,
+             ColumnFamilyHandle* column_family, const Slice& key,
+             std::string* value) = 0;
+```
+
+However, in the current implementation in Java, the list of ColumnFamilyHandle is managed on the RocksDB side and calling Get and Put require one hash-map lookup inside RocksDB to get the correct mapping:
+
+```
+public void put(String columnFamily, byte[] key, byte[] value)
+```
+
+Does it make sense to have consistent behavior on handling column family in both C++ and Java, where DB::Open in RocksJava has a out-value for the list of ColumnFamilyHandle and uses ColumnFamilyHandle to specify column family in Get() and Put() as followings?
+
+```
+public static RocksDB open(Options options, String path, List<String> columnFamilyNames, List<ColumnFamilyHandle> handles);
+
+public void put(ColumnFamilyHandle columnFamily, byte[] key, byte[] value);
+```
+
+@yhchiang i updated the differential. You are right it should be aligned to the C++ API.
+
+Thanks for the update.  Will review it in few days.
+
+@fyrz would you mind squashing all the commits together? When we have lots of commits in our history it makes it harder to reason about all the changes that went into a release
+
+@igorcanadi done
+

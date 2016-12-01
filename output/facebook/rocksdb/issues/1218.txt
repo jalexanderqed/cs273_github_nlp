@@ -1,0 +1,10 @@
+picking execute_process command based on OS
+
+@yuslepukhin Could you give me an opinion on the changes to `java/CMakeLists.txt` for Windows please?
+
+@adamretter I think this looks fine. It would work nicely to support cross-platform CMake.
+
+@yuslepukhin Thanks, much appreciated :-)
+
+Closes https://github.com/facebook/rocksdb/issues/1217
+

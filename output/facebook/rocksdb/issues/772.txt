@@ -1,0 +1,40 @@
+Hello,
+I am looking for suggestions on my RocksDB configuration.
+
+Num of memtables = 2
+Size of memtable = 16MB
+Num of levels = 4
+Target file size base = 64MB
+Target file size multiplier = 1
+max_bytes_for_level_base = 1GB
+max_bytes_for_level_multiplier = 12
+level0_file_num_compaction_trigger = 40
+level0_slowdown_writes_trigger = 50
+level0_stop_writes_trigger = 64
+Average Key size = 32 Bytes
+Average Value size = 80 Bytes (we work with smaller values)
+Block cache size = 128MB
+Compression = NO
+Block Size = 16KB
+
+The database is hosted on 128G SSD.
+Expected workload is 70:30 ( Read:Write) and maximum PUT rate is around 20K ops.
+
+Can you suggest if this configuration is optimal with respect to performance and write amplification?
+
+Thanks.
+
+> level0_file_num_compaction_trigger = 40
+
+You probably don't want 40 files on Level 0. I would reduce that to 4, which is the default.
+
+With 4 files on level 0, your total level 0 size will be 64MB, so I would also make max_bytes_for_level_base (very fancy name for L1 size) 64MB or maybe 128MB.
+
+You can also turn on level_compaction_dynamic_level_bytes, which is a new feature of leveled compaction which fills the LSM tree from bottom up instead of top-down. Check out comments here: https://github.com/facebook/rocksdb/blob/master/include/rocksdb/options.h#L461
+
+Increase number of memtables from 2 to 4. That way you can aviod stalls when flush process is behind.
+
+Other things look good. Maybe reduce the file size to 16MB. With 128GB database and 64MB files, you'll have 2000 files. You can easily support more, and smaller files are beneficial.
+
+Let us know how it goes! If you see bad performance, send us your LOG files and we'll take a look if you can optimize further.
+

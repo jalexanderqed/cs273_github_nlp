@@ -1,0 +1,4 @@
+There is no C API for backing up RocksDB. So one cannot backup RocksDB db from Go, for example.
+
+That is unfortunately correct. We usually rely on the community to maintain our C api (same as go language bindings, etc.), so we would appreciate any pull requests to that effect.
+

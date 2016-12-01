@@ -1,0 +1,16 @@
+In response to https://github.com/facebook/osquery/pull/1284, we'd
+like to add a test to ensure that the RocksDB we're building with was
+compiled with Snappy support.
+
+If you all would prefer a different approach with this, happy to oblige.
+
+I successfully built and ran the tests for this on my local machine.
+
+The approach looks good to me.  Will merge the pull request once the Travis build is completed.
+
+I'm not sure this will work. RocksDB's headers are not compiled, so if you call them from your code the result will depend on whether the macro SNAPPY is defined in your code (not ours).
+
+How about this? Make CompressionTypeSupported un-inlined and expose the definition in include/rocksdb/options.h? That's what we had before but then I moved it back to private with this patch: https://github.com/facebook/rocksdb/commit/760e9a94de9ea1c3754c5d6a824ae3327d17ea7f#diff-4d118d7301c2a9650b694fbc4a7cfb80L60
+
+@igorcanadi, good point, yeah, let me close this and re-work it.
+

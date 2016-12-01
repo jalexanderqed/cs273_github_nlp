@@ -1,0 +1,23 @@
+Currently the C-API does not allow a caller to pass custom CompactRangeOptions. The signature of rocksdb_compact_range is 
+
+``` c
+extern ROCKSDB_LIBRARY_API void rocksdb_compact_range(rocksdb_t* db,
+                                                      const char* start_key,
+                                                      size_t start_key_len,
+                                                      const char* limit_key,
+                                                      size_t limit_key_len);
+
+extern ROCKSDB_LIBRARY_API void rocksdb_compact_range_cf(
+    rocksdb_t* db, rocksdb_column_family_handle_t* column_family,
+    const char* start_key, size_t start_key_len, const char* limit_key,
+    size_t limit_key_len);
+```
+
+I'm guessing the C api was forgotten about when introducing these new options.  Would you be interested in submitting a patch to fix this?
+
+@agiardullo I can do that. Would it be okay to break the current C-API as a part of this fix?
+
+How about you just create a new function so it wont break the api?
+
+@agiardullo Alright. Will do this.
+

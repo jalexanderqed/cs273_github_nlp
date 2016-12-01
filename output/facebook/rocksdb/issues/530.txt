@@ -1,0 +1,40 @@
+How big is the block cache by default? What's a good rule of thumb for setting it?
+
+The default block cache is 8M.
+
+You can get from the table.h file
+
+```
+  // If non-NULL use the specified cache for blocks.
+  // If NULL, rocksdb will automatically create and use an 8MB internal cache.
+  std::shared_ptr<Cache> block_cache = nullptr;
+```
+
+We have done an benchmark show that increase block cache size don't affect the performance 
+
+This is our test result 
+- 2CPU Intel(R) Xeon(R) CPU           E5620  @ 2.40GHz
+- 6.2GB of RAM
+- SCSI hard disk
+
+We first insert 60 million records (key:16byte, value:100byte). Then we first read all the records to make the data load into cache, then we do the benchmark to get the read performance.
+
+| Block cache size | Leveldb(micros/op) | Rocksdb(micros/op) |
+| --- | --- | --- |
+| 4M | 56.750 | 28.423 |
+| 1G | 28.423 | 27.193 |
+
+We have done benchmark in some machine with high configuration, it also show that the block cache size didn't affect the performance. 
+
+So In my opnion, you don't need care the block size, just use the default setting.
+
+What was your benchmark? I didn't see any improvements in sequential reads either and this was expected. However, I saw good improvement in parallel random reads benchmark.
+
+It looks like your db size was about 7GB which wasn't much higher than RAM size. It'd be interesting to see what numbers look like with 60GB or 600GB DB size. (I do not expect much difference though for this particular case).
+
+It's highly related to workload and how much resource you have. Hard to come up with a good default. I would say a default of 256MB or 512MB will be safe so that there is not likely to be a lot of wastes.
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+
+Closing this, please reopen if you feel that you have additional inputs to this problem.
+

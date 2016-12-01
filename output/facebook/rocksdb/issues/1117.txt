@@ -1,0 +1,22 @@
+In the latest Debian unstable, I get:
+
+```
+util/options_builder.cc: In function 'rocksdb::CompactionStyle rocksdb::{anonymous}::PickCompactionStyle(size_t, int, int, uint64_t)':
+util/options_builder.cc:29:7: error: 'log' is not a member of 'std'
+std::log(target_db_size / write_buffer_size) / std::log(kBytesForLevelMultiplier)));
+```
+
+Changing `#include <math.h>` to `#include <cmath>` fixes the issue.
+
++1
+
+Let me see whether I can remove util/options_builder.cc from the build. I don't think anyone is using it.
+
++1
+
+Status? I'm getting this error right now.
+
+@dbrock I've already removed util/options_builder.cc. Are you building from the master?
+
+Oops, sorry! :sob: Works!
+

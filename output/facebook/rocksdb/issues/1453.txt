@@ -1,0 +1,22 @@
+Fixes #1442.
+
+No longer add -ljemalloc to library link lines.
+
+No longer call malloc_print_stats() unless we're actually using jemalloc (use weak linking).
+
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4109771).
+
+@tudor We are getting the following error in our contbuild. Do you mind fixing it? Thanks. https://gist.github.com/yiwu-arbug/aca8bc19c11316d73990d70076a168a4
+
+@yiwu-arbug By "our" contbuild, I'm assuming you mean Facebook's? I'm no longer a Facebook employee. Can you check whether the contbuild sets the JEMALLOC_INCLUDE environment variable explicitly? (I removed that from build_detect_platform, I can add it back if that's the reason.)
+
+Ah, you do mean Facebook's contbuild, and it does set it.
+
+`build_tools/fbcode_config.sh:JEMALLOC_INCLUDE=" -I $JEMALLOC_BASE/include/"`
+
+@yiwu-arbug Try now?
+
+@tudor updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1453/files/f3e21b97b69f60c3ba9f5b2e5be1031c8e95c74a..672ad181fcff931958975d262bb64a8f5617f3d5) - [changes since last import](https://github.com/facebook/rocksdb/pull/1453/files/f3e21b97b69f60c3ba9f5b2e5be1031c8e95c74a..672ad181fcff931958975d262bb64a8f5617f3d5)
+
+@tudor Thanks. Let's wait for the build.
+

@@ -1,0 +1,12 @@
+Summary:
+- "rocksdb.compaction.key.drop.range_del" - number of keys dropped during compaction due to a range tombstone covering them
+- "rocksdb.compaction.range_del.drop.obsolete" - number of range tombstones dropped due to compaction to bottom level and no snapshot saving them
+- s/CompactionIteratorStats/CompactionIterationStats/g since this class is no longer specific to CompactionIterator -- it's also updated for range tombstone iteration during compaction
+- Move the above class into a separate .h file to avoid circular dependency.
+
+Test Plan: test together with https://reviews.facebook.net/D63927, which uses these stats
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4187179).
+
+fyi my end-to-end tests depend on compaction stats, e.g., to verify range deletions compacted to bottommost level can be obsoleted. so this diff is a prerequisite for checking in tests, which we should do for 5.0
+
+@ajkr updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1520/files/7c1f7358e84541629c9f8c12e742d29dcb7cd161..74acf730ab6553af574e06def3187093b2a2fbe0) - [changes since last import](https://github.com/facebook/rocksdb/pull/1520/files/7c1f7358e84541629c9f8c12e742d29dcb7cd161..74acf730ab6553af574e06def3187093b2a2fbe0)

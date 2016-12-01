@@ -1,0 +1,2 @@
+I had some issues when compiling the code on Debian using GCC 4.7. I was getting lots of errors like "error: comparison between signed and unsigned integer", similar to what is described on #83. These changes fixed the problem for me and I could compile the code.
+

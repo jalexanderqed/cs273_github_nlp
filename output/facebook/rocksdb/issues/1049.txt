@@ -1,0 +1,4 @@
+Using async file handle and wrapping sync operations on top of async seems to provide better parallelism on Windows.
+
+Since it is a env_win change. I'm going to bland merge it. Hope your teammate ever reviewed it.
+

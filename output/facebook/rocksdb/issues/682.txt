@@ -1,0 +1,274 @@
+Bug: `RocksIterator.prev()` sometimes results in a key which is _larger_ than the previous key.
+
+To run this test:
+
+```
+$ git clone git@gist.github.com:c34e092a88d58d3c7a67.git bug
+$ cd bug
+$ ./run.sh 
+```
+
+Here's an example output:
+
+```
+...
+created KVIterator[minKey=null,maxKey=95,reverse]
+seek to 95
+valid, seek to previous before 95
+resulting starting position is {9f,712a3083afda9c5c}
+Runner[0]: got exception
+java.lang.AssertionError: first key 9f >= 95 max key
+    at KVIterator.<init>(KVIterator.java:98)
+    at Runner$1.<init>(Test.java:207)
+    at Runner.iterator(Test.java:207)
+```
+
+Explanation of the above output:
+- Initially an iterator is created and `seek()` is invoked with target `95`
+- Result is valid, meaning a key >= `95` exists
+- `prev()` is invoked
+- result is `9f`, which is not smaller than `95`
+
+The test is randomized so you will get different values each time.
+
+You probably used prefix iterator and trying to issue a Prev(). It is, however, is not supported. I just tried submit a patch to explicitly disallow it: https://reviews.facebook.net/D43431
+
+What's your file format and mem table format used?
+
+Sorry, I don't know what a prefix iterator is or whether or not I'm using one. I'm just creating a database with the default options and then using a Java `RocksIterator`:
+
+```
+public static void main(String[] args) throws Exception {
+
+    // Create database
+    final Options options = new Options()
+      .setCreateIfMissing(true)
+      .setMergeOperatorName("uint64add");
+    options.setLogger(new Logger(options) {
+        @Override
+        protected void log(InfoLogLevel level, String message) {
+            System.out.println("[RocksDB] " + level + ": " + message);
+        }
+    });
+    final File dir = new File("data");
+    if (dir.exists())
+        throw new Exception("file exists: " + dir);
+    if (!dir.mkdirs() || !dir.isDirectory())
+        throw new Exception("can't create directory: " + dir);
+    final RocksDB db = RocksDB.open(options, dir.toString());
+    ...
+```
+
+Here's what gets spit out at the start of the test:
+
+```
+[RocksDB] INFO_LEVEL: RocksDB version: 3.10.0
+
+[RocksDB] INFO_LEVEL: Git sha rocksdb_build_git_sha:v3.10-5-gbe55065
+[RocksDB] INFO_LEVEL: Compile date Apr 30 2015
+[RocksDB] INFO_LEVEL: DB SUMMARY
+
+[RocksDB] INFO_LEVEL: SST files in data dir, Total Num: 0, files: 
+
+[RocksDB] INFO_LEVEL: Write Ahead Log file in data: 
+
+[RocksDB] INFO_LEVEL:          Options.error_if_exists: 0
+[RocksDB] INFO_LEVEL:        Options.create_if_missing: 1
+[RocksDB] INFO_LEVEL:          Options.paranoid_checks: 1
+[RocksDB] INFO_LEVEL:                      Options.env: 0x1294afca8
+[RocksDB] INFO_LEVEL:                 Options.info_log: 0x7fae8bc548d0
+[RocksDB] INFO_LEVEL:           Options.max_open_files: 5000
+[RocksDB] INFO_LEVEL:       Options.max_total_wal_size: 0
+[RocksDB] INFO_LEVEL:        Options.disableDataSync: 0
+[RocksDB] INFO_LEVEL:              Options.use_fsync: 0
+[RocksDB] INFO_LEVEL:      Options.max_log_file_size: 0
+[RocksDB] INFO_LEVEL: Options.max_manifest_file_size: 18446744073709551615
+[RocksDB] INFO_LEVEL:      Options.log_file_time_to_roll: 0
+[RocksDB] INFO_LEVEL:      Options.keep_log_file_num: 1000
+[RocksDB] INFO_LEVEL:        Options.allow_os_buffer: 1
+[RocksDB] INFO_LEVEL:       Options.allow_mmap_reads: 0
+[RocksDB] INFO_LEVEL:      Options.allow_mmap_writes: 0
+[RocksDB] INFO_LEVEL:          Options.create_missing_column_families: 0
+[RocksDB] INFO_LEVEL:                              Options.db_log_dir: 
+[RocksDB] INFO_LEVEL:                                 Options.wal_dir: data
+[RocksDB] INFO_LEVEL:                Options.table_cache_numshardbits: 4
+[RocksDB] INFO_LEVEL:     Options.delete_obsolete_files_period_micros: 21600000000
+[RocksDB] INFO_LEVEL:              Options.max_background_compactions: 1
+[RocksDB] INFO_LEVEL:                  Options.max_background_flushes: 1
+[RocksDB] INFO_LEVEL:                         Options.WAL_ttl_seconds: 0
+[RocksDB] INFO_LEVEL:                       Options.WAL_size_limit_MB: 0
+[RocksDB] INFO_LEVEL:             Options.manifest_preallocation_size: 4194304
+[RocksDB] INFO_LEVEL:                          Options.allow_os_buffer: 1
+[RocksDB] INFO_LEVEL:                         Options.allow_mmap_reads: 0
+[RocksDB] INFO_LEVEL:                        Options.allow_mmap_writes: 0
+[RocksDB] INFO_LEVEL:                      Options.is_fd_close_on_exec: 1
+[RocksDB] INFO_LEVEL:                    Options.stats_dump_period_sec: 3600
+[RocksDB] INFO_LEVEL:                    Options.advise_random_on_open: 1
+[RocksDB] INFO_LEVEL:                     Options.db_write_buffer_size: 0
+[RocksDB] INFO_LEVEL:          Options.access_hint_on_compaction_start: NORMAL
+[RocksDB] INFO_LEVEL:                       Options.use_adaptive_mutex: 0
+[RocksDB] INFO_LEVEL:                             Options.rate_limiter: 0x0
+[RocksDB] INFO_LEVEL:                           Options.bytes_per_sync: 0
+[RocksDB] INFO_LEVEL:                   Options.enable_thread_tracking: 0
+[RocksDB] INFO_LEVEL: Creating manifest 1 
+
+[RocksDB] INFO_LEVEL: Recovering from manifest file: MANIFEST-000001
+
+[RocksDB] INFO_LEVEL: --------------- Options for column family [default]:
+
+[RocksDB] INFO_LEVEL:          Options.error_if_exists: 0
+[RocksDB] INFO_LEVEL:        Options.create_if_missing: 1
+[RocksDB] INFO_LEVEL:          Options.paranoid_checks: 1
+[RocksDB] INFO_LEVEL:                      Options.env: 0x1294afca8
+[RocksDB] INFO_LEVEL:                 Options.info_log: 0x7fae8bc548d0
+[RocksDB] INFO_LEVEL:           Options.max_open_files: 5000
+[RocksDB] INFO_LEVEL:       Options.max_total_wal_size: 0
+[RocksDB] INFO_LEVEL:        Options.disableDataSync: 0
+[RocksDB] INFO_LEVEL:              Options.use_fsync: 0
+[RocksDB] INFO_LEVEL:      Options.max_log_file_size: 0
+[RocksDB] INFO_LEVEL: Options.max_manifest_file_size: 18446744073709551615
+[RocksDB] INFO_LEVEL:      Options.log_file_time_to_roll: 0
+[RocksDB] INFO_LEVEL:      Options.keep_log_file_num: 1000
+[RocksDB] INFO_LEVEL:        Options.allow_os_buffer: 1
+[RocksDB] INFO_LEVEL:       Options.allow_mmap_reads: 0
+[RocksDB] INFO_LEVEL:      Options.allow_mmap_writes: 0
+[RocksDB] INFO_LEVEL:          Options.create_missing_column_families: 0
+[RocksDB] INFO_LEVEL:                              Options.db_log_dir: 
+[RocksDB] INFO_LEVEL:                                 Options.wal_dir: data
+[RocksDB] INFO_LEVEL:                Options.table_cache_numshardbits: 4
+[RocksDB] INFO_LEVEL:     Options.delete_obsolete_files_period_micros: 21600000000
+[RocksDB] INFO_LEVEL:              Options.max_background_compactions: 1
+[RocksDB] INFO_LEVEL:                  Options.max_background_flushes: 1
+[RocksDB] INFO_LEVEL:                         Options.WAL_ttl_seconds: 0
+[RocksDB] INFO_LEVEL:                       Options.WAL_size_limit_MB: 0
+[RocksDB] INFO_LEVEL:             Options.manifest_preallocation_size: 4194304
+[RocksDB] INFO_LEVEL:                          Options.allow_os_buffer: 1
+[RocksDB] INFO_LEVEL:                         Options.allow_mmap_reads: 0
+[RocksDB] INFO_LEVEL:                        Options.allow_mmap_writes: 0
+[RocksDB] INFO_LEVEL:                      Options.is_fd_close_on_exec: 1
+[RocksDB] INFO_LEVEL:                    Options.stats_dump_period_sec: 3600
+[RocksDB] INFO_LEVEL:                    Options.advise_random_on_open: 1
+[RocksDB] INFO_LEVEL:                     Options.db_write_buffer_size: 0
+[RocksDB] INFO_LEVEL:          Options.access_hint_on_compaction_start: NORMAL
+[RocksDB] INFO_LEVEL:                       Options.use_adaptive_mutex: 0
+[RocksDB] INFO_LEVEL:                             Options.rate_limiter: 0x0
+[RocksDB] INFO_LEVEL:                           Options.bytes_per_sync: 0
+[RocksDB] INFO_LEVEL:                   Options.enable_thread_tracking: 0
+[RocksDB] INFO_LEVEL:               Options.comparator: rocksdb.InternalKeyComparator:leveldb.BytewiseComparator
+[RocksDB] INFO_LEVEL:           Options.merge_operator: UInt64AddOperator
+[RocksDB] INFO_LEVEL:        Options.compaction_filter: None
+[RocksDB] INFO_LEVEL:        Options.compaction_filter_factory: DefaultCompactionFilterFactory
+[RocksDB] INFO_LEVEL:        Options.compaction_filter_factory_v2: DefaultCompactionFilterFactoryV2
+[RocksDB] INFO_LEVEL:         Options.memtable_factory: SkipListFactory
+[RocksDB] INFO_LEVEL:            Options.table_factory: BlockBasedTable
+[RocksDB] INFO_LEVEL:            table_factory options:   flush_block_policy_factory: FlushBlockBySizePolicyFactory (0x7fae8bc30ba0)
+  cache_index_and_filter_blocks: 0
+  index_type: 0
+  hash_index_allow_collision: 1
+  checksum: 1
+  no_block_cache: 0
+  block_cache: 0x7fae8bc5fa38
+  block_cache_size: 8388608
+  block_cache_compressed: 0x0
+  block_size: 4096
+  block_size_deviation: 10
+  block_restart_interval: 16
+  filter_policy: nullptr
+  format_version: 0
+
+[RocksDB] INFO_LEVEL:        Options.write_buffer_size: 4194304
+[RocksDB] INFO_LEVEL:  Options.max_write_buffer_number: 2
+[RocksDB] INFO_LEVEL:          Options.compression: 1
+[RocksDB] INFO_LEVEL:       Options.prefix_extractor: nullptr
+[RocksDB] INFO_LEVEL:             Options.num_levels: 7
+[RocksDB] INFO_LEVEL:        Options.min_write_buffer_number_to_merge: 1
+[RocksDB] INFO_LEVEL:         Options.purge_redundant_kvs_while_flush: 1
+[RocksDB] INFO_LEVEL:            Options.compression_opts.window_bits: -14
+[RocksDB] INFO_LEVEL:                  Options.compression_opts.level: -1
+[RocksDB] INFO_LEVEL:               Options.compression_opts.strategy: 0
+[RocksDB] INFO_LEVEL:      Options.level0_file_num_compaction_trigger: 4
+[RocksDB] INFO_LEVEL:          Options.level0_slowdown_writes_trigger: 20
+[RocksDB] INFO_LEVEL:              Options.level0_stop_writes_trigger: 24
+[RocksDB] INFO_LEVEL:                Options.max_mem_compaction_level: 2
+[RocksDB] INFO_LEVEL:                   Options.target_file_size_base: 2097152
+[RocksDB] INFO_LEVEL:             Options.target_file_size_multiplier: 1
+[RocksDB] INFO_LEVEL:                Options.max_bytes_for_level_base: 10485760
+[RocksDB] INFO_LEVEL: Options.level_compaction_dynamic_level_bytes: 0
+[RocksDB] INFO_LEVEL:          Options.max_bytes_for_level_multiplier: 10
+[RocksDB] INFO_LEVEL: Options.max_bytes_for_level_multiplier_addtl[0]: 1
+[RocksDB] INFO_LEVEL: Options.max_bytes_for_level_multiplier_addtl[1]: 1
+[RocksDB] INFO_LEVEL: Options.max_bytes_for_level_multiplier_addtl[2]: 1
+[RocksDB] INFO_LEVEL: Options.max_bytes_for_level_multiplier_addtl[3]: 1
+[RocksDB] INFO_LEVEL: Options.max_bytes_for_level_multiplier_addtl[4]: 1
+[RocksDB] INFO_LEVEL: Options.max_bytes_for_level_multiplier_addtl[5]: 1
+[RocksDB] INFO_LEVEL: Options.max_bytes_for_level_multiplier_addtl[6]: 1
+[RocksDB] INFO_LEVEL:       Options.max_sequential_skip_in_iterations: 8
+[RocksDB] INFO_LEVEL:              Options.expanded_compaction_factor: 25
+[RocksDB] INFO_LEVEL:                Options.source_compaction_factor: 1
+[RocksDB] INFO_LEVEL:          Options.max_grandparent_overlap_factor: 10
+[RocksDB] INFO_LEVEL:                        Options.arena_block_size: 419430
+[RocksDB] INFO_LEVEL:                       Options.soft_rate_limit: 0.00
+[RocksDB] INFO_LEVEL:                       Options.hard_rate_limit: 0.00
+[RocksDB] INFO_LEVEL:       Options.rate_limit_delay_max_milliseconds: 1000
+[RocksDB] INFO_LEVEL:                Options.disable_auto_compactions: 0
+[RocksDB] INFO_LEVEL:          Options.purge_redundant_kvs_while_flush: 1
+[RocksDB] INFO_LEVEL:                           Options.filter_deletes: 0
+[RocksDB] INFO_LEVEL:           Options.verify_checksums_in_compaction: 1
+[RocksDB] INFO_LEVEL:                         Options.compaction_style: 0
+[RocksDB] INFO_LEVEL:  Options.compaction_options_universal.size_ratio: 1
+[RocksDB] INFO_LEVEL: Options.compaction_options_universal.min_merge_width: 2
+[RocksDB] INFO_LEVEL: Options.compaction_options_universal.max_merge_width: 4294967295
+[RocksDB] INFO_LEVEL: Options.compaction_options_universal.max_size_amplification_percent: 200
+[RocksDB] INFO_LEVEL: Options.compaction_options_universal.compression_size_percent: -1
+[RocksDB] INFO_LEVEL: Options.compaction_options_fifo.max_table_files_size: 1073741824
+[RocksDB] INFO_LEVEL:                   Options.table_properties_collectors: InternalKeyPropertiesCollectorFactory; 
+[RocksDB] INFO_LEVEL:                   Options.inplace_update_support: 0
+[RocksDB] INFO_LEVEL:                 Options.inplace_update_num_locks: 10000
+[RocksDB] INFO_LEVEL:               Options.min_partial_merge_operands: 2
+[RocksDB] INFO_LEVEL:               Options.memtable_prefix_bloom_bits: 0
+[RocksDB] INFO_LEVEL:             Options.memtable_prefix_bloom_probes: 6
+[RocksDB] INFO_LEVEL:   Options.memtable_prefix_bloom_huge_page_tlb_size: 0
+[RocksDB] INFO_LEVEL:                           Options.bloom_locality: 0
+[RocksDB] INFO_LEVEL:                    Options.max_successive_merges: 0
+[RocksDB] INFO_LEVEL:                Options.optimize_fllters_for_hits: 0
+[RocksDB] INFO_LEVEL: Recovered from manifest file:data/MANIFEST-000001 succeeded,manifest_file_number is 1, next_file_number is 3, last_sequence is 0, log_number is 0,prev_log_number is 0,max_column_family is 0
+
+[RocksDB] INFO_LEVEL: Column family [default] (ID 0), log number is 0
+
+[RocksDB] INFO_LEVEL: DB pointer 0x7fae8c12ca00
+```
+
+Interesting. You are not using prefix iterating (prefix_extractor is null). It is interesting then. What read option do you use when creating the iterator?
+
+Reading from a snapshot.
+
+I still couldn't run your project. I have some difficulty in building rocksjava and is trying to resolve it. In the mean time, if you set max_sequential_skip_in_iterations to MAX, will it still fail?
+
+The `rocksdbjni-3.10.1.jar` JAR file is included in the gist, so the test shouldn't have to resolve anything. I'm curious what error you are seeing when you invoke `./run.sh` ?
+
+I added this and the result is the same:
+
+```
+diff --git a/Test.java b/Test.java
+index cb6e37e..a2e1808 100644
+--- a/Test.java
++++ b/Test.java
+@@ -28,6 +28,7 @@ public class Test {
+         // Create database
+         final Options options = new Options()
+           .setCreateIfMissing(true)
++          .setMaxSequentialSkipInIterations(Long.MAX_VALUE)
+           .setMergeOperatorName("uint64add");
+         options.setLogger(new Logger(options) {
+             @Override
+```
+
+Correction to previous comment: the iteration is sometimes from a snapshot, and other times not. It also does other random puts, removes, write batches, etc.
+
+@archiecobbs turn out to be, I didn't run "make jclean" before build java.
+There is a known issue that changing direction for merge iterator might be wrong. It's not yet fixed. We probably want find a way to fix it some time this week.
+
+@siying Thanks. It looks like issue #648 is the issue you are referring to... correct?
+
+Looks like this got fixed by 8e01bd1144abc43ebe68d8ea7393a3f1a31abd06 (see issue #648).
+

@@ -1,0 +1,17 @@
+@yuslepukhin Making use of GetSystemTimePreciseAsFileTime dynamic to not break compatibility with Windows 7. The issue with rotated logs was fixed other way.
+#726
+
+@yuslepukhin I pushed code review fixes. Please review latest changes.
+
+Looks like you need to rebase off master
+
+@koldat @siying Lets wait for the checks to pass otherwise looks good. Thank you for your contribution.
+
++1
+
+@koldat You may want to do a rebase off the latest so the checks would pass so @siying can merge it.
+
+@siying I rebased to latest, let's wait for tests.
+
+@siying I changed RollLogFile to follow your suggestion.
+

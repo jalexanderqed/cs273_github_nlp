@@ -1,0 +1,70 @@
+In the process of tracking down unbounded memory consumption in our application that uses rocksdb, a memory profiler pointed to `ReadBlockContents` as a large source of allocations (our version is a little older than what's in the master branch). I spent some time tracing the code and it looks like the local `buf` that is allocated via:
+`char* buf = new char[n + kBlockTrailerSize];`
+is later freed here:
+https://github.com/facebook/rocksdb/blob/master/table/block.cc#L320
+
+Studying the code more carefully it looks like a naked, allocated pointer is returned to the caller via `Slice`, and then ownership is regained by constructing a `Block` from `BlockContents`. The presumption is that `result->heap_allocated` becomes true in `ReadBlockContents`, causing the `Block` object to set `owned_` to `true`, thus freeing the memory in `Block::~Block`.
+
+We strongly discourage naked calls to `new` and `delete` as well as unowned naked pointers for the reason that it is hard to verify the chain of ownership of dynamically allocated objects. We are fairly certain there is a leak in there somewhere but analysis is impeded by the unsafe semantics. We suggest using the C++11 RAII containers such as `std::unique_ptr` in interfaces to control ownership. 
+
+Proposed change: replace `bool BlockContents::heap_allocated` with `std::unique_ptr <char> BlockContents::allocation`.  Use the implicit conversion of `unique_ptr` to bool as a replacement for the value of `heap_allocated`. This way, `ReadBlockContents` can safely transfer ownership to the caller via the `BlockContents::allocation` field.
+
+@vinniefalco I agree with your suggestion. This part of code is inherited from LevelDB: https://code.google.com/p/leveldb/source/browse/table/block.cc#40
+
+If you could send a patch that would be great!
+
+Here's an update. Namely, I've found that much of the memory consumption can be avoided through bypassing the cache by way of setting ReadOptions::fill_cache to false, before doing a DB:Get(). It appears as though the object to cache, of type Block, never gets destructed, if it goes through the cache.
+
+We are using RocksDB version 3.2.0. I don't know if this issue exists in the latest released version though.
+
+The leak seems to result from this code: https://github.com/facebook/rocksdb/blob/7a9dd5f214fa2581f0b230c05f6d2ef1cd1cd19c/table/block_based_table_reader.cc#L669
+
+@mtrippled This is interesting. We have been running RocksDB version 3.2.0 in production for a month and a half now and no leak was reported.
+
+What's your block cache size? Do you clean up all your iterators?
+
+@mtrippled do you use compressed block cache?
+
+@siying: Not sure about the block cache, but we do have compression turned on (via Snappy).
+
+@vinniefalco can you paste first 1000 lines of your LOG file?
+
+@igorcanadi out block cache size is 256MB.
+
+What do you mean by "clean up all your iterators"? We do a simple DB::Get(): https://github.com/mtrippled/rippled/blob/rotate-delete2/src/ripple/nodestore/backend/RocksDBFactory.cpp#L209
+The result string is scoped to the function.
+
+I will post 1000 lines of LOG when I run another test with unbounded growth.
+
+@siying No, we don't use a compressed block cache.
+
+---
+
+Setting fill_cache to false makes the memory footprint seemingly stable. Is it possible that the block_cache doesn't get cleaned up within RocksDB when the DB object gets destroyed? We destroy our shared pointer to the block_cache after creating a DB instance, as the Options are scoped to the creating function.
+
+I ran another test with options.fill_cache set to default (true). The LOG file only had roughly 351 before our application deleted it, but here it is: http://codepad.org/Ou2sWbCi
+
+The relevant RocksDB code in our application is here: https://github.com/mtrippled/rippled/blob/rotate-delete2/src/ripple/nodestore/backend/RocksDBFactory.cpp
+DB creation and Get() are both in that source file.
+
+@mtrippled are you ever calling `for_each()` function? If there are long-running for_each calls, that might explain increase in memory footprint.
+
+Here are the two things I suggest:
+1. Figure out if the block cache eviction is working correctly. Reduce block cache size to 8MB and see if blocks are getting evicted (add some logging code there). Also check if the memory footprint decreased as a result of decrease in block cache size.
+2. Write smallest self-contained program that exhibits this behavior. If you do this, I'll try running it and if I can reproduce, will find the solution.
+
+Regarding the adoption of std::unique_ptr, it would make sense to replace the data_ member of the Slice object with a shared_ptr to further eliminate bare pointers that are handled by the Block and BlockContents classes. This would break binary and source compatibility, but I feel that this is a justifiable break as it would more clearly define ownership semantics regarding all pointers that are given to the Slice object.
+
+Documentation in include/rocksdb/slice.h warns API consumers to not use the Slice object after the corresponding memory has been freed. Switching this to also use a shared_ptr would eliminate that concern and possibility for crashes.
+
+Thoughts?
+
+@tdfischer class Slice doesn't own any memory it points too. It always points to memory others own. If we need to replace some raw pointers to unique pointers, it is not Slice:)
+
+@siying Yes, though using a smart pointer would decouple users of the Slice object from a need to track whether or not the external memory is freed.
+
+Definitely not `Slice` that would break quite a bit of client code. `Slice` is the `boost::asio::mutable_buffer` of RocksDB:
+http://www.boost.org/doc/libs/1_55_0/doc/html/boost_asio/reference/mutable_buffer.html
+
+I would be suspicious of shared_ptr on oft used pieces of code, for performance reasons. I am ok with unique_ptr though.
+

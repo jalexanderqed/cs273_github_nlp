@@ -1,0 +1,4 @@
+Would love to see something like repcached Master/Master replication support.
+
+we do not have a roadmap to build replication support into rocksdb.
+

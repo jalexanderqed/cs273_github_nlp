@@ -1,0 +1,6 @@
+hi.I find an empty rocksdb's database need 145 MB of space.I use "du -h" to find the phenomenon.Why and can I fix it.
+
+Probably because we preallocate space for the write-ahead-log. Try setting `allow_fallocate` to false: https://github.com/facebook/rocksdb/blob/master/include/rocksdb/options.h#L1057
+
+Is it a newly created database or a database that had  data earlier but you deleted all the data from it?
+

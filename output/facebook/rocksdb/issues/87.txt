@@ -1,0 +1,73 @@
+Added support to use xxhash as the default checksum type.  Small backwards compatible change with the ondisk 'type' byte.
+
+This is a good patch and definitely adds lots of value to RocksDB. Thanks for submitting the pull request. I have a request for some slight enhancements.
+
+In the current code, each table file has a 5 bytes footer. The first byte specifies the type of CompressionType. This patch overloads this byte to also store the ChecksumType. This works, but one problem is that if we ever want to add some more metadata to the footer, we will be backward incompatible. To solve this problem, I have the following suggestion:
+
+Use the existing single-byte in the footer to represent two things: a TableFormatVersion and a CompressionType. The first four bits could be TableFormatVersion and the remaining 4 bits could be CompressionType. This will keep it backward compatible. We could define all pre-existing tables to have a TableFormatVersion=0, while this patch will set TableFormatVersion=1 for all tables that will be created in the future. For tables that have TableFormatVersion of 1, the footer will be 6 bytes (instead of 5 bytes). The additional byte can store the ChecksumType.
+
+The reason I prefer the above approach is that it allows us to be able to store additional metadata with each table in the future without introducing backward incompatibility. Does this sound reasonable?
+
+That sounds like a reasonable idea, but having to support multiple trailer lengths makes maintaining support for older files more onerous.  This is the block trailer, not the table footer, so I think it will appear at the end of every block, potentially many times in a file.  Are you certain you want to increase the size of the block trailer?  I don't see what more of value could be put into the  block trailer beyond how to validate and decompress the data therein, anything else should probably go into some sort of index or meta-table.  Thoughts?
+
+@slachowsky I don't think it is desirable to have checksum type per block anyway. I should try to find a way to encode it in footer. No matter it is in footer or now, it seems to be desirable to put a version field as a part of footer so that in the future if there is another format change for footer/trailer, we can make it backward compatible. How about this: now there is a magic number in the end of the file. Let's make a new format, which has [version, magic_number] in the end. To bootstrap this meta change, we can use another magic number.
+
+I agree, there is little benefit in being able to switch the checksum-type on a per block basis, it just happened to be the least-invasive change.  Updating the footer to contain the checksum type sounds reasonable, where version defines the size/semantics of the footer/trailer.
+
+i would vote for keeping crc32c as the default, but add Options to set it to xxhash if requested.
+
+The Options exists, I've reverted it to crc32c by default.  Regarding expanding the Footer to include a version, a new magic number and the checksum type, that is simple enough... but will ripple through several layers and require some method of passing the checksum type back down to ReadBlockContents().  Do we want to be able to transparently read older files, but write only newer ones?
+
+@slachowsky, yes, that's what we want. Transparently read older files, but write new files in the new format. I.e. we support backward compatibility, but not forward compatibility.
+
+The code looks great @slachowsky!
+
+Can you:
+1) Add more unit tests (especially the one where DB with checksum crc32 can open a DB written with checksum xxHash)
+2) merge all the commits together
+
+@slachowsky can you document the new footer format in comments?
+
+This is a good diff. Can we please get some description of the disk format change  (in the form of code comments). that will help in reviewing the code. 
+
+The code looks good, except one place where there is  some logic "if -then" based on the magic number. I am not entirely clear on why we need to do this based on the magic number, can you pl explain?
+
+Few notes on RocksDB code style:
+1) always put braces around one-line if statements:
+
+```
+ if (something) {
+     something_else();     
+}
+```
+
+2) All methods should be CapitalFirstLetterCamelCase(). The exception can be simple read-only/const methods that just return a value. They can be lower_case_underscore_names()
+
+3) Spaces around binary operators: `a + b`
+
+I realize we might not be following this style everywhere, but we try to make at least new code consistent. :)
+
+Hey @slachowsky, we just had a discussion about your new format. We propose the change where you don't explicitly write length in the footer, but determine the correct length based on version. In other words, each version would have fixed length. The new format we propose would be:
+- checksum type
+- metadata_index_handle
+- index_handle
+- padding -- use this to make footer the fixed length
+- version
+  *magic
+
+What do you think about this?
+
+I thought of doing that initially, but I assumed you want the format to be a bit more flexible with regard to future expansion.  How large do you propose the version field should be?
+
+@slachowsky fixed 32 bits is sufficient to me. The idea is that we want the format to be even more flexible so we can allow more dramatic format change in future versions, something like putting footer in another file.
+
+Ok, I'll update the code and fix what I find with the style checker.  Are you sure you want all the commits squashed, or should I rebase into a cleaner more didactic patch set?
+
+@slachowsky I don't understand the difference of the two approaches.
+
+The difference is whether you get a single patch, or a patch series showing the development progression.
+
+Single patch is fine :)
+
+Thanks for the contribution @slachowsky . As we discussed on the meetup, we're transferring this to: https://reviews.facebook.net/D18315. Feel free to provide comments there.
+

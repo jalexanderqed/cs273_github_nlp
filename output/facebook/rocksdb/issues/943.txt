@@ -1,0 +1,33 @@
+In the Java API, the constructor for `ColumnFamilyDescriptor` accepts the concrete class `ColumnFamilyOptions` instead of the interface `ColumnFamilyOptionsInterface`.
+
+Likewise, `RocksDB#open` accepts the concrete class `DBOptions` instead of the interface `DBOptionsInterface`.
+
+`Options` class implements `DBOptionsInterface` and `ColumnFamilyOptionsInterface`.
+Why can I not simply apply the above methods with `Options` object ?
+
+Thanks
+
+@yohanakh Actually there is a version of `RocksDB#open` that takes just `Options`.
+
+However, to answer your question from the perspective of the Java API, and why we have this proliferation of concrete unrelated classes, this is because we have so far tried to stay as close to the C++ API as possible. I agree this may not be the _"Java way"_ where classically inheritance was favoured over composition.
+
+Perhaps @yhchiang could comment on why that approach was taken  in the C++ API?
+
+Thank you for the quick reply.
+I already have a rocksDB with some column families. I tried to open them with the RocksDB.open that accept Options but it throws an exception of:
+org.rocksdb.RocksDBException: Invalid argument: You have to open all column families. Column families not opened: COL1, COL2, ...
+
+Is there another way to open an existing rocksDB with Options ? or with defining one options instead of two ?
+Thanks
+
+Hey @yohanakh.  If a RocksDB database was previously opened with more than one column family, then   RocksDB.open must input the ColumnFamilyDescriptors of all the current existing column families.
+
+There's a recent change (v4.3) that has not yet supported in RocksJava is the options file support, which RocksDB will persist the latest options into an Options file, and developers can call one of the utility functions to construct DBOptions and ColumnFamilyDescriptors from the options file. 
+
+So from what I understand, the only way to create/open a RocksDB with multiple column family is via the RocksDB.open that accepts DBOptions. And I need to initialize one DBOptions and one ColumnFamilyOptions.
+Am I correct?
+
+> So from what I understand, the only way to create/open a RocksDB with multiple column family is via the RocksDB.open that accepts DBOptions. And I need to initialize one DBOptions and one ColumnFamilyOptions.
+
+Yes, one ColumnFamilyOptions for each column family.
+

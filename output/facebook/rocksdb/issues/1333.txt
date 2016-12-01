@@ -1,0 +1,6 @@
+We want to use different TableFactory for different level, but we can't find any approach to archive this requirement.
+We tried to customize a TableFactory, TableReaderOptions has 'level' data member, so we can do it, but TableBuilderOptions has no 'level' data member, we can not do it!
+
+Makes sense to have `level` passed to TableFactory in TableBuilderOptions. 
+Are you interested in sending a pull request to pass the `level` information in TableBuilderOptions ? I will be happy to review it.
+

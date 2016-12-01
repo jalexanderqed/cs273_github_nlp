@@ -1,0 +1,6 @@
+
+Hey @SherlockNoMad 
+I think this duplication is intended to measure the performance before and after compaction
+
+ic. Thank you for the clarification. 
+

@@ -1,0 +1,5 @@
+ Add heap_test, merge_helper_test
+ Fix uninitialized pointers in db_sanity_test that cause SIGSEV when DB::Open fails in case compression is not linked.
+
+Thank you for your contribution!
+

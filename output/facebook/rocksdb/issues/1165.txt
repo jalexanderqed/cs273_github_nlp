@@ -1,0 +1,9 @@
+when the file deletions are disabled, this interface returns value that > 0, and if the file deletions are enabled, it returns value that = 0.
+I think it should be reversed.
+
+See https://github.com/facebook/rocksdb/blob/master/include/rocksdb/db.h#L725-L729
+
+The return value acts as a counter for the number of threads that have disabled file deletions and not reenabled them yet. The name should probably be something like NumFileDeletionsDisabled().
+
+Yes, it's more reasonable to change the method name.
+

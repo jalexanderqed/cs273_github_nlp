@@ -1,0 +1,19 @@
+Hello!
+
+I want to make a cyclic database periodically deleting old records for this i'm use function GetLiveFilesMetaData, which is determined by the oldest file and delete it using the DeleteFile, but if the application is corrupt, sst files remain at level-1, which are not moving to a new level and the next time the function DeleteFile does not remove them!
+
+Any idea what to do in this situation?
+There is an option to delete all records from smallestkey to largestkey using the Delete but it is very slow ...
+
+I don't think deleting old files is the best method for implementing cyclic database. Did you check out DBWithTTL? You could also use column families to partition the key space and then drop the oldest partitions.
+
+The only reason to implement deleting old files (if ur application is ok with it) is that the system has a v v low write amplification of 1. 
+
+For storing the log I use the rocksdb, allocating database 50 gigabytes of hard drive space, as a key use uint64_t timestamp. Records of different sizes from 1KB to 6Kb. According to the list of stored files and smallestkey largestkey easily determine the file with the old records and remove it, which is equivalent to the removal of a few hundred records at once :)
+
+Files starting L1 downwards are partitioned by key space, which normally has no correlation with sequence number (time). Thus, it's usually not possible to find a totally 'old' file. However, since you use timestamp as key, it could actually work, as partition by key is the same thing as partition by time. Could you explain what you mean by 'application is corrupt, sst files remain at level-1'?
+
+If send a SIGKILL when being recorded log files level0, then the next start, these files move to sst files level1 and no further move to level2.
+
+@Rustam12345 closing this for now, please reopen if you have any other questions.
+

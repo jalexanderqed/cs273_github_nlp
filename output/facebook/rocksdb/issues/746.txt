@@ -1,0 +1,221 @@
+The current IO workload that is generated from log file appends is very
+unfriendly to the file system.  The problem is that for every append
+and fdatasync, the fs has to write the data block _and_ write an entry
+to its journal that updates the inode metadata (size, mtime, and maybe
+allocation map).
+
+Note that the current option to use fallocate to preallocate space only
+sort of helps: it means that the file's data blocks will be contiguous on
+disk, but it doesn't change the IO pattern.  fallocate gives the extents
+to the file, but marks them 'unwritten' so that if you read them you'll
+get zeros.  When you go to write real data, teh fs still has to update the
+inode to indicate the blocks are now written and there is real data on
+disk.  There is no way to skip this step without actually writing a bunch
+of zeros--the fs doesn't know what garbage may be on the platter (maybe
+some other user's old secrets) and won't expose it in a few file as a
+security precaution.
+
+This series adds a recycle_log_files option that takes previously written
+logs that would otherwise be deleted and puts them on a recycle queue.
+The next time we need a new log file, we use one of those if it is
+available.  That way we get a previously written and allocated file and
+can write records to it and fdatasync without touching the inode metadata
+(mtime will eventually get written, but only once, much later--not on
+every IO).  For XFS, this turns 3 IOs into 1 IO; for ext4 it turns 2 IOs
+into 1 IO.  Yay!
+
+The main challenge is that the file has a bunch of "garbage" in it that
+looks like it is real: they are valid records with valid checksums. To
+avoid reading them back, we change the checksum to XOR in the log_number.
+That way, when I reuse log 10 as 23, the CRC won't match on read and I'll
+stop reading.
+
+I'm still fighting a few issues, mainly just getting all of the tests to
+work with this change, but in practice things are working.  Early review
+would be appreciated to ensure I'm not wasting my time polishing something
+that is fundamentally broken.
+
+Thanks!
+
+How will this interact with WALRecoveryMode::kAbsoluteConsistency?  It seems like it'd be incompatible, so maybe refuse to open a db with inconsistent options?  Alternately, is it feasible to include an "end" marker so that during log replay you can distinguish between garbage from a previous generation and corruption?
+
+Thank you for contributing to RocksDB! Recycling logs is definitely a very useful feature! checksum to XOR in the log_number as the new checksum sounds smart to me and it should work. We'll look at the PR!
+
+@msb-at-yahoo I have to read through the recovery code to understand how kAbsoluteConsistency works vs the default behavior.  This sounds like the mode that we want to use and I don't think there is an inherent problem, but I need to read through teh code to be sure.  I was confused that the log_reader seemed to not mind skipping corrupt records, which is not what I expected...  Anyway, I'll take a look! 
+
+@msb-at-yahoo Okay, now I understand kAbsoluteConsistency--it assumes a clean shutdown where records are written to completion.  As I understand things this will work equally well (or poorly) with recycling enabled.
+
+What is very weird is the support for replaying a log full of corrupted records.  My current version of log_reader translates bogus records to kEof because I don't think it's wise to keep trying to read all the later records in the file once we hit a bad one--that just increases the probability that we'll get a false-positive on the CRC and accept garbage.  And in the real world I suspect that it is pretty rare to use the  kSkipAnyCorruptedRecords mode... is that a sane approach?
+
+if you convert a bogus record to kEof, then kAbsoluteConsistency will lead to failure because of premature eof.  since all of the previous generation's records are bogus (will fail checksum), this will only work in the unlikely case the log has been written completely, no?  you have also weakened  the default consistency check which will ignore bad records only if they're at the end of the file.
+
+i'd only use kSkipAnyCorruptedRecords in an emergency or debugging, in which case i would definitely not want to stop replay prematurely and discard the rest of the log.
+
+i think an explicit "eof" log record type would address both cases:
+- if in recycled log mode, always append an eof record (be careful to do the checksum only once in the process)
+- if you encounter an "eof" log record, return kEof and ignore the `report_eof_inconsistency` in `ReadPhysicalRecord`.
+
+Very few use cases should use kAbsoluteConsistency and in fact we ever debated whether we need this mode at all. We can say this is not supported in recycled logs and I'm perfectly fine with it. By saying that, I am not saying an EOF record is a bad idea. It's also a good approach to help investigate problems. OK with either way.
+
+Do you mean writing an explicit EOF record at the end of the log file, or with every append (and then overlap/overwrite it with the next write)?  The latter is I think a bad idea (can block writeback due to the way the Linux VFS handles this; presents an usual IO pattern that few things will be able to optimize for, or may even trigger issues with crummy firmware).  For the former case I think we can just as easily truncate the file so that it _is_ the end of the file... ?
+
+To distinguish between these case I need wal_recovery_mode in ReadRecord et al (not just the bool)... working on that now.
+
+Hmm, with kAbsoluteConsistency, we assume an orderly shutdown, right?  In that case, wouldn't this line truncate any trailing garbage off the file anyway?  https://github.com/facebook/rocksdb/blob/master/util/file_reader_writer.cc#L139
+
+@liewagas good point.  my only concern now with functionality is with asserting kEof at the first bad record which would break both the other recovery modes.
+
+i'm looking forward to seeing this feature merged.  do you have any measurements for the performance improvement?
+
+I've pushed the latest version.  Now I think kTolerateCorruptedTailRecords and kPointInTimeRecovery are pretty much the same: once we hit something we don't like we stop playback.  If the recovery mode is kSkipAnyCorruptedRecords we continue to return kBadRecord instead of kEof.
+
+I'm taking a look. CC @kradhakrishnan who implemented the log level.
+
+@liewegas thank you for the patch. It's an awesome patch and I don't have much comments related to the main logic. Most of the comments are for code styling etc. I hope another teammate take another look on this critical change. CC @kradhakrishnan @igorcanadi 
+
+For bigger pull requests, I feel like it would be better to move them to phabricator for initial discussion. Should be pretty simple to do. After installing arcanist (https://secure.phabricator.com/book/phabricator/article/arcanist/), you'd just have to run `arc diff`.
+
+We use same process for our own commits. Can you give it a try and let us know how it goes?
+
+(BTW the travis build is failing on LogTest.ErrorJoinsRecords: https://travis-ci.org/facebook/rocksdb/jobs/83812904)
+
+Repushed:
+- fixed style/whitespace
+- recycle_log_file_num option (instead of of recycle_log_files bool) so you can specify how many to have in the queue
+- simplified the crc code a bit
+- fixed failing log_test test
+
+and addressed (I think) all the other code comments.  I didn't change around the reader/writers to not take db_options yet, though.  If you like I'll do that on my next pass 
+
+Hi Sage, thanks for doing this. Please do see if you can change log_readers/log_writers to not take DBOptions (but rather take in options.recycle_log_file_num as individual params). That would keep the logreader/writer code more modular and pluggable in the future.
+
+If you feel, please also publish your change to phabricator (like Igor mentioned)... this is not a hard requirement... but it makes the life of code reviewers easy. But if you feel that pushing to phabricator is taking a lot of your time (ideally, it should not), then please feel free to ignore this comment.
+
+Re-pushed.
+
+I gave arcanist a go but it's failing with
+
+<pre>[2015-10-08 17:22:50] EXCEPTION: (PhutilMissingSymbolException) Failed to load class or interface 'ArcanistBaseWorkflow': the class or interface 'ArcanistBaseWorkflow' is not defined in the library map for any loaded phutil library.
+</pre>
+
+seems to be trying to find some facebook specific module?
+
+<pre>
+https://secure.phabricator.com/book/phabcontrib/article/adding_new_classes/ at [<phutil>/src/__phutil_library_init__.php:25]
+arcanist(head=master, ref.master=172c930630a9), arcanist_util(head=wip-recycle, ref.master=7e4ee423152f, ref.wip-recycle=075a2c78d9e5), phutil(head=master, ref.master=8870e8fe9df8)
+  #0 __phutil_autoload(string)
+  #1 spl_autoload_call(string) called at [<arcanist_util>/config/FacebookArcanistConfiguration.php:7]
+  #2 include_once(string) called at [<phutil>/src/moduleutils/PhutilBootloader.php:226]
+  #3 PhutilBootloader::executeInclude(string) called at [<phutil>/src/moduleutils/PhutilBootloader.php:216]
+  #4 PhutilBootloader::loadLibrarySource(string, string) called at [<phutil>/src/symbols/PhutilSymbolLoader.php:381]
+  #5 PhutilSymbolLoader::loadSymbol(array) called at [<phutil>/src/symbols/PhutilSymbolLoader.php:256]
+  #6 PhutilSymbolLoader::selectAndLoadSymbols() called at [<phutil>/src/__phutil_library_init__.php:22]
+  #7 __phutil_autoload(string)
+  #8 spl_autoload_call(string) called at [<arcanist>/scripts/arcanist.php:176]
+</pre>
+
+(It works outside the rocksdb src dir, so presumably something in the .arcconfig is triggering this.)
+
+Seems like we're running an old version of arcanist: https://secure.phabricator.com/book/arcanist/class/ArcanistBaseWorkflow/
+
+Oh well, never mind. We can review it here before we figure out how to support new arcanist.
+
+The travis compile is still failing, though.
+
+WAL consistency levels are impacted by this change. Most of the code I read seem to assume that a corrupt record is actually a record from the previous file. I think it will be better from a reasoning perspective, if we can differentiate the two situations -- corrupt/incomplete data and bytes beyond file size from previous run -- like before.
+
+Instead of making the checksum broken, can we add version/generation number to every WAL record. When the file gets recycled, the generation count increases. This way you can differentiate the old records from previous run and the current records.
+
+Alternative, you can drop support for a few of the consistency levels like kTolerateCorruptedTailRecords. 
+
+kTolerateCorruptedTailRecords: With the current setting, it is pretty hard to define tail corruption (current default behavior)
+kAbsoluteConsistency: Can be supported by truncating WAL file before shutdown.
+kPointInTimeRecovery: As is behavior
+kSkipAnyCorruptedRecords: As is behavior if you arrange the abstractions cleanly
+
+Please correct me if my understanding is not correct.
+
+I am not in favor of pushing WAL consistency level to ReadRecord and beyond. Can you please consider keeping the WAL consistency logic at a higher level than primitive read/write logic.
+
+@kradhakrishnan "if we can differentiate the two situations -- corrupt/incomplete data and bytes beyond file size from previous run -- like before" Hmm, that is a good point.
+
+One alternative I can think of is to have a record type of "recycled type" and following it save "type", hash(log_number, sequence_id). So we use extra 5 bytes in record header (now 7). It feels like patchy too but it can solve the problem @kradhakrishnan  mentioned.
+
+Or we just use highest bit of the "type" to indicate it is a recycling row so expect some (log_number, sequence id) information after the type field. The format of the information we can other alternatives.
+
+I agree about keeping ReadPhysicalRecord independent of the mode.. I'll see how I can fix that up (although to be fair it was already dependent by the ignore eof bool :).
+
+As for changing the record format and types, that is probably also a good idea, if only because we can separate the CRC from the log number explicitly.  But, if I'm understanding you correctly, the only change is that we can distinguish kEof (we see an old record from a log_number w/ a valid crc) vs definite kBadRecord (crc is invalid).  And that is only useful in the kSkipAnyCorruptedRecords mode, when there is a corruption in the non-header portion of the record, but of course won't help if the header is corrupted.  Not sure how often that happens... is it worth it?  (That's a mode that we would never use because of our consistency requirements.)  With a 32k record size and 4k disk blocks, is it that frequent that a header is intact but the payload isn't, and there are also uncorrupted records that follow that we want?  I'm happy to change it, but just want to make sure I'm understanding everything first.  :)
+
+Thanks for the careful reviews!
+
+(although to be fair it was already dependent by the ignore eof bool :).
+
+> > If you want to fix that too, go for it :)
+
+Not sure how often that happens... is it worth it?
+
+> > I would think of it differently. RocksDB is general purpose and we want to make it ubiquitous. And to accomplish that we need to be able to provide what we promise. When recovering we should not skip valid data or include invalid until explicitly specified. When it comes to disk errors everything happens !! (mostly on disk due cache in disk controller)
+
+I'm happy to change it, but just want to make sure I'm understanding everything first. :)
+
+> > I think we are on the same page.
+
+https://github.com/facebook/rocksdb/wiki/Write-Ahead-Log-File-Format#record-format
+
+With reference to the WAL disk layout, I was more referring to stealing some bits from type and calling it generation (1 bits is all we need). Generation will start with 0 and for every recycle we will increment by 1. For every record we find (which passes checksum), if the generation number does not match the current generation number, we will return kEof or skip the record (?).
+
+@liewegas here is what I think: no matter whether we can benefit it for now, we want to have a general format that can help us implement other solutions in the future. For example, if we want to avoid the ftruncate when closing log files, or we want to implement a pure circular buffer in single log file, we want a format that still can work there.
+
+For current implementation, at least it can help us investigate problems when we see issues.
+
+@kradhakrishnan If we use high bits of type to indicate generation, I suggest 2 or more bits, just in case of multiple recycles and very weird controller/disk behavior.  Or a failure to properly truncate the log (where gen 0 writes past 4 MB, gen 1 writes exactly 4MB, and on gen 2 we restart and see gen 0 records at the end).
+
+My only hesitation is that it's a bit more awkward to implement: I need to know the file's previous generation, which you don't get from the filename.  The simplest thing would be to read the first record, but that sucks performance-wise.  Instead, we can throw out any old log files on startup and only recycle files from the current instance, and track that alongside the recycle queue (we need to record the generation when we start writing the file, not when we are done with it and add it to the recycle queue).
+
+Sound reasonable?
+
+@liewegas can we set the high bit to indicate a recycled mode and use the next bytes as generation ID?
+
+On Fri, 9 Oct 2015, Siying Dong wrote:
+
+> @liewegas can we set the high bit to indicate a recycled mode and use the next bytes as generation ID?
+
+Yeah... or better yet, just put in the log number (or the bottom 16 or 32 
+bits of it).  That way we don't have to track generation (which is more 
+complicated).  I avoided this originally because it changes some of the 
+assumptions about header size and the precalculated crc values, but that's 
+not that big a deal to fix.
+
+@kradhakrishnan @siying I think I prefer the second option (new k\* types, bigger header, with explicit log_number field).. probably also more flexible for future log format changes than the first option (putting a generation number into the high type bits).   
+
+@liewegas I think your log number option sounds better. Also, I am not sure if we need to preserve the log file pool across reboots. Almost all inodes have to be read from media which might offset the IO we are trying to save, and it simplifies our design. Please keep in mind that format change should be backward compatible - if the dataset is opened by a reasonably recent version of RocksDB it should not interpret it as junk. 
+
+@kradhakrishnan  "if the dataset is opened by a reasonably recent version of RocksDB it should not interpret it as junk" I can't think of any way it can be achieved. I would forget about it and treat it as a breaking change.
+
+Is it sufficient to just introduce new type values?  An old rocksdb will 
+fail to read the log files at all.  Or is there some other compat/incompat 
+mechanism so that it prevents startup in this case...
+
+@liewegas a new type value unknown to the older version sounds good to me.
+
+Okay, I've reworked this with new types and fixed up the log_test.cc tests to work.  Comments?
+
+ping @siying @kradhakrishnan 
+
+I'm good with the new format. Will wait for @kradhakrishnan's further comments.
+
+Rebased to resolve conflict w/ master.  ci failure appears to be an issue with master branch.
+
+Can this support both the old and new format ? The way it is written handles both the types of record ? 
+
+@kradhakrishnan repushed to fix ReadMore sig and continue, thanks.
+
+This will read either the old or new format.  The new format will be written iff log recycling is enabled.
+
+@kradhakrishnan: do you have any additional comments on this patch?
+
+I mostly focussed on the WAL reader portion. Looks good to me.
+
+Merged. @liewegas thank you for your contribution!
+

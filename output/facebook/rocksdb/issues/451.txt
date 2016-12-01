@@ -1,0 +1,22 @@
+Summary: 
+Fixed TODO. Added correct serialization
+of negative integers.
+
+Test Plan: make all check
+
+Reviewers: igor, sdong
+
+Reviewed By: igor
+
+Subscribers: dhruba, leveldb
+
+Differential Revision: https://reviews.facebook.net/D31065
+
+I hope nobody is actually using this since it's changing disk format. It is tagged experimental in the .h file, though, so shouldn't be a problem.
+
+Yeap, I've thought about that. Maybe it's worth adding versions.
+
+@StanislavGlebik You should have commit access now.
+
+@igorcanadi Yeap, I have it. Thanks a lot!
+

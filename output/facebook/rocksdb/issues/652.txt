@@ -1,0 +1,62 @@
+  Introduce include/rocksdb/public_port.h with minimum porting required for Windows
+  Add a new file util/db_test_util.cc to CMake file. Would be nice for now to enforce this in code review until
+  CI is in effect and we find a better solution.
+
+Synced with @igorcanadi . You can guard with Win32 or _MSVC, or whatever not showing up in other platform. Only include those needed in public header. That means remove the port for ROCKSDB_PRIszt, snprintf and strcasecmp
+
+@siying Are you in favor of that single header OR individual #ifdefs as required?
+
+@yuslepukhin Don't have a strong opinion on it. If you guard it with _MSVC or so, perhaps it's a better idea to guard only once, instead of everywhere.
+
+I am not able to understand the need for a public header file called public_port.h. This file defines things like "define ROCKSDB_PRIszt "Iu"". Can's it be a non-public header file?
+
+@dhruba I agree define like ROCKSDB_PRIszt should not be there. But there are two things that are hard to solve. "**thread" is used in perf_context.h. We probably want to change it to a function but we probably need to do it later. Also "__attribute**(deprecated)" is used in 5 different places and is not supported in Windows. Don't know how to support it. The easiest way to work around to define it as none in Windows.
+
+This things are already ported/defined within port/win/port_win.h and it is useful to include to a non-public headers and .cc files.
+
+However, we cannot include the above into public headers for two reasons 1) that would require port to be among public include paths 2) would require #define that are in our make files to be in the clients makefiles.
+
+The solution proposed is to have a minimum porting public header that would have some of the above in it and depend on the #defines that are automatically set by a compiler.
+
+Thanks,
+Dmitri
+
+From: dhruba borthakur [mailto:notifications@github.com]
+Sent: Wednesday, July 15, 2015 2:53 AM
+To: facebook/rocksdb
+Cc: Dmitri Smirnov
+Subject: Re: [rocksdb] Ensure Windows build w/o port/port.h in public headers (#652)
+
+I am not able to understand the need for a public header file called public_port.h. This file defines things like "define ROCKSDB_PRIszt "Iu"". Can's it be a non-public header file?
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/pull/652#issuecomment-121559676.
+
+Hi siying, the __attribute() in the public header files are protected by ifdef GNUC and windows does not define GNUC. So I am wondering how this is a problem.
+
+@dhruba can you point me the ifdef GNUC guard? I can't find it.
+
+https://github.com/facebook/rocksdb/blob/master/include/rocksdb/env.h#L717
+
+@dhruba that one is fine. The problem is this: https://github.com/facebook/rocksdb/blob/master/include/rocksdb/db.h#L434 and four other attribute deprecated.
+
+I see. maybe we can protect all these via ifdef **GNUC**?
+
+@dhruba good idea. Something worth trying.
+
+@dhruba @siying Providing this is all I will try to re-work this.
+
+pseudo-code
+
+```
+#if defined(__GNUC__) // and clang, etc?
+#define ROCKSDB_DEPRECATED __attribute__((deprecated))
+#elif defined(_MSVC)
+#define ROCKSDB_DEPRECATED __declspec(deprecated)
+#else
+#define ROCKSDB_DEPRECATED
+#endif
+```
+
+@msb-at-yahoo thanks Maurice but that would be a separate header and it looks like for public headers ones they want inline.
+

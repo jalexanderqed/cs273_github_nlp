@@ -1,0 +1,5 @@
+
+Travis CI error: ++: internal compiler error: Killed (program cc1plus)
+
+This is normal -- we're running OOM on Travis machine.
+

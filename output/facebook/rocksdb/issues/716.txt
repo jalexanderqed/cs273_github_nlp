@@ -1,0 +1,134 @@
+  Summary. A change https://reviews.facebook.net/differential/diff/224721/
+  Has attempted to move common functionality out of platform dependent
+  code to a new facility called file_reader_writer.
+  This includes:
+- perf counters
+- Buffering
+- RateLimiting
+  
+  However, the change did not attempt to refactor Windows code.
+  To mitigate, we introduce new quering interfaces such as UseOSBuffer(),
+  GetRequiredBufferAlignment() and ReaderWriterForward()
+  for pure forwarding where required.
+  Introduce WritableFile got a new method Truncate(). This is to communicate
+  to the file as to how much data it has on close.
+  - When space is pre-allocated on Linux it is filled with zeros implicitly,
+    no such thing exist on Windows so we must truncate file on close.
+  - When operating in unbuffered mode the last page is filled with
+    zeros but we still want to truncate.
+  
+  Previously, Close() would take care of it but now buffer
+  management is shifted to the wrappers and the file has
+  no idea about the file true size.
+  
+  This means that Close() on the wrapper level must always include
+  Truncate() as well as wrapper __dtor should call Close() and
+  against double Close().
+  Move buffered/unbuffered write logic to the wrapper.
+  Utilize Aligned buffer class.
+  Adjust tests and implement Truncate() where necessary.
+  Come up with reasonable defaults for new virtual interfaces.
+  Forward calls for RandomAccessReadAhead class to avoid double
+  buffering and locking (double locking in unbuffered mode on WIndows).
+  
+  There are two outstanding test failures
+  which I believe is due to the same Mock framework bug.
+  Both flush_job_test and compaction_job_test fail with 
+  Assertion failed: result.size() == 4, file c:\dev\rocksdb\rocksdb\table\mock_table.cc, line 110
+  
+  After some debugging it looks like the test opens a RandomAccessFile .sst which
+  remains empty. Mocked TableBuilder which is responsible for flushing a Level-0 file
+  never actually writes anything to disk. At the end of the test we attempt to read 4 bytes
+  at the beginning of an empty file and fail.
+
+There are two more failures after refreshing from master but seem to be
+of the more recent introduction.
+- [ RUN      ] ColumnFamilyTest.ReadDroppedColumnFamily
+  `c:\dev\rocksdb\rocksdb\db\column_family_test.cc`(1191): error: Value of: kKeysNum \* ((i == 2) ?
+- [ RUN      ] TransactionTest.TimeoutTest
+  `c:\dev\rocksdb\rocksdb\utilities\transactions\transaction_test.cc`(1523): error: s
+  Operation timed out: Timeout waiting to lock key
+
+Thank you so much for working on it. I'll take a look today.
+
+@igorcanadi is investigating ColumnFamilyTest.ReadDroppedColumnFamily.
+
+I only managed to build on my environment with this change:
+
+```
+diff --git a/include/rocksdb/env.h b/include/rocksdb/env.h
+index b346eff..a379bd5 100644
+--- a/include/rocksdb/env.h
++++ b/include/rocksdb/env.h
+@@ -459,7 +459,8 @@ class WritableFile {
+
+   // Positional write for unbuffered access default forward
+   // to simple append as most of the tests are buffered by default
+-  virtual Status Append(const Slice& /* data */, uint64_t /* offset */) {
++  virtual Status PositionedAppend(const Slice& /* data */,
++                                  uint64_t /* offset */) {
+     return Status::NotSupported();
+   }
+
+@@ -868,6 +869,9 @@ class WritableFileWrapper : public WritableFile {
+   explicit WritableFileWrapper(WritableFile* t) : target_(t) { }
+
+   Status Append(const Slice& data) override { return target_->Append(data); }
++  Status PositionedAppend(const Slice& data, uint64_t offset) override {
++    return target_->PositionedAppend(data, offset);
++  }
+   Status Truncate(uint64_t size) override { return target_->Truncate(size); }
+   Status Close() override { return target_->Close(); }
+   Status Flush() override { return target_->Flush(); }
+diff --git a/util/file_reader_writer.cc b/util/file_reader_writer.cc
+index 453bb74..642658e 100644
+--- a/util/file_reader_writer.cc
++++ b/util/file_reader_writer.cc
+@@ -339,7 +339,7 @@ Status WritableFileWriter::WriteUnbuffered() {
+       IOSTATS_TIMER_GUARD(write_nanos);
+       TEST_SYNC_POINT("WritableFileWriter::Flush:BeforeAppend");
+       // Unbuffered writes must be positional
+-      s = writable_file_->Append(Slice(src, size), write_offset);
++      s = writable_file_->PositionedAppend(Slice(src, size), write_offset);
+       if (!s.ok()) {
+         buf_.SetSize(file_advance + leftover_tail);
+         return s;
+@@ -458,8 +458,9 @@ class ReadaheadRandomAccessFile : public RandomAccessFile {
+
+ std::unique_ptr<RandomAccessFile> NewReadaheadRandomAccessFile(
+     std::unique_ptr<RandomAccessFile>&& file, size_t readahead_size) {
+-  return std::make_unique<ReadaheadRandomAccessFile> (
+-     std::move(file), readahead_size);
++  std::unique_ptr<RandomAccessFile> ret(
++      new ReadaheadRandomAccessFile(std::move(file), readahead_size));
++  return std::move(ret);
+ }
+
+ }  // namespace rocksdb
+```
+
+With the change I posted in the previous comment, it can build and pass all the tests on my dev host.
+
+The pull request looks great to me! My only comments are 
+1. fix Linux build by renaming the new Append() to something else to fix building on my GCC
+2. avoid make_unique()
+3 .fix some accessor and mutator functions' names.
+And we are almost ready to go.
+
+@siying So everything is done according to the check list and some. But we have those two tests failing. You mentioned that @igorcanadi is investigating. Is it a known issue or this is something new? I had it popped up when I merged the latest from the master.
+
+https://reviews.facebook.net/D46773 is fixing ColumnFamilyTest.ReadDroppedColumnFamily, so don't worry about it.
+
+What's the other test failure?
+
+Let me try on my host and see whether tests pass too in the mean time.
+
+@siying I am seeing:
+[ RUN      ] TransactionTest.TimeoutTest
+`c:\dev\rocksdb\rocksdb\utilities\transactions\transaction_test.cc(1523): error: s`
+Operation timed out: Timeout waiting to lock key
+
+@yuslepukhin  the test passes on my host, so I'm not too worry about it. I'll take another look at the patch while I'm running test suites on my own host. If it works, I'll just merge it. Maybe @agiardullo can take a look at the failing transaction test.
+
+I'm merging as all unit tests pass on my host. I don't worry too much about Travis CI build for now as it is recently not stable even in master.
+

@@ -1,0 +1,18 @@
+- conversion from 'size_t' to 'type', by add static_cast
+- extend type from int to int64_t
+
+Tested:
+- by build solution on Windows, Linux locally,
+- run tests
+
+@Vaisman Thanks for helping out. I will look at it. I have these changes in my private branch as well unpublished because of another PR pending which is not currently reviewed.
+@siying @igorcanadi Do you have any objections to this and  https://github.com/facebook/rocksdb/pull/846 requests. I realize these might be too many changes but these two appear to be important for the correct functionality on Windows.
+
+@Vaisman Please, run both db_test and individual tests. Recommend setting gflags /i <image> +vrf
+
+@yuslepukhin Thanks for your comments,  I''l fix it.
+
+Can somebody review?
+
+@Vaisman @siying This looks good to me as far as I can see.
+

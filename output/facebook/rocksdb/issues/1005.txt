@@ -1,0 +1,16 @@
+https://github.com/facebook/rocksdb/blob/master/Makefile#L1065
+
+`*.h => "*.h"`
+
+```
+    for header in `find "include/rocksdb" -type f -name *.h`; do \
+        install -C -m 644 $$header $(INSTALL_PATH)/$$header; \
+    done
+```
+
+@bjne I am not a bash expert, however I think you are saying the problem is that the expansion of `*.h` would be done by `bash` and not `find`. I remember in the past being told that one should use `\*.h`, how does that compare to your suggestion of `"*.h"`?
+
+That is correct, shell could be expanding unescaped *
+
+I think either is fine, needs testing tho.
+

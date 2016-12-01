@@ -1,0 +1,23 @@
+My rocksdb version is 3.2 and OS is rhel6.5 on ppc64. make check has the following error messages:
+
+for t in db_test block_hash_index_test autovector_test column_family_test table_
+properties_collector_test arena_test auto_roll_logger_test benchharness_test blo
+ck_test bloom_test dynamic_bloom_test c_test cache_test coding_test corruption_t
+est crc32c_test dbformat_test env_test blob_store_test filelock_test filename_te
+st filter_block_test histogram_test log_test manual_compaction_test memenv_test
+merge_test redis_test reduce_levels_test plain_table_db_test prefix_test simple_
+table_db_test skiplist_test stringappend_test ttl_test backupable_db_test versio
+n_edit_test version_set_test file_indexer_test write_batch_test deletefile_test
+table_test thread_local_test geodb_test; do echo "****\* Running $t"; ./$t || exi
+t 1; done
+****\* Running db_test
+./db_test: /usr/lib64/libstdc++.so.6: version `GLIBCXX_3.4.18' not found (required by ./db_test)
+./db_test: /usr/lib64/libstdc++.so.6: version`GLIBCXX_3.4.14' not found (required by ./db_test)
+./db_test: /usr/lib64/libstdc++.so.6: version `CXXABI_1.3.5' not found (required by ./db_test)
+./db_test: /usr/lib64/libstdc++.so.6: version`GLIBCXX_3.4.15' not found (required by ./db_test)
+make: **\* [check] Error 1
+
+I think the problem was caused by my configuration mistake: export LD_LIBRARY_PATH=/usr/lib64:/usr/lib.
+
+The issue is caused by user error
+

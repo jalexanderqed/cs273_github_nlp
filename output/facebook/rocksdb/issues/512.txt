@@ -1,0 +1,65 @@
+Hello;
+
+getting error with the make command with both 3.9.fb and master version .
+
+OS version. ubuntu 12.04.
+
+May you advise if I need to update script for this OS.
+
+Thank You,
+Regards.
+
+~/dev/rocksdb$ make rocksdbjava
+/bin/sh: 1: ~/dev/rocksdb/build_tools/build_detect_platform: not found
+Makefile:36: build_config.mk: No such file or directory
+make: **\* No rule to make target `build_config.mk'.  Stop.
+~/dev/rocksdb/rocksdb$ echo $JAVA_HOME
+/usr/lib/jvm/java-8-oracle/
+
+~/dev/rocksdb$ git branch -v
+- 3.9.fb b506c51 Bump the version to 3.9.1.
+  master b9a0213 build: fix unportable Makefile syntax
+  ~/dev/rocksdb/rocksdb$ git checkout master
+  Switched to branch 'master'
+  ~/dev/rocksdb$ make rocksdbjava
+  /bin/sh: 1:~/rocksdb/build_tools/build_detect_platform: not found
+  Makefile:36: make_config.mk: No such file or directory
+  make: **\* No rule to make target `make_config.mk'.  Stop.
+## 
+
+Osman Sebati Çam
+
+https://twitter.com/osmanscam
+
+I am on a clean Linux Mint 17.1 which is derived from Ubuntu 14.04, and using the following process works for me:
+
+``` bash
+$ sudo apt-get install git g++ automake openjdk-7-jdk curl
+$ export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
+$ git clone https://github.com/facebook/rocksdb.git
+$ cd rocksdb
+$ sudo apt-get install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev
+$ make rocksdbjava
+```
+
+Perhaps that gives you a clue or tells you about something different that you are doing?
+
+Hello;
+
+make rocksdbjava runs successfully with Ubuntu 14.04 
+and it produces the files /java/target/rocksdbjni-3.10.0-linux64.jar
+and /java/target/librocksdbjni-linux64.so .
+
+(However with Ubuntu 12.04 there are issues ...)
+
+Thank you for your help,
+Regards.
+
+@osmanscam Do you need Ubuntu 12.04 support?
+
+@adamretter I do not need support for 12.04. I have decided to go ahead with 14.04. after your comment above. now it seems working, i will continue working with this version.
+
+about 12.04, even tough all related libraries were installed, make rocksdbjava was not working.
+
+@osmanscam Okay well I don't have a Ubuntu 12.04 machine to test on and as it is not a priority for you anymore I will close this, and if someone complains again in future then we can look again...
+

@@ -1,0 +1,4 @@
+I am wondering if even when we set new columns using the column family options, the default column  is still existing on a newly created db, and if we can use it. The doc is not clear about it.
+
+default column family is always there -- you can't delete it
+

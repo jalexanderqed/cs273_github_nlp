@@ -1,0 +1,34 @@
+Changing Java `multiGet` API to return `List<byte[]>` instead of `Map<byte[], byte[]>`. This is for two reasons:
+1. Java arrays implement `equals()` as reference equality instead
+of comparing each value. This means a HashMap should never have an array
+as key, since anyone calling `get()` with a new array key with the exact same contents
+as an existing key will get different results. It happens to work
+currently because the `byte[]` reference is used as it is in the `Map` key.
+But it is a confusing API for the caller because they cannot make this
+assumption.
+2. `List<byte[]>` keeps it close to the native API (which returns
+`byte[][]`). It avoids the perf cost of creating a `Map`. If a caller does
+not need `Map` functionality, the API should not force it unnecessarily,
+especially in perf-critical use cases.
+
+Ideally, the existing method should be deprecated and the new one added.
+But that would require creating a new method name. multiGet is the best
+name for this method. So I am trying to avoid changing it. This should
+be a simple change for the clients to make, so as long as the major version
+is bumped up, it should be ok to break backwards compatibility. Please suggest
+if you think there are better ways to do this. I am not familiar with the rocksdb
+versioning protocol.
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+**If you are contributing on behalf of someone else (eg your employer)**: the individual CLA is not sufficient - use https://developers.facebook.com/opensource/cla?type=company instead. Contact cla@fb.com if you have any questions.
+@hshankar I agree that it is desirable to avoid the overhead of constructing a `Map`, when it is not required. We could also just consider returning `byte[][]` instead of `List<byte[]>`, although there is little overhead in this instance when using `Arrays.asList`.
+
+Ideally I would like it if we could avoid breaking backwards compatibility here. However, I also have some sympathy for wanting to use the best method name.
+
+Perhaps there is a compromise, we could keep the existing method that returns a `Map`, but rename it to something like `multiGetAsMap` (or something better), add your new method (named as `multiGet`) with javadoc also indicating that the old behaviour was renamed to `multiGetAsMap`, and update the javadoc for the `multiGetAsMap` politely suggesting to users that they use the newer `multiGet` if they don't require map lookup.
+Whilst we might break the backwards compatible compile, it is then just a small change for the user to fix that (assuming they read the javadocs).
+
+
+@adamretter Thanks for taking a look. Having a separate method for the old use case sounds reasonable. I am not convinced about the cost of maintaining that method, tests etc. though. If the caller is going to make changes anyway, it is trivial to write a method to convert the `List` into `Map`. Giving an alternate method would just prolong the inevitable, and I think most users would just prefer to migrate right away anyway.
+
+Regarding `List<byte[]>` vs `byte[][]`, I originally used `byte[][]`, but then the API takes List as input param, so it kind of makes sense that it return a `List`. Then I looked up the cost of converting it to List and it seems negligible (although non-zero), so decided to go with it. It seemed like a good compromise between keeping it close to the native API, and doing it the "Java" way :). Let me know what do you think.

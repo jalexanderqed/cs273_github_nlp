@@ -1,0 +1,10 @@
+   Remove conditional compilation as we no longer build tests in Release
+   Previously windows build attempted to build tests in Release
+   which led and continues to lead to failures. We no longer
+   build test only code in Release builds so #ifdefs are no longer
+   necessary.
+
+Yay for less ifdefs!
+
+BTW it looks like this PR also contains other unrelated code. Can you please submit a PR that only removes the conditionals?
+

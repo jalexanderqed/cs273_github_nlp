@@ -1,0 +1,23 @@
+This set of changes allows RocksDB to be compiled as a "unity build" (http://buffered.io/posts/the-magic-of-unity-builds/). I realize that this is an odd use-case: we inline the entire rocksdb repository within our own respotory using `git subtree` (http://blogs.atlassian.com/2013/05/alternatives-to-git-submodule-git-subtree/). But the RocksDB sources only needed very minor cosmetic changes. Mostly eliminating duplicate symbols in different translation units. And also, moving some identifiers out of anonymous namespaces to prevent compilation warnings when those symbols appear as data members of classes in non-anonymous namespaces.
+
+Here's the source file used to compile RocksDB as a unity build:
+https://github.com/ripple/rippled/blob/develop/src/ripple/unity/rocksdb.cpp
+
+Once this patch gets committed, how do you plan to ensure that new patches do not break the unity build? Do you plan to setup some open-source build process that  builds rocksdb nightly and posts the results to this group?
+
+Well every time we update our RocksDB subtree I would fix the errors and submit a new pull request. This might not happen with every commit in the upstream though. If you wanted that, then we should consider adding a target to the RocksDB build that compiles the unity .cpp (which you can add to the RocksDB repository).Of course the unity style build is not what the majority of programmers are used to seeing. But if it's any consolation, it compiles _really fast_. This is a godsend when building from scratch on Travis.
+
+It looks good to me. Can you rebase?
+
+Yes. I had to reshuffle things a bit. Going forward, I believe the best way to ensure support for this style of build is to add a target to the RocksDB build system that compiles a unity .cpp file and checks for errors. It's fairly easy to model one after this:
+https://github.com/ripple/rippled/blob/develop/src/ripple/unity/rocksdb.cpp
+What do you think?
+
+Any word on this? We found some defects in usage of naked pointers in the API (specifically the bloom filter) and we'd like to get some convergence on the diverging branches
+
+@vinniefalco I'm fine with it. You are welcome to improve our makefile file to add a target for it.
+
+I can pull this patch once the conflicts are resolved.
+
+I'm going to close this for now, the merge conflicts are somewhat non-trivial. I'll get to work on a new pull request and then re-submit. Thanks
+

@@ -1,0 +1,22 @@
+If FAIL_ON_WARNINGS is OFF, compilation will succeed if there were compile
+warnings.
+Thank you for your pull request. We require contributors to sign our Contributor License Agreement, and yours has expired.
+
+Before we can review or merge your code, **we need you to email cla@fb.com** with your details so we can update your status.
+
+@vaintroub updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1446/files/6cac0071a7e7a64fea8a12530d31da3e8656fb33..a2596d2af0b0d9a9e29e7a03b3bba4ab34a7c577)
+
+@yiwu-arbug It is OK with me once the builds complete. FYI, I no longer have rights to merge per new FB security policy.
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+@yuslepukhin Thank you for review! Will merge.
+
+@vaintroub Thank you for your contribution.
+
+@yiwu-arbug has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4107825).
+
+@vaintroub Can you rebase the PR so we can merge? Thanks!
+
+@vaintroub updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1446/files/a2596d2af0b0d9a9e29e7a03b3bba4ab34a7c577..49aec67d2755f2cd4f392e196dd001742b44e1de) - [changes since last import](https://github.com/facebook/rocksdb/pull/1446/files/a2596d2af0b0d9a9e29e7a03b3bba4ab34a7c577..49aec67d2755f2cd4f392e196dd001742b44e1de)
+

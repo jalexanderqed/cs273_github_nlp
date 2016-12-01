@@ -1,0 +1,58 @@
+This change is to make wal_filter understand if a given record is applicable to a column_family (since the log record could have been flushed for some column family but not the other, so it may or may not apply to a given column family).
+
+This change contains the following:
+1) Column-family name/number map exposed to wal_filter - this is because this is during open, client doesn't have CF handles yet, and can only understand name.
+2) CF number/lognumber map exposed to wal_filter - so that wal_filter can know if log is applicable to a given column-family.
+3) Providing lognumber with the record to wal_filter callback - so it can check if the given record applies to a column-family.
+
+Not sure the Java related failures in Travis build are related to my change.
+
+Looks good to me.
+
+Build failure:
+
+16:10:52 In file included from db/db_test2.cc:12:0:
+16:10:52 ./include/rocksdb/wal_filter.h: In member function ‘virtual void rocksdb::DBTest2_WalFilterTest_Test::TestBody()’:
+16:10:52 ./include/rocksdb/wal_filter.h:78:31: error: ‘virtual rocksdb::WalFilter::WalProcessingOption rocksdb::WalFilter::LogRecord(long long unsigned int, const string&, const rocksdb::WriteBatch&, rocksdb::WriteBatch_, bool_)’ was hidden [-Werror=overloaded-virtual]
+16:10:52    virtual WalProcessingOption LogRecord(unsigned long long log_number,
+16:10:52                                ^
+16:10:52 db/db_test2.cc:127:33: error:   by ‘virtual rocksdb::WalFilter::WalProcessingOption rocksdb::DBTest2_WalFilterTest_Test::TestBody()::TestWalFilter::LogRecord(const rocksdb::WriteBatch&, rocksdb::WriteBatch_, bool_) const’ [-Werror=overloaded-virtual]
+16:10:52      virtual WalProcessingOption LogRecord(const WriteBatch& batch,
+16:10:52                                  ^
+16:10:52 In file included from db/db_test2.cc:12:0:
+16:10:52 ./include/rocksdb/wal_filter.h: In member function ‘virtual void rocksdb::DBTest2_WalFilterTestWithChangeBatch_Test::TestBody()’:
+16:10:52 ./include/rocksdb/wal_filter.h:78:31: error: ‘virtual rocksdb::WalFilter::WalProcessingOption rocksdb::WalFilter::LogRecord(long long unsigned int, const string&, const rocksdb::WriteBatch&, rocksdb::WriteBatch_, bool_)’ was hidden [-Werror=overloaded-virtual]
+16:10:52    virtual WalProcessingOption LogRecord(unsigned long long log_number,
+16:10:52                                ^
+16:10:52 db/db_test2.cc:323:33: error:   by ‘virtual rocksdb::WalFilter::WalProcessingOption rocksdb::DBTest2_WalFilterTestWithChangeBatch_Test::TestBody()::TestWalFilterWithChangeBatch::LogRecord(const rocksdb::WriteBatch&, rocksdb::WriteBatch_, bool_) const’ [-Werror=overloaded-virtual]
+16:10:52      virtual WalProcessingOption LogRecord(const WriteBatch& batch,
+16:10:52                                  ^
+16:10:52 In file included from db/db_test2.cc:12:0:
+16:10:52 ./include/rocksdb/wal_filter.h: In member function ‘virtual void rocksdb::DBTest2_WalFilterTestWithChangeBatchExtraKeys_Test::TestBody()’:
+16:10:52 ./include/rocksdb/wal_filter.h:78:31: error: ‘virtual rocksdb::WalFilter::WalProcessingOption rocksdb::WalFilter::LogRecord(long long unsigned int, const string&, const rocksdb::WriteBatch&, rocksdb::WriteBatch_, bool_)’ was hidden [-Werror=overloaded-virtual]
+16:10:52    virtual WalProcessingOption LogRecord(unsigned long long log_number,
+16:10:52                                ^
+16:10:52 db/db_test2.cc:422:33: error:   by ‘virtual rocksdb::WalFilter::WalProcessingOption rocksdb::DBTest2_WalFilterTestWithChangeBatchExtraKeys_Test::TestBody()::TestWalFilterWithChangeBatchAddExtraKeys::LogRecord(const rocksdb::WriteBatch&, rocksdb::WriteBatch_, bool_) const’ [-Werror=overloaded-virtual]
+16:10:52      virtual WalProcessingOption LogRecord(const WriteBatch& batch,
+16:10:52                                  ^
+16:10:52 In file included from db/db_test2.cc:12:0:
+16:10:52 ./include/rocksdb/wal_filter.h: In member function ‘virtual void rocksdb::DBTest2_WalFilterTestWithColumnFamilies_Test::TestBody()’:
+16:10:52 ./include/rocksdb/wal_filter.h:89:31: error: ‘virtual rocksdb::WalFilter::WalProcessingOption rocksdb::WalFilter::LogRecord(const rocksdb::WriteBatch&, rocksdb::WriteBatch_, bool_) const’ was hidden [-Werror=overloaded-virtual]
+16:10:52    virtual WalProcessingOption LogRecord(const WriteBatch& batch,
+16:10:52                                ^
+16:10:52 db/db_test2.cc:505:33: error:   by ‘virtual rocksdb::WalFilter::WalProcessingOption rocksdb::DBTest2_WalFilterTestWithColumnFamilies_Test::TestBody()::TestWalFilterWithColumnFamilies::LogRecord(long long unsigned int, const string&, const rocksdb::WriteBatch&, rocksdb::WriteBatch_, bool_)’ [-Werror=overloaded-virtual]
+16:10:52      virtual WalProcessingOption LogRecord(unsigned long long log_number,
+16:10:52                                  ^
+
+Can you fix it?
+
+Fixing it. Will PR momentarily.
+
+Pull request 1047 for the fix. Thanks and sorry for the break.
+
+@PraveenSinghRao thanks for your fix! We run different CI internally and in Travis, which causes confusion. We also run more intensive CI test internally. So it's common that we report issues after checking in data.
+
+No problem @siying. I imagined a stricter check internally which failed :).
+
+We have lint/valgrind equivalents too internally but haven't had a chance to integrate those with our rocksdb repo. Once we do that, fewer issues should leak out to you.
+

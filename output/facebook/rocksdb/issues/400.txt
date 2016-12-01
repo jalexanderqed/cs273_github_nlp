@@ -1,0 +1,21 @@
+i exec "make rocksdbjava" command,but in the end an error has occurred.the error is : 
+
+/usr/bin/ld: db/builder.o: relocation R_X86_64_32 against `.rodata' can not be used when making a shared object; recompile with -fPIC
+db/builder.o: could not read symbols: Bat value
+collect2: error：ld return 1
+make: **\* [rocksdbjava] error 1
+
+i use centos7 x64
+
+@haochun g++ 4.9 is as far as i know not yet supported. I suppose you use 4.9 ?
+
+@fyrz  my g++ version is 4.8.2.do you know how to solve this problem?
+
+@haochun i noticed the same problem once in travis-ci when compiling another make target beforehand. Did you try `make clean jclean` beforehand ?
+
+@fyrz it works ,thanks you very much
+
+@haochun can you close this one :-) ?
+
+@fyrz i forget,i am sorry
+

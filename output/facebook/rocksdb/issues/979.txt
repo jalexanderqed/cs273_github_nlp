@@ -1,0 +1,6 @@
+@igorcanadi @siying @jamesgpearce - updated the licenses to reflect the new format found in our dex. PM me for the link.
+The new style is: Copyright (c) 20xx-present, Facebook, Inc.
+Where 20xx represents the project start year.
+
+@bhamodi, are you sure that "present" will not be interpreted as being an unenforceable notification?
+

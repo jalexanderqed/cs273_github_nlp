@@ -1,0 +1,8 @@
+See https://github.com/facebook/rocksdb/issues/813
+
+Am currently putting this on-hold until we have clear need.  More discussion can be found in issue #813.
+
+ping @yhchiang 
+
+LGTM.  Thanks for the fix!
+

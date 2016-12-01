@@ -1,0 +1,91 @@
+Hi,
+
+I'm running 8 different processes on one box, sharing the same SSD. Every process has one rocksdb instance.
+I found out many slow put operations in these rocksdb instances, almost happened at the same time.
+
+```
+process timestamp proc_time(us)
+5575 16:00:38.823 169878
+5579 16:00:38.823 168830
+5573 16:00:38.823 157049
+5578 16:00:38.823 166701
+5574 16:00:38.823 168724
+5580 16:00:38.823 169366
+5577 16:00:38.823 170997
+5576 16:00:38.824 171616
+5564 16:00:40.994 166867
+5561 16:00:40.994 140321
+5559 16:00:40.994 163448
+5560 16:00:40.994 167488
+```
+
+Then I went deeper into perf_context and rocksdb codes.
+
+```
+2014/10/13-17:49:57.461943 7faa1cbfd700 PosixWritableFile::Flush write slow. cost: 148485 us
+2014-10-13 17:49:57.462022 7faa1cbfd700 slow perf. write, cost 148534 us, user_key_comparison_count = 16, block_cache_hit_count = 0, block_read_count = 0, block_read_byte = 0, block_read_time = 0, block_checksum_time = 0, block_decompress_time = 0, internal_key_skipped_count = 0, internal_delete_skipped_count = 0, write_wal_time = 148506786, get_snapshot_time = 0, get_from_memtable_time = 0, get_from_memtable_count = 0, get_post_process_time = 0, get_from_output_files_time = 0, seek_child_seek_time = 0, seek_child_seek_count = 0, seek_min_heap_time = 0, seek_internal_seek_time = 0, find_next_user_entry_time = 0, write_pre_and_post_process_time = 7787, write_memtable_time = 17639,
+
+2014/10/13-17:51:11.473171 7faa1cbfd700 PosixWritableFile::Append PrepareWrite slow. cost: 563977 us
+2014/10/13-17:51:11.473185 7faa1cbfd700 PosixWritableFile::Append slow. cost: 563991 us
+2014-10-13 17:51:11.473279 7faa1cbfd700 slow perf. write, cost 564045 us, user_key_comparison_count = 25, block_cache_hit_count = 0, block_read_count = 0, block_read_byte = 0, block_read_time = 0, block_checksum_time = 0, block_decompress_time = 0, internal_key_skipped_count = 0, internal_delete_skipped_count = 0, write_wal_time = 564013846, get_snapshot_time = 0, get_from_memtable_time = 0, get_from_memtable_count = 0, get_post_process_time = 0, get_from_output_files_time = 0, seek_child_seek_time = 0, seek_child_seek_count = 0, seek_min_heap_time = 0, seek_internal_seek_time = 0, find_next_user_entry_time = 0, write_pre_and_post_process_time = 4745, write_memtable_time = 24159,
+```
+
+According to the perf log, write_wal_time was significant large. It was affected by PrepareWrite() in PosixWritableFile::Append() or write() in PosixWritableFile::Flush(). Meanwhile, io util of the SSD was a little bit high for some while, because of background flush or compaction.
+
+Because different processes slowed at the exact same time, the disk I/O should be the issue.
+
+I guess, 
+1) write may be stalled if dirty page size is too large. But actually, dirty page size was under a low level. Is there any other reason may stall write operation? i.e. fdatasync?
+2) Does fallocate slow under heavy workload?
+
+Any suggestions to tuning this?
+
+Thanks in advance.
+
+This is a high-quality question @allenlz, thanks. :)
+
+1) We do fdatasync() after every sst file flush. By default, we don't sync the WAL, unless you speficy WriteOptions::sync to be true. Do you sync on every write?
+2) Does your kernel support fallocate? If it doesn't glibc will fall back to posix_fallocate, which will just write zeros to a file. In any case, I think fallocate needs to do disk I/O, so it's normal for it to be slower during heavy workloads.
+
+It might be good to record stack traces of the system during the heavy workload. That will tell us if the bottleneck is disk, kernel or rocksdb. `perf record -ag` will do that. Are you familiar with perf events?
+
+Also, check out our rate_limiter option. There is no blog post on it yet, but what it does is limit flush and compaction I/O rates. That way, foreground operations are not slowed down as much during flush or compaction.
+
+Thanks for quick reply. You guys are alway so nice and helpful.
+
+Here's my setup: rocksdb 3.3, Linux, rate_limiter enabled, no WriteOptions::sync.
+
+`perf` is good advice. I tried perf with "block:*" events. Unfortunately, `perf report` failed with "floating exception", if samples collected more than several seconds.
+
+I also tried two modifications, and measured the slow log numbers between different machines.
+1) set disableDataSync to false. This did some improvement, but not significant.
+2) set bytes_per_sync to 2MB. This improvement is significant.
+After that, I added another setup with bytes_per_sync set to 10MB. The abtest is still running. I'm going to review the result tomorrow.
+
+BTW, I disable the fallocate for WAL in rocksdb by hard coding.
+I wonder, if using SSD device, do we need to fallocate a zero space to result in less fragmentation? Correct me If I'm wrong.
+
+After modification methioned above, we push our new version into production. It ran well and the number of slow set query is decreased. ^_^
+
+However, I found another case:
+
+```
+Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
+sde               0.00    54.00 1828.00   42.00 133564.00 10500.00   154.08    29.10    0.59    0.57    1.62   0.53 100.00
+sde               0.00     0.00 1715.00    0.00 135336.00     0.00   157.83    28.94    0.55    0.55    0.00   0.58 100.00
+sde               1.00     0.00 1763.00   24.00 135304.00  6684.00   158.91    10.71   31.52    0.51 2309.33   0.56 100.40
+```
+
+As you can see, IO util remains 100% for some seconds, and it related to high reads or high read bytes/second. At that point, we found a lot of slow set queries.
+BTW, the write rate limit is set to 15MB/s.
+
+I'm trying to find some method to limit the read rate.
+
+Any suggestions? Thanks.
+
+Hey @allenlz. Sorry for the delay, feel free to ping us next time. :)
+
+Limiting write_rate using Options::rate_limiter should also limit the read_rate (done by compaction). Can you limit the read_rate from the application side?
+
+Hey @allenlz. I'm closing this issue since it looks like you got it working on your end. Please let us know if you have any other questions.
+

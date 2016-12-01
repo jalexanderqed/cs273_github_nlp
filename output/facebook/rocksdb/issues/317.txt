@@ -1,0 +1,116 @@
+Happens on 3.5 as well as master (works fine without -DROCKSB_LITE).
+I compiled rocksdbjava with:
+
+``` diff
+-   OPT="-fPIC -DNDEBUG -O2" $(MAKE) $(LIBRARY) -j32
++   OPT="-fPIC -DNDEBUG -O2 -DROCKSDB_LITE" $(MAKE) $(LIBRARY) -j32
+```
+
+Here's the dump
+
+```
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  SIGSEGV (0xb) at pc=0x00007f080bb705d6, pid=23118, tid=139672858359552
+#
+# JRE version: Java(TM) SE Runtime Environment (7.0_67-b01) (build 1.7.0_67-b01)
+# Java VM: Java HotSpot(TM) 64-Bit Server VM (24.65-b04 mixed mode linux-amd64 compressed oops)
+# Problematic frame:
+# C  [liblrocksdb.so+0xaf5d6]  rocksdb::Version::AddIterators(rocksdb::ReadOptions const&, rocksdb::EnvOptions const&, rocksdb::MergeIteratorBuilder*)+0x26
+```
+
+liblrocksdb.so embeds librocksdb.a and a small jni impl.
+It has no problems when running with regular rocksdb.
+
+Hello @dyu, thanks for reporting this issue.  Can I first get the piece of code that can produce the error you mentioned if you don't mind sharing?
+
+I'll have to extract it to something self-contained.
+Commenting out line 618 of db/version_set.cc prevents the segfault (all my unit tests pass as well).
+Not a solution though as I think that is needed for L1 compactions.
+
+Just curious, any reason you're building with ROCKSDB_LITE?
+
+I don't need the other features.  I'm targetting rocksdb because of prefix-hash, to minimize read-amp.
+Comparatively here are the size differences for the .so files:
+rocksb: 32M
+rocksdb-lite: 19M
+hyperleveldb: 4.1M
+leveldb: 576k
+
+I've been using hyperleveldb before I noticed the prefix-hash from a benchmark in which rocksdb performed well on random reads.
+
+ROCKSDB_LITE is an experimental feature and I wouldn't recommend running it in any production. If you compile the library using ROCKSDB_LITE you need to compile all source files that are using the library also with ROCKSDB_LITE. Otherwise, you will see segmentation faults like you do.
+
+If you want to reduce the size of the binary, can you try stripping? Stripping the library brings it down to 2MB on my machine.
+
+On Thu, Oct 2, 2014 at 1:33 AM, Igor Canadi notifications@github.com
+wrote:
+
+> ROCKSDB_LITE is an experimental feature and I wouldn't recommend running
+> it in any production. If you compile the library using ROCKSDB_LITE you
+> need to compile all source files that are using the library also with
+> ROCKSDB_LITE. Otherwise, you will see segmentation faults like you do.
+> 
+> If you want to reduce the size of the binary, can you try stripping?
+> 
+> What are the commands to do that? (not a cpp expert)
+> 
+> Stripping the library brings it down to 2MB on my machine.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/317#issuecomment-57504038.
+
+## 
+
+When the cat is away, the mouse is alone.
+- David Yu
+
+strip librocksdb.so
+
+On Thu, Oct 2, 2014 at 1:33 AM, Igor Canadi notifications@github.com
+wrote:
+
+> ROCKSDB_LITE is an experimental feature and I wouldn't recommend running
+> it in any production. If you compile the library using ROCKSDB_LITE you
+> need to compile all source files that are using the library also with
+> ROCKSDB_LITE.
+> 
+> Yep I did that.  I added -DROCKSDB_LITE when compiling the source files
+> using the lib.
+> 
+> Otherwise, you will see segmentation faults like you do.
+> 
+> If you want to reduce the size of the binary, can you try stripping?
+> Stripping the library brings it down to 2MB on my machine.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/317#issuecomment-57504038.
+
+## 
+
+When the cat is away, the mouse is alone.
+- David Yu
+
+On Thu, Oct 2, 2014 at 2:11 AM, Igor Canadi notifications@github.com
+wrote:
+
+> strip librocksdb.so
+> 
+> It's now down to 2.2M (gcc-4.7).  And it works, thanks!
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/317#issuecomment-57509795.
+
+## 
+
+When the cat is away, the mouse is alone.
+- David Yu
+
+Great!
+
+Note that I meant it works with rocksdb.  With rocksdb-lite it still segfaults.  There is still a bug in there with the ROCKSDB_LITE ifdefs/preprocessors.
+

@@ -1,0 +1,27 @@
+Summary:
+Add avoid_flush_during_shutdown DB option.
+
+Test Plan:
+See the new unit test.
+cc @benrnd 
+
+@yiwu-arbug has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4108643).
+
+@yiwu-arbug has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4108643).
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1451/files/aa60cbff7c80d0fe6a34099277c4254ca48830e7..47da936f240fdf74e16a1c824cb7d92363441967) - [changes since last import](https://github.com/facebook/rocksdb/pull/1451/files/aa60cbff7c80d0fe6a34099277c4254ca48830e7..47da936f240fdf74e16a1c824cb7d92363441967)
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1451/files/47da936f240fdf74e16a1c824cb7d92363441967..aeee7d59c1885cf2bf0a8438114ca1c58b44abd4) - [changes since last import](https://github.com/facebook/rocksdb/pull/1451/files/aa60cbff7c80d0fe6a34099277c4254ca48830e7..aeee7d59c1885cf2bf0a8438114ca1c58b44abd4)
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1451/files/aeee7d59c1885cf2bf0a8438114ca1c58b44abd4..f75bb198a68b19b2bb496bf52336970254899428) - [changes since last import](https://github.com/facebook/rocksdb/pull/1451/files/aa60cbff7c80d0fe6a34099277c4254ca48830e7..f75bb198a68b19b2bb496bf52336970254899428)
+
+Comment updated. @ajkr any more comments?
+
+Rebase.
+
+@yiwu-arbug updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1451/files/f75bb198a68b19b2bb496bf52336970254899428..95c138077637ca9c3c6dadc24e61415f310fd449) - [changes since last import](https://github.com/facebook/rocksdb/pull/1451/files/aa60cbff7c80d0fe6a34099277c4254ca48830e7..95c138077637ca9c3c6dadc24e61415f310fd449)
+
+ping @siying @ajkr 
+
+Approved. Please merge after all tests pass.
+

@@ -1,0 +1,4 @@
+This pull requests adds manual range compaction support to Java API.
+
+Differential: https://reviews.facebook.net/D29283
+

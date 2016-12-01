@@ -1,0 +1,8 @@
+If I iterate a database is it guaranteed that there will be no duplicate keys?
+
+Yes.
+
+@vinniefalco RocksDB doesn't allow duplicate keys. Put() will overwrite existing value with the same key. Iterators are supposed to return what DB has, so you shouldn't see a duplicated key.
+
+Thanks
+

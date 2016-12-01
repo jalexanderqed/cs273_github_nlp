@@ -1,0 +1,7 @@
+  db_stress now runs on Windows
+  Redo some calculations without double, often not needed
+
+@siying Pls, review this and then I can try squashing the commits into one.
+
+Will close and resumbit anew
+

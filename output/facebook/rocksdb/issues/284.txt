@@ -1,0 +1,38 @@
+Hi,
+
+Seeing this error during make:
+
+In file included from db/write_controller.cc:6:0:
+./db/write_controller.h:65:3: error: looser throw specifier for 'virtual rocksdb::StopWriteToken::~StopWriteToken()'
+./db/write_controller.h:50:11: error:   overriding 'virtual rocksdb::WriteControllerToken::~WriteControllerToken() noexcept (true)'
+./db/write_controller.h:72:3: error: looser throw specifier for 'virtual rocksdb::DelayWriteToken::~DelayWriteToken()'
+./db/write_controller.h:50:11: error:   overriding 'virtual rocksdb::WriteControllerToken::~WriteControllerToken() noexcept (true)'
+
+Verified it on Mac OSX and Linux. Can someone please take a look if some recent commit has broken the build?
+
+I can't reproduce, but hopefully got it fixed with https://github.com/facebook/rocksdb/commit/04ce1b25f3d7623c62cd5771cd8391d02da7e31a. Can you please confirm?
+
+Thanks! Commit fixed the issue but now got one more build error:
+
+**Linux**:
+util/bloom.cc: In member function ‘virtual rocksdb::Slice rocksdb::{anonymous}::FullFilterBitsBuilder::Finish(std::unique_ptr<const char []>_)’:
+util/bloom.cc:70:20: error: use of deleted function ‘void std::unique_ptr<_Tp [], _Dp>::reset(_Up) [with _Up = char_; _Tp = const char; _Dp = std::default_delete<const char []>]’
+In file included from /opt/rh/devtoolset-1.1/root/usr/lib/gcc/x86_64-redhat-linux/4.7.2/../../../../include/c++/4.7.2/memory:86:0,
+                 from ./include/rocksdb/filter_policy.h:24,
+                 from util/bloom.cc:10:
+
+**Mac**:
+util/bloom.cc: In member function 'virtual rocksdb::Slice rocksdb::{anonymous}::FullFilterBitsBuilder::Finish(std::unique_ptr<const char []>_)':
+util/bloom.cc:70:20: error: use of deleted function 'void std::unique_ptr<_Tp [], _Dp>::reset(_Up) [with _Up = char_; _Tp = const char; _Dp = std::default_delete<const char []>]'
+In file included from /opt/local/include/gcc47/c++/memory:86:0,
+                 from ./include/rocksdb/filter_policy.h:24,
+                 from util/bloom.cc:10:
+
+Hmm. Which compiler do you use? I don't understand why my compiler doesn't catch this.
+
+https://reviews.facebook.net/D23409
+
+@ankgup87 does it work now? 
+
+Apologies for replaying late. It works now. Thanks a ton! :+1: 
+

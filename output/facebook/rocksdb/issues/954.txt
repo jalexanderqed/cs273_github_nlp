@@ -1,0 +1,14 @@
+Minor changes to rocksdb to allow it to build on solaris with gcc49.
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Withdraw as build problem with windows
+
+Clean build on Mac OS X and Linux. Windows issues should now be fixed.
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+@davidbernard appreciate your awesome contribution! I'll merge as soon as the review comments are addressed.
+
+Thank you for your contribution!
+

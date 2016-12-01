@@ -1,0 +1,103 @@
+I've seen many innovations on rocksdb based on leveldb.
+But, there is a _hole_ we can do to improve.
+
+As in skiplist, the internal key packed as:
+{sequence|type|user_key|value}
+
+if one key in skiplist is:
+
+```
+{100|0x01|'key1'|'val1'} -->node0
+```
+
+then, we insert same key with different value:
+
+```
+{101|0x01|'key1'|'val2'} -->node1
+```
+
+So, the same key is in two nodes, when we fall in the 'hot' function 'DBIter::FindNextUserEntryInternal', we have to do as follows:
+
+```
+if (ParseKey(&ikey) && ikey.sequence <= sequence_) {
+      if (skipping &&
+          user_comparator_->Compare(ikey.user_key, saved_key_.GetKey()) <= 0) {
+```
+
+if we changed the node structure from:
+
+```
+struct node {
+   Key key;
+}
+```
+
+to
+
+```
+struct node {
+   Key keys[];
+}
+```
+
+We don't need to do user_comparator_->Compare.
+The 'iter->next' means that i am a 'restart'&'difference' key.
+
+The OK version is here:
+https://github.com/shuttler/nessDB/blob/master/engine/skiplist.h
+https://github.com/shuttler/nessDB/blob/master/engine/skiplist.c
+
+-BohuTANG
+
+I had posted this earlier here:
+https://www.facebook.com/groups/rocksdb.dev/permalink/566664156765436/
+and people thought that this could be a good thing to do.
+
+If you could provide a diff (or a pull request) against the rocksdb code base, that will be a great step to get it reviewed and committed.
+
+The optimization would make sense when a workload inserts the same key multiple times within a relatively short period of time. 
+
+I just realized a problem with this approach -- DBIter is also used on top of table files, not only memtables. I don't think this is fixable.
+
+@dhruba 
+yeah, that was my old&simple version to levelDB group.
+
+@igorcanadi 
+the 'better' way is to reserve the first bit of key packed buffer for multi flag.
+
+shuttler: your observation is good. If you can provide a patch (after incorporating a fix for the problem mentioned by Igor), that would be great.
+
+@dhruba 
+Cool.
+If we use an array, another problem is that since skiplist is read lock-free, we need to add a write lock on the array, or else, it's a tough job.
+Any ideas?
+
+@igorcanadi 
+
+As you mentioned:
+https://github.com/rescrv/HyperLevelDB/commit/f6fa561a775c7006c38126dc7ca963975ce8248b
+
+But I guess there is no(or a bit) affects with this patch.
+If your compare functions  as:
+
+```
+    uint32_t minlen = a->size < b->size ? a->size : b->size;
+    r = memcmp(a->data, b->data, minlen);
+    if (r == 0)
+        return (a->size - b->size);
+```
+
+that is fast enough, because 'memcmp'(glibc) internal is blocks compare.
+
+this is an interesting idea. I feel the improvement will come from a very specific workload. I'd expect majority of keys will be unique in the memtable?
+
+@ljinfb 
+No matter what the unique majority is, we don't need  'user_comparator_->Compare' here,
+just to go next, because we're pretty sure the next entry is an restart key.
+
+ljinfb: are you saying that this problem is fixed and we do not need this patch?
+
+@dhruba no, it is not fixed. His patch (link does not seem to work, based on my guess) only applies to skiplist. If we try to remove that compare in DBIter, the same thing needs to be fixed in all memtable formats as well as SSTs. I am not sure if that is possible 
+
+Closing this issue due to inactivity. @BohuTANG if you could provide a pull request and show performance improvements, we will gladly merge it into our source tree.
+

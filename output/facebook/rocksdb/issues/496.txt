@@ -1,0 +1,84 @@
+My compilation of rocksdb is failing with following errrors:
+
+/home/storagevisor/rocksdb/librocksdb.a(format.o): In function `BZip2_Uncompress':
+/home/storagevisor/rocksdb/./port/port_posix.h:374: undefined reference to`BZ2_bzDecompressInit'
+/home/storagevisor/rocksdb/./port/port_posix.h:393: undefined reference to `BZ2_bzDecompress'
+/home/storagevisor/rocksdb/./port/port_posix.h:412: undefined reference to`BZ2_bzDecompressEnd'
+/home/storagevisor/rocksdb/./port/port_posix.h:418: undefined reference to `BZ2_bzDecompressEnd'
+/home/storagevisor/rocksdb/librocksdb.a(block_based_table_builder.o): In function`BZip2_Compress':
+/home/storagevisor/rocksdb/./port/port_posix.h:321: undefined reference to `BZ2_bzCompressInit'
+/home/storagevisor/rocksdb/./port/port_posix.h:340: undefined reference to`BZ2_bzCompress'
+/home/storagevisor/rocksdb/./port/port_posix.h:356: undefined reference to `BZ2_bzCompressEnd'
+/home/storagevisor/rocksdb/./port/port_posix.h:362: undefined reference to`BZ2_bzCompressEnd'
+
+I tried adding -lrt -lz in my LIBS. It used to work but started failing again. I believe I had just recompiled the static rocksdb library when I started seeing these failures again.
+
+Those are for libbz2 (bzip2). This might install it -- 'sudo apt-cache
+install bzip2'
+
+On Wed, Feb 4, 2015 at 8:10 AM, sameermahajan notifications@github.com
+wrote:
+
+> My compilation of rocksdb is failing with following errrors:
+> 
+> /home/storagevisor/rocksdb/librocksdb.a(format.o): In function
+> BZip2_Uncompress':
+> /home/storagevisor/rocksdb/./port/port_posix.h:374: undefined reference to
+> BZ2_bzDecompressInit'
+> /home/storagevisor/rocksdb/./port/port_posix.h:393: undefined reference to
+> BZ2_bzDecompress'
+> /home/storagevisor/rocksdb/./port/port_posix.h:412: undefined reference to
+> BZ2_bzDecompressEnd'
+> /home/storagevisor/rocksdb/./port/port_posix.h:418: undefined reference to
+> BZ2_bzDecompressEnd'
+> /home/storagevisor/rocksdb/librocksdb.a(block_based_table_builder.o): In
+> functionBZip2_Compress':
+> /home/storagevisor/rocksdb/./port/port_posix.h:321: undefined reference to
+> BZ2_bzCompressInit'
+> /home/storagevisor/rocksdb/./port/port_posix.h:340: undefined reference to
+> BZ2_bzCompress'
+> /home/storagevisor/rocksdb/./port/port_posix.h:356: undefined reference to
+> BZ2_bzCompressEnd'
+> /home/storagevisor/rocksdb/./port/port_posix.h:362: undefined reference to
+> BZ2_bzCompressEnd'
+> 
+> I tried adding -lrt -lz in my LIBS. It used to work but started failing
+> again. I believe I had just recompiled the static rocksdb library when I
+> started seeing these failures again.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/496.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+This is weird. We don't compile BZ2 support if we detect you don't have BZ2 installed. See here: https://github.com/facebook/rocksdb/blob/master/build_tools/build_detect_platform#L256
+
+Can you post your build output?
+
+My build output is the one given earlier. I added the specific library name
+/usr/lib/x86_64-linux-gnu/libbz2.a after the rockdb library in my makefile
+to make it work for the time being.
+
+On Wed, Feb 4, 2015 at 11:46 PM, Igor Canadi notifications@github.com
+wrote:
+
+> This is weird. We don't compile BZ2 support if we detect you don't have
+> BZ2 installed. See here:
+> https://github.com/facebook/rocksdb/blob/master/build_tools/build_detect_platform#L256
+> 
+> Can you post your build output?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/496#issuecomment-72907608.
+
+I mean full build output.
+
+Some times people need to run "make clean" before building to clean up some of the issues.
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+

@@ -1,0 +1,20 @@
+
+Thanks @yuslepukhin, looks like this change is not compiling on Linux
+What is the motiviation of the changes in options_helper.cc
+
+@IslamAbdelRahman I will take care of this shortly.
+
+The motivation behind the function local static change is make it not to allocate memory. Function local statics are great for addressing the creation/destruction order. However, this is a problem for memory multi tenancy working well. 
+
+Suppose you want to isolate different instances of Rocksdb in memory and for that you make new/delete go to different pools. Can be achieved with Jemalloc too.  
+
+Function local statics present a problem because they may allocate memory in the memory pool that is associated with a specific instance. If that instance is offloaded from a specific node then the memory pool is yanked from under such a static. If reallocation is required then it may be requested when a different db instance operates on a such a static.
+
+There are other changes I made to global facilities such as thread local storage, thread-pool and environment which I am not sharing at this point because I cloned them and make use of Windows native thread-pool. This change is very small so I though I would push it into the common code.
+
+However, it is working.
+
+@IslamAbdelRahman If you agree I will merge it. The failure seems to be timeout related.
+
+Thanks @yuslepukhin 
+

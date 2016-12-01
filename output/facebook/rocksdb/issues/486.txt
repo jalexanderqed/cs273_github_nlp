@@ -1,0 +1,26 @@
+Rebased upon request https://github.com/facebook/rocksdb/pull/485
+
+---
+
+This is a BW-Tree implementation of Memtable for RocksDB.
+It was done as part of Facebook Open Academy.
+The original paper by Microsoft Research can be viewed at http://research.microsoft.com/pubs/178758/bw-tree-icde2013-final.pdf
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+Can you elaborate on this comment from btree.h? What requires external synchronization? I haven't read the paper recently but I thought the BW-tree was lock free so N readers and M writers can all run concurrently.
+
++// Writes require external synchronization, most likely a mutex.
++// Reads require a guarantee that the BTree will not be destroyed
++// while the read is in progress.  Apart from that, reads progress
++// without any internal locking or synchronization.(B-link tree)
+
+@YosubShin thank you for contributing to RocksDB! I will take a look at the changes. In the mean time, can you post your benchmark results for discussion?
+
+https://www.dropbox.com/s/vzr5d271jhfpzxd/bwtree-benchmark-report-for-review.pdf?dl=0
+
+@YosubShin good write-up and good results. I have several questions:
+(1) in your experiment, how long are the keys?
+(2) is the read throughput measured using single thread?
+(3) you are using db_bench to test it. Now we have memtablerep_bench just to benchmark mem tables. Can you rerun the tests using it?
+

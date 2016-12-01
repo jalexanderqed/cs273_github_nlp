@@ -1,0 +1,264 @@
+I'm testing RocksDB on iOS and a simple test app is crashing on simple iteration.
+
+```
+std::string kDBPath = "/tmp/rocksdb_simple_example";
+
++(void)internalIterationTest
+{
+    DB* db;
+    Options options;
+
+    // Optimize RocksDB. This is the easiest way to get RocksDB to perform well
+//    options.IncreaseParallelism();
+//    options.OptimizeLevelStyleCompaction();
+    // create the DB if it's not already present
+    options.create_if_missing = true;
+    options.paranoid_checks = true;
+
+    // open DB
+    Status s = DB::Open(options, kDBPath, &db);
+    assert(s.ok());
+
+    // Put key-value
+    s = db->Put(WriteOptions(), "key", "super duper");
+    assert(s.ok());
+    std::string value;
+    // get value
+    s = db->Get(ReadOptions(), "key", &value);
+    assert(s.ok());
+    assert(value == "super duper");
+
+    NSLog(@"value:%s", value.c_str());
+
+    ReadOptions readOptions = ReadOptions();
+    readOptions.fill_cache = false;
+    readOptions.snapshot = db->GetSnapshot();
+
+    rocksdb::Iterator* it = db->NewIterator(readOptions);
+    for (it->SeekToFirst();   // <---- CRASHES HERE
+         it->Valid();
+         it->Next()) {
+        NSLog(@"key:%s value:%s", it->key().ToString().c_str(), it->value().ToString().c_str());
+    }
+
+    assert(it->status().ok()); // Check for any errors found during the scan
+    delete it;
+    db->ReleaseSnapshot(readOptions.snapshot);
+
+    delete db;
+}
+```
+
+Console:
+
+```
+2014-09-30 14:41:19.354 RockyPlay[17407:1056596] value:super duper
+(lldb) <-- crash
+```
+
+Stack trace:
+
+```
+Thread 1Queue : com.apple.main-thread (serial)
+#0  0x0006dc4e in rocksdb::Version::LevelFileNumIterator::key() const ()
+#1  0x00092670 in rocksdb::(anonymous namespace)::TwoLevelIterator::SeekToFirst() ()
+#2  0x0008b1ca in rocksdb::MergingIterator::SeekToFirst() ()
+#3  0x00045590 in rocksdb::DBIter::SeekToFirst() ()
+#4  0x00045ca4 in rocksdb::ArenaWrappedDBIter::SeekToFirst() ()
+#5  0x0000a420 in +[SemiRocksDB internalIterationTest] at ~ ... RockyPlay/SemiRocksDB.mm:102
+```
+
+Debugger
+
+```
+RockyPlay`rocksdb::(anonymous namespace)::TwoLevelIterator::SeekToFirst():
+0x92640:  pushl  %ebp
+0x92641:  movl   %esp, %ebp
+0x92643:  pushl  %esi
+0x92644:  pushl  %eax
+0x92645:  movl   0x8(%ebp), %esi
+0x92648:  movl   0x18(%esi), %eax
+0x9264b:  movl   (%eax), %ecx
+0x9264d:  movl   %eax, (%esp)
+0x92650:  calll  *0xc(%ecx)
+0x92653:  movl   0x18(%esi), %eax
+0x92656:  movl   (%eax), %ecx
+0x92658:  movl   %eax, (%esp)
+0x9265b:  calll  *0x8(%ecx)
+0x9265e:  movb   %al, 0x1c(%esi)
+0x92661:  testb  %al, %al
+0x92663:  je     0x92676                   ; rocksdb::(anonymous namespace)::TwoLevelIterator::SeekToFirst() + 54
+0x92665:  movl   0x18(%esi), %eax
+0x92668:  movl   (%eax), %ecx
+0x9266a:  movl   %eax, (%esp)
+0x9266d:  calll  *0x20(%ecx)
+0x92670:  movl   %edx, 0x24(%esi)   <----- EXC_BAD_ACCESS (code=2, address=0x1d)
+0x92673:  movl   %eax, 0x20(%esi)
+0x92676:  movl   %esi, %ecx
+0x92678:  calll  0x92b40                   ; rocksdb::(anonymous namespace)::TwoLevelIterator::InitDataBlock()
+0x9267d:  movl   0x28(%esi), %eax
+0x92680:  testl  %eax, %eax
+0x92682:  je     0x926af                   ; rocksdb::(anonymous namespace)::TwoLevelIterator::SeekToFirst() + 111
+0x92684:  movl   (%eax), %ecx
+0x92686:  movl   %eax, (%esp)
+0x92689:  calll  *0xc(%ecx)
+0x9268c:  movl   0x28(%esi), %eax
+0x9268f:  movl   (%eax), %ecx
+0x92691:  movl   %eax, (%esp)
+0x92694:  calll  *0x8(%ecx)
+0x92697:  movb   %al, 0x2c(%esi)
+0x9269a:  testb  %al, %al
+0x9269c:  je     0x926af                   ; rocksdb::(anonymous namespace)::TwoLevelIterator::SeekToFirst() + 111
+0x9269e:  movl   0x28(%esi), %eax
+0x926a1:  movl   (%eax), %ecx
+```
+
+I think there are multiple issues with the LITE builds. First, when I clone the current repo and run this:
+
+```
+$ TARGET_OS=IOS make static_lib
+$ cd examples/
+$ make
+$ ./simple_example
+Assertion failed: (s.ok()), function main, file simple_example.cc, line 27.
+Abort trap: 6
+```
+
+Is anyone else seeing this?
+
+You also need to compile simple_example using -DROCKSDB_LITE
+
+Ok, I just tried that. Same error with assertion failed.
+
+```
+$ TARGET_OS=IOS make
+g++  simple_example.cc -osimple_example ../librocksdb.a -I../include -O2 -std=c++11  -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_MACOSX -DIOS_CROSS_COMPILE -DROCKSDB_LITE
+g++  column_families_example.cc -ocolumn_families_example ../librocksdb.a -I../include -O2 -std=c++11  -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_MACOSX -DIOS_CROSS_COMPILE -DROCKSDB_LITE
+$ ./simple_example
+Assertion failed: (s.ok()), function main, file simple_example.cc, line 27.
+Abort trap: 6
+```
+
+I added a bit more debugging:
+
+```
+$ls -lah /tmp/rocksdb_simple_example/
+ls: /tmp/rocksdb_simple_example/: No such file or directory
+
+$./simple_example
+error:IO error: `/tmp/rocksdb_simple_example' exists but is not a directory
+Assertion failed: (s.ok()), function main, file simple_example.cc, line 29.
+Abort trap: 6
+
+$ls -lah /tmp/rocksdb_simple_example/
+total 8
+drwxr-xr-x   3 i     wheel   102B Sep 30 20:17 .
+drwxrwxrwt  19 root  wheel   646B Sep 30 20:17 ..
+-rw-r--r--   1 i     wheel   3.5K Sep 30 20:17 LOG
+
+$cat /tmp/rocksdb_simple_example/LOG
+2014/09/30-20:17:05.917806 7fff7eb7a310 DB SUMMARY
+2014/09/30-20:17:05.918198 7fff7eb7a310 SST files in /tmp/rocksdb_simple_example dir, Total Num: 0, files:
+2014/09/30-20:17:05.918203 7fff7eb7a310 Write Ahead Log file in /tmp/rocksdb_simple_example:
+2014/09/30-20:17:05.918205 7fff7eb7a310          Options.error_if_exists: 0
+2014/09/30-20:17:05.918206 7fff7eb7a310        Options.create_if_missing: 1
+2014/09/30-20:17:05.918208 7fff7eb7a310          Options.paranoid_checks: 1
+2014/09/30-20:17:05.918209 7fff7eb7a310                      Options.env: 0x106608d50
+2014/09/30-20:17:05.918210 7fff7eb7a310                 Options.info_log: 0x7fe5c3c11a30
+2014/09/30-20:17:05.918212 7fff7eb7a310           Options.max_open_files: 5000
+2014/09/30-20:17:05.918213 7fff7eb7a310       Options.max_total_wal_size: 0
+2014/09/30-20:17:05.918214 7fff7eb7a310        Options.disableDataSync: 0
+2014/09/30-20:17:05.918216 7fff7eb7a310              Options.use_fsync: 0
+2014/09/30-20:17:05.918217 7fff7eb7a310      Options.max_log_file_size: 0
+2014/09/30-20:17:05.918218 7fff7eb7a310 Options.max_manifest_file_size: 18446744073709551615
+2014/09/30-20:17:05.918220 7fff7eb7a310      Options.log_file_time_to_roll: 0
+2014/09/30-20:17:05.918221 7fff7eb7a310      Options.keep_log_file_num: 1000
+2014/09/30-20:17:05.918222 7fff7eb7a310        Options.allow_os_buffer: 1
+2014/09/30-20:17:05.918224 7fff7eb7a310       Options.allow_mmap_reads: 0
+2014/09/30-20:17:05.918225 7fff7eb7a310      Options.allow_mmap_writes: 0
+2014/09/30-20:17:05.918226 7fff7eb7a310          Options.create_missing_column_families: 0
+2014/09/30-20:17:05.918227 7fff7eb7a310                              Options.db_log_dir:
+2014/09/30-20:17:05.918229 7fff7eb7a310                                 Options.wal_dir: /tmp/rocksdb_simple_example
+2014/09/30-20:17:05.918230 7fff7eb7a310                Options.table_cache_numshardbits: 4
+2014/09/30-20:17:05.918231 7fff7eb7a310     Options.table_cache_remove_scan_count_limit: 16
+2014/09/30-20:17:05.918233 7fff7eb7a310     Options.delete_obsolete_files_period_micros: 21600000000
+2014/09/30-20:17:05.918234 7fff7eb7a310              Options.max_background_compactions: 15
+2014/09/30-20:17:05.918235 7fff7eb7a310                  Options.max_background_flushes: 1
+2014/09/30-20:17:05.918237 7fff7eb7a310                         Options.WAL_ttl_seconds: 0
+2014/09/30-20:17:05.918238 7fff7eb7a310                       Options.WAL_size_limit_MB: 0
+2014/09/30-20:17:05.918239 7fff7eb7a310             Options.manifest_preallocation_size: 4194304
+2014/09/30-20:17:05.918241 7fff7eb7a310                          Options.allow_os_buffer: 1
+2014/09/30-20:17:05.918242 7fff7eb7a310                         Options.allow_mmap_reads: 0
+2014/09/30-20:17:05.918243 7fff7eb7a310                        Options.allow_mmap_writes: 0
+2014/09/30-20:17:05.918244 7fff7eb7a310                      Options.is_fd_close_on_exec: 1
+2014/09/30-20:17:05.918246 7fff7eb7a310               Options.skip_log_error_on_recovery: 0
+2014/09/30-20:17:05.918247 7fff7eb7a310                    Options.stats_dump_period_sec: 3600
+2014/09/30-20:17:05.918248 7fff7eb7a310                    Options.advise_random_on_open: 1
+2014/09/30-20:17:05.918250 7fff7eb7a310          Options.access_hint_on_compaction_start: NORMAL
+2014/09/30-20:17:05.918253 7fff7eb7a310                       Options.use_adaptive_mutex: 0
+2014/09/30-20:17:05.918254 7fff7eb7a310                             Options.rate_limiter: 0x0
+2014/09/30-20:17:05.918255 7fff7eb7a310                           Options.bytes_per_sync: 1048576
+```
+
+Earlier I did some digging to try and figure out why S_ISDIR was returning 0 for the mode of the directory. I'm still not sure why building with ROCKSDB_LITE makes a difference.
+
+From util/env_posix.cc:1474
+
+```
+  // Returns true iff the named directory exists and is a directory.
+  virtual bool DirExists(const std::string& dname) {
+    struct stat statbuf;
+    if (stat(dname.c_str(), &statbuf) == 0) {
+      return S_ISDIR(statbuf.st_mode);
+    }
+    return false; // stat() failed return false
+  }
+```
+
+Are you running on mac OS or ios simulator?
+
+This is a complex issue with at least 3 bugs affecting different runtimes (e.g. simulator vs. OSX command line).
+
+The original issue of EXC_BAD_ACCESS occurs on the iOS Simulator as well as on physical iOS devices.
+
+When I try to replicate the issue on the OSX command line (compiled using ROCKSDB_LITE), I am struck with the other bugs such as "IO error: `/tmp/rocksdb_simple_example' exists but is not a directory." The show-stopper for me is the original crash... but the other bugs makes troubleshooting difficult, if not impossible.
+
+Can you try compiling your project with ROCKSDB_LITE and running it on iOS simulator? I'm 99% confident that EXC_BAD_ACCESS occurs because you didn't compile your project with ROCKSDB_LITE.
+
+I can repro the other issue on my mac. It looks like fs system calls are funky when running iOS binaries on OSX. I don't have much experience here and can't help unfortunately.
+
+When you say "project" do you mean the Xcode project? Which build setting should I modify? Can you post a screenshot?
+
+Caylan
+
+> On Oct 1, 2014, at 12:27 PM, Igor Canadi notifications@github.com wrote:
+> 
+> Can you try compiling your project with ROCKSDB_LITE and running it on iOS simulator? I'm 99% confident that EXC_BAD_ACCESS occurs because you didn't compile your project with ROCKSDB_LITE.
+> 
+> I can repro the other issue on my mac. It looks like fs system calls are funky when running iOS binaries on OSX. I don't have much experience here and can't help unfortunately.
+> 
+> —
+> Reply to this email directly or view it on GitHub.
+
+There must be some sort of compile flags, right? Just add -DROCKSDB_LITE to compile flags in Xcode.
+
+Maybe try "preprocessor macros"?
+
+Also add IOS_CROSS_COMPILE.
+
+Added this to our INSTALL.md: https://github.com/facebook/rocksdb/blob/master/INSTALL.md
+
+I recompiled everything, added flags wherever I thought relevant, and it's still crashing.
+
+![2014-10-01 at 1 53 pm](https://cloud.githubusercontent.com/assets/1819762/4481032/4e6ef7d4-499c-11e4-94d7-ea922a52a551.png)
+
+I cleaned both the project build, and I cleaned and rebuilt the static lib.
+
+@semireg it looks like we might have fixed this error by https://github.com/facebook/rocksdb/commit/fa50abb72615789647103f3d9220878c2125aaaa. Can you please check if it works now?
+
+We are starting to more actively support our iOS builds. Sorry about non-support so far.
+
+Any news?
+
+This issue is likely fixed by https://github.com/facebook/rocksdb/commit/fa50abb72615789647103f3d9220878c2125aaaa. Feel free to reopen if you are still seeing this.
+

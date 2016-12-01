@@ -1,0 +1,52 @@
+there is the info from gdb
+#0  0x00000000004e63c9 in GetNumber (this=0x27b2000, edit=0x7fff5a1d2610) at ./db/version_edit.h:54
+#1  CheckConsistencyForDeletes (this=0x27b2000, edit=0x7fff5a1d2610) at db/version_set.cc:1625
+#2  rocksdb::VersionSet::Builder::Apply (this=0x27b2000, edit=0x7fff5a1d2610) at db/version_set.cc:1648
+#3  0x00000000004dc3d9 in rocksdb::VersionSet::Recover (this=0x27e01e0, column_families=Unhandled dwarf expression opcode 0xf3
+
+)
+    at db/version_set.cc:2227
+#4  0x00000000004a2986 in rocksdb::DBImpl::Recover (this=0x27d8c00,
+
+```
+column_families=std::vector of length 1, capacity 1 = {...}, read_only=false, error_if_log_file_exist=false)
+at db/db_impl.cc:1180
+```
+#5  0x00000000004a6dfd in rocksdb::DB::Open (db_options=..., dbname=
+
+```
+"/ssd/data/neo_noblock_shortterm_prod//UidDoc", column_families=std::vector of length 1, capacity 1 = {...}, 
+handles=0x7fff5a1d3200, dbptr=0x7fff5a1d3088) at db/db_impl.cc:4874
+```
+#6  0x000000000050948e in rocksdb::DBWithTTL::Open (db_options=..., dbname=
+
+```
+"/ssd/data/neo_noblock_shortterm_prod//UidDoc", column_families=Unhandled dwarf expression opcode 0xf3
+```
+
+) at utilities/ttl/db_ttl_impl.cc:96
+#7  0x000000000050a554 in rocksdb::DBWithTTL::Open (options=Unhandled dwarf expression opcode 0xf3
+
+) at utilities/ttl/db_ttl_impl.cc:61
+#8  0x0000000000438c56 in rocks_db::_init_ttl (this=0x2740ca8, meta=
+
+```
+"/ssd/data/neo_
+```
+
+the data size is 100GB
+
+how did you compile the binary? looks like you have debug checks enabled. Read this to understand more: https://github.com/facebook/rocksdb/blob/master/Makefile#L24-L35
+
+i compile it for some debug-info.  Does it slow the db  recovering?  
+
+Yes. It slow entire DB operation.
+
+even if you compile with DEBUG_LEVEL=0, we still have some debugging information.
+
+Did this solve your problem?
+
+Thank you for reporting this issue and appreciate your patience. We've  notified the core team for an update on this issue. We're looking for a response within the next 30 days or the issue may be closed.
+
+I'm closing this due to inactivity. Let us know if you're still seeing issues.
+

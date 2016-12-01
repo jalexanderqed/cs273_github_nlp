@@ -1,0 +1,6 @@
+using gmaven property so that script is not broken by embedding unescaped Windows-style path
+
+Please check the issue description.
+
+Thanks!
+

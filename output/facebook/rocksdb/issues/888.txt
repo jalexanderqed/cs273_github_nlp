@@ -1,0 +1,21 @@
+Here is the error message. 
+put or merge error: Not implemented: Provide a merge_operator when opening DB
+tcmalloc: large alloc 1100156043264 bytes == (nil) @  0x3fffb5709754 0x3fffb564bb14 0x3fffb564d4f8 0x3fffb564e33c 0x101dde44 0x101de084 0x101de57c 0x101acfd8 0x100c6ccc 0x100c8814 0x100cad38 0x100f7fa0 0x10105d18 0x10219764 0x10219920 0x3fffb57f7fe8 0x3fffb53651e4
+terminate called after throwing an instance of 'std::bad_alloc'
+  what():  std::bad_alloc
+Received signal 6 (Aborted)
+
+I used all default setting for db_bench.
+LevelDB:    version 4.3
+Keys:       16 bytes each
+Values:     100 bytes each (50 bytes after compression)
+Entries:    1000000
+Prefix:    0 bytes
+Keys per prefix:    0
+RawSize:    110.6 MB (estimated)
+FileSize:   62.9 MB (estimated)
+Writes per second: 0
+Compression: Snappy
+Memtablerep: skip_list
+Perf Level: 0
+

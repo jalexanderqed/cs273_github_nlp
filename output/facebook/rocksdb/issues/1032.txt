@@ -1,0 +1,209 @@
+Hi,
+
+if i disable this option, does that mean RocksDB do directIO for file read?
+
+Thanks,
+Sheng
+
+It is used to control whether rocksdb uses fadvise() to indicate to the OS that those pages can be reclaimed. All rocksdb reads are always via the OS page-cache.
+
+The effect is different on Windows 
+
+``` cpp
+// A wrapper for fadvise, if the platform doesn't support fadvise,
+// it will simply return Status::NotSupport.
+int Fadvise(int fd, off_t offset, size_t len, int advice) {
+  return 0;  // simply do nothing.
+}
+```
+
+However
+
+``` cpp
+if (!options.use_os_buffer && !options.use_mmap_reads) {
+      fileFlags |= FILE_FLAG_NO_BUFFERING;
+    } else {
+      fileFlags |= FILE_FLAG_RANDOM_ACCESS;
+    }
+```
+
+I think a better option name would be "request_unmapping" (or similar) as the OS isn't bound to follow fadvise requests in the first place and also to change the code in Windows has FILE_FLAG_NO_BUFFERING doesn't do what you might think it does.
+
+See [here](https://msdn.microsoft.com/en-us/library/windows/desktop/aa363858%28v=vs.85%29.aspx#caching_behavior)
+
+@edouarda The flag does exactly what we think it does :) However, we turn off os level buffering only when mmaping is not requested.
+
+I see your point @edouarda. But it is difficult to change the name of the option (to keep backward compatibility). Would you like to submit a pull request that enhances the code comments around https://github.com/facebook/rocksdb/blob/master/include/rocksdb/options.h#L1044 so that the beviour on Linux and windows is well explained?
+
+Basically, Windows allocates the amount of memory for file buffering which is hard to control in multi-tenant environment. So what we (and many other windows products) do is do direct I/O (hence aligned buffers) and control memory allocation by specifying cache size.
+
+@kradhakrishnan is adding direct IO support to RocksDB. It will be ready soon. Will let you know whether this is going to be the option to use.
+
+@dhruba Yes I think you are right it's a good idea, but let me make sure I understand everything correctly. The only thing worse than no documentation is incorrect documentation.
+@yuslepukhin If my understanding is correct - but I haven't written Windows kernel code for a couple of years now so my knowledge might be outdated - file cache of NT and Linux work fundamentally differently. On top of that rocksdb doesn’t do the same thing on posix and Windows.
+
+On Posix systems, rocksdb calls posix_fadvise(POSIX_FADV_DONTNEED) on the range of pages that has been read, in which case the OS may, or may _not_, evict those pages from memory. It has to be called after every read, so you're still using the os "buffer", just discarding it every time.
+Note that using the word buffer is a bit confusing here. Do we care about the I/O manager internal buffers or the filesystem cache (which implies read, read ahead, write caches)?
+
+Note that to disable the readahead cache (which is the OS reading more of the requested file for you) this happens generally when you use posix_fadvise with POSIX_FADV_RANDOM.
+
+If you really want to do unbuffered I/O on posix (bypass fs cache) you need to open the file with O_DIRECT and maybe O_SYNC if you also want to write through. This is where os_buffer is ambiguous because we don't know if it talks about read buffer or write buffer or os cache. I understand we have to live with this name for now.
+
+On Windows, rocksdb opens files with FILE_FLAG_NO_BUFFERING. This is actually what you should do, regardless of the option when doing overlapped I/O because you can use page locality tricks for maximum performance and you don’t rely on the AIO memory manager which can be problematic in NT (at least it is when doing network I/O of very large chunks).
+However, FILE_FLAG_NO_BUFFERING has no effect on the _read cache_ of Windows. As far as I can remember it’s not possible for a user application to advise the file system cache. So when reading data from the disk, the OS can actually decide to keep in cache anyway. FILE_FLAG_NO_BUFFERING just disables the read ahead cache and the internal buffer of the Iom.
+That’s why you have to provide a sector aligned buffer, you’re just telling to the Iom “Hey, don’t use your buffer, use mine!”. Note that for some devices, the flag will be ignored (remote devices notably). 
+
+If you can check in NT source code you will see what exactly happens. Just look for FILE_FLAG_NO_BUFFERING, it will then land you on the translation to the internal flag and look for that flag.
+
+If you’d like I can suggest a text that explains what the parameter currently does. The name is ambiguous and port writers should nevertheless feel free to ignore it to do whatever is most efficient for the ported platform.
+
+Currently this is what we have:
+
+``` cpp
+  // Data being read from file storage may be buffered in the OS
+  // Default: true
+  bool allow_os_buffer;
+```
+
+I like the Windows solution. The RocksDB approach on Linux of doing an
+extra system call (posix_fadvise) after every read() calls is ugly and
+wastes CPU -- both for the system call and for the work to move pages to
+the end of the LRU. Changes to use O_DIRECT are being discussed.
+
+On Tue, Mar 15, 2016 at 1:42 AM, Edouard A. notifications@github.com
+wrote:
+
+> @dhruba https://github.com/dhruba Yes I think you are right it's a good
+> idea, but let me make sure I understand everything correctly. The only
+> thing worse than no documentation is incorrect documentation.
+> @yuslepukhin https://github.com/yuslepukhin If my understanding is
+> correct - but I haven't written Windows kernel code for a couple of years
+> now so my knowledge might be outdated - file cache of NT and Linux work
+> fundamentally differently. On top of that rocksdb doesn’t do the same thing
+> on posix and Windows.
+> 
+> On Posix systems, rocksdb calls posix_fadvise(POSIX_FADV_DONTNEED) on the
+> range of pages that has been read, in which case the OS may, or may _not_,
+> evict those pages from memory. It has to be called after every read, so
+> you're still using the os "buffer", just discarding it every time.
+> Note that using the word buffer is a bit confusing here. Do we care about
+> the I/O manager internal buffers or the filesystem cache (which implies
+> read, read ahead, write caches)?
+> 
+> Note that to disable the readahead cache (which is the OS reading more of
+> the requested file for you) this happens generally when you use
+> posix_fadvise with POSIX_FADV_RANDOM.
+> 
+> If you really want to do unbuffered I/O on posix (bypass fs cache) you
+> need to open the file with O_DIRECT and maybe O_SYNC if you also want to
+> write through. This is where os_buffer is ambiguous because we don't know
+> if it talks about read buffer or write buffer or os cache. I understand we
+> have to live with this name for now.
+> 
+> On Windows, rocksdb opens files with FILE_FLAG_NO_BUFFERING. This is
+> actually what you should do, regardless of the option when doing overlapped
+> I/O because you can use page locality tricks for maximum performance and
+> you don’t rely on the AIO memory manager which can be problematic in NT (at
+> least it is when doing network I/O of very large chunks).
+> However, FILE_FLAG_NO_BUFFERING has no effect on the _read cache_ of
+> Windows. As far as I can remember it’s not possible for a user application
+> to advise the file system cache. So when reading data from the disk, the OS
+> can actually decide to keep in cache anyway. FILE_FLAG_NO_BUFFERING just
+> disables the read ahead cache and the internal buffer of the Iom.
+> That’s why you have to provide a sector aligned buffer, you’re just
+> telling to the Iom “Hey, don’t use your buffer, use mine!”. Note that for
+> some devices, the flag will be ignored (remote devices notably).
+> 
+> If you can check in NT source code you will see what exactly happens. Just
+> look for FILE_FLAG_NO_BUFFERING, it will then land you on the translation
+> to the internal flag and look for that flag.
+> 
+> Since you’re doing overlapped I/O read, it’s better to do
+> FILE_FLAG_NO_BUFFERING anyway because you can do tricks like page locality
+> and you bypass the shared I/O buffer manager in the first place.
+> 
+> If you’d like I can suggest a text that explains what the parameter
+> currently does. The name will be ambiguous and port writers should
+> nevertheless feel free to ignore it to do whatever is most efficient for
+> the ported platform.
+> 
+> Currently this is what we have:
+> 
+>   // Data being read from file storage may be buffered in the OS
+>   // Default: true
+>   bool allow_os_buffer;
+> 
+> —
+> You are receiving this because you are subscribed to this thread.
+> Reply to this email directly or view it on GitHub:
+> https://github.com/facebook/rocksdb/issues/1032#issuecomment-196721540
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@edouarda For what it's worth, Windows will indeed bypass the file system cache (cache manager) when FILE_FLAG_NO_BUFFERING is set (for reads & writes alike). Note that the requests have to be aligned to the underlying device properly (though page size alignment is generally sufficient).
+
+@jrtipton  Thanks for the information!
+
+In theory the database should do only direct I/O as it knows exactly what it needs to buffer and how. The OS doesn't know you're doing a database.
+
+In a few words
+- @edouarda  No doubt the code for posix and windows is different now. We currently do not plan to contribute to posix in this area. If you have a proposal for unification, we'd be willing to adjust. Though, changing the option name for the sake of the name alone may not be worth it. We selected the existing option because at the time it reflected what we wanted to achieve versus inventing a Windows only option.
+- `FILE_FLAG_NO_BUFFERING` has proven to be very effective in preventing cache manager/memory manager from allocating an excessive amount of memory on reads (both sequential and random). The issue can easily be repro with `db_bench` Random Read/Write scenario. The system grabs all the available memory trying to cache a very big file as much as it can. Though it will make this memory available to applications when needed it generates additional system activity that we think affects 999%. Additionally, that memory is not charged to the process so it is hard to account/control memory.
+- We also use unbuffered I/O on writes. This helps us charge I/O costs directly on the calling flushing/compacting thread instead of letting the system do flushes async at random times. This gives us better direct control over the disk bandwidth and read latency by simply permuting through various combinations of (block_size/compaction_readahead_size/writable_file_max_buffer_size)
+- FILE_FLAG_NO_BUFFERING does not require overlapping I/O and it is currently not done. The overlapping structure is only used to specify I/O offset to emulate pread/pwrite.
+- A patch is coming that would add async file handle flag and perform the overlapping I/O. pread/pwrite nature would remain synchronous. The reason for this patch is that there is a serialization on file handle in non-async mode that accumulates significant wait time in high contention scenarios. Though there are other serializations, removing this one has proven to improve throughput and latency. To take advantage of that `random_access_max_buffer_size` must be zero so the aligned buffer is not serialized on.
+- Getting rid of intermediate aligned buffer on reads would be a good goal but we are not seeing much impact now.
+
+Thanks for the answer, are you saying that os_buffer = true has a negative impact on performance in most cases? All I can say is that in our high level benchmarks (ie from quasardb API) we cannot see a difference, except, like you said, more system memory occupied.
+
+Ran some tests for 1TB database with fast storage to understand whether
+there is CPU or IO difference when using allow_os_buffer = true or false.
+There wasn't much of a difference. I was mostly checking to determine
+whether CPU load increased with allow_os_buffer=false.
+https://gist.github.com/mdcallag/a3dadfcd7f3e52c560bf
+
+On Tue, Mar 15, 2016 at 10:55 AM, Edouard A. notifications@github.com
+wrote:
+
+> Thanks for the answer, are you saying that os_buffer = true has a negative
+> impact on performance in most cases? All I can say is that in our high
+> level benchmarks (ie from quasardb API) we cannot see a difference, except,
+> like you said, more system memory occupied.
+> 
+> —
+> You are receiving this because you commented.
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1032#issuecomment-196947614
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@edouarda if you ran db_bench w and w/o os_buffer you will likely get much better numbers with buffering on. The out the door latency you'd get in your application w/o buffering will depend on what you do on the application level, caching, bloom, etc.
+The decision to use buffering or not to use will have to come from your requirements and trade offs resulting vector.
+
+Hope you will not take offense I had to make sure you guys were correct, so I checked up what really happens under the hood...
+
+... and it seems you were right and I was wrong. My memory was incorrect, when you pass `FILE_NO_INTERMEDIATE_BUFFERING` (the internal name for `FILE_FLAG_NO_BUFFERING`) the driver has to comply (if it can) and
+- Do not cache data in its internal buffers, to the limits of the possible (that, I remembered)
+- The file system driver (not the storage driver) will not put the data into the cache manager (that, I forgot)
+
+Some drivers do ignore the flag completely (either because of a bug or because the way device work makes complying with the request impossible), but most are compliant (and I submit will be rejected by validation if they are not).
+
+An important note though, where I knew there was something dodgy about CacheManager: NTFS metadata is still cached (by the file system driver), whatever option you pass. That means that if RocksDB opens a lot of small files, it will be normal to see a growth of the cache manager.
+
+Interinstingly:
+- `FILE_WRITE_THROUGH` - The device driver cannot return from the Irp until data is actually written to the device (and device drivers issue a "flush cache" to the device with this flag).
+
+When RocksDb is configured in "fsync after everywrite", using the above flag gives in theory better performance than calling FlushFileBuffers. I see the above flag isn't used.
+
+I'll propose a description of the flag later today.
+
+@edouarda `FILE_WRITE_THROUGH` is a potential option to include if @kradhakrishnan comes up with an implementation that requires behavior that is more inline with it.
+Performance implications remain to be seen.
+However, it can not subst `FlushFileBuffers` because file metadata is flushed then and some functionality, notably some tests rely on it. I have no idea why `FlushFileBuffers` was chosen to be implemented with an impact that is much wider than a given file.
+

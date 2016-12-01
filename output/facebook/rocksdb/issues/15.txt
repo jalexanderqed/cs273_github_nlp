@@ -1,0 +1,15 @@
+I was unable to link against RocksDB with some other libraries on x64. This fixed it.
+
+*Edit: Yes, I did sign the CLA.
+
+Tnx @Photonios 
+I think we want to do -fPIC in any case. I added https://github.com/facebook/rocksdb/commit/793fdd6731a8df7423f2b82e4f7ad35bad5cd7c0
+
+No, you don't want to do that either. Using position independent code on x86 (when not required) slows down execution, even when the loss is minimal. Also, as @liukai pointed out in a comment on your commit, it apparently breaks 3rd party releases. Maybe a separate makefile option to at least be able to build with -fPIC without modifying the make file? Like:
+
+make fpic 
+
+@Photonios does https://github.com/facebook/rocksdb/commit/fd4eca73e75282cf89b6de7f6f3bb4cf2b0acbc6 fix the problem?
+
+It still builds here, so yes :)
+

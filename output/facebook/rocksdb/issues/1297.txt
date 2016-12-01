@@ -1,0 +1,783 @@
+First off, thanks for the great project!
+
+I'm looking into a problem (https://github.com/cockroachdb/cockroach/issues/8784) that cockroachdb is having with an apparent deadlock that seems like it may be due to an underlying deadlock in our embedded rocksdb instance. We're running version 4.8 of rocksdb, and seeing this happen fairly regularly on Google Compute Engine with standard persistent disks (and now at least once with a pd-ssd).
+
+Here's the info we have so far on where the process is stuck:
+
+At the top level, cockroachdb is blocked waiting on a rocksdb operation:
+
+```
+goroutine 784393 [syscall, 47 minutes, locked to thread]:
+github.com/cockroachdb/cockroach/storage/engine._Cfunc_DBApplyBatchRepr(0x7f6bfb844ee0, 0xc820a02000, 0x7076, 0x0, 0x0)
+    ??:0 +0x53
+github.com/cockroachdb/cockroach/storage/engine.dbApplyBatchRepr(0x7f6bfb844ee0, 0xc820a02000, 0x7076, 0x8000, 0x0, 0x0)
+    /go/src/github.com/cockroachdb/cockroach/storage/engine/rocksdb.go:1365 +0x138
+github.com/cockroachdb/cockroach/storage/engine.(*RocksDB).ApplyBatchRepr(0xc8202ebaa0, 0xc820a02000, 0x7076, 0x8000, 0x0, 0x0)
+    /go/src/github.com/cockroachdb/cockroach/storage/engine/rocksdb.go:448 +0x4e
+github.com/cockroachdb/cockroach/storage/engine.(*rocksDBBatch).Commit(0xc8208f3a40, 0x0, 0x0)
+    /go/src/github.com/cockroachdb/cockroach/storage/engine/rocksdb.go:993 +0x430
+github.com/cockroachdb/cockroach/storage.(*Replica).handleRaftReady(0xc820777400, 0x0, 0x0)
+    /go/src/github.com/cockroachdb/cockroach/storage/replica.go:1502 +0x77e
+github.com/cockroachdb/cockroach/storage.(*Store).processRaft.func1.1(0xc8216aa0f0, 0xc8202c02a0, 0xc820777400)
+    /go/src/github.com/cockroachdb/cockroach/storage/store.go:2575 +0x25
+created by github.com/cockroachdb/cockroach/storage.(*Store).processRaft.func1
+    /go/src/github.com/cockroachdb/cockroach/storage/store.go:2580 +0x4da
+```
+
+There is basically zero disk output from the process, but the disk is currently working fine (https://github.com/cockroachdb/cockroach/issues/8784#issuecomment-242096242).
+
+There are only 10 threads running in the process:
+
+```
+(gdb) info threads
+  Id   Target Id         Frame
+  10   Thread 0x7ff6e33ff700 (LWP 499) "cockroach" 0x000000000064d713 in runtime.futex ()
+  9    Thread 0x7ff6e2bfe700 (LWP 500) "cockroach" 0x000000000064d713 in runtime.futex ()
+  8    Thread 0x7ff6e1bc6700 (LWP 501) "cockroach" 0x000000000064d713 in runtime.futex ()
+  7    Thread 0x7ff6e13c5700 (LWP 504) "cockroach" 0x000000000064d713 in runtime.futex ()
+  6    Thread 0x7ff6e07ff700 (LWP 505) "cockroach" pthread_cond_wait@@GLIBC_2.3.2 ()
+    at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+  5    Thread 0x7ff6dfbff700 (LWP 506) "cockroach" 0x000000000064d713 in runtime.futex ()
+* 4    Thread 0x7ff6dd3ff700 (LWP 511) "rocksdb:bg0" pthread_cond_wait@@GLIBC_2.3.2 ()
+    at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+  3    Thread 0x7ff6d9fff700 (LWP 574) "cockroach" 0x000000000064d713 in runtime.futex ()
+  2    Thread 0x7ff6d97fe700 (LWP 579) "cockroach" 0x000000000064d899 in runtime.epollwait ()
+  1    Thread 0x7ff6e4599980 (LWP 498) "cockroach" 0x000000000064d713 in runtime.futex ()
+```
+
+Most of them aren't particularly interesting:
+
+```
+(gdb) thread 1
+[Switching to thread 1 (Thread 0x7ff6e4599980 (LWP 498))]
+#0  0x000000000064d713 in runtime.futex ()
+(gdb) bt
+#0  0x000000000064d713 in runtime.futex ()
+#1  0x00000000006168b3 in runtime.futexsleep ()
+#2  0x0000000002aa4620 in runtime.finptrmask ()
+#3  0x0000000000000000 in ?? ()
+(gdb) thread 2
+[Switching to thread 2 (Thread 0x7ff6d97fe700 (LWP 579))]
+#0  0x000000000064d899 in runtime.epollwait ()
+(gdb) bt
+#0  0x000000000064d899 in runtime.epollwait ()
+#1  0x00000000006166d4 in runtime.netpoll ()
+#2  0x00007ff600000007 in ?? ()
+#3  0x00007ff6d97fd568 in ?? ()
+#4  0xffffffff00000080 in ?? ()
+#5  0x0000000100000000 in ?? ()
+#6  0x00000000ffffffff in ?? ()
+#7  0x000000c82026d980 in ?? ()
+#8  0x0000000000000000 in ?? ()
+```
+
+But threads 4 and 6 are. Thread 6 is where our go code called down into rocksdb to try to do a write:
+
+```
+(gdb) thread 6
+[Switching to thread 6 (Thread 0x7ff6e07ff700 (LWP 505))]
+#0  pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+185     ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S: No such file or directory.
+(gdb) bt
+#0  pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+#1  0x00000000015543ed in rocksdb::port::CondVar::Wait() ()
+#2  0x00000000014ed0e8 in rocksdb::InstrumentedCondVar::Wait() ()
+#3  0x0000000001419b7e in rocksdb::DBImpl::DelayWrite(unsigned long) ()
+#4  0x000000000143d780 in rocksdb::DBImpl::WriteImpl(rocksdb::WriteOptions const&, rocksdb::WriteBatch*, rocksdb::WriteCallback*) ()
+#5  0x000000000143ea04 in rocksdb::DBImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch*) [clone .localalias.1430] ()
+#6  0x0000000001295031 in DBImpl::ApplyBatchRepr(DBSlice) ()
+#7  0x000000000129222a in DBApplyBatchRepr ()
+#8  0x0000000001247515 in _cgo_6915c59f3272_Cfunc_DBApplyBatchRepr ()
+#9  0x000000000064b720 in runtime.asmcgocall ()
+#10 0x0000000000000008 in ?? ()
+#11 0x000000c8207692b8 in ?? ()
+#12 0x00000000005ee46a in runtime.cgocall ()
+#13 0x000000c8207692c8 in ?? ()
+#14 0x000000c82091b9c0 in ?? ()
+#15 0x0000000000000d10 in ?? ()
+#16 0x000000c820909200 in ?? ()
+#17 0x0000000000649d59 in runtime.systemstack ()
+#18 0x000000000061dce0 in runtime.startTheWorldWithSema ()
+#19 0x000000c820016000 in ?? ()
+#20 0x00007ff6e07ff700 in ?? ()
+#21 0x000000c8201acd80 in ?? ()
+#22 0x000000000061dd52 in runtime.mstart ()
+#23 0x0000000000800000 in github.com/cockroachdb/cockroach/roachpb.(*OpRequiresTxnError).Unmarshal ()
+#24 0x0000000001248733 in crosscall_amd64 ()
+#25 0x00007ff6e07ff700 in ?? ()
+#26 0x0000000000000000 in ?? ()
+```
+
+It appears to be stuck waiting on a condition variable to trigger and indicate that a background flush is done (IIUC):
+https://github.com/facebook/rocksdb/blob/56dd03411534d0957a6f698f460609bf7cea4b63/db/db_impl.cc#L4872
+https://github.com/facebook/rocksdb/blob/56dd03411534d0957a6f698f460609bf7cea4b63/db/db_impl.h#L730
+
+Thread 4, on the other hand, appears to be the main background thread:
+
+```
+(gdb) thread 4
+[Switching to thread 4 (Thread 0x7ff6dd3ff700 (LWP 511))]
+#0  pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+185     in ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S
+(gdb) bt
+#0  pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+#1  0x0000000001513337 in rocksdb::ThreadPool::BGThread(unsigned long) ()
+#2  0x0000000001513543 in rocksdb::BGThreadWrapper(void*) ()
+#3  0x00007ff6e3f660a4 in start_thread (arg=0x7ff6dd3ff700) at pthread_create.c:309
+#4  0x00007ff6e399a87d in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:111
+```
+
+I'm a little less clear on what it's doing, but it looks like it's just waiting to be signaled about work to do:
+https://github.com/facebook/rocksdb/blob/56dd03411534d0957a6f698f460609bf7cea4b63/util/threadpool.cc#L176
+
+My understanding may be wrong since this is my first time looking at the code, but the combination of the two seems to indicate that something is wrong -- the main thread is waiting on the background thread to signal it's done doing something, while the background thread is waiting to be told there's something to do.
+
+Does any of this ring any bells? Are there any suggestions on what we should look into in more detail to get to the bottom of it? It's been happening pretty regularly lately, at least on Compute Engine.
+
+cc @tschottdorf @sploiselle @petermattis
+
+Hi @a-robinson, Thanks for the detailed information.
+
+I am wondering if you are using rocksdb EventListener, We actually have a bug that was fixed in RocksDB 4.9
+https://github.com/facebook/rocksdb/commit/c70a9335de4040e0fae0f8888789256638a60ff6
+
+This bug could happen if you are using Options::listeners, this bug could cause the DB to Stall
+
+It seems that we do:
+
+storage/engine/rocksdb/db.cc:
+ options.listeners.emplace_back(event_listener);
+
+Thanks for the info, Islam!
+
+On Wed, Aug 24, 2016 at 5:24 PM Islam AbdelRahman notifications@github.com
+wrote:
+
+> Hi @a-robinson https://github.com/a-robinson, Thanks for the detailed
+> information.
+> 
+> I am wondering if you are using rocksdb EventListener, We actually have a
+> bug that was fixed in RocksDB 4.9
+> c70a933
+> https://github.com/facebook/rocksdb/commit/c70a9335de4040e0fae0f8888789256638a60ff6
+> 
+> This bug could happen if you are using Options::listeners, this bug could
+> cause the DB to Stall
+> 
+> —
+> You are receiving this because you were mentioned.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/issues/1297#issuecomment-242213046,
+> or mute the thread
+> https://github.com/notifications/unsubscribe-auth/AE135B4ZQd_zoyBvT2QpIyJjNnfOAGKfks5qjLaPgaJpZM4JsZo3
+> .
+
+Indeed, thank you! We'll try upgrading to 4.9 and seeing how it works for us.
+
+Unfortunately, bumping our version to 4.9 didn't fix the issue, we're still getting consistently stuck in the same situation after around 4 hours of running. We do have more debugging symbols now, so we've got that going for us, which is nice. I can play around in gdb some more, but do you have any further suggestions or thoughts?
+
+```
+(gdb) bt
+#0  runtime.futex () at /usr/local/go/src/runtime/sys_linux_amd64.s:388
+#1  0x00000000005f94c2 in runtime.futexsleep (addr=0x2322920 <runtime.sig>, val=0, ns=-1) at /usr/local/go/src/runtime/os_linux.go:45
+#2  0x00000000005df61d in runtime.notetsleep_internal (n=0x2322920 <runtime.sig>, ns=-1, ~r2=131) at /usr/local/go/src/runtime/lock_futex.go:161
+#3  0x00000000005df80a in runtime.notetsleepg (n=0x2322920 <runtime.sig>, ns=-1, ~r2=true) at /usr/local/go/src/runtime/lock_futex.go:206
+#4  0x0000000000611667 in os/signal.signal_recv (~r0=537005992) at /usr/local/go/src/runtime/sigqueue.go:116
+#5  0x0000000000b2ee52 in os/signal.loop () at /usr/local/go/src/os/signal/signal_unix.go:22
+#6  0x000000000062f301 in runtime.goexit () at /usr/local/go/src/runtime/asm_amd64.s:2086
+#7  0x0000000000000000 in ?? ()
+(gdb) info threads
+  Id   Target Id         Frame 
+  9    Thread 0x7ff8423ff700 (LWP 783) "cockroach" runtime.futex () at /usr/local/go/src/runtime/sys_linux_amd64.s:388
+  8    Thread 0x7ff841bfe700 (LWP 784) "cockroach" runtime.futex () at /usr/local/go/src/runtime/sys_linux_amd64.s:388
+  7    Thread 0x7ff840bc6700 (LWP 786) "cockroach" pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+  6    Thread 0x7ff8403c5700 (LWP 787) "cockroach" runtime.futex () at /usr/local/go/src/runtime/sys_linux_amd64.s:388
+  5    Thread 0x7ff83fbc4700 (LWP 788) "cockroach" runtime.epollwait () at /usr/local/go/src/runtime/sys_linux_amd64.s:525
+  4    Thread 0x7ff83edff700 (LWP 789) "cockroach" runtime.futex () at /usr/local/go/src/runtime/sys_linux_amd64.s:388
+  3    Thread 0x7ff83c7ff700 (LWP 818) "rocksdb:bg0" pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+  2    Thread 0x7ff83a5ff700 (LWP 905) "cockroach" runtime.futex () at /usr/local/go/src/runtime/sys_linux_amd64.s:388
+* 1    Thread 0x7ff843bd9980 (LWP 782) "cockroach" runtime.futex () at /usr/local/go/src/runtime/sys_linux_amd64.s:388
+(gdb) thread 2
+[Switching to thread 2 (Thread 0x7ff83a5ff700 (LWP 905))]
+#0  runtime.futex () at /usr/local/go/src/runtime/sys_linux_amd64.s:388
+388     in /usr/local/go/src/runtime/sys_linux_amd64.s
+(gdb) bt
+#0  runtime.futex () at /usr/local/go/src/runtime/sys_linux_amd64.s:388
+#1  0x00000000005f94c2 in runtime.futexsleep (addr=0xc420e2ed10, val=0, ns=-1) at /usr/local/go/src/runtime/os_linux.go:45
+#2  0x00000000005df562 in runtime.notesleep (n=0xc420e2ed10) at /usr/local/go/src/runtime/lock_futex.go:145
+#3  0x000000000060199d in runtime.stopm () at /usr/local/go/src/runtime/proc.go:1594
+#4  0x00000000006027a8 in runtime.findrunnable (gp=0x6092be <runtime.runqget+142>, inheritTime=false) at /usr/local/go/src/runtime/proc.go:2021
+#5  0x000000000060331c in runtime.schedule () at /usr/local/go/src/runtime/proc.go:2120
+#6  0x0000000000603693 in runtime.park_m (gp=0xc420b821a0) at /usr/local/go/src/runtime/proc.go:2183
+#7  0x000000000062c39b in runtime.mcall () at /usr/local/go/src/runtime/asm_amd64.s:240
+#8  0x000000c420016000 in ?? ()
+#9  0x00007ff800000001 in ?? ()
+#10 0x000000c420dff1e0 in ?? ()
+#11 0x00007ff83a5fec78 in ?? ()
+#12 0x00000000006008c4 in runtime.mstart () at /usr/local/go/src/runtime/proc.go:1096
+#13 0x0000000001083d03 in crosscall_amd64 () at /usr/local/go/src/runtime/cgo/gcc_amd64.S:35
+#14 0x00007ff83a5ff700 in ?? ()
+#15 0x0000000000000030 in ?? ()
+#16 0x00007ff843be5060 in ?? () from /lib64/ld-linux-x86-64.so.2
+#17 0x0000000000000000 in ?? ()
+(gdb) thread 3
+[Switching to thread 3 (Thread 0x7ff83c7ff700 (LWP 818))]
+#0  pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+185     ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S: No such file or directory.
+(gdb) bt
+#0  pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+#1  0x000000000135a4af in ConditionWait (lock=..., condition=...) at /go/src/github.com/cockroachdb/c-rocksdb/internal_util_threadpool.cc:97
+#2  rocksdb::ThreadPool::BGThread (this=0x7ff84256b0e0, thread_id=0) at /go/src/github.com/cockroachdb/c-rocksdb/internal_util_threadpool.cc:176
+#3  0x000000000135a6b3 in rocksdb::BGThreadWrapper (arg=0x7ff83f15e4a0) at /go/src/github.com/cockroachdb/c-rocksdb/internal_util_threadpool.cc:254
+#4  0x00007ff8435a70a4 in start_thread (arg=0x7ff83c7ff700) at pthread_create.c:309
+#5  0x00007ff842aba87d in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:111
+(gdb) thread 4
+[Switching to thread 4 (Thread 0x7ff83edff700 (LWP 789))]
+#0  runtime.futex () at /usr/local/go/src/runtime/sys_linux_amd64.s:388
+388     /usr/local/go/src/runtime/sys_linux_amd64.s: No such file or directory.
+(gdb) bt
+#0  runtime.futex () at /usr/local/go/src/runtime/sys_linux_amd64.s:388
+#1  0x00000000005f9537 in runtime.futexsleep (addr=0x22e7958 <runtime.timers+24>, val=0, ns=5887827) at /usr/local/go/src/runtime/os_linux.go:62
+#2  0x00000000005df69b in runtime.notetsleep_internal (n=0x22e7958 <runtime.timers+24>, ns=5887827, ~r2=false) at /usr/local/go/src/runtime/lock_futex.go:174
+#3  0x00000000005df80a in runtime.notetsleepg (n=0x22e7958 <runtime.timers+24>, ns=5887827, ~r2=false) at /usr/local/go/src/runtime/lock_futex.go:206
+#4  0x0000000000619c5b in runtime.timerproc () at /usr/local/go/src/runtime/time.go:209
+#5  0x000000000062f301 in runtime.goexit () at /usr/local/go/src/runtime/asm_amd64.s:2086
+#6  0x0000000000000000 in ?? ()
+(gdb) thread 5
+[Switching to thread 5 (Thread 0x7ff83fbc4700 (LWP 788))]
+#0  runtime.epollwait () at /usr/local/go/src/runtime/sys_linux_amd64.s:525
+525     in /usr/local/go/src/runtime/sys_linux_amd64.s
+(gdb) bt
+#0  runtime.epollwait () at /usr/local/go/src/runtime/sys_linux_amd64.s:525
+#1  0x00000000005f92a3 in runtime.netpoll (block=true, ~r1=0x0) at /usr/local/go/src/runtime/netpoll_epoll.go:67
+#2  0x000000000060280c in runtime.findrunnable (gp=0x6092be <runtime.runqget+142>, inheritTime=false) at /usr/local/go/src/runtime/proc.go:2003
+#3  0x000000000060331c in runtime.schedule () at /usr/local/go/src/runtime/proc.go:2120
+#4  0x0000000000603693 in runtime.park_m (gp=0xc420354680) at /usr/local/go/src/runtime/proc.go:2183
+#5  0x000000000062c39b in runtime.mcall () at /usr/local/go/src/runtime/asm_amd64.s:240
+#6  0x000000c420016000 in ?? ()
+#7  0x00007ff800000001 in ?? ()
+#8  0x000000c420168680 in ?? ()
+#9  0x00007ff83fbc3c78 in ?? ()
+#10 0x00000000006008c4 in runtime.mstart () at /usr/local/go/src/runtime/proc.go:1096
+#11 0x0000000001083d03 in crosscall_amd64 () at /usr/local/go/src/runtime/cgo/gcc_amd64.S:35
+#12 0x00007ff83fbc4700 in ?? ()
+#13 0x0000000000000030 in ?? ()
+#14 0x00007ff843be5060 in ?? () from /lib64/ld-linux-x86-64.so.2
+#15 0x0000000000000000 in ?? ()
+(gdb) thread 6
+[Switching to thread 6 (Thread 0x7ff8403c5700 (LWP 787))]
+#0  runtime.futex () at /usr/local/go/src/runtime/sys_linux_amd64.s:388
+388     in /usr/local/go/src/runtime/sys_linux_amd64.s
+(gdb) bt
+#0  runtime.futex () at /usr/local/go/src/runtime/sys_linux_amd64.s:388
+#1  0x00000000005f94c2 in runtime.futexsleep (addr=0xc420283d10, val=0, ns=-1) at /usr/local/go/src/runtime/os_linux.go:45
+#2  0x00000000005df562 in runtime.notesleep (n=0xc420283d10) at /usr/local/go/src/runtime/lock_futex.go:145
+#3  0x000000000060199d in runtime.stopm () at /usr/local/go/src/runtime/proc.go:1594
+#4  0x00000000006027a8 in runtime.findrunnable (gp=0x6092be <runtime.runqget+142>, inheritTime=false) at /usr/local/go/src/runtime/proc.go:2021
+#5  0x000000000060331c in runtime.schedule () at /usr/local/go/src/runtime/proc.go:2120
+#6  0x0000000000603693 in runtime.park_m (gp=0xc420b821a0) at /usr/local/go/src/runtime/proc.go:2183
+#7  0x000000000062c39b in runtime.mcall () at /usr/local/go/src/runtime/asm_amd64.s:240
+#8  0x000000c420016000 in ?? ()
+#9  0x00007ff800000001 in ?? ()
+#10 0x000000c4203a9380 in ?? ()
+#11 0x00007ff8403c4c78 in ?? ()
+#12 0x00000000006008c4 in runtime.mstart () at /usr/local/go/src/runtime/proc.go:1096
+#13 0x0000000001083d03 in crosscall_amd64 () at /usr/local/go/src/runtime/cgo/gcc_amd64.S:35
+#14 0x00007ff8403c5700 in ?? ()
+#15 0x0000000000000030 in ?? ()
+#16 0x00007ff843be5060 in ?? () from /lib64/ld-linux-x86-64.so.2
+#17 0x0000000000000000 in ?? ()
+(gdb) thread 7
+[Switching to thread 7 (Thread 0x7ff840bc6700 (LWP 786))]
+#0  pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+185     ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S: No such file or directory.
+(gdb) bt
+#0  pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+#1  0x00000000013a18ad in rocksdb::port::CondVar::Wait (this=this@entry=0x7ff8425a52b0) at internal/port/port_posix.cc:89
+#2  0x0000000001330635 in rocksdb::InstrumentedCondVar::WaitInternal (this=this@entry=0x7ff8425a52b0)
+    at /go/src/github.com/cockroachdb/c-rocksdb/internal_util_instrumented_mutex.cc:59
+#3  0x00000000013307b8 in rocksdb::InstrumentedCondVar::Wait (this=this@entry=0x7ff8425a52b0)
+    at /go/src/github.com/cockroachdb/c-rocksdb/internal_util_instrumented_mutex.cc:51
+#4  0x000000000125d06e in rocksdb::DBImpl::DelayWrite (this=this@entry=0x7ff8425a5000, num_bytes=<optimized out>)
+    at /go/src/github.com/cockroachdb/c-rocksdb/internal_db_db_impl.cc:4839
+t#5  0x0000000001281d13 in rocksdb::DBImpl::WriteImpl (this=0x7ff8425a5000, write_options=..., my_batch=<optimized out>, callback=callback@entry=0x0, 
+    log_used=log_used@entry=0x0, log_ref=0, disable_memtable=false) at /go/src/github.com/cockroachdb/c-rocksdb/internal_db_db_impl.cc:4563
+#6  0x000000000128306b in rocksdb::DBImpl::Write (this=<optimized out>, write_options=..., my_batch=<optimized out>)
+    at /go/src/github.com/cockroachdb/c-rocksdb/internal_db_db_impl.cc:4376
+#7  0x00000000010d0681 in DBImpl::ApplyBatchRepr (this=0x7ff842444e00, repr=...) at /go/src/github.com/cockroachdb/cockroach/storage/engine/rocksdb/db.cc:1809
+#8  0x00000000010cd28a in DBApplyBatchRepr (db=<optimized out>, repr=...) at /go/src/github.com/cockroachdb/cockroach/storage/engine/rocksdb/db.cc:1827
+#9  0x0000000001082725 in _cgo_1cc2ee5b181c_Cfunc_DBApplyBatchRepr (v=0xc4207f1480) at /go/src/github.com/cockroachdb/cockroach/storage/engine/rocksdb.go:100
+#10 0x000000000062e0f0 in runtime.asmcgocall () at /usr/local/go/src/runtime/asm_amd64.s:590
+#11 0x000000c4207f13f0 in ?? ()
+#12 0x00000000005d2afd in runtime.cgocall (fn=0x7ff800000001, arg=0xc4203a9040, ~r2=1086086264) at /usr/local/go/src/runtime/cgocall.go:115
+#13 0x000000c420016000 in ?? ()
+#14 0x00007ff800000001 in ?? ()
+#15 0x000000c4203a9040 in ?? ()
+#16 0x00007ff840bc5c78 in ?? ()
+#17 0x00000000006008c4 in runtime.mstart () at /usr/local/go/src/runtime/proc.go:1096
+#18 0x0000000001083d03 in crosscall_amd64 () at /usr/local/go/src/runtime/cgo/gcc_amd64.S:35
+#19 0x00007ff840bc6700 in ?? ()
+#20 0x0000000000000030 in ?? ()
+#21 0x00007ff843be5060 in ?? () from /lib64/ld-linux-x86-64.so.2
+#22 0x0000000000000000 in ?? ()
+(gdb) thread 8
+[Switching to thread 8 (Thread 0x7ff841bfe700 (LWP 784))]
+#0  runtime.futex () at /usr/local/go/src/runtime/sys_linux_amd64.s:388
+388     /usr/local/go/src/runtime/sys_linux_amd64.s: No such file or directory.
+(gdb) bt
+#0  runtime.futex () at /usr/local/go/src/runtime/sys_linux_amd64.s:388
+#1  0x00000000005f94c2 in runtime.futexsleep (addr=0xc420024910, val=0, ns=-1) at /usr/local/go/src/runtime/os_linux.go:45
+#2  0x00000000005df562 in runtime.notesleep (n=0xc420024910) at /usr/local/go/src/runtime/lock_futex.go:145
+#3  0x00000000006020ca in runtime.stoplockedm () at /usr/local/go/src/runtime/proc.go:1741
+#4  0x00000000006034ca in runtime.schedule () at /usr/local/go/src/runtime/proc.go:2078
+#5  0x0000000000603693 in runtime.park_m (gp=0xc4203a9a00) at /usr/local/go/src/runtime/proc.go:2183
+#6  0x000000000062c39b in runtime.mcall () at /usr/local/go/src/runtime/asm_amd64.s:240
+#7  0x000000c420016000 in ?? ()
+#8  0x00007ff800000001 in ?? ()
+#9  0x000000c420001040 in ?? ()
+#10 0x00007ff841bfdc78 in ?? ()
+#11 0x00000000006008c4 in runtime.mstart () at /usr/local/go/src/runtime/proc.go:1096
+#12 0x0000000001083d03 in crosscall_amd64 () at /usr/local/go/src/runtime/cgo/gcc_amd64.S:35
+#13 0x00007ff841bfe700 in ?? ()
+#14 0x0000000000000030 in ?? ()
+#15 0x00007ff843be5060 in ?? () from /lib64/ld-linux-x86-64.so.2
+#16 0x0000000000000000 in ?? ()
+(gdb) thread 9
+[Switching to thread 9 (Thread 0x7ff8423ff700 (LWP 783))]
+#0  runtime.futex () at /usr/local/go/src/runtime/sys_linux_amd64.s:388
+388     in /usr/local/go/src/runtime/sys_linux_amd64.s
+(gdb) bt
+#0  runtime.futex () at /usr/local/go/src/runtime/sys_linux_amd64.s:388
+#1  0x00000000005f9537 in runtime.futexsleep (addr=0x22e9118 <runtime.sched+216>, val=0, ns=60000000000) at /usr/local/go/src/runtime/os_linux.go:62
+#2  0x00000000005df69b in runtime.notetsleep_internal (n=0x22e9118 <runtime.sched+216>, ns=60000000000, ~r2=true) at /usr/local/go/src/runtime/lock_futex.go:174
+#3  0x00000000005df776 in runtime.notetsleep (n=0x22e9118 <runtime.sched+216>, ns=60000000000, ~r2=true) at /usr/local/go/src/runtime/lock_futex.go:194
+#4  0x000000000060788c in runtime.sysmon () at /usr/local/go/src/runtime/proc.go:3618
+#5  0x00000000006009ee in runtime.mstart1 () at /usr/local/go/src/runtime/proc.go:1126
+#6  0x00000000006008c4 in runtime.mstart () at /usr/local/go/src/runtime/proc.go:1096
+#7  0x0000000001083d03 in crosscall_amd64 () at /usr/local/go/src/runtime/cgo/gcc_amd64.S:35
+#8  0x00007ff8423ff700 in ?? ()
+#9  0x0000000000000030 in ?? ()
+#10 0x00007ff843be5060 in ?? () from /lib64/ld-linux-x86-64.so.2
+#11 0x0000000000000000 in ?? ()
+```
+
+In the background thread, the work queue is apparently empty, so it doesn't seem unreasonable that the background thread is waiting:
+
+```
+(gdb) thread 3
+[Switching to thread 3 (Thread 0x7ff83c7ff700 (LWP 818))]
+#0  pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+185     ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S: No such file or directory.
+(gdb) up
+#1  0x000000000135a4af in ConditionWait (lock=..., condition=...) at /go/src/github.com/cockroachdb/c-rocksdb/internal_util_threadpool.cc:97
+97      /go/src/github.com/cockroachdb/c-rocksdb/internal_util_threadpool.cc: No such file or directory.
+(gdb) up
+#2  rocksdb::ThreadPool::BGThread (this=0x7ff84256b0e0, thread_id=0) at /go/src/github.com/cockroachdb/c-rocksdb/internal_util_threadpool.cc:176
+176     in /go/src/github.com/cockroachdb/c-rocksdb/internal_util_threadpool.cc
+(gdb) info locals
+uniqueLock = @0x7ff84256b0e8: {__data = {__lock = 0, __count = 0, __owner = 0, __nusers = 0, __kind = 256, __spins = 0, __elision = 2, __list = {__prev = 0x0, 
+      __next = 0x0}}, __size = '\000' <repeats 17 times>, "\001\000\000\000\000\002", '\000' <repeats 16 times>, __align = 0}
+function = <optimized out>
+arg = <optimized out>
+decrease_io_priority = <optimized out>
+low_io_priority = false
+(gdb) print queue
+No symbol "queue" in current context.
+(gdb) print queue_
+$3 = std::deque with 0 elements
+(gdb) print thread_id
+$4 = 0
+```
+
+And here's a quick look at going on in the thread that's waiting in DelayWrite. The most suspicious thing that jumps out at me is that `bg_error_` has status OK, but also has a couple suspicious looking error messages inside of it (`{0x17d8690 "", 0x1805e3f "Timeout Acquiring Mutex", 
+    0x1805e57 "Timeout waiting to lock key", 0x18015e8 "Failed to acquire lock due to max_num_locks limit"}`). Is that expected?
+
+```
+(gdb) thread 7
+[Switching to thread 7 (Thread 0x7ff840bc6700 (LWP 786))]
+#0  pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+185     ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S: No such file or directory.
+(gdb) bt
+#0  pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+#1  0x00000000013a18ad in rocksdb::port::CondVar::Wait (this=this@entry=0x7ff8425a52b0) at internal/port/port_posix.cc:89
+#2  0x0000000001330635 in rocksdb::InstrumentedCondVar::WaitInternal (this=this@entry=0x7ff8425a52b0)
+    at /go/src/github.com/cockroachdb/c-rocksdb/internal_util_instrumented_mutex.cc:59
+#3  0x00000000013307b8 in rocksdb::InstrumentedCondVar::Wait (this=this@entry=0x7ff8425a52b0)
+    at /go/src/github.com/cockroachdb/c-rocksdb/internal_util_instrumented_mutex.cc:51
+#4  0x000000000125d06e in rocksdb::DBImpl::DelayWrite (this=this@entry=0x7ff8425a5000, num_bytes=<optimized out>)
+    at /go/src/github.com/cockroachdb/c-rocksdb/internal_db_db_impl.cc:4839
+#5  0x0000000001281d13 in rocksdb::DBImpl::WriteImpl (this=0x7ff8425a5000, write_options=..., my_batch=<optimized out>, callback=callback@entry=0x0, 
+    log_used=log_used@entry=0x0, log_ref=0, disable_memtable=false) at /go/src/github.com/cockroachdb/c-rocksdb/internal_db_db_impl.cc:4563
+#6  0x000000000128306b in rocksdb::DBImpl::Write (this=<optimized out>, write_options=..., my_batch=<optimized out>)
+    at /go/src/github.com/cockroachdb/c-rocksdb/internal_db_db_impl.cc:4376
+#7  0x00000000010d0681 in DBImpl::ApplyBatchRepr (this=0x7ff842444e00, repr=...) at /go/src/github.com/cockroachdb/cockroach/storage/engine/rocksdb/db.cc:1809
+#8  0x00000000010cd28a in DBApplyBatchRepr (db=<optimized out>, repr=...) at /go/src/github.com/cockroachdb/cockroach/storage/engine/rocksdb/db.cc:1827
+#9  0x0000000001082725 in _cgo_1cc2ee5b181c_Cfunc_DBApplyBatchRepr (v=0xc4207f1480) at /go/src/github.com/cockroachdb/cockroach/storage/engine/rocksdb.go:100
+#10 0x000000000062e0f0 in runtime.asmcgocall () at /usr/local/go/src/runtime/asm_amd64.s:590
+#11 0x000000c4207f13f0 in ?? ()
+#12 0x00000000005d2afd in runtime.cgocall (fn=0x7ff800000001, arg=0xc4203a9040, ~r2=1086086264) at /usr/local/go/src/runtime/cgocall.go:115
+#13 0x000000c420016000 in ?? ()
+#14 0x00007ff800000001 in ?? ()
+#15 0x000000c4203a9040 in ?? ()
+#16 0x00007ff840bc5c78 in ?? ()
+#17 0x00000000006008c4 in runtime.mstart () at /usr/local/go/src/runtime/proc.go:1096
+#18 0x0000000001083d03 in crosscall_amd64 () at /usr/local/go/src/runtime/cgo/gcc_amd64.S:35
+#19 0x00007ff840bc6700 in ?? ()
+#20 0x0000000000000030 in ?? ()
+#21 0x00007ff843be5060 in ?? () from /lib64/ld-linux-x86-64.so.2
+#22 0x0000000000000000 in ?? ()
+(gdb) frame 4
+#4  0x000000000125d06e in rocksdb::DBImpl::DelayWrite (this=this@entry=0x7ff8425a5000, num_bytes=<optimized out>)
+    at /go/src/github.com/cockroachdb/c-rocksdb/internal_db_db_impl.cc:4839
+4839    /go/src/github.com/cockroachdb/c-rocksdb/internal_db_db_impl.cc: No such file or directory.
+(gdb) info locals
+sw = {env_ = 0x231b100 <rocksdb::Env::Default()::default_env>, statistics_ = 0x7ff84259a980, hist_type_ = 20, elapsed_ = 0x7ff840bc5608, stats_enabled_ = true, 
+  start_time_ = 1472150783533247}
+delay = <optimized out>
+time_delayed = 0
+delayed = true
+(gdb) print bg_error_
+$5 = {code_ = rocksdb::Status::kOk, subcode_ = rocksdb::Status::kNone, state_ = 0x0, static msgs = {0x17d8690 "", 0x1805e3f "Timeout Acquiring Mutex", 
+    0x1805e57 "Timeout waiting to lock key", 0x18015e8 "Failed to acquire lock due to max_num_locks limit"}}
+(gdb) print bg_error_.ok()
+Cannot evaluate function -- may be inlined
+(gdb) print write_controller_
+$6 = {total_stopped_ = 1, total_delayed_ = 0, total_compaction_pressure_ = 0, bytes_left_ = 7785, last_refill_time_ = 1472150782776540, 
+  delayed_write_rate_ = 1456355}
+(gdb) print mutex_
+$7 = {mutex_ = {mu_ = {__data = {__lock = 0, __count = 0, __owner = 0, __nusers = 0, __kind = 256, __spins = 0, __elision = 1, __list = {__prev = 0x0, 
+          __next = 0x0}}, __size = '\000' <repeats 17 times>, "\001\000\000\000\000\001", '\000' <repeats 16 times>, __align = 0}}, stats_ = 0x7ff84259a980, 
+  env_ = 0x231b100 <rocksdb::Env::Default()::default_env>, stats_code_ = 46}
+```
+
+Also potentially of interest, still from the DelayWrite stack frame:
+
+```
+(gdb) print delay
+$8 = <optimized out>
+(gdb) print env_
+$9 = (rocksdb::Env * const) 0x231b100 <rocksdb::Env::Default()::default_env>
+(gdb) print stats_
+$10 = (rocksdb::Statistics *) 0x7ff84259a980
+(gdb) print *stats_
+$11 = {_vptr.Statistics = 0x1f82a50 <vtable for rocksdb::StatisticsImpl+16>, stats_level_ = rocksdb::kExceptTimeForMutex}
+(gdb) print this
+$12 = (rocksdb::DBImpl * const) 0x7ff8425a5000
+(gdb) print *this
+$13 = {<rocksdb::DB> = {_vptr.DB = 0x1f7df90 <vtable for rocksdb::DBImpl+16>}, env_ = 0x231b100 <rocksdb::Env::Default()::default_env>, 
+  dbname_ = "/mnt/disks/ssd0/cockroach-data", versions_ = std::unique_ptr<rocksdb::VersionSet> containing 0x7ff842558400, db_options_ = {create_if_missing = true, 
+    create_missing_column_families = false, error_if_exists = false, paranoid_checks = true, env = 0x231b100 <rocksdb::Env::Default()::default_env>, rate_limiter = 
+    std::shared_ptr (empty) 0x0, sst_file_manager = std::shared_ptr (empty) 0x0, info_log = std::shared_ptr (count 3, weak 0) 0x7ff8425567a0, 
+    info_log_level = rocksdb::INFO_LEVEL, max_open_files = 5000, max_file_opening_threads = 16, max_total_wal_size = 0, 
+    statistics = std::shared_ptr (count 3, weak 0) 0x7ff84259a980, disableDataSync = false, use_fsync = false, db_paths = std::vector of length 1, capacity 1 = {{
+        path = "/mnt/disks/ssd0/cockroach-data", target_size = 18446744073709551615}}, db_log_dir = "", wal_dir = "/mnt/disks/ssd0/cockroach-data", 
+    delete_obsolete_files_period_micros = 21600000000, base_background_compactions = 0, max_background_compactions = 0, max_subcompactions = 1, 
+    max_background_flushes = 1, max_log_file_size = 0, log_file_time_to_roll = 0, keep_log_file_num = 1000, recycle_log_file_num = 0, 
+    max_manifest_file_size = 18446744073709551615, table_cache_numshardbits = 6, WAL_ttl_seconds = 0, WAL_size_limit_MB = 0, manifest_preallocation_size = 4194304, 
+    allow_os_buffer = true, allow_mmap_reads = false, allow_mmap_writes = false, allow_fallocate = true, is_fd_close_on_exec = true, 
+    skip_log_error_on_recovery = false, stats_dump_period_sec = 600, advise_random_on_open = true, db_write_buffer_size = 0, 
+    access_hint_on_compaction_start = rocksdb::DBOptions::NORMAL, new_table_reader_for_compaction_inputs = false, compaction_readahead_size = 0, 
+    random_access_max_buffer_size = 1048576, writable_file_max_buffer_size = 1048576, use_adaptive_mutex = false, bytes_per_sync = 0, wal_bytes_per_sync = 0, 
+    listeners = std::vector of length 1, capacity 1 = {std::shared_ptr (count 6, weak 0) 0x7ff842556780}, enable_thread_tracking = false, 
+    delayed_write_rate = 2097152, allow_concurrent_memtable_write = false, enable_write_thread_adaptive_yield = false, write_thread_max_yield_usec = 100, 
+    write_thread_slow_yield_usec = 3, skip_stats_update_on_db_open = false, wal_recovery_mode = rocksdb::kPointInTimeRecovery, allow_2pc = false, 
+    row_cache = std::shared_ptr (empty) 0x0, wal_filter = 0x0, fail_if_options_file_error = false, dump_malloc_stats = false}, stats_ = 0x7ff84259a980, 
+  recovered_transactions_ = std::unordered_map with 0 elements, table_cache_ = std::shared_ptr (count 1, weak 0) 0x7ff842575010, db_lock_ = 0x7ff8425569c0, 
+  options_files_mutex_ = {mutex_ = {mu_ = {__data = {__lock = 0, __count = 0, __owner = 0, __nusers = 0, __kind = 0, __spins = 0, __elision = 0, __list = {
+            __prev = 0x0, __next = 0x0}}, __size = '\000' <repeats 39 times>, __align = 0}}, stats_ = 0x0, env_ = 0x0, stats_code_ = 0}, mutex_ = {mutex_ = {mu_ = {
+        __data = {__lock = 0, __count = 0, __owner = 0, __nusers = 0, __kind = 256, __spins = 0, __elision = 1, __list = {__prev = 0x0, __next = 0x0}}, 
+        __size = '\000' <repeats 17 times>, "\001\000\000\000\000\001", '\000' <repeats 16 times>, __align = 0}}, stats_ = 0x7ff84259a980, 
+    env_ = 0x231b100 <rocksdb::Env::Default()::default_env>, stats_code_ = 46}, shutting_down_ = {<std::atomic_bool> = {_M_base = {
+        _M_i = false}}, <No data fields>}, bg_cv_ = {cond_ = {cv_ = {__data = {__lock = 0, __futex = 1, __total_seq = 1, __wakeup_seq = 0, __woken_seq = 0, 
+          __mutex = 0x7ff8425a5268, __nwaiters = 2, __broadcast_seq = 0}, 
+        __size = "\000\000\000\000\001\000\000\000\001", '\000' <repeats 23 times>, "hRZB\370\177\000\000\002\000\000\000\000\000\000", __align = 4294967296}, 
+      mu_ = 0x7ff8425a5268}, stats_ = 0x7ff84259a980, env_ = 0x231b100 <rocksdb::Env::Default()::default_env>, stats_code_ = 46}, logfile_number_ = 56, 
+  log_recycle_files = std::deque with 0 elements, log_dir_synced_ = false, log_empty_ = false, default_cf_handle_ = 0x7ff8425568a0, 
+  default_cf_internal_stats_ = 0x7ff842573e00, column_family_memtables_ = std::unique_ptr<rocksdb::ColumnFamilyMemTablesImpl> containing 0x7ff842572340, 
+  alive_log_files_ = std::deque with 1 elements = {{number = 56, size = 62636, getting_flushed = false}}, logs_ = std::deque with 1 elements = {{number = 56, 
+      writer = 0x7ff83ee98980, getting_synced = false}}, log_sync_cv_ = {cond_ = {cv_ = {__data = {__lock = 0, __futex = 0, __total_seq = 0, __wakeup_seq = 0, 
+          __woken_seq = 0, __mutex = 0x0, __nwaiters = 0, __broadcast_seq = 0}, __size = '\000' <repeats 47 times>, __align = 0}, mu_ = 0x7ff8425a5268}, 
+    stats_ = 0x7ff84259a980, env_ = 0x231b100 <rocksdb::Env::Default()::default_env>, stats_code_ = 46}, total_log_size_ = 62636, 
+  max_total_in_memory_state_ = 67108864, single_column_family_mode_ = true, logs_to_free_ = {num_stack_items_ = 0, values_ = {0x7ff83f1c7340, 0x7ff83f1a5f80, 0x0, 
+      0x0, 0x0, 0x0, 0x0, 0x0}, vect_ = std::vector of length 0, capacity 0}, is_snapshot_supported_ = true, directories_ = {
+    db_dir_ = std::unique_ptr<rocksdb::Directory> containing 0x7ff8424198a0, data_dirs_ = std::vector of length 1, capacity 1 = {
+      std::unique_ptr<rocksdb::Directory> containing 0x0}, wal_dir_ = std::unique_ptr<rocksdb::Directory> containing 0x0}, write_buffer_ = {buffer_size_ = 0, 
+    memory_used_ = {<std::__atomic_base<unsigned long>> = {_M_i = 66591}, <No data fields>}}, write_thread_ = {max_yield_usec_ = 0, slow_yield_usec_ = 3, 
+    newest_writer_ = {_M_b = {_M_p = 0x7ff840bc59f0}}}, tmp_batch_ = {<rocksdb::WriteBatchBase> = {
+      _vptr.WriteBatchBase = 0x1f7f710 <vtable for rocksdb::WriteBatch+16>}, save_points_ = 0x0, content_flags_ = {<std::__atomic_base<unsigned int>> = {
+        _M_i = 0}, <No data fields>}, rep_ = '\000' <repeats 11 times>}, write_controller_ = {total_stopped_ = 1, total_delayed_ = 0, 
+    total_compaction_pressure_ = 0, bytes_left_ = 7785, last_refill_time_ = 1472150782776540, delayed_write_rate_ = 1456355}, last_batch_group_size_ = 10366, 
+  flush_scheduler_ = {head_ = {_M_b = {_M_p = 0x0}}}, snapshots_ = {list_ = {<rocksdb::Snapshot> = {
+        _vptr.Snapshot = 0x1f7df50 <vtable for rocksdb::SnapshotImpl+16>}, number_ = 4294967295, prev_ = 0x7ff8425a5590, next_ = 0x7ff8425a5590, list_ = 0x0, 
+      unix_time_ = 0, is_write_conflict_boundary_ = false}, count_ = 0}, pending_outputs_ = empty std::list, flush_queue_ = std::deque with 0 elements, 
+  compaction_queue_ = std::deque with 1 elements = {0x7ff8425b6700}, unscheduled_flushes_ = 0, unscheduled_compactions_ = 1, bg_compaction_scheduled_ = 0, 
+  num_running_compactions_ = 0, bg_flush_scheduled_ = 0, num_running_flushes_ = 0, manual_compaction_dequeue_ = std::deque with 0 elements, bg_error_ = {
+    code_ = rocksdb::Status::kOk, subcode_ = rocksdb::Status::kNone, state_ = 0x0, static msgs = {0x17d8690 "", 0x1805e3f "Timeout Acquiring Mutex", 
+      0x1805e57 "Timeout waiting to lock key", 0x18015e8 "Failed to acquire lock due to max_num_locks limit"}}, disable_delete_obsolete_files_ = 0, 
+  delete_obsolete_files_next_run_ = 1472158594993315, last_stats_dump_time_microsec_ = {<std::__atomic_base<unsigned long>> = {_M_i = 0}, <No data fields>}, 
+  next_job_id_ = {<std::__atomic_base<int>> = {_M_i = 19}, <No data fields>}, has_unpersisted_data_ = false, static KEEP_LOG_FILE_NUM = 1000, 
+  static kNoTimeOut = 18446744073709551615, db_absolute_path_ = "/mnt/disks/ssd0/cockroach-data", env_options_ = {use_os_buffer = true, use_mmap_reads = false, 
+    use_mmap_writes = false, use_direct_reads = false, use_direct_writes = false, allow_fallocate = true, set_fd_cloexec = true, bytes_per_sync = 0, 
+    fallocate_with_keep_size = true, compaction_readahead_size = 0, random_access_max_buffer_size = 1048576, writable_file_max_buffer_size = 1048576, 
+    rate_limiter = 0x0}, wal_manager_ = {db_options_ = @0x7ff8425a5020, env_options_ = @0x7ff8425a5720, env_ = 0x231b100 <rocksdb::Env::Default()::default_env>, 
+    read_first_record_cache_ = std::unordered_map with 0 elements, read_first_record_cache_mutex_ = {mu_ = {__data = {__lock = 0, __count = 0, __owner = 0, 
+          __nusers = 0, __kind = 0, __spins = 0, __elision = 0, __list = {__prev = 0x0, __next = 0x0}}, __size = '\000' <repeats 39 times>, __align = 0}}, 
+    purge_wal_files_last_run_ = 0, static kDefaultIntervalToDeleteObsoleteWAL = 600}, event_logger_ = {logger_ = 0x7ff8425567a0}, bg_work_paused_ = 0, 
+  bg_compaction_paused_ = 0, refitting_level_ = false, opened_successfully_ = true, 
+  min_log_with_prep_ = std::priority_queue wrapping: std::vector of length 0, capacity 0, prepared_section_completed_ = std::unordered_map with 0 elements, 
+  prep_heap_mutex_ = {<std::__mutex_base> = {_M_mutex = {__data = {__lock = 0, __count = 0, __owner = 0, __nusers = 0, __kind = 0, __spins = 0, __elision = 0, 
+          __list = {__prev = 0x0, __next = 0x0}}, __size = '\000' <repeats 39 times>, __align = 0}}, <No data fields>}}
+```
+
+```
+(gdb) print bg_compaction_scheduled_
+$14 = 0
+```
+
+And I'm not sure why I didn't include this in the initial dumps, but this is the actual condvar in the background thread:
+
+```
+(gdb) print bgsignal_
+$24 = {__data = {__lock = 0, __futex = 33, __total_seq = 17, __wakeup_seq = 16, __woken_seq = 16, __mutex = 0x7ff84256b0e8, __nwaiters = 2, __broadcast_seq = 0}, 
+  __size = "\000\000\000\000!\000\000\000\021\000\000\000\000\000\000\000\020\000\000\000\000\000\000\000\020\000\000\000\000\000\000\000\350\260VB\370\177\000\000\0
+02\000\000\000\000\000\000", __align = 141733920768}
+```
+
+And this is the condvar in the DelayWrite thread:
+
+```
+(gdb) print bg_cv_
+$26 = {cond_ = {cv_ = {__data = {__lock = 0, __futex = 1, __total_seq = 1, __wakeup_seq = 0, __woken_seq = 0, __mutex = 0x7ff8425a5268, __nwaiters = 2, 
+        __broadcast_seq = 0}, __size = "\000\000\000\000\001\000\000\000\001", '\000' <repeats 23 times>, "hRZB\370\177\000\000\002\000\000\000\000\000\000", 
+      __align = 4294967296}, mu_ = 0x7ff8425a5268}, stats_ = 0x7ff84259a980, env_ = 0x231b100 <rocksdb::Env::Default()::default_env>, stats_code_ = 46}
+```
+
+@a-robinson, I will try to take a look soon. Can you please share with me the options that you are using, Is it also possible to get RocksDB LOG file ?
+
+I've pasted the options file below. Getting logs is a bit trickier due to the embedded way that we're running rocksdb via cgo, but I'm trying to get some for you.
+
+```
+# This is a RocksDB option file.
+#
+# For detailed file format spec, please refer to the example file
+# in examples/rocksdb_option_file_example.ini
+#
+
+[Version]
+  rocksdb_version=4.9.0
+  options_file_version=1.1
+
+[DBOptions]
+  info_log_level=INFO_LEVEL
+  write_thread_max_yield_usec=100
+  write_thread_slow_yield_usec=3
+  fail_if_options_file_error=false
+  stats_dump_period_sec=600
+  max_total_wal_size=0
+  wal_recovery_mode=kPointInTimeRecovery
+  wal_bytes_per_sync=0
+  max_manifest_file_size=18446744073709551615
+  bytes_per_sync=0
+  max_subcompactions=1
+  WAL_ttl_seconds=0
+  wal_dir=/home/alex/cockroach-data
+  enable_write_thread_adaptive_yield=false
+  manifest_preallocation_size=4194304
+  log_file_time_to_roll=0
+  recycle_log_file_num=0
+  allow_concurrent_memtable_write=false
+  keep_log_file_num=1000
+  db_write_buffer_size=0
+  dump_malloc_stats=false
+  table_cache_numshardbits=6
+  max_open_files=5000
+  base_background_compactions=0
+  max_background_compactions=0
+  db_log_dir=
+  use_fsync=false
+  use_adaptive_mutex=false
+  writable_file_max_buffer_size=1048576
+  max_background_flushes=1
+  compaction_readahead_size=0
+  skip_stats_update_on_db_open=false
+  skip_log_error_on_recovery=false
+  new_table_reader_for_compaction_inputs=false
+  error_if_exists=false
+  enable_thread_tracking=false
+  delete_obsolete_files_period_micros=21600000000
+  random_access_max_buffer_size=1048576
+  is_fd_close_on_exec=true
+  disable_data_sync=false
+  WAL_size_limit_MB=0
+  create_missing_column_families=false
+  paranoid_checks=true
+  disableDataSync=false
+  create_if_missing=true
+  access_hint_on_compaction_start=NORMAL
+  max_log_file_size=0
+  allow_2pc=false
+  allow_mmap_writes=false
+  delayed_write_rate=2097152
+  max_file_opening_threads=16
+  allow_fallocate=true
+  allow_os_buffer=true
+  allow_mmap_reads=false
+  advise_random_on_open=true
+
+
+[CFOptions "default"]
+  compaction_filter_factory=nullptr
+  prefix_extractor=cockroach_prefix_extractor
+  comparator=cockroach_comparator
+  table_factory=BlockBasedTable
+  bottommost_compression=kDisableCompressionOption
+  compression_per_level=
+  max_bytes_for_level_base=16777216
+  bloom_locality=0
+  target_file_size_base=4194304
+  memtable_prefix_bloom_huge_page_tlb_size=0
+  max_successive_merges=0
+  max_sequential_skip_in_iterations=8
+  arena_block_size=1048576
+  target_file_size_multiplier=2
+  source_compaction_factor=1
+  min_write_buffer_number_to_merge=2
+  max_write_buffer_number=4
+  write_buffer_size=8388608
+  max_grandparent_overlap_factor=10
+  memtable_factory=SkipListFactory
+  compression=kSnappyCompression
+  min_partial_merge_operands=2
+  level0_stop_writes_trigger=17
+  num_levels=7
+  level0_slowdown_writes_trigger=16
+  level0_file_num_compaction_trigger=1
+  expanded_compaction_factor=25
+  compaction_filter=nullptr
+  soft_rate_limit=0.000000
+  soft_pending_compaction_bytes_limit=68719476736
+  max_write_buffer_number_to_maintain=0
+  verify_checksums_in_compaction=true
+  merge_operator=cockroach_merge_operator
+  memtable_prefix_bloom_bits=0
+  paranoid_file_checks=false
+  inplace_update_num_locks=10000
+  optimize_filters_for_hits=false
+  level_compaction_dynamic_level_bytes=true
+  inplace_update_support=false
+  compaction_style=kCompactionStyleLevel
+  memtable_prefix_bloom_probes=6
+  purge_redundant_kvs_while_flush=true
+  filter_deletes=false
+  hard_pending_compaction_bytes_limit=274877906944
+  disable_auto_compactions=false
+  max_bytes_for_level_multiplier=10
+  report_bg_io_stats=false
+
+[TableOptions/BlockBasedTable "default"]
+  index_block_restart_interval=1
+  block_size_deviation=10
+  format_version=2
+  block_restart_interval=16
+  block_size=32768
+  no_block_cache=false
+  checksum=kCRC32c
+  skip_table_builder_flush=false
+  index_type=kBinarySearch
+  hash_index_allow_collision=true
+  pin_l0_filter_and_index_blocks_in_cache=false
+  cache_index_and_filter_blocks=false
+  whole_key_filtering=true
+  filter_policy=rocksdb.BuiltinBloomFilter
+  flush_block_policy_factory=FlushBlockBySizePolicyFactory
+
+
+```
+
+It might not be in quite the format you're expecting due to the tricks we play with cgo, but you can download the rocksdb logs from a stuck node here: https://storage.googleapis.com/cockroach-alex/rocks.log
+
+As I commented on https://github.com/cockroachdb/cockroach/issues/8784#issuecomment-243155761, there's an interesting escalation of problems in the WARN logs (there aren't any ERROR logs):
+
+```
+$ grep WARN rocks.log
+I160826 04:47:00.189215 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 2 level-0 files
+I160826 04:53:42.393899 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 2 level-0 files
+I160826 05:00:26.926154 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 2 level-0 files
+I160826 05:00:27.536304 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 3 level-0 files
+I160826 05:07:12.385180 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 3 level-0 files
+I160826 05:13:59.813762 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 3 level-0 files
+I160826 05:14:00.408152 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 4 level-0 files
+I160826 05:20:42.397298 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 4 level-0 files
+I160826 05:27:29.820410 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 4 level-0 files
+I160826 05:27:30.288415 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 5 level-0 files
+I160826 05:34:12.385271 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 5 level-0 files
+I160826 05:40:56.905675 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 5 level-0 files
+I160826 05:40:57.329201 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 6 level-0 files
+I160826 05:47:39.838726 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 6 level-0 files
+I160826 05:54:26.894564 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 6 level-0 files
+I160826 05:54:27.279983 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 7 level-0 files
+I160826 06:01:09.818475 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 7 level-0 files
+I160826 06:07:56.895062 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 7 level-0 files
+I160826 06:07:57.155478 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 8 level-0 files
+I160826 06:14:42.381495 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 8 level-0 files
+I160826 06:21:26.910347 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 8 level-0 files
+I160826 06:21:27.321539 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 9 level-0 files
+I160826 06:28:09.824149 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 9 level-0 files
+I160826 06:34:56.897768 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 9 level-0 files
+I160826 06:34:57.585951 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 10 level-0 files
+I160826 06:41:39.814000 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 10 level-0 files
+I160826 06:48:22.381817 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 10 level-0 files
+I160826 06:48:22.910202 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 11 level-0 files
+I160826 06:55:06.907234 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 11 level-0 files
+I160826 07:01:49.832723 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 11 level-0 files
+I160826 07:01:50.225516 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 12 level-0 files
+I160826 07:08:36.902698 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 12 level-0 files
+I160826 07:15:26.894773 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 12 level-0 files
+I160826 07:15:27.251780 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 13 level-0 files
+I160826 07:22:09.841335 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 13 level-0 files
+I160826 07:28:56.894706 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 13 level-0 files
+I160826 07:28:57.259954 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 14 level-0 files
+I160826 07:35:39.815485 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 14 level-0 files
+I160826 07:42:22.382095 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 14 level-0 files
+I160826 07:42:22.737980 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 15 level-0 files
+I160826 07:49:06.894388 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 15 level-0 files
+I160826 07:55:49.813715 storage/engine/rocksdb.go:72  [WARN] [default] Increasing compaction threads because we have 15 level-0 files
+I160826 07:55:50.585357 storage/engine/rocksdb.go:72  [WARN] [default] Stalling writes because we have 16 level-0 files rate 2097152
+I160826 08:02:32.382557 storage/engine/rocksdb.go:72  [WARN] [default] Stalling writes because we have 16 level-0 files rate 1747626
+I160826 08:09:19.813615 storage/engine/rocksdb.go:72  [WARN] [default] Stalling writes because we have 16 level-0 files rate 1456355
+I160826 08:09:20.287301 storage/engine/rocksdb.go:72  [WARN] [default] Stopping writes because we have 17 level-0 files
+```
+
+And these are the last few logs before the system froze up:
+
+```
+I160826 08:09:20.283373 storage/engine/rocksdb.go:72  EVENT_LOG_v1 {"time_micros": 1472198960283252, "cf_name": "default", "job": 18, "event": "table_file_creation", "file_number": 57, "file_size": 460227, "table_properties": {"data_size": 455422, "index_size": 2917, "filter_size": 2373, "raw_key_size": 74082, "raw_average_key_size": 40, "raw_value_size": 1917954, "raw_average_value_size": 1057, "num_data_blocks": 56, "num_entries": 1814, "filter_policy_name": "rocksdb.BuiltinBloomFilter", "kDeletedKeys": "517", "kMergeOperands": "1200"}}
+I160826 08:09:20.283447 storage/engine/rocksdb.go:72  [default] [JOB 18] Level-0 flush table #57: 460227 bytes OK
+I160826 08:09:20.287301 storage/engine/rocksdb.go:72  [WARN] [default] Stopping writes because we have 17 level-0 files
+I160826 08:09:20.287394 storage/engine/rocksdb.go:72  (Original Log Time 2016/08/26-08:09:20.284898) [default] Level-0 commit table #57 started
+I160826 08:09:20.287428 storage/engine/rocksdb.go:72  (Original Log Time 2016/08/26-08:09:20.287141) [default] Level-0 commit table #57: memtable #1 done
+I160826 08:09:20.287438 storage/engine/rocksdb.go:72  (Original Log Time 2016/08/26-08:09:20.287146) [default] Level-0 commit table #57: memtable #2 done
+I160826 08:09:20.287451 storage/engine/rocksdb.go:72  (Original Log Time 2016/08/26-08:09:20.287182) EVENT_LOG_v1 {"time_micros": 1472198960287161, "job": 18, "event": "flush_finished", "lsm_state": [17, 0, 0, 0, 0, 0, 0], "immutable_memtables": 0}
+I160826 08:09:20.287463 storage/engine/rocksdb.go:72  (Original Log Time 2016/08/26-08:09:20.287345) [default] Level summary: base level 6 max bytes base 18446744073709551615 files[17 0 0 0 0 0 0] max score 17.00
+I160826 08:09:29.927060 server/node.go:697  node 1 status: [TRUNCATED]
+```
+
+Per my comment on https://github.com/cockroachdb/cockroach/issues/8784, I think the accidental `max_background_compactions = 0` setting is the problem. We normally don't see this because we're running on multi-cpu machines.
+
+Thanks @petermattis ! setting max_background_compactions to zero could definitely cause this issue. The more pending L0 files and compaction bytes RocksDB accumulate the more it will slow down the writes until they stop completely, and if there are no compactions to reduce the number of L0 files and pending compaction bytes the DB won't be able to recover from this Stall/Dead lock
+
+@IslamAbdelRahman Is it ever valid/desirable for `max_background_compactions` to be 0? Perhaps RocksDB should prohibit that configuration (or make it less likely). Regardless, we'll be fixing this on our end as well. 
+
+@petermattis, I don't think there is a reason to set `max_background_compactions` to 0
+If users want to bulk load data they set `disable_auto_compactions` to true and issue a manual compaction after loading everything. This is the recommended way of disabling background compactions.
+I believe we should prohibit setting `max_background_compactions` to zero
+
+Ok, thanks. This line of code is where we were inadvertently setting `max_background_compactions` to 0, for what it's worth:
+https://github.com/facebook/rocksdb/blob/v4.9/util/options.cc#L795
+
+This is a good point, shall we prevent setting max_background_compactions  to zero? Does a similar argument apply to max_background_flushes?
+
+Just to close the loop here, ensuring `max_background_compactions` is always at least 1 did resolve the problem for us.
+
+Thanks @a-robinson for the update
+

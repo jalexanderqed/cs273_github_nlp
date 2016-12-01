@@ -1,0 +1,22 @@
+When reading the documentation on plaintable format, I stumbled across two misleading sections where block-based options are defined, which seems unnecessary (i.e. these options have no effect) in my understanding. As I'm trying to learn the right plaintable options from the documentation, my understanding can be wrong, of course. In that case, I'd welcome some clarification on the effect of those parameters in plaintable mode.
+
+In https://github.com/facebook/rocksdb/wiki/RocksDB-Tuning-Guide#in-memory-prefix-database, there is an option
+
+```
+options.no_block_cache = true;
+```
+
+This line doesn't compile in recent rocksdb versions. It looks like this should be
+
+```
+block_based_options.no_block_cache = true;
+```
+
+Could this line safely be removed from the plaintable configuration?
+
+In https://github.com/facebook/rocksdb/wiki/RocksDB-In-Memory-Workload-Performance-Benchmarks#test-1-point-lookup, the plethora of command line arguments include arguments like `--block_size=4096`. They also seem unnecessary to me. Is that correct?
+
+You are right. Thank you for reporting it. Let me remove them.
+
+Thanks a lot, @siying. Feel free to close this issue once you updated the documentation.
+

@@ -1,0 +1,167 @@
+I have a rocksdb DB of size ~125GB (version 3.9.1). The memory used by rocksdb keeps going up over time. Our OOM killer kills the process when it hits ~8GB (it gets there in ~1 hour). And the leak seems to be happening along the read path (both point lookups and row iteration).
+
+Google's tcmalloc shows that allocations along ReadFilter() and CreateIndexReader() are contributing to the leak. Both of these ultimately point to ReadBlockContents() and UncompressBlockContents(). Any idea what could be happening? The larger question is if there is a way to limit cumulative memory usage by rocksdb to a certain number?
+
+Here are the DB options we're using:
+
+write_buffer_size = 64MB
+block_size = 8192;
+rocksdb::BlockBasedTableOptions table_options;
+table_options.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
+table_options.block_cache = rocksdb::NewLRUCache(128 \* 1024 \* 1024);
+min_write_buffer_number_to_merge = 3;
+max_write_buffer_number = 5;
+target_file_size_base = 64MB;
+max_bytes_for_level_base = 512MB;
+max_bytes_for_level_multiplier = 8;
+target_file_size_multiplier = 3;
+
+After seeing leaks, I tried/considered the following:
+1) Set the block cache to 1MB. It did not help.
+2) Verified that cache_index_and_filter_blocks is false.
+3) Considered setting use_block_based_builder to true, but wanted to get to the bottom of this leak before rebuilding/compacting the DB with this option.
+
+There are currently 4 levels in the DB, and the largest sstable is 1.9GB. Here are the current db stats:
+
+```
+** Compaction Stats [default] **
+Level   Files   Size(MB) Score Read(GB)  Rn(GB) Rnp1(GB) Write(GB) Wnew(GB) Moved(GB) W-Amp Rd(MB/s) Wr(MB/s) Comp(sec) Comp(cnt) Avg(sec) Stall(sec) Stall(cnt) Avg(ms)     RecordIn   RecordDrop
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  L0     3/0        122   0.4      0.0     0.0      0.0       0.3      0.3       0.0   0.0      0.0     28.4         9         8    1.176       0.00          0    0.00            0            0
+  L1    11/0        511   1.0      0.7     0.3      0.5       0.6      0.1       0.0   2.4     24.2     20.4        32         1   31.658       0.00          0    0.00      4258695       548196
+  L2    47/0       3956   1.0      0.6     0.1      0.5       0.6      0.1       0.0   4.5     18.8     18.3        34         2   16.779       0.00          0    0.00      4994999       212495
+  L3   100/0      32443   1.0      0.7     0.2      0.5       0.7      0.2       0.0   3.0     17.7     17.6        42         1   41.880       0.00          0    0.00     11112522        20936
+  L4    77/0      89758   0.3      0.0     0.0      0.0       0.0      0.0       0.0   0.0      0.0      0.0         0         0    0.000       0.00          0    0.00            0            0
+ Sum   238/0     126789   0.0      2.1     0.6      1.5       2.2      0.8       0.0   8.5     18.4     19.4       117        12    9.709       0.00          0    0.00     20366216       781627
+ Int     0/0          0   0.0      1.1     0.3      0.7       1.2      0.4       0.0   9.7     17.0     18.6        63         5   12.678       0.00          0    0.00     13075943       192579
+Flush(GB): accumulative 0.261, interval 0.119
+Stalls(secs): 0.000 level0_slowdown, 0.000 level0_numfiles, 0.000 memtable_compaction, 0.000 leveln_slowdown_soft, 0.000 leveln_slowdown_hard
+Stalls(count): 0 level0_slowdown, 0 level0_numfiles, 0 memtable_compaction, 0 leveln_slowdown_soft, 0 leveln_slowdown_hard
+
+** DB Stats **
+Uptime(secs): 1001.2 total, 471.2 interval
+Cumulative writes: 3111 writes, 4052120 keys, 3111 batches, 1.0 writes per batch, 1.02 GB user ingest
+Cumulative WAL: 3111 writes, 3111 syncs, 1.00 writes per sync, 1.02 GB written
+Interval writes: 1103 writes, 1858047 keys, 1103 batches, 1.0 writes per batch, 475.9 MB user ingest
+Interval WAL: 1103 writes, 1103 syncs, 1.00 writes per sync, 0.46 MB written
+```
+
+Thank you for taking the time to read this.
+
+With `cache_index_and_filter_blocks = false` RocksDB will keep all indexes and bloom filters in memory. With database of 150GB this can easily be 8GB or more. You can get amount of memory taken by index and filter blocks like this:
+
+```
+ std::string mem;
+ db->GetProperty("rocksdb.estimate-table-readers-mem", &mem);
+```
+
+What does this property say?
+
+Increasing block_size will decrease memory usage for indexes.
+
+I get back "0".
+
+Let me try setting cache_index_and_filter_blocks to true. Will setting it to true limit rocksdb memory usage to the block size cache (which I'm setting to 128MB)?
+
+Yes, it will limit memory usage to block cache, although the performance might suffer, since you'll have to do many page reads for each read request.
+
+Let's say I can allocate 2GB to the block cache. Do you think that's an acceptable size to cache bloom filters/indices? Or would you still recommend that I increase my block size? My average row size is ~1K and I'd like to avoid reading and uncompressing too much data for point lookups.
+
+I'm running off of an SSD, so I'm not too worried about additional seeks. Would you recommend using use_block_based_builder instead of the above-mentioned options?
+
+Thanks for the quick replies, Igor.
+
+I tried setting cache_index_and_filter_blocks to true, but it dropped read performance by ~100x, so that change is a non-starter. Most of CPU (90%) is being spent in ReadBlockContents() (ultimately in pread64 and snappy::RawUncompress). The remaining 10% is being spent in the destruction of *FilterBlockReader and BinarySearchIndexReader (it seems to be freeing a bunch of memory).
+
+Two questions:
+1) Is there a rule of thumb estimate for memory requirements for bloom filters and index blocks for sstables? Are there any other rocksdb properties I could be looking at?
+2) Apart from increasing the block size, are there any other options to try to reduce memory usage? 8GB index + filter blocks for 125GB = 6.4%, which seems rather high.
+
+Any pointers would be much appreciated. Thanks!
+
+@sureshkrishnan1 what block cache size do you use?
+
+I'm using a block size of 8K.
+
+@sureshkrishnan1 I mean block cache size. What do you set to table_options.block_cache
+
+The DB was populated with: table_options.block_cache = rocksdb::NewLRUCache(128 \* 1024 \* 1024);
+
+I recently increased it to 2GB, but it didn't help. The 100x drop in performance was measured with a 2GB block cache size.
+
+I've now set ReadOptions.fill_cache to false for my bulk scans. It helped a little, but instead of 1 hour, the binary gets to 8GB in 2 hours. I guess the underlying problem of bringing too much into memory still remains.
+
+Can you try increasing block size?
+
+Igor, I'm about to try a block size of 32K. It'll take some time to load up 125GB of data, but I'll keep you posted on how it goes.
+
+@siying any idea why would "rocksdb.estimate-table-readers-mem" return 0?
+
+I think I ran it right at the beginning (after the DB was initialized) before the readers got a chance to load up data. I've now added a way to print it out periodically.
+
+For a 16GB rocksdb database, the value of this flag (with old settings, i.e. 8K block size) is 1GB. Here are the values of other rocksdb properties:
+rocksdb.estimate-num-keys: 88160282
+rocksdb.is-file-deletions-enabled: 0
+
+For 88 million keys and 10 bits/key, total bloom filter size estimate would be ~110MB.
+
+Any idea why is-file-deletions-enabled is set to 0? Does this mean old sstables will never be garbage collected? Should EnableFileDeletions() be explicitly called on a rocksdb instance?
+
+LOL, it's wrong output: https://github.com/facebook/rocksdb/blob/master/db/db_filesnapshot.cc#L79. IsFileEnabled() returns true when file deletions are disabled :(
+
+Glad to know that it's a minor typo :)
+
+Okay, so I tried a synthetic workload with both 32K and 8K block sizes. Loaded the db to 25GB in both cases. Using an 8K block size used up more memory for filters, but not by too much.
+
+With 8K block size  rocksdb.estimate-table-readers-mem is 869,905,706 (829MB), and with 32K block size it is 664,033,011 (633MB). Memory usage by the binary varies from 1.2GB -> 2GB (depends on compactions and other unrelated caching I do).
+
+It seems like having a larger block size doesn't help as much.
+
+Question: Is there a way to tell rocksdb to create a sparser index (with block based tables)?
+
+hmmm, interesting. i would expect that increasing block size 4x will bring down the index size 4x. the only way block based tables can create sparser indexes is by increasing block sizes unfortunately.
+
+how big is your working set size? is most of your data cold (i.e. never accessed)? if that's true we could make cache_index_and_filter_blocks=true work OK while keeping the memory usage low.
+
+There is one strange observation I haven't been able to explain. In both cases, I wrote between 300 - 400 million rows (the data was very compressible though).
+
+Rocksdb's estimate of the total number of rows (rocksdb.estimate-num-keys) was ~4 billion when block size was 32K and ~2 billion when block size was 8K. I can't explain the blow up from 400 million to 4 billion (the key is a randomly generated int64 + a 12 byte suffix) and the 2X difference between 32K and 8K. If I take the numbers at face value, it's possible that we're using up a lot of space for bloom filters when block size is 32K. I didn't get a heap profile when I did my experiments, so that information is lost now.
+
+In a day or two, I'll re-run the experiments by either disabling bloom filters, or if that's too slow, I'll set the number of bloom bits to 5 bits/key instead of 10/key (that'll probably give me a false positive rate of ~10%).
+
+Regarding, cache_index_and_filter_blocks, I was overagressive in setting my block cache size to 2GB the last time around. I'll try again with a 6GB cache size and see if read performance is acceptable.
+
+Thanks for your help, Igor. I'll update this thread with my findings.
+
+Are you using jemalloc or tcmalloc?
+
+tcmalloc.
+
+Got caught-up with a few things so couldn't post an update on this bug. The read performance (point lookups) with 32K was just not acceptable. Latencies spiked, CPU usage went up (snappy decompression started showing up in profiles), and so I had to revert back to 8K. I just ended up clubbing multiple rows together so as to have fewer rocksdb rows. This reduced bloom filter usage, which was also a significant contributor to memory usage.
+
+Question: Is there a way to set smaller block size for sstables in upper levels (say 0, 1, 2), and bigger block sizes for sstables in lower levels?
+
+Regarding the stats discrepancy (2 billion vs 4 billion posted above), it seems like the values exported by rocksdb are not always up-to-date and are just stale.
+
+Thanks!
+
+Thanks for the update!
+
+> Question: Is there a way to set smaller block size for sstables in upper levels (say 0, 1, 2), and bigger block sizes for sstables in lower levels?
+
+Unfortunately we don't have this option yet :(
+
+In my case, a 6.2G database uses 19G RAM for rocksdb.estimate-table-readers-mem. 
+All options are default.  The key and value are both 1KB.
+
+update: It seems like that the amount of memory indexes and filters is _very_ relavent to the size 
+of keys?  @igorcanadi  Is this correct ?  How big are keys in your case @sureshkrishnan1  ?
+
+> In my case, a 6.2G database uses 19G RAM for rocksdb.estimate-table-readers-mem. 
+
+Oh wow. Are your keys very very compressible? That sounds a bit off.
+
+> Oh wow. Are your keys very very compressible? That sounds a bit off.
+
+The pattern is like k[0-9]{13}[A]{1024}. Yes, it's very compressible. 
+

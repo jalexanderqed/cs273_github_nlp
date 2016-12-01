@@ -1,0 +1,60 @@
+We aren't correctly handling the case where the header has a bad length
+or checksum. Add a test and fix it! As it happens several of the existing
+tests weren't behaving as they should in the recycled log case.
+
+CC @kradhakrishnan 
+
+@kradhakrishnan @siying ping!  This fixed everything for me.  What is might not do is gracefully preserve all of the weird WAL replay modes.  Honestly, it's not clear to me that that is possible or a good idea anyway.  The only mode we care about is where we stop replay when we hit anything resembling garbage.
+
+Can you please provide more information on what the problem was and what the fix is doing ? It is not obvious to me.
+
+Thanks!
+
+The situation I ran into was that the recycled log would have garbage.  If we happen to read a physical record that is aligned with a block, we would get a valid crc and mismatched log_number, and know we were at the end.  But if we didn't happen to align with an old record, we would just see garbage and it would be treated as a corruption and fail (instead of just stopping replay).
+
+@kradhakrishnan did you get a chance to review this PR?
+
+Let me take a look. I need to read the code a bit to validate the fix. I will respond with comments soon.
+
+I think at this point, it is very hard to reason with this section of codebase. The fix looks ok, but I am not sure if it is fixing only the issues observed and is missing other cases. I would take the patch on testing basis and probably raise an issue to take a comprehensive look at this code path and make it cleaner and simpler.
+
+I agree this code is hard to follow. The part I struggle with is that most of the replay modes don't make sense for recycled logs.  Unless/until most users are using that mode, though, I hesitate to restructure the code around it.  This puts all of the logic in the switch statement in ReadRecord, which seems to be about as good as it gets for the moment...
+
+FWIW I've been use this commit in all of my failure testing for several months now without any problems. (Well, except for the new commit that combines the two bad record cases.)
+
+Can you turn down supporting modes that doesn't go well with "pooled" WAL instead of trying to support everything ?
+
+I think kAbsoluteConsistency doesn't make sense (you're overwriting 'garbage' so how do you distinguish a clean stop from a messy one?).  It will basically fail almost every time, but that's a safe failure mode, at least. 
+
+kPointInTimeRecovery is indistinguishable from the default kTolerateCorruptedRecords, so it can be ruled out.
+
+kSkipAnyCorruptedRecords works.
+
+I've added a patch that santizes those 2 modes by silently switching to kTolerateCorruptedTailRecords... is that what you mean?  Or is there a good place to simply error out on startup?
+
+@liewegas  This patch was not merged. Can you rebase to the master and run the tests just to make sure it is good, so we can merge ?
+
+@liewegas can you rebase the PR to restart the tests? We can merge after that.
+
+Rebased!  Thanks-
+
+The windows build times out. Maybe it doesn't go with Windows there. Can we disable the test under Windows?
+
+Try this for now https://github.com/facebook/rocksdb/pull/1125
+
+@liewegas can you rebase it again after the Windows fix? Or maybe I should just merge.
+
+This was merged manually.
+
+@liewegas what do you mean by "merged manually"?
+
+I see these commits in master from 5/23:
+
+847e471db608a35f9dea8e00dde6a3e58b72e458
+7947aba68ca372f155cf27432d0b7dacfcc6db55
+34df1c94d5ece7463368d2c771fd021c72692e3f
+2b2a898e0b9ffe12e4ffb9e2bf4a697c843278f0
+11f329bd40ff6d6cd730e3dd276c5662188538a0
+
+I assume your internal ci tool did a rebase/merge operation..
+

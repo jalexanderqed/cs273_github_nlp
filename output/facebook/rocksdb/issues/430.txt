@@ -1,0 +1,6 @@
+Exposed IncreaseParallelism option to Java API as setIncreaseParallelism
+
+Review is here: https://reviews.facebook.net/D29871
+
+Thanks for adding this support!
+

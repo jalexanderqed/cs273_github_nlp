@@ -1,0 +1,21 @@
+ColumnFamilyHandles face the same problem as RocksIterator previously
+so used methods were also applied for ColumnFamilyHandles.
+
+Another problem with CF was that Options passed to CFs were
+always filled with default values. To enable Merge, all parts
+of the database must share the same merge functionality which
+is not possible using default values. So from now on every
+CF will inherit from db options.
+
+Changes to RocksDB:
+- merge can now take also a cfhandle
+
+Changes to MergeTest:
+- Corrected formatting
+- Included also GC tests
+- Extended tests to cover CF related parts
+- Corrected paths to cleanup properly within the test process
+- Reduced verbosity of the test
+
+Differential: https://reviews.facebook.net/D27999
+

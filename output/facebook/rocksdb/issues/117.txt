@@ -1,0 +1,319 @@
+Hi,
+
+First of all, thank you for making this open source. I have just installed it on one of our servers (it runs CentOS 6.2) in order to evaluate it.
+
+I installed all the dependencies and both the shared and static libraries build. However, I get two tests (out of 44) that fail.
+- The first is signal_test, which in addition generates a coredump,
+#0   ./signal_test() [0x406ab9] f0      /home/ehamilto/rocksdb/rocksdb-master/util/signal_test.cc:12
+#1   /lib64/libc.so.6(__libc_start_main+0xfd) [0x3ca681ed1d] ?? ??:0
+#2   ./signal_test() [0x4069c9] _start  ??:0
+
+(gdb) bt
+#0  f0 () at util/signal_test.cc:12
+#1  f1 () at util/signal_test.cc:16
+#2  f2 () at util/signal_test.cc:20
+#3  f3 () at util/signal_test.cc:24
+#4  main () at util/signal_test.cc:31
+- The second is  merge_test (does not generate a coredump),
+
+db/merge_test.cc:344: failed: 10 == 0
+#0   ./merge_test() [0x40b3e3] Options  /home/ehamilto/rocksdb/rocksdb-master/./include/rocksdb/options.h:772
+#1   ./merge_test() [0x40eb0d] main     /home/ehamilto/rocksdb/rocksdb-master/db/merge_test.cc:464
+#2   /lib64/libc.so.6(__libc_start_main+0xfd) [0x3ca681ed1d] ?? ??:0
+#3   ./merge_test() [0x406bcd] _start   ??:0
+
+I am first and foremost interested in knowing whether this is expected (I got a copy of the repository this morning) and I can ignore them but I'd also appreciate if you could say what they mean.
+
+I built from whatever was in the repository this morning.
+
+Thank you in advance,
+
+Ethan. 
+
+signal test is meant to trigger a segment fault. So that is expected. But merge_test failure is not expected. I just ran merge_test on my machine, it works for me.
+
+Thanks. 
+
+From the failure I get, it looks like it doesn't like an Options variable. What is this test supposed to do?
+
+---
+
+From: Lei Jin [notifications@github.com]
+Sent: Friday, April 11, 2014 5:00 PM
+To: facebook/rocksdb
+Cc: Ethan Hamilton
+Subject: Re: [rocksdb] Only 2 tests fail after install/build : signal_test and merge_test (#117)
+
+signal test is meant to trigger a segment fault. So that is expected. But merge_test failure is not expected. I just ran merge_test on my machine, it works for me.
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/117#issuecomment-40265556.
+
+include/rocksdb/options.h:772 is the constructor of Options(). It is not possible to be on the call stack of db/merge_test.cc:344. Are you sure it is copied correctly?
+
+I downloaded it this morning as a zip file from,
+
+https://github.com/facebook/rocksdb
+
+From: Lei Jin [mailto:notifications@github.com]
+Sent: Friday, April 11, 2014 6:03 PM
+To: facebook/rocksdb
+Cc: Ethan Hamilton
+Subject: Re: [rocksdb] Only 2 tests fail after install/build : signal_test and merge_test (#117)
+
+include/rocksdb/options.h:772 is the constructor of Options(). It is not possible to be on the call stack of db/merge_test.cc:344. Are you sure it is copied correctly?
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/117#issuecomment-40267674.
+
+Whatever it was, rocksdb seems to be running fine with the application I am testing it with ☺.
+
+From: Ethan Hamilton
+Sent: Friday, April 11, 2014 6:12 PM
+To: facebook/rocksdb; facebook/rocksdb
+Subject: RE: [rocksdb] Only 2 tests fail after install/build : signal_test and merge_test (#117)
+
+I downloaded it this morning as a zip file from,
+
+https://github.com/facebook/rocksdb
+
+From: Lei Jin [mailto:notifications@github.com]
+Sent: Friday, April 11, 2014 6:03 PM
+To: facebook/rocksdb
+Cc: Ethan Hamilton
+Subject: Re: [rocksdb] Only 2 tests fail after install/build : signal_test and merge_test (#117)
+
+include/rocksdb/options.h:772 is the constructor of Options(). It is not possible to be on the call stack of db/merge_test.cc:344. Are you sure it is copied correctly?
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/117#issuecomment-40267674.
+
+@ehamilto signal_test is expected (if you run unit tests using the command `make check` we don't actually run signal_test). merge_test is not expected.
+
+Can you try doing `make clean; make dbg; ./merge_test`? That will give us correct line on which the test fails. (if you're running optimized code, our stack trace seems off)
+
+Thanks!
+
+Thanks Igor,
+
+This is strange, in debug mode, the test passes,
+
+$ ./merge_test
+Test read-modify-write counters...
+a: 3
+1
+2
+a: 3
+b: 1225
+3
+Compaction started ...
+Compaction ended
+a: 3
+b: 1225
+Test merge-based counters...
+a: 3
+1
+2
+a: 3
+b: 1225
+3
+Test merge in memtable...
+a: 3
+1
+2
+a: 3
+b: 1225
+3
+Test Partial-Merge
+Opening database with TTL
+Test read-modify-write counters...
+a: 3
+1
+2
+a: 3
+b: 1225
+3
+Compaction started ...
+Compaction ended
+a: 3
+b: 1225
+Test merge-based counters...
+a: 3
+1
+2
+a: 3
+b: 1225
+3
+Test merge in memtable...
+Opening database with TTL
+a: 3
+1
+2
+a: 3
+b: 1225
+3
+Test Partial-Merge
+Opening database with TTL
+Opening database with TTL
+Opening database with TTL
+Opening database with TTL
+Opening database with TTL
+Opening database with TTL
+Opening database with TTL
+Opening database with TTL
+Opening database with TTL
+Opening database with TTL
+Opening database with TTL
+Opening database with TTL
+Opening database with TTL
+Opening database with TTL
+Opening database with TTL
+Opening database with TTL
+
+But in release mode I get,
+
+$ ./merge_test
+Test read-modify-write counters...
+1
+2
+3
+Compaction started ...
+Compaction ended
+Test merge-based counters...
+1
+2
+3
+Test merge in memtable...
+1
+2
+3
+Test Partial-Merge
+db/merge_test.cc:344: failed: 10 == 0
+#0   ./merge_test() [0x423083] Options  /home/fgomez/rocksdb/rocksdb-master/./include/rocksdb/options.h:772
+#1   ./merge_test() [0x406a94] ~basic_string    /usr/include/c++/4.8/bits/basic_string.h:539
+#2   /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf5) [0x7fc0876b8de5] ??        ??:0
+#3   ./merge_test() [0x41f7a2] _start   ??:?
+
+With respect to the version of gcc that I used for the above,
+
+]$ gcc --version
+gcc (Ubuntu/Linaro 4.8.1-10ubuntu9) 4.8.1
+Copyright (C) 2013 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+On Friday I was running things on a machine that had two different versions of the gcc runtime, so to isolate the problems I am now compiling, building, linking on a machine that has only the gcc compiler mentioned above.
+
+In any case, I have integrated rocksdb with our app and things seem to work fine. What is the “merge test” actually testing?
+
+Thanks,
+
+Ethan.
+
+From: Igor Canadi [mailto:notifications@github.com]
+Sent: Monday, April 14, 2014 10:19 AM
+To: facebook/rocksdb
+Cc: Ethan Hamilton
+Subject: Re: [rocksdb] Only 2 tests fail after install/build : signal_test and merge_test (#117)
+
+@ehamiltohttps://github.com/ehamilto signal_test is expected (if you run unit tests using the command make check we don't actually run signal_test). merge_test is not expected.
+
+Can you try doing; ./merge_test? That will give us correct line on which the test fails. (if you're running optimized code, our stack trace seems off)
+
+Thanks!
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/117#issuecomment-40392804.
+
+Can you send me the exact line how you compiled merge_test?
+
+For the one that passes (ie, debug mode),
+
+make clean; make dbg
+
+For the one that doesn’t ,
+
+make release
+
+From: Igor Canadi [mailto:notifications@github.com]
+Sent: Monday, April 14, 2014 11:35 AM
+To: facebook/rocksdb
+Cc: Ethan Hamilton
+Subject: Re: [rocksdb] Only 2 tests fail after install/build : signal_test and merge_test (#117)
+
+Can you send me the exact line how you compiled merge_test?
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/117#issuecomment-40401715.
+
+I'm able to reproduce, thanks for the report, we'll fix this asap
+
+fixed by https://github.com/facebook/rocksdb/commit/327102efa5f2b321b6fb9bf1480f1f7c9fe2438b
+
+That was fast :).
+
+One quick question. Was this an issue with the example code, build process or something that affected the core of rocksdb?
+
+Thanks,
+
+Ethan. 
+
+---
+
+From: Igor Canadi [notifications@github.com]
+Sent: Monday, April 14, 2014 11:43 AM
+To: facebook/rocksdb
+Cc: Ethan Hamilton
+Subject: Re: [rocksdb] Only 2 tests fail after install/build : signal_test and merge_test (#117)
+
+I'm able to reproduce, thanks for the report, we'll fix this asap
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/117#issuecomment-40402735.
+
+Never mind, I see that the issue was with the example code from the fix.
+
+Thanks for getting it fixed so quickly.
+
+Best,
+
+Ethan. 
+
+---
+
+From: Ethan Hamilton
+Sent: Monday, April 14, 2014 12:21 PM
+To: facebook/rocksdb; facebook/rocksdb
+Cc: Ethan Hamilton
+Subject: RE: [rocksdb] Only 2 tests fail after install/build : signal_test and merge_test (#117)
+
+That was fast :).
+
+One quick question. Was this an issue with the example code, build process or something that affected the core of rocksdb?
+
+Thanks,
+
+Ethan.
+
+---
+
+From: Igor Canadi [notifications@github.com]
+Sent: Monday, April 14, 2014 11:43 AM
+To: facebook/rocksdb
+Cc: Ethan Hamilton
+Subject: Re: [rocksdb] Only 2 tests fail after install/build : signal_test and merge_test (#117)
+
+I'm able to reproduce, thanks for the report, we'll fix this asap
+
+—
+Reply to this email directly or view it on GitHubhttps://github.com/facebook/rocksdb/issues/117#issuecomment-40402735.
+
+It's because merge_test use assert in the following incorrect way:
+
+```
+assert(get(key, &value));
+assert(put(key, value));
+```
+
+so it definitely never being executed in the release mode :)
+

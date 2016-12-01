@@ -1,0 +1,25 @@
+I put RocksDB through a Coverity Scan. Looks pretty good.
+
+block_based_table_builder.cc line 112:
+filter_block(opt.filter_policy == nullptr ? nullptr : new FilterBlockBuilder(opt))
+There is no destructor that deletes this new FilterBlockBuilder.
+
+db_stats_logger.cc line 42:
+Should probably lock the mutex before changing bg_logstats_scheduled_.
+
+BZip2_Compress in port/port_posix.h has a stray line:
+return output;
+
+ NewRandomRWFile can technically leak the file descriptor fd if it takes the if (options.use_mmap_writes || options.use_mmap_reads) path.
+
+Most of the false positives are related to the use of std::unique_ptr and some shortcuts in test code.
+
+Tnx! I'll fix this tomorrow :)
+
+filter_block - false positive, deletion in line 113
+db_stats_logger - MaybeScheduleLogDBDeployStats() is always called with mutex held.
+
+I'm fixing the rest
+
+https://github.com/facebook/rocksdb/commit/d53b18822834c5596f1bb3f5201dc566dfb5bd30
+

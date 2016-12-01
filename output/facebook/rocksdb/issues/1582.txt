@@ -1,0 +1,11 @@
+https://github.com/facebook/rocksdb/commit/99c052a34f93d119b75eccdcd489ecd581d48ee9 fixes integer overflow in GetL0ThresholdSpeedupCompaction() by checking if int become -ve.
+UBSAN will complain about that since this is still an overflow, we can fix the issue by simply using int64_t
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4241525).
+@IslamAbdelRahman updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1582/files/dc454d30761e38eea4b0122c021f6edc2bd93aca..fe33b8c13907cc87c9c76bd98876980a2782fba6) - [changes since last import](https://github.com/facebook/rocksdb/pull/1582/files/dc454d30761e38eea4b0122c021f6edc2bd93aca..fe33b8c13907cc87c9c76bd98876980a2782fba6)
+@IslamAbdelRahman updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1582/files/fe33b8c13907cc87c9c76bd98876980a2782fba6..c6c3b18c6f960e1635db6615d3a270a2709799d0) - [changes since last import](https://github.com/facebook/rocksdb/pull/1582/files/dc454d30761e38eea4b0122c021f6edc2bd93aca..c6c3b18c6f960e1635db6615d3a270a2709799d0)
+Address @siying comment
+It seems to have failed Travis:
+
+db/column_family.cc:592:12: error: implicit conversion loses integer precision: 'int64_t' (aka 'long') to 'int' [-Werror,-Wshorten-64-to-32]
+    return res;
+    ~~~~~~ ^~~

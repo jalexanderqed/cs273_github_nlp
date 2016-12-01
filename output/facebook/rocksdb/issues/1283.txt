@@ -1,0 +1,8 @@
+Looks like there's a bug in `db_ttl_impl`. `DBWithTTLImpl` overrides only the `NewIterator` method. There's no 'NewIterators' in this class, so this method is inherited, and iterators obtained as the result of this method are not `TtlIterator`. They don't know anything about TTL and won't strip the time from value.
+
+example of patch against 4.5.1
+http://textuploader.com/58c63
+
+Please review this commit against 4.11
+https://github.com/brigadier/rocksdb/commit/1e5ef5ea268281893b22ac40633e4c7e5e004ac3
+

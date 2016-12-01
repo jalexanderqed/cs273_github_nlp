@@ -1,0 +1,69 @@
+I think I'm following the INSTALL correctly but still getting an error.
+
+./include/rocksdb/statistics.h:9:10: fatal error: 'atomic' file not found
+
+Which g++ version are you using?
+
+I think I'll revise the installation guide for mac users. Seems updating to the latest xcode is not enough.
+
+@wildthink, can you try the updated instructions for mac again: https://github.com/facebook/rocksdb/blob/master/INSTALL.md
+
+Let me know if there is still any problem.
+
+Not there yet :-(
+Running OSX 10.8.5 (Mountain Lion)
+
+rocksdb git:(master) ✗ gcc -v
+Configured with: --prefix=/Applications/Xcode.app/Contents/Developer/usr --with-gxx-include-dir=/usr/include/c++/4.2.1
+Apple LLVM version 5.0 (clang-500.2.79) (based on LLVM 3.3svn)
+Target: x86_64-apple-darwin12.5.0
+
+## Thread model: posix
+
+➜  rocksdb git:(master) ✗ xcode-select --version
+xcode-select version 2311.
+➜  rocksdb git:(master) ✗ xcode-select --install
+xcode-select: Error: unknown command option '--install'.
+
+xcode-select: Report or change the path to the active
+              Xcode installation for this machine.
+
+Usage: xcode-select --print-path
+           Prints the path of the active Xcode folder
+   or: xcode-select --switch <xcode_path>
+           Sets the path for the active Xcode folder
+   or: xcode-select --version
+
+##            Prints the version of xcode-select
+
+brew tap homebrew/dupes; brew install gcc47 --use-llvm
+=>
+➜  rocksdb git:(master) ✗ brew tap homebrew/dupes; brew install gcc47 --use-llvm
+Error: Already tapped!
+Error: No available formula for gcc47 
+Searching taps...
+Error: 404 Not Found
+Please report this bug:
+    https://github.com/mxcl/homebrew/wiki/troubleshooting
+/System/Library/Frameworks/Ruby.framework/Versions/1.8/usr/lib/ruby/1.8/open-uri.rb:277:in `open_http'
+/usr/local/Library/Homebrew/cmd/search.rb:99:in`value'
+/usr/local/Library/Homebrew/cmd/search.rb:99:in `search_taps'
+/System/Library/Frameworks/Ruby.framework/Versions/1.8/usr/lib/ruby/1.8/open-uri.rb:230:in`inject'
+/usr/local/Library/Homebrew/cmd/search.rb:96:in `each'
+/usr/local/Library/Homebrew/cmd/search.rb:96:in`inject'
+/usr/local/Library/Homebrew/cmd/search.rb:96:in `search_taps'
+/usr/local/Library/Homebrew/cmd/install.rb:41:in`install'
+/usr/local/Library/brew.rb:91:in `send'
+/usr/local/Library/brew.rb:91
+
+@wildthink mayby you need to install a newer version of xcode.
+
+```
+$  xcode-select --version
+xcode-select version 2333.
+```
+
+and the option '--install' of a xcode-select command is working for me.
+
+if it is not the latest version of a xcode, 'xcode-select --install' should work normally. please, try to install a xcode again, It will be better to quick-fix for this problem
+

@@ -1,0 +1,94 @@
+There are some obstacles in compiling RocksDB with the latest Visual Studio. For example, use of `__thread` and `__attribute__`. I would like to have a Windows port. I'm okay with having a "port_cxx11.h" (i.e. ported to C++11, using `std::mutex`, `std::condition_variable`, et. al.). This would be useful for other platforms that support C++11 as well. But I'm stumped on some of the non standard language constructs. Thoughts?
+
+@vinniefalco Building and maintaining windows port is something we are never planning to do. We will, however, accept any contributions towards making RocksDB compile on Windows.
+
+**attribute** constructs are there mostly for optimization and code could work if we just add compile guards around them.
+
+We use thread local variables a lot. However, it looks like visual studio has some support, just with different syntax: http://msdn.microsoft.com/en-us/library/6yh4a9k1.aspx
+
+This must be for the rippled work (I have been following your work here). If you have a way to compile RocksDB on windows that would be great and i am hoping that it is not a very invasive change that you would need.
+
+Btw, does rippled need iteration or does it need only gets/puts? If it is only gets/puts, then you can configure to make rocksdb perform even more efficiently.
+
+Sorry to jump in, but I'd be very interested to hear about the optimisations :-)
+
+Rippled currently only does point lookups and iteration is only useful when doing offline analysis. Every key is a fixed length and is the first 32 bytes of the SHA512 of a section of the value (the first 9 bytes of the value are omitted).
+
+I am guessing that you do online puts and online gets of keys in random order. The key is fixed length while the value is variable length. The scans are mostly offline and you do not need high performance for those scans, is that right?
+1. how big is ur database?
+2. how much memory do you have on your machine?
+3. how many threads do concurrent gets and puts?
+4. do you use disks or flash?
+
+If you can post the LOG file from the rocksdb database, I can take a look at it and suggest performance tuning.
+
+for point lookups:
+https://github.com/facebook/rocksdb/wiki/Hash-based-memtable-implementations
+
+for write-heavy workloads (if there are updates to the same key):
+https://github.com/facebook/rocksdb/wiki/Merge-Operator
+
+My use case is slightly different from that of rippled itself. I'm working on analysing historic data, whereas rippled is mostly concerned with keys and values written in the recent past, although rippled does sync with other instances to help them acquire their historical dataset.
+
+For my use case, I'm currently doing lexicographic scans, which are fast enough. But in the future I'd like to traverse the history in ledger order, which means 100's of millions of gets in random order. This traversal is much slower than the normal scan and is what I'd be interested in speeding up.
+
+The database is 433GB and I have 32GB of RAM, the threads are configurable and I'm using a flash drive. Ripple Lab's instances probably do not share the same configuration. I've submitted a LOG previously, but can do so again if it is helpful (I can send an attachment, my email address is donovanhide @ google's email). 
+
+I'm not certain about the same key update workload for rippled, but are you recommending a HashSkipList for best random traversal speed?
+
+Thanks for your help! 
+
+Here's a bit more detail about how the slowly changing tree is stored in a key value store:
+
+https://github.com/ripple/ripple-lib-java/blob/c8d3b3b84c132363030e9be6d4d6e43321756228/ripple-core/src/main/java/com/ripple/core/types/shamap/README.md
+
+This question describes our use-case:
+http://stackoverflow.com/questions/24050205/fastest-persistent-key-value-db-for-fixed-size-keys-and-only-insert-fetch-no-de
+
+@dhruba That all sounds fairly accurate. The iteration is offline (its only used for exporting). Other than that, we only do inserts and fetches.
+
+I'm interested in contributing to a Windows port of RocksDB. I implemented a Windows port for leveldb some years ago (see [port_windows.cc](https://github.com/bgrainger/leveldb/blob/windows/port/port_windows.cc) and [env_windows.cc](https://github.com/bgrainger/leveldb/blob/windows/util/env_windows.cc)) and am hoping that much of that code could be reused in RocksDB.
+
+Two concerns:
+1. I don't want to duplicate anyone else's effort. I haven't found a Windows port so far; if there's one I missed, please let me know.
+2. I want to author it in such a way that my contributions will be accepted upstream. Would it be preferable to ask code layout questions etc. in a PR on GitHub, on the Facebook group, or somewhere else?
+
+My vote is that if we can encapsulate the windows-related changes to the port subdirectory that would be great. If course, I understand that this might need to make some code re-structural changes. Would it be possible for you to make two changes:
+1. The first  change is to re-structure the existing code-base. This should have no Windows related changes.
+2. The second change is to actually introduce the code changes for Windows support.
+
+Depending on the complexity of (1), we can collectively decide whether it is worth to merge the Windows port upstream into the rocksdb code base. 
+
+@bgrainger that would be great.
+
+1) I am not aware of any RocksDB windows port.
+2) Both github and facebook group work.
+
+I believe not much code change except port_windows and env_windows is needed. With awesome C++11 supports for atomics and related things, I don't even think port_windows will be a big change.
+
+If that shows to be the case, we will definitely accept your contributions and merge them upstream, as @dhruba said.
+
+Based on what I've seen in the other ports, I _think_ you can get away with having a "C++11" port instead. This would be non-Windows specific (but still work on Windows). It would work for any C+11 conformant system.
+
+My understanding is that C++11 doesn't have a reader/writer lock (which I believe would be necessary to implement `MutexRW`); we'd need to wait for [`shared_mutex` in C++14](http://isocpp.org/blog/2013/04/n3659-shared-locking).
+
+I'm not sure that a pure C++11 port is possible right now, so I may proceed with a Windows-only port (perhaps using C++11 types where possible).
+
+Header suppression macro still says **LEVELDB**:
+https://github.com/facebook/rocksdb/blob/master/port/port_posix.h#L12
+
+@bgrainger You can always just take the open source implementation of shared_mutex. Here's the one from Howard:
+http://home.roadrunner.com/~hinnant/mutexes/shared_mutex
+http://home.roadrunner.com/~hinnant/mutexes/shared_mutex.cpp
+
+See:
+http://stackoverflow.com/questions/14306797/c11-equivalent-to-boost-shared-mutex
+
+A C++11-only port has value
+
+Submitted a [PR](https://github.com/facebook/rocksdb/pull/176) to change the `MutexRW` API in preparation for a Win32 or C++14 port.
+
+Submitted a [PR](https://github.com/facebook/rocksdb/pull/178) to track work-in-progress for Visual C++/Windows support. Any early feedback is welcome.
+
+@vinniefalco my coworkers over at Bing just merged a performant windows port @yuslepukhin Windows Port from Microsoft #646 yay!
+

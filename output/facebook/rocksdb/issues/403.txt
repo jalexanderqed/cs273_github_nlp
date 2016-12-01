@@ -1,0 +1,29 @@
+i use roksdb java,but when i use WriteBatch method to insert data.But when I insert some 3 million data,it occurred "to many open files exception".i searched in google and issues.only found use nlimit -n command, i want to know can i merge db files to 1 or less files?
+ like lucene ,it has optimize(int num) method,does rocksdb has similar method or setting?? 
+
+@haochun to address both questions:
+
+1). Too many open files: That's a linux issue. You need to raise the configuration setting with `ulimit` or configure it via `security/limits`.
+
+2.) The "equivalent" to Lucenes optimize functionality is compaction in RocksDB. Some functionality is not yet exposed via RocksJava. Manual compaction triggering is currently a high priority task on my list. In the mean-time the only possibility to trigger manual compaction is to use `ldb`. What is working is background_compaction which is influenced by Options. You can read about that in the Wiki and in `ColumnFamilyOptionsInterface JavaDoc`.
+
+@yhchiang plz correct if smthg is wrong about that.
+
+@fyrz thank you very much,from you answer,does it means rocksdb cound not merge much db files to less files by my self.i can only set option thead num,it compaction backgound?but i has more than 10 billion data,and i write batch 1000 pairs each time.rocksdb can store such a large amount of data?  
+
+@haochun  there are more options than just setting the thread num up. See Options for this.
+
+The other part referring to how much RocksDB can store: There are at the moment as far as i know only few limitations on size. So it should be possible to store that amount.
+
+@fyrz you mean i can use some option to slove the "to many open files" exception??
+
+@haochun no. The too many open files problem is a operating system issue. You can configure the maximum using operating system functionality like in the other post or like commented in my first comment.
+
+What i meant in the last comment is: You can can configure how background compaction behaves with options settings.
+
+@haochun did you manage to solve your problem ?
+
+@fyrz i am not use ths rocksdb now,i forget to close this issue,sorry.
+
+@haochun sad because it is not really a rocksdb issue.
+

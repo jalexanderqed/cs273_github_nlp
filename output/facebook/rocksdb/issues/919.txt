@@ -1,0 +1,86 @@
+i find a problem recently，when hard disk is full，rocksdb always return error：Mset set keys error, err=IO error：No space left on device， even after clean the disk，rocksdb always stay error state，
+
+i think bg_error_ may be the reason，when bg_error_ is set error， this flag will stay error all the time，therr is no way to reset this flag. so once set bg_error_ to error status，it will always stay error all the time ,and rocksdb will not work.
+can you give some suggestion about this problem?
+
+Thanks~
+
+You can close the db, free up disk space, and reopen the db.
+
+@followheart  you are right. Currently there is no way to reset DB from the write error state unless you restart the DB. We plan to add a way to allow users to do it. But out of disk space is a tricky situation. I suggest you restart DB to recover it anyway.
+
+@siying , @dhruba , thanks for answering my question，in the begining, i think when free up disk space, rocksdb can detect it and work again.
+since i know the reason now, i will find a way to avoid this situation~~
+
+@dhruba @igorcanadi @siying ... we too are hitting into this issue. Is there a way we can tell rocksdb to return error or call cleanup routine to free space up when it detects this?
+
+@ovjh so far RocksDB can't detect out of space. We just directly forward IO errors to users. Is there a way you can't detect out of space by youself and do the cleaning up?
+
+@siying We detect the IO error and cleanup space but rocksdb never comes out of that state.
+
+@ovjh you mean even restarting the DB doesn't work?
+
+@ovjh one way you can think of is to use SST file manager to cap size of your DBs to be a conservative value: https://github.com/facebook/rocksdb/blob/4.8.fb/include/rocksdb/options.h#L871-L885 so it is harder for it to run out of space.
+
+@siying  Unfortunately we can't restart the db. Let me try using SST file manager. I will keep you posted. Tx for the help.
+
+@ovjh actaully with size cap reached, SST file manager also fails the DB in the same way as out of disk and you need to restart DB to recover. So maybe it can't solve your problem :(
+
+Is there still a feature request to let bg_error_ get cleared when disk
+space is made available? This is an infrequent problem for MySQL tiers
+(disk full) but it waits until we free up disk space -- no need to restart
+the database process.
+
+On Fri, Jun 10, 2016 at 4:25 PM, Siying Dong notifications@github.com
+wrote:
+
+> @ovjh https://github.com/ovjh actaully with size cap reached, SST file
+> manager also fails the DB in the same way as out of disk and you need to
+> restart DB to recover. So maybe it can't solve your problem :(
+> 
+> —
+> You are receiving this because you are subscribed to this thread.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/issues/919#issuecomment-225318741,
+> or mute the thread
+> https://github.com/notifications/unsubscribe/ABkKTVWe2DY8pvtUBOtuGW0DybtXTRP-ks5qKfKBgaJpZM4G_V3H
+> .
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+We do plan to do it. The first step would be to recover from failing to write new files of compactions and flushes. But it's trickier to deal with writing to WAL failure. Out of space is can get either failures.
+
+On Jun 10, 2016, at 9:00 PM, Mark Callaghan <notifications@github.com<mailto:notifications@github.com>> wrote:
+
+Is there still a feature request to let bg_error_ get cleared when disk
+space is made available? This is an infrequent problem for MySQL tiers
+(disk full) but it waits until we free up disk space -- no need to restart
+the database process.
+
+On Fri, Jun 10, 2016 at 4:25 PM, Siying Dong <notifications@github.com<mailto:notifications@github.com>>
+wrote:
+
+> @ovjh https://github.com/ovjh actaully with size cap reached, SST file
+> manager also fails the DB in the same way as out of disk and you need to
+> restart DB to recover. So maybe it can't solve your problem :(
+> 
+> —
+> You are receiving this because you are subscribed to this thread.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/issues/919#issuecomment-225318741,
+> or mute the thread
+> https://github.com/notifications/unsubscribe/ABkKTVWe2DY8pvtUBOtuGW0DybtXTRP-ks5qKfKBgaJpZM4G_V3H
+> .
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.commailto:mdcallag@gmail.com
+
+—
+You are receiving this because you were mentioned.
+Reply to this email directly, view it on GitHubhttps://github.com/facebook/rocksdb/issues/919#issuecomment-225335301, or mute the threadhttps://github.com/notifications/unsubscribe/AFFmJxRPLwVNOv22fdlfs3i183G7nj9oks5qKjLxgaJpZM4G_V3H.
+

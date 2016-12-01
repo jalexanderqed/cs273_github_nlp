@@ -1,0 +1,6 @@
+Level0 -1: use kNoCompression , level2-6: use kSnappyCompression , these options should improve the flush speed and decrease disk space amplification. Will it decrease the query speed?
+
+If a read needs to access a data block, it will first need to read the block / decompress the block / put the block in the block cache
+
+This means that the read will consume more CPU because of decompression cost, but if the read found the block in the block cache, it will be there uncompressed
+

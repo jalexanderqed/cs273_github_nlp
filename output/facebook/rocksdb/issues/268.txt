@@ -1,0 +1,8 @@
+1, const qualifiers on return types make no sense and will trigger a compile warning: warning: type qualifiers ignored on function return type [-Wignored-qualifiers]
+
+2, class HistogramImpl has virtual functions and thus should have a virtual destructor
+
+3, with some toolchain, the macro __STDC_FORMAT_MACROS is predefined and thus should be checked before define
+
+It seems that the master itself is broken and the build break is not caused by this change.
+

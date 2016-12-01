@@ -1,0 +1,13 @@
+CI for Windows (AppVeyor) fails since CMakeLists.txt has a line 'util/mutable_cf_options.cc' which does not exist currently.
+
+```
+CMake Error at CMakeLists.txt:307 (add_library):
+  Cannot find source file:
+    util/mutable_cf_options.cc
+  Tried extensions .c .C .c++ .cc .cpp .cxx .m .M .mm .h .hh .h++ .hm .hpp
+  .hxx .in .txx
+CMake Error: CMake can not determine linker language for target: rocksdbli
+```
+
+Thank you!
+

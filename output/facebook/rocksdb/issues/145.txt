@@ -1,0 +1,66 @@
+Hi,
+
+I set up an amazon ec2 with image 'Amazon Linux AMI 2014.03.1' for x64.
+I download RocksDB 3.0 branch code.
+
+And follow the install.md, section Linux - CentOS to install dependent lib.
+I can do 'make'  or 'make shared_lib' and output an .so and .a file correctly.
+But I try to build jni, 'make rocksdbjava', there are some errors occur.
+
+g++ -g -Wall -Werror -I. -I./include -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_ATOMIC_PRESENT -DROCKSDB_FALLOCATE_PRESENT -DSNAPPY -DGFLAGS=google -DZLIB -DBZIP2   -DHAVE_JEMALLOC -fPIC -DNDEBUG -O2 -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c table/block_hash_index.cc -o table/block_hash_index.o 
+g++: internal compiler error: deleted (program cc1plus)
+Please submit a full bug report,
+with preprocessed source if appropriate.
+See http://bugzilla.redhat.com/bugzilla for instructions.
+make[1]: **\* [db/db_impl_debug.o] Error 4
+make[1]: **\* Waiting for unfinished jobs....
+
+I had try gcc47-c++ and gcc48-c++, same issue.
+
+I don't think this is rocksdb issue, but I have no ideal what happen.
+
+Do you have any comment?
+
+Thanks.
+
+FYI.
+
+Amazon Linux AMI 2014.03.1
+https://aws.amazon.com/amazon-linux-ami/2014.03-release-notes/
+
+Thanks.
+
+I solved this issue by setting swap file.
+
+Even I use m3.medium type EC2 instance (with 3.75GiB men), the problem still occurs.
+After add a 1G or 2G swap file, the problem was gone.
+
+I refer the following information to do that. 
+http://stackoverflow.com/questions/17173972/how-do-you-add-swap-to-an-ec2-instance
+http://serverfault.com/questions/218750/why-dont-ec2-ubuntu-images-have-swap
+
+My java program can run with rocksdb correctly in this environment now.
+However, I run 'make check', some error occurs, and I still try to find the reason.
+
+---
+
+g++ db/db_test.o db/builder.o db/c.o db/column_family.o db/compaction.o db/compaction_picker.o db/db_filesnapshot.o db/dbformat.o db/db_impl.o db/db_impl_debug.o db/db_impl_readonly.o db/db_iter.o db/db_stats_logger.o db/file_indexer.o db/filename.o db/internal_stats.o db/log_reader.o db/log_writer.o db/memtable.o db/memtable_list.o db/merge_helper.o db/merge_operator.o db/repair.o db/table_cache.o db/table_properties_collector.o db/tailing_iter.o db/transaction_log_impl.o db/version_edit.o db/version_set.o db/write_batch.o table/block_based_table_builder.o table/block_based_table_factory.o table/block_based_table_reader.o table/block_builder.o table/block.o table/block_hash_index.o table/filter_block.o table/flush_block_policy.o table/format.o table/iterator.o table/merger.o table/meta_blocks.o table/plain_table_builder.o table/plain_table_factory.o table/plain_table_reader.o table/table_properties.o table/two_level_iterator.o util/arena.o util/auto_roll_logger.o util/blob_store.o util/bloom.o util/build_version.o util/cache.o util/coding.o util/comparator.o util/crc32c.o util/dynamic_bloom.o util/env.o util/env_hdfs.o util/env_posix.o util/filter_policy.o util/hash.o util/hash_cuckoo_rep.o util/hash_linklist_rep.o util/hash_skiplist_rep.o util/histogram.o utilities/backupable/backupable_db.o utilities/geodb/geodb_impl.o utilities/merge_operators/put.o utilities/merge_operators/string_append/stringappend2.o utilities/merge_operators/string_append/stringappend.o utilities/merge_operators/uint64add.o utilities/redis/redis_lists.o utilities/ttl/db_ttl_impl.o util/ldb_cmd.o util/ldb_tool.o util/log_buffer.o util/logging.o util/murmurhash.o util/options.o util/perf_context.o util/skiplistrep.o util/slice.o util/statistics.o util/status.o util/string_util.o util/sync_point.o util/thread_local.o util/vectorrep.o util/xxhash.o port/stack_trace.o port/port_posix.o  ./util/testharness.o ./util/testutil.o   -o db_test -lpthread -lrt -lsnappy -lgflags -lz -lbz2 
+db/db_test.o: In function `rocksdb::_Test_TransactionLogIteratorRace::_Run()':
+/home/ec2-user/rocksdb-3.0.fb/db/db_test.cc:5585: undefined reference to「rocksdb::SyncPoint::GetInstance()」
+/home/ec2-user/rocksdb-3.0.fb/db/db_test.cc:5585: undefined reference to「rocksdb::SyncPoint::LoadDependency(std::vector<rocksdb::SyncPoint::Dependency, std::allocator<rocksdb::SyncPoint::Dependency> > const&)」
+/home/ec2-user/rocksdb-3.0.fb/db/db_test.cc:5588: undefined reference to「rocksdb::SyncPoint::GetInstance()」
+/home/ec2-user/rocksdb-3.0.fb/db/db_test.cc:5588: undefined reference to「rocksdb::SyncPoint::ClearTrace()」
+/home/ec2-user/rocksdb-3.0.fb/db/db_test.cc:5589: undefined reference to「rocksdb::SyncPoint::GetInstance()」
+/home/ec2-user/rocksdb-3.0.fb/db/db_test.cc:5589: undefined reference to「rocksdb::SyncPoint::DisableProcessing()」
+/home/ec2-user/rocksdb-3.0.fb/db/db_test.cc:5606: undefined reference to「rocksdb::SyncPoint::GetInstance()」
+/home/ec2-user/rocksdb-3.0.fb/db/db_test.cc:5606: undefined reference to「rocksdb::SyncPoint::EnableProcessing()」
+collect2: error: ld returned 1 exit status
+make: **\* [db_test] Error 1
+
+If I run 'make rocksdbjava' and then 'make check' the error occurs,
+but it is ok if I run 'make check' after 'make'.
+
+I guest this is not an issue.
+
+"make clean" before helped me
+

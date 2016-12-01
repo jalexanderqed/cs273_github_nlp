@@ -1,0 +1,113 @@
+Latest maven RocksDB Java jar (http://mvnrepository.com/artifact/org.rocksdb/rocksdbjni/3.10.1) only appears to support Linux and MacOs. Anyone know how to use RocksDB Java library in Windows Development environment? 
+
+We currently not yet include windows binary in the jar file, and we are trying to find some way to include that :)
+
+Meanwhile, you can also try to build the RocksDB Java by running `make rocksdbjavastatic` in the Windows environment, but let me know if it doesn't work for you.
+
+Windows build is through CMake: https://github.com/facebook/rocksdb/blob/master/CMakeLists.txt CC @yuslepukhin 
+
+@mingqlin We have not tried to build Java lib on Windows nor did we look into that. Let us know if we can help.
+
+@yuslepukhin perhaps all what they need is a .dll.
+
+it is not very efficient for windows developers to manually build dll before using RockDB, please consider adding dll to future maven package. 
+
+I am able to build RocksDB using cmake and Visual Studio 2013 msbuild. the result of the build is rocksdb.dll
+
+But Any guide for which we can follow to build windows rocksdbjava with embed rocksdb.dll? 
+I have tried all following and failed
+1. Visual Studio 2013 nmake and msbuild, neither of them work.
+2. Windows GnuWin32 make
+
+I have Windows 7 64bit Development environment. I am trying to use RocksDb in Java program. would be appreciated if someone could post a step by step guide. 
+
+Also interested in .dll being part of the maven package (thanks for the 4.0 Java release!)
+
+@Gadreel Buidling instructions are at the top of the CMake file and that works for me everyday.
+
+@Gadreel Said that. There is currently no good way for building with dependencies. However, you can clone gflags and zlib from github and build them. Then edit thirdparty.inc to adjust the build paths. Thus you would be able to enable them and build with them.
+I will look into making that easier. However, there is not an easy build for JEMALLOC which is important.
+
+@yuslepukhin Is there a reason not to include the built dlls in the published artifact? Other binaries are published. I don't own a Windows machine and would be happy to avoid maintaining one, but can't pick RocksDB unless it runs on all development machines in our site (some of them run Windows).
+
+@liqweed I am not aware of any reasons not to include them. However, neither my colleages not I ever touched maven repo so I am out of context on this one.
+
+@liqweed you are very welcome to publish Java artifacts with dlls!
+CC @yhchiang 
+
+> @liqweed Is there a reason not to include the built dlls in the published artifact?
+
+I think there's no specific reason for that.  You're very welcomed to publish Java artifacts with dlls.
+To support windows, we will probably need to augment the Makefile such that it will download the right virtual machine for Windows and build Java package inside that virtual environment.
+
+Let me know if you have any questions.
+
+@siying @yhchiang How do you currently publish to repo1? Do you have access to the PGP keys?
+I can look into what it would take to automate this 'post to repo1' (I suppose bintray is also a decent option) but I don't currently maintain a Windows machine with which to build these dlls. Does anyone have a prebuilt and tested dlls I can experiment with?
+
+Is this available on the latest release? I'm trying to find the latest 4.3.1 release jar but I can only find up to [4.2 on maven central](http://mvnrepository.com/artifact/org.rocksdb/rocksdbjni).  Is there another repo with newer releases?
+
+@jamespedwards42 and @liqweed 4.2.0 is the latest release of rocksdbjni; It does not contain any Windows binary artifacts.
+
+I can create a 4.3.1 release and publish it to Maven Central, but if I did it also would not contain any Windows Binary artifacts. 
+
+We use Vagrant with VirtualBox from our `Makefile` to create the Linux artifacts that we need. If someone wants to work on adding the ability to build Windows artifacts to the `Makefile` then this is what we need:
+1. A Vagrant box file containing a Windows x64 guest which has installed into it all of the tools which you need for building Rocks Java on Windows, i.e.
+   1. Visual Studio 2013 Update 4
+   2. Git
+   3. GFlags
+   4. Snappy
+   5. LZ4
+   6. ZLib
+   7. JeMalloc
+   8. Oracle JDK 7
+2. Some mechanism for executing the build inside the Windows guest, I am not certain but if we were to have installed the [Ubuntu user-space for Windows](https://insights.ubuntu.com/2016/03/30/ubuntu-on-windows-the-ubuntu-userspace-for-windows-developers/), then we may just be able to use ssh to start the build and scp to retrieve the build artifacts.
+
+Some thoughts:
+1. Whatever we use for the Windows guest, we have to ensure that we don't violate any Microsoft licensing terms. We may be able to use a 90 day trial version of Windows Server 2012R2 or the evaluation version of Windows 7 or even 10. I am not sure what the licensing terms are and if we would be permitted to reuse the trial box (effectively starting from trial day 1 each time) to build our binaries?
+   1. We might be able to start with a base-box and then use Puppet or something to install the tools we need, e.g. http://www.vagrantbox.es/. I am afraid I abandoned Windows as a platform many years ago, so I would rather rely on someone more involved with Windows to figure out the best mechanism, see - http://huestones.co.uk/node/305
+   2. We need to ensure that the Windows box is as small as possible in terms of image size. As whomever does a release build is going to need to download this at least once, and many GB's would not be a good thing.
+
+@adamretter oof, I see. Thank you for all of the information.  We are 99% a unix based shop, but we recently had someone join that uses windows so I was trying get them going with one of our Rocks dependent projects and hit this issue.  I don't have any experience with building on Windows either so I can't be of any help here.   Given all of this I think it will be easier for me to push them to use a unix based OS for development.  Again, thank you for the detailed explanation.
+
+@adamretter Is it possible to publish a cookbook on how to build the dll on our own? Those of us who do not do C++ development on Windows are going to have a tough time. 
+
+Either that, or just point us at a prebuilt dll somewhere. It'll be easy to just drag it into a Windows project and use it.
+
+Or maybe ping the Bing team and ask them to do it. This issue really does hold up true cross-platform use of Rocksdb.
+
+@ccleve The cookbook as such is already available in the file [WINDOWS_PORT.md](https://github.com/facebook/rocksdb/blob/master/WINDOWS_PORT.md).
+
+I have been discussing getting the output artifacts from AppVeyor uploaded to a public place, but we are not there yet...
+
+@ccleve Rocksdb dll is built automatically as a part of the CMake build.
+
+Are there binaries anywhere I could download?
+
+On Tue, Jul 12, 2016 at 12:42 PM, Dmitri Smirnov notifications@github.com
+wrote:
+
+> @ccleve https://github.com/ccleve Rocksdb dll is built automatically as
+> a part of the CMake build.
+> 
+> —
+> You are receiving this because you were mentioned.
+> Reply to this email directly, view it on GitHub
+> https://github.com/facebook/rocksdb/issues/703#issuecomment-232122231,
+> or mute the thread
+> https://github.com/notifications/unsubscribe/ABEzqizfTiJpTlfUCkCH8KgQno852BILks5qU9H6gaJpZM4F0S0k
+> .
+
+## 
+
+Chris Cleveland
+Dieselpoint, Inc.
+http://dieselpoint.com
+312-339-2677 mobile
+
+@ccleve Released binaries is something that @adamretter has been working on. But you can build a DLL yourself now.
+
+For those who are interested, the new 4.9.0 release of RocksDB Java has a Windows DLL build packaged in the Jar file also - see https://github.com/facebook/rocksdb/issues/1177#issuecomment-240582631
+
+**NOTE:** I gave it a quick test from Java 7 in Windows 10 and it appeared to work, but I have not thoroughly tested it in any sense. Also it is not linked with any of the 3rd-party libraries, so don't expect compression support.
+

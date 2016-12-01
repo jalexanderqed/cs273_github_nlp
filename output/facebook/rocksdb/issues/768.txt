@@ -1,0 +1,46 @@
+Summary: This patch splits the posix storage backend into Env and
+the actual *File implementations. The motivation is to allow other Envs
+to use posix as a library. This enables a storage backend different from
+posix to split its secondary storage between a normal file system
+partition managed by posix, and it own media.
+
+Test Plan: No new functionality is added to posix Env or the library,
+thus the current tests should suffice.
+
+I see the usefulness of the patch for other Envs.
+
+The general approach seems to have an Env encapsulate another object called StorageEnv. The StorageEnv would be where all the file/directory related calls would reside. 
+
+@dhruba Can you point to an example? I cannot find StorageEnv in the current code. I am happy to move things around the way you believe suits best the current architecture.
+
+There isn't a StorageEnv in the current code base. Your patch made me feel that you are trying to encapsulate all the store-apis into a new pluggable class called StorageEnv.
+
+Please do not change anything else in the patch. Please wait for more people to comment on your patch before deciding to make whole-sale changes. The reason being that this is partly a design question and it would be good to get some kind of consensus before committing this. Does that make sense?
+
+Makes total sense. I think though it is a good idea to encapsulate it. Let's see if some other have more ideas. At the moment I am using it in our Open-Channel SSD Env and it just requires including lib_posix.h, so it is pretty minimal changes for another Env to use Posix.
+Thanks for the rapid feedback! :)
+
+I'm OK with this approach. Will hear opinion from more people.
+
+Thanks for the review @siying. If others think that the approach is correct I'll rebase and resolve the conflicts introduced by the last commits.
+
+CC @igorcanadi @rven1 @yhchiang @kradhakrishnan @agiardullo 
+
+This diff seems like a reasonable abstraction improvement to me.  Dhruba's StorageEnv suggestion also seems like a good abstraction as well, but it’s possible both abstraction cleanups are useful.  Without seeing what this is used for, I don’t know if it would be better to implement the custom env using Dhruba’s proposed abstraction.  But I am fine with this diff as is.
+
+@javigon can you resolve the conflicts. I can merge if conflicts are resolved and checks pass.
+
+Thanks @siying. I'll do that today.
+
+@siying resolved conflicts and pushed again
+
+I tried but it's really hard to make sure the copy & paste applies on the latest version and doesn't revert a recent change by mistake. I'm just merging it as I trust you have checked carefully. 
+
+@siying I checked the last patches affecting env_posix.cc manually; i hope I have not missed anything. I'll give it another manual pass today just in case... Thanks.
+
+@siying I checked manually until 4049bcde396842f802d123c44340128612e6d077, which is the last commit that affected the merging window. Please do confirm with @igorcanadi and @lalinsky; you are the ones having commits to env_posix. Otherwise, if the checks pass the patch is good to go. I did not touch the headers yet, since I am planning to do something similar with the posix threads (probably next week). If it is a big issue I will fix it for this patch too. Thanks.
+
+@javigon I would try to reduce those header not needed now. If it takes too long, I'm OK with doing it as a follow-up.
+
+@siying Please do so :)
+

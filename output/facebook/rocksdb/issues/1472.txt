@@ -1,0 +1,19 @@
+The persistent cache is designed to hop over errors and return key not found. So far, it has shown resilience to write errors, encoding errors, data corruption etc. It is not resilient against disappearing files/directories. This was exposed during testing when multiple instances of persistence cache was started sharing the same directory simulating an unpredictable filesystem environment.
+
+This patch
+
+- makes the write code path more resilient to errors while creating files
+- makes the read code path more resilient to handle situation where files are not found
+- added a test that does negative write/read testing by removing the directory while writes are in progress
+@kradhakrishnan has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4143413).
+
+@kradhakrishnan updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1472/files/481bfe5fa42c900f785edfe2a375733a460e3d50..90fe2a44ad5fbba9f6cc2c7ad098a103d0c28b93) - [changes since last import](https://github.com/facebook/rocksdb/pull/1472/files/481bfe5fa42c900f785edfe2a375733a460e3d50..90fe2a44ad5fbba9f6cc2c7ad098a103d0c28b93)
+
+@kradhakrishnan updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1472/files/90fe2a44ad5fbba9f6cc2c7ad098a103d0c28b93..254a6115953150f225af22e5731c4f754fa963dc) - [changes since last import](https://github.com/facebook/rocksdb/pull/1472/files/90fe2a44ad5fbba9f6cc2c7ad098a103d0c28b93..254a6115953150f225af22e5731c4f754fa963dc)
+
+Rebased against the latest master.
+
+@kradhakrishnan updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1472/files/254a6115953150f225af22e5731c4f754fa963dc..33f88ed4773dfd74201fba6b1403fa191b9224fb) - [changes since last import](https://github.com/facebook/rocksdb/pull/1472/files/90fe2a44ad5fbba9f6cc2c7ad098a103d0c28b93..33f88ed4773dfd74201fba6b1403fa191b9224fb)
+
+@kradhakrishnan updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1472/files/33f88ed4773dfd74201fba6b1403fa191b9224fb..0c0372d5e15ea26c165ac923d604a754460b3a68) - [changes since last import](https://github.com/facebook/rocksdb/pull/1472/files/90fe2a44ad5fbba9f6cc2c7ad098a103d0c28b93..0c0372d5e15ea26c165ac923d604a754460b3a68)
+

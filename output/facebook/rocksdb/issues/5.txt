@@ -1,0 +1,15 @@
+
+Tnx @pborreli, this is great! :)
+
+Can you please sign a Contributor License Agreement, see: https://github.com/facebook/rocksdb/blob/master/CONTRIBUTING.md
+
+We require this from every contributor. Thanks.
+
+@igorcanadi already signed facebook's CLA for facebook/react-page#8 (sending signed pdf to @stoyan)
+
+Tnx!
+
+@pborreli - thanks for the contribution
+
+github needs a like button :)
+

@@ -1,0 +1,58 @@
+I recently installed the latest release 3.1 on a new system but encountered the following error in "make check" step. Any advice? 
+
+==== Test EnvPosixTest.RandomAccessUniqueID
+==== Test EnvPosixTest.AllocateTest
+util/env_test.cc:508: failed: 204800 > 204800
+#0   ./env_test() [0x40d6f9] ~basic_string      /opt/centos/devtoolset-1.1/root/usr/lib/gcc/x86_64-redhat-linux/4.7.2/../../../../include/c++/4.7.2/bits/basic_string.h:536
+#1   ./env_test() [0x414e0e] ~basic_string      /opt/centos/devtoolset-1.1/root/usr/lib/gcc/x86_64-redhat-linux/4.7.2/../../../../include/c++/4.7.2/bits/basic_string.h:536
+#2   ./env_test() [0x50cf36] rocksdb::test::RunAllTests()       /root/rocksdb/rocksdb-rocksdb-3.1/util/testharness.cc:48
+#3   /lib64/libc.so.6(__libc_start_main+0xfd) [0x7fd437fb7d1d] ??       ??:0
+#4   ./env_test() [0x4076f5] _start     ??:0
+
+make: **\* [check] Error 1
+
+Which platform are you running on? Linux?
+
+This is interesting, looks like ftruncate() call doesn't do the right thing on your system.
+
+This is not a big issue. You can still run RocksDB, it just might have some small storage overhead.
+
+Hi Siying,
+This is on Centos 6.5  Kernel 2.6.32
+rpm -qa |grep kernel
+abrt-addon-kerneloops-2.0.8-21.el6.centos.x86_64
+libreport-plugin-kerneloops-2.0.9-19.el6.centos.x86_64
+kernel-headers-2.6.32-431.17.1.el6.x86_64
+dracut-kernel-004-336.el6_5.2.noarch
+kernel-firmware-2.6.32-431.17.1.el6.noarch
+kernel-2.6.32-431.17.1.el6.x86_64
+kernel-2.6.32-431.el6.x86_64
+Igor, thanks for the info. 
+
+cat /etc/redhat-release
+CentOS release 6.5 (Final)
+
+I've also run into a 'make check' error though in a different place.
+
+git log -1: commit 593bb2c40bf82a4d4bdba21a3fa965d8e3f6022b
+Ubuntu 14.04 LTS, 3.13.0-27-generic x86_64
+
+```
+==== Test DBTest.GroupCommitTest
+db/db_test.cc:6117: failed: 0 > 0
+#0   ./db_test() [0x48c697] _Vector_impl        /usr/include/c++/4.8/bits/stl_ve ctor.h:87
+#1   ./db_test() [0x4a0624] ~_Test_GroupCommitTest      ./vendor/rocksdb/db/db_test.cc:6097
+#2   ./db_test() [0x57aba3] rocksdb::test::RunAllTests()        ./vendor/rocksdb/util/testharness.cc:48
+#3   /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf5) [0x2b47e92c0ec5] ??  ??:0
+#4   ./db_test() [0x42261e] _start      ??:?
+make: *** [check] Error 1
+```
+
+@doktorstick maybe it is a timing issue? How about change from "kGCNumKeys = 1000" to a larger number and see whether it passes?
+
+@clare2014 like what @igorcanadi  said, I don't think it is an important test. It's totally fine to just have it disabled.
+
+@siying It passed at `kGCNumKeys = 100000`; that's the only retest I did.
+
+Close the issue for now as we are currently at 3.6.2, but please feel free to reopen it if you're using 3.1 and think this issue should be addressed.
+

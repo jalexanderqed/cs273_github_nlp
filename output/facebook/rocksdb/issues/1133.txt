@@ -1,0 +1,222 @@
+Hello and thank you for RocksDB,
+
+When using `ldb load`, `getline` on `cin` can use a lot of user CPU when lines are long.
+
+I noticed `ldb` using a lot of user CPU when loading large values:
+
+```
+perl -e 'while($i<1000){++$i;printf(qq{$i ==> }.(q{x} x 1_000_000).{\n},$i)}' | 
+    time ldb --create_if_missing --db=/dev/shm/test.rdb load
+  61.85 user
+   1.61 system
+1:03.42 elapsed
+        100%CPU
+```
+
+`perf record -g` showed the CPU time was spent in `_IO_getc`
+
+```
+ Children      Self  Command  Shared Object        Symbol
+   54.86%    54.77%  ldb      libc-2.17.so         [.] _IO_getc
+   28.57%    28.53%  ldb      libc-2.17.so         [.] _IO_ungetc
+    5.78%     5.46%  ldb      libstdc++.so.6.0.19  [.] std::getline<char, std::char_traits<char>, std::allocator<char> >
+    2.62%     0.00%  ldb      ldb                  [.] rocksdb::LDBTool::Run
+    2.62%     0.00%  ldb      ldb                  [.] rocksdb::LDBCommandRunner::RunCommand
+    2.62%     0.00%  ldb      ldb                  [.] rocksdb::LDBCommand::Run
+```
+
+The `getline` on `cin` code in `tools/ldb_cmd.cc::DBLoaderCommand::DoCommand` can be inefficient, to demonstrate:
+
+`getline.cc`
+
+```
+#include <iostream>
+#include <string>
+using namespace std;
+int main(){
+  string line;
+  int num_lines;
+  while (getline(cin, line, '\n')) {
+    ++num_lines;
+  }
+  cout << "getline num_lines = " << num_lines << endl;
+}
+```
+
+`getline_posix.cc`
+
+```
+#include <iostream>
+#include <stdlib.h>
+#include <cstdio>
+using namespace std;
+int main(){
+  char *line = NULL;
+  int num_lines;
+  size_t len = 0;
+  ssize_t read;
+  while ((read = getline(&line, &len, stdin)) != -1) {
+    ++num_lines;
+  }
+  free(line);
+  cout << "getline_posix num_lines = " << num_lines << endl;
+}
+```
+
+Compile and run:
+
+```
+> g++ getline.cc -o getline 
+> perl -e '$line=q{x} x 2048 . qq{\n};while($i<1_000_000){print $line;++$i}' | 
+    time ./getline
+getline num_lines = 1000000
+  58.43 user 
+   0.43 system 
+0:58.81 elapsed
+
+> g++ getline_posix.cc -o getline_posix  
+> perl -e '$line=q{x} x 2048 . qq{\n};while($i<1_000_000){print $line;++$i}' | 
+    time ./getline_posix
+getline_posix num_lines = 1000000
+   0.18 user
+   0.45 system
+0:00.63 elapsed
+```
+
+This is with:
+
+```
+> g++ --version
+g++ (GCC) 4.8.5 20150623 (Red Hat 4.8.5-4)
+> rpm -q glibc
+glibc-2.17-106.el7_2.4.x86_64
+> uname -a
+Linux HOSTNAME 3.10.0-229.el7.x86_64 #1 SMP Thu Jan 29 18:37:38 EST 2015 x86_64 x86_64 x86_64 GNU/Linux
+```
+
+A quick test using the head of the master RocksDB branch, building with `make CFLAGS=-DSNAPPY=1`
+
+```
+> diff -du6 tools/ldb_cmd.cc.orig tools/ldb_cmd.cc
+--- tools/ldb_cmd.cc.orig       2016-05-23 11:26:39.203254542 -0400
++++ tools/ldb_cmd.cc    2016-05-23 13:14:16.560139818 -0400
+@@ -801,26 +801,31 @@
+   if (disable_wal_) {
+     write_options.disableWAL = true;
+   }
+
+   int bad_lines = 0;
+   std::string line;
+-  while (getline(std::cin, line, '\n')) {
++  char *c_line = NULL;
++  size_t len = 0;
++  ssize_t read;
++  while ((read = getline(&c_line, &len, stdin)) != -1) {
++    line = std::string(c_line);
++    line.pop_back();
+     std::string key;
+     std::string value;
+     if (ParseKeyValue(line, &key, &value, is_key_hex_, is_value_hex_)) {
+       db_->Put(write_options, GetCfHandle(), Slice(key), Slice(value));
+     } else if (0 == line.find("Keys in range:")) {
+       // ignore this line
+     } else if (0 == line.find("Created bg thread 0x")) {
+       // ignore this line
+     } else {
+       bad_lines ++;
+     }
+   }
+-
++  free(c_line);
+   if (bad_lines > 0) {
+     std::cout << "Warning: " << bad_lines << " bad lines ignored." << std::endl;
+   }
+   if (compact_) {
+     db_->CompactRange(CompactRangeOptions(), GetCfHandle(), nullptr, nullptr);
+   }
+```
+
+Shows the reduction in user CPU (in debug mode), for this example down from just over 1 minute to 1 second.
+
+```
+> perl -e 'while($i<1000){++$i;printf(qq{$i ==> }.(q{x} x 1_000_000).{\n},$i)}' | 
+    time ldb --create_if_missing --db=/dev/shm/test.rdb load
+   1.17 user
+   1.70 system
+0:03.79 elapsed
+        76%CPU
+```
+
+At the moment I would just like to report this as an issue, and not work on a portable efficient replacement.  I do not have a CLA in place.
+
+Thanks.
+
+I could not find a way to set a buffer on `cin`, but setting one on an `ifstream` and then using it to open `/dev/stdin` works:
+
+`getlinebuf.cc`
+
+```
+#include <iostream>
+#include <string>
+#include <fstream>
+using namespace std;
+int main(){
+  ifstream ifs;
+  char stream_buffer[1048576] = {0};
+  ifs.rdbuf()->pubsetbuf(stream_buffer, sizeof(stream_buffer) );
+  ifs.open("/dev/stdin");
+  string line;
+  int num_lines;
+  while (getline(ifs, line, '\n')) {
+    ++num_lines;
+  }
+  cout << "getlinebuf num_lines = " << num_lines << endl;
+}
+```
+
+Compile and run:
+
+```
+> g++ getlinebuf.cc -o getlinebuf 
+> perl -e '$line=q{x} x 2048 . qq{\n};while($i<1_000_000){print $line;++$i}' | 
+    time ./getlinebuf
+getline num_lines = 1000000
+   0.18 user
+   0.36 system
+0:00.54 elapsed
+        99%CPU
+```
+
+But also, just using an `ifstream` on `/dev/stdin`, without setting a buffer also does not have the very poor performance.  An `strace` shows 8K `reads` (the `reads` with the 1M buffer were 1M), `perl` is performing 2K `writes` and the `pipe` is using 64K buffers as is `time`.  If `ldb load` supported an `--input_file` optional parameter then if a "file" was passed then I think the block size of the filesystem would be used as the buffer size, and where available `--input_file=/dev/stdin` could be passed, and could maybe be the default on platforms where it is available.
+
+`getlineifs.cc`
+
+```
+#include <iostream>
+#include <string>
+#include <fstream>
+using namespace std;
+int main(){
+  ifstream ifs("/dev/stdin"); /* could also be cin */
+  string line;
+  int num_lines;
+  while (getline(ifs, line, '\n')) {
+    ++num_lines;
+  }
+  cout << "getlineifs num_lines = " << num_lines << endl;
+}
+```
+
+Compile and run:
+
+```
+> g++ getlineifs.cc -o getlineifs 
+> perl -e '$line=q{x} x 2048 . qq{\n};while($i<1_000_000){print $line;++$i}' | 
+    time ./getlineifs
+getlineifs num_lines = 1000000
+   0.16 user
+   0.37 system
+0:00.54 elapsed 
+        100%CPU
+```
+

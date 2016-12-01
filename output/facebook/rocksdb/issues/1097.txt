@@ -1,0 +1,6 @@
+I describe my requirement as follows:
+I have two client of database, they are in two different processes,one has write and read request of database called A,another has only read request of database called B. Now A writes into database without a stop. I want that B can read the real time updates of database written by A.
+I see that rocksdb has an api  OpenForReadOnly. But it seems that B can only read the snapshot when B uses OpenForReadOnly. I don't know how can B reads the updates written by A after OpenForReadOnly. 
+
+Thanks
+

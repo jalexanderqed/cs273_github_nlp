@@ -1,0 +1,15 @@
+1, if the param new_descriptor_log is true, new manifest file number may re-use and overwrite the old one, which is an unexpected behavior.
+2, check s.ok() to avoid unnecessary invoking of v->PrepareApply().
+3, add current_file_updated flag for assert.
+4, fix incorrect log printing when deleting manifest file.
+
+Thank you for your contribution! Reading from the changes, it does look like you find a bug and have a right fix for it. Let me reproduce it in a unit test to double check that. Will merge once it is verified by a unit test.
+
+@qinzuoyan how did you trigger the bug? From reading the codes, it only seems to be triggered while running ldb.
+
+Yes, I found it while reading the code :)
+
+@qinzuoyan The code path only seems to be triggered in "./ldb reduce_levels" commend. We don't have any unit test covering this, so I'm a little bit concerned in taking it. If you can help us write a unit test to cover this code path, I can merge it. Otherwise, I would hold until we have such a unit test. Is it OK to you?
+
+Yes, I'll add unit test recently.
+

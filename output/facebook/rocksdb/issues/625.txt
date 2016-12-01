@@ -1,0 +1,91 @@
+this patch does the same thing but makes clang happy, re: https://github.com/facebook/rocksdb/pull/621 it also had a gripe about `size_t` <-> `int`. clang needs some vicodin 
+
+@rdallman , AddressSanitizer reports error:
+
+11:13:45 ===== Running c_test
+11:13:45 === Test create_objects
+11:13:45 === Test destroy
+11:13:45 === Test open_error
+11:13:45 === Test open
+11:13:45 === Test put
+11:13:45 === Test backup_and_restore
+11:13:45 === Test compactall
+11:13:45 === Test compactrange
+11:13:45 === Test writebatch
+11:13:45 === Test writebatch_vectors
+11:13:45 === Test writebatch_rep
+11:13:45 === Test iter
+11:13:45 === Test multiget
+11:13:45 === Test approximate_sizes
+11:13:45 === Test property
+11:13:45 === Test snapshot
+11:13:45 === Test repair
+11:13:45 === Test filter
+11:13:45 === Test compaction_filter
+11:13:45 === Test compaction_filter_factory
+11:13:45 === Test compaction_filter_v2
+11:13:45 === Test merge_operator
+11:13:45 === Test columnfamilies
+11:13:45 =================================================================
+11:13:45 ==3528988==ERROR: AddressSanitizer: global-buffer-overflow on address 0x00000094d107 at pc 0x49e1c4 bp 0x7ffff012ff30 sp 0x7ffff012ff28
+11:13:45 READ of size 1 at 0x00000094d107 thread T0
+11:13:45     #0 0x49e1c3 in rocksdb::LookupKey::LookupKey(rocksdb::Slice const&, unsigned long) db/dbformat.cc:151
+11:13:45     #1 0x4be0fb in rocksdb::DBImpl::MultiGet(rocksdb::ReadOptions const&, std::vector<rocksdb::ColumnFamilyHandle*, std::allocator<rocksdb::ColumnFamilyHandle*> > const&, std::vector<rocksdb::Slice, std::allocator<rocksdb::Slice> > const&, std::vector<std::string, std::allocator<std::string> >_) db/db_impl.cc:2848
+11:13:45     #2 0x42c97f in rocksdb_multi_get_cf db/c.cc:885
+11:13:45     #3 0x4122fe in main db/c_test.c:832
+11:13:45     #4 0x7fbb738790f5 in __libc_start_main (/usr/local/fbcode/gcc-4.9-glibc-2.20/lib/libc.so.6+0x200f5)
+11:13:45     #0 0x40e8b4 in _start ??:0
+11:13:45 
+11:13:45 0x00000094d107 is located 57 bytes to the left of global variable '_.LC40' from 'db/c_test.c' (0x94d140) of size 4
+11:13:45   '_.LC40' is ascii string 'baz'
+11:13:45 0x00000094d107 is located 3 bytes to the right of global variable '_.LC39' from 'db/c_test.c' (0x94d100) of size 4
+11:13:45   '_.LC39' is ascii string 'bar'
+11:13:45 SUMMARY: AddressSanitizer: global-buffer-overflow db/dbformat.cc:151 rocksdb::LookupKey::LookupKey(rocksdb::Slice const&, unsigned long)
+11:13:45 Shadow bytes around the buggy address:
+11:13:45   0x0000801219d0: f9 f9 f9 f9 00 00 00 06 f9 f9 f9 f9 00 00 02 f9
+11:13:45   0x0000801219e0: f9 f9 f9 f9 05 f9 f9 f9 f9 f9 f9 f9 00 f9 f9 f9
+11:13:45   0x0000801219f0: f9 f9 f9 f9 03 f9 f9 f9 f9 f9 f9 f9 07 f9 f9 f9
+11:13:45   0x000080121a00: f9 f9 f9 f9 07 f9 f9 f9 f9 f9 f9 f9 00 04 f9 f9
+11:13:45   0x000080121a10: f9 f9 f9 f9 00 00 00 00 03 f9 f9 f9 f9 f9 f9 f9
+11:13:45 =>0x000080121a20:[04]f9 f9 f9 f9 f9 f9 f9 04 f9 f9 f9 f9 f9 f9 f9
+11:13:45   0x000080121a30: 00 04 f9 f9 f9 f9 f9 f9 00 00 03 f9 f9 f9 f9 f9
+11:13:45   0x000080121a40: 00 07 f9 f9 f9 f9 f9 f9 00 00 00 07 f9 f9 f9 f9
+11:13:45   0x000080121a50: 06 f9 f9 f9 f9 f9 f9 f9 07 f9 f9 f9 f9 f9 f9 f9
+11:13:45   0x000080121a60: 00 00 00 05 f9 f9 f9 f9 00 04 f9 f9 f9 f9 f9 f9
+11:13:45   0x000080121a70: 00 01 f9 f9 f9 f9 f9 f9 00 01 f9 f9 f9 f9 f9 f9
+11:13:45 Shadow byte legend (one shadow byte represents 8 application bytes):
+11:13:45   Addressable:           00
+11:13:45   Partially addressable: 01 02 03 04 05 06 07
+11:13:45   Heap left redzone:       fa
+11:13:45   Heap right redzone:      fb
+11:13:45   Freed heap region:       fd
+11:13:45   Stack left redzone:      f1
+11:13:45   Stack mid redzone:       f2
+11:13:45   Stack right redzone:     f3
+11:13:45   Stack partial redzone:   f4
+11:13:45   Stack after return:      f5
+11:13:45   Stack use after scope:   f8
+11:13:45   Global redzone:          f9
+11:13:45   Global init order:       f6
+11:13:45   Poisoned by user:        f7
+11:13:45   Contiguous container OOB:fc
+11:13:45   ASan internal:           fe
+11:13:45 ==3528988==ABORTING
+11:13:45 make: *_\* [check] Error 1
+11:13:46 Build step 'Execute shell' marked build as failure
+11:13:47 Email was triggered for: Failure - Any
+11:13:47 Sending email for trigger: Failure - Any
+11:13:47 Sending email to: build-admin@fb.com leveldb@fb.com
+11:13:48 Notifying upstream projects of job completion
+11:13:48 Finished: FAILURE
+
+Can be something related?
+
+seems likely, should add that to CI :) checking now...
+
+Fixed with https://reviews.facebook.net/D39699
+
+@igorcanadi  you really move fast!
+
+thanks @igorcanadi 
+

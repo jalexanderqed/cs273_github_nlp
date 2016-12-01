@@ -1,0 +1,54 @@
+Hello,
+
+I'm not sure if you're already supporting Android as a platform (I'm guessing yes because a quick search shows there are precompiler directives to check `OS_ANDROID`).
+
+Basically trying to initialize the native library via `RocksDB.loadLibrary()` fails at https://github.com/facebook/rocksdb/blob/master/java/src/main/java/org/rocksdb/NativeLibraryLoader.java#L101 due to missing `Files`, `File#toPath` and `StandardCopyOption`.
+
+I'm using the [jar in Maven](http://search.maven.org/#artifactdetails%7Corg.rocksdb%7Crocksdbjni%7C3.13.1%7Cjar).
+
+Okay so those classes came in NIO.2 which means you will need at least Java 7. I am not familiar with Android development, so do you have Java 7 SDK classes available?
+
+Android doesn't have those classes in nio https://developer.android.com/reference/java/nio/package-summary.html
+
+Hmm so it seems like Android is based on and has stayed with JDK 6. Unfortunately the Rocks Java API requires at least Java 7.
+
+Would it be feasible to switch to something like [Okio](https://github.com/square/okio)? Or would it be too much of a dependency?
+
+@fourlastor For reference, can I ask which is the minimum Android API level that you are targeting?
+
+It was a test project just to try out rocksdb and it was some months ago, but I usually just leave the last SDK for those so 20+ must likely. If you want I can put up a quick repository tomorrow and check?
+
+@fourlastor I am trying to establish if we want to support Android with RocksDB, and is so which API level we should target. Do you have any instructions for building Rocks with Android NDK?
+
+No I don't, but it literally fails while copying a file while instantiating the library because it uses nio which is a Java 7 library. It would be necessary only to use Java 6 API to copy the file to support it I suppose
+
+@adamretter have you come to any conclusion?
+
+I don't think this is straight forward. We would first need to compile RocksDB C++ code for Android using the NDK. After that, we could make some small changes to ] the Java part to support Android. However, before all of that I wan't to make sure the other Rocks developers want to actually support Android. Let me get back to you...
+
+@chakrit @fourlastor Okay so there is an appetite to support Android. I will see if I can't get something working in the near future...
+
+@adamretter nice, thanks!
+
+Simple and FAST key-value DB like this are very very good as the final persistence layer for mobile because of the speed limitation. Apps shouldn't need to parse 100 SQL statements to display its first views with cached data when user taps the app icon. Also this just helps with any UI interactivity in general.
+
+Also applications may crash or be killed anytime so we need something that can do small incremental persistence (many PUTs + flush) instead of the traditional dump-entire-model-layer-to-JSON approach. RocksDB fits the use case perfectly and  is also especially well-suited to this task due to the widespread use of solid state drives on mobile devices.
+
+Hope this helps explains my use case a bit. Don't want to use any random fork floating around the interwebs if I can help it. And LevelDB just isn't fast enough (you still need to be consciously careful about it, for it to be fast.)
+
+I can help test as soon as there is something released officially.
+
+@adamretter thanks for following up!
+
+@chakrit if there is something already in existence, can you please point me at "the random fork floating around the interwebs"?
+
+@adamretter I remember a blog post detailing how to port to android but I can't find it anymore. However there is this https://github.com/fusesource/rocksdbjni/blob/master/rocksdb.patch going on which maybe of interest.
+
+Huh! That's really interesting, that is an entirely different implementation separate from this one. I also see that it hasn't been updated since 2013. Do you know that that code compiles on Android?
+
+@adamretter Yep, 2013. I havn't try to compile it from source but the artifact of the same thing on maven is non-working. Complains about `librocksdb.so` or something.
+
++1
+
++1
+

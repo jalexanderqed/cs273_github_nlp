@@ -1,0 +1,24 @@
+The smallest_seqno/largest_seqno field in struct FileMetaData means the smallest/largest sequence number in the file.
+
+But in BuildTable(), the smallest_seqno is set as the smallest key's sequence number, and the largest_seqno is set as the largest key's sequence number, then the result range [smallest_seqno, largest_seqno] may be subset of the real range.
+
+This bug didn't cause any problem because there is little code depending on the values. One exception is NewestFirstBySeqNo(), which uses smallest_seqno as the first sort key to sort files in level-0. But luckily, all sstables in level-0 don't overlap with each other, so inaccurate smallest_seqno  doesn't cause a problem here.
+
+Thanks for raising this issue, very nice catch! It would be good to also add a unit test that would fail without this patch. You can probably easily reproduce the issue by using https://github.com/facebook/rocksdb/blob/master/db/flush_job_test.cc framework.
+
+BTW can you please keep all lines under 80 characters? You can automatically format the commit by running `make format`.
+
+I just submitted a diff https://reviews.facebook.net/D42087 in which I rewrote some part of BuildTable and I think I also fixed this bug. Can you please review to check if it's fixed now?
+
+Unit-test added.
+
+@igorcanadi , yes, it has been fixed in your newly submitted diff https://reviews.facebook.net/D42087 . And I hope you can consider my optimization to avoid unnecessary parsing and assigning for merge queue, becase sequence number in merge queue is in increasing order.
+
+Yup, I will definitely take your optimization + your unit test. Thanks! :)
+
+Wow, the bug has been there since universal compaction was introduced: https://reviews.facebook.net/D11289
+
+@qinzuoyan thank you for finding it out!
+
+This should be fixed now with https://github.com/facebook/rocksdb/commit/4ab26c5ad163c72501aeedba738d23f139a934b9. @qinzuoyan thanks for your contribution!
+

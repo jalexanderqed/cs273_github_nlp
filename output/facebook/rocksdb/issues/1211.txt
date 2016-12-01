@@ -1,0 +1,49 @@
+It's an xml for starters, plus Maven expects it to be named pom.xml.
+There's no other pom.xml in this directory which makes this change trivial.
+
+@clumsy The issue is that `rocksjni.pom` does not include a version number as this is non-static and meant to be calculated dynamically and injected by `java/Makefile`. In reality, a whole bunch of cleanup could be done around the Java build, where we either start with `mvn` and call `make` for the native C++ parts, or start with `make` and call `mvn` for the Java parts.
+
+I did consider the `nar-plugin` for Maven at one point, but I think the complexity of the RocksDB build could make this tricky; There is also an effort underway to move over to CMake as that should work for both Windows and Unix/Linux platforms.
+
+I've actually made it working with nar-plugin :)
+
+By far the only change is the addition of the new plugin in build section:
+
+``` xml
+...
+         <plugin>
+                <groupId>com.github.maven-nar</groupId>
+                <artifactId>nar-maven-plugin</artifactId>
+                <version>3.4.0</version>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>nar-javah</goal>
+                        </goals>
+                        <configuration>
+                            <javah>
+                                <jniDirectory>${project.basedir}/include</jniDirectory>
+                            </javah>
+                            <libraries>
+                                <library>
+                                    <type>jni</type>
+                                    <narSystemPackage>org.rocksdb</narSystemPackage>
+                                </library>
+                            </libraries>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+...
+```
+
+There's still a problem making tests use the native code for native classes - they fail on runtime.
+But at least it compiles.
+
+@clumsy Okay but you are only producing the native headers with `javah` there; You are not actually compiling the C++ code in `java/rocksjni` or even prior to that the Rocks C++ code which will also be needed.
+
+@adamretter JNI headers is all you need to compile Java classes.
+The only problem is with runtime, and here you'll rocksdb library.
+

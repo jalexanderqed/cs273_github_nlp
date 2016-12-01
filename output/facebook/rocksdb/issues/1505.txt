@@ -1,0 +1,17 @@
+Change DumpTable() so we can see the range deletion meta-block.
+
+Test Plan: try it out
+```
+$ ./sst_dump --file=./tmp/000007.sst --command=raw
+$ grep 'Range deletions' -A3 ./tmp/000007_dump.txt
+Range deletions:
+--------------------------------------
+HEX    61: 7A
+ASCII  a : z
+```
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4172227).
+
+@ajkr has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4172227).
+
+was reviewed in https://reviews.facebook.net/D63909
+

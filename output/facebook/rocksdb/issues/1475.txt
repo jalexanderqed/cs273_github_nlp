@@ -1,0 +1,3 @@
+In dynamic leveled compaction, when calculating read bytes, output level bytes may be wronglyl calculated as input level inputs. Fix it.
+@siying has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4148412).
+

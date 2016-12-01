@@ -1,0 +1,16 @@
+The tests run by `make check` require Bash. On Debian you'd need to run
+the test as `make SHELL=/bin/bash check`. This commit makes it work on
+all POSIX compatible shells (tested on Debian with `dash`).
+
+Thank you for your pull request and welcome to our community. We require contributors to sign our Contributor License Agreement, and we don't seem to have you on file. In order for us to review and merge your code, please sign up at https://code.facebook.com/cla - and if you have received this in error or have any questions, please drop us a line at cla@fb.com. Thanks!
+
+FYI, i just signed the CLA.
+
+Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Facebook open source project. Thanks!
+
+Sorry I just saw some problem with this in our parallel tests. I'm reverting it to unblock tests for now. Sorry for the inconvenience.
+
+This change has broken our log file generation. When make runs the final command what runs is /bin/sh -c ${test}  >&2 t/log-${test}. this does not work in either /bin/sh or bash for me. Its also not a common pattern. Typical to use >&    to redirect both stdout/stderr  or use 2>&1 
+
+@vmx is there another way you can try? This way doesn't work well for us. On my hosts, the outputs are not piped to log files, but console.
+

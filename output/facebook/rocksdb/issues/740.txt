@@ -1,0 +1,6 @@
+This popped up using AWS Ec2 instances going from a c4 to a c3 instance using Ubuntu LTS 14; invalid opcode calls, and invalid instruction dumps. This was triggered when using librocksdb.so.4.0.0 with pyrocksdb when simply calling rocksdb.Options(). It did not happen with other calls.
+
+Hi @Downchuck. Did you compile the shared library with PORTABLE=1? Default compile only makes RocksDB work on the architecture you built it on. Check out: https://github.com/facebook/rocksdb/blob/master/INSTALL.md
+
+Thanks for that heads up: I did not think to compile it with PORTABLE. I'm sure that'll fix the issue.
+

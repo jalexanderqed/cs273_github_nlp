@@ -1,0 +1,29 @@
+All members in DBOptions use the same code style.
+
+I agree that it's not conforming to out style (same with disableWAL), but unfortunately, this is backwards incompatible change, and I would rather avoid breaking client's applications.
+
+Agree with Igor.
+
+Does RocksDB have a process for incompatible changes like that? Not
+allowing any of them means some things can't get fixed? MySQL does it over
+several releases (a few years). In one major release something can be
+deprecated which is a notice or warning to users. Then it can be fixed in
+the next major release where the fix allows for breaking of backwards
+compatibility.
+
+On Tue, Sep 2, 2014 at 1:22 PM, dhruba borthakur notifications@github.com
+wrote:
+
+> Agree with Igor.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/pull/252#issuecomment-54211710.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@mdcallag we do have a process. We sometimes introduce backward incompatible changes if there is enough value. When the feature is highly used, we start by marking something deprecated (ex. https://reviews.facebook.net/D20409) and then removing it. However, sometimes we just flip the switch at once, in case the feature is for advanced users or if the code change necessary is small enough. One example of such diff is https://github.com/facebook/rocksdb/commit/384400128f6eb9f1111f41efd9712c6879411cfc
+

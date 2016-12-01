@@ -1,0 +1,250 @@
+Compared to original leveldb
+    mergedb: 853.131 micros/op;    4.6 MB/s
+    leveldb: 1913.242 micros/op;    2.0 MB/s
+
+In my strategy, size of n+1 level's data is only about twice the size of n level's data. And every compaction will compact all adjacent non-empty levels from level0 to a single level, which resulting less writes.
+Suppose a LevelDB with 7 levels, there will be about 20 levels in my new db. The idea write amplification will be 1 write to log, 1 write to level0, and about 10 write to move up to level20, that is about 12 writes compared to 68 writes in original db.
+I don't want to stop the write operation, so I compact data in a sophisticated way similar to the above, then resulting several extra writes. In all, the new writes will be about 15.
+
+details can be found [mergedb](https://github.com/yedf/mergedb), Is anyone interested?
+
+In testing (db_bench, some real workloads) I usually get write-amp of ~5
+for n >= 2 when level n+1 is 10X larger than level n. So using 68 as the
+estimate for the total write-amp is pessimistic. Why don't you compare this
+to universal (size-tiered) compaction?
+
+You are making a tradeoff -- more space-amp and read-amp for less
+write-amp. Your comparison should mention the impact on all three.
+
+On Tue, Jun 16, 2015 at 5:30 AM, yedf notifications@github.com wrote:
+
+> Compared to original leveldb
+> mergedb: 853.131 micros/op; 4.6 MB/s
+> leveldb: 1913.242 micros/op; 2.0 MB/s
+> 
+> In my strategy, size of n+1 level's data is only about twice the size of n
+> level's data. And every compaction will compact all adjacent non-empty
+> levels from level0 to a single level, which resulting less writes.
+> Suppose a LevelDB with 7 levels, there will be about 20 levels in my new
+> db. The idea write amplification will be 1 write to log, 1 write to level0,
+> and about 10 write to move up to level20, that is about 12 writes compared
+> to 68 writes in original db.
+> I don't want to stop the write operation, so I compact data in a
+> sophisticated way similar to the above, then resulting several extra
+> writes. In all, the new writes will be about 15.
+> 
+> details can be found mergedb https://github.com/yedf/mergedb, Is anyone
+> interested?
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/637.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+In RockSDB's test case, the write-amp of levelDB is large, only 1.3 MB/sec for 2 FusionIO devices in SW RAID 0 that can do ~200k 4kb read/second at peak. So I don't think 68 is pessimistic.
+
+In my real application, the db is about 1TB on a 2TB hard disk. In the default setting of LevelDB, there will be 7 levels and write-amp will be about 68. If the write buffer size is 64MB, there is also 6 levels, and write-amp will be larger than 46. 
+I only get less than 1MB's write throughput on my hard disk with a speed of 200MB/s.
+
+Of course, this strategy is making tradeoff between write-amp and read-amp. Given the iops of hard disk is about 200, and bloom filter with 15 bit which will reduce 99.9% unnecessary disk read, then the read qps(1 read op will at most result in  1 hit read and 19 miss reads, so real disk reads is 1 + 19*0.001 ~ 1, miss read can be greatly reduced by bloom filter) on hard disk is still about 200 while the write throughput is greatly enlarged.
+So on a hard disk, although read-amp is larger, but read speed is the same. That is why levelDB speedup its write operations while not slow down its read speed.
+
+For space-amp, the worst case for levelDB is about 2.1 if the top level's data size is the same as second level, which I observed in my real application. 
+For a ratio of 2 instead of 10, the worst case is about 3 if the size on top level is the same as second. I do a compact if top 4 level's size is larger than 2.3*size of top level, which reduce the space-amp to at most 2.3+1/16.
+
+I can't talk about LevelDB as I don't use it any more. I can talk about
+RocksDB.
+
+With the default fanout of 10 the space-amp for leveled compaction is
+~1.1X. You are proposing to use a fanout of 2 in which case the space-amp
+can be ~2. The benefit of using a fanout of 2 is reduced  write-amp but
+that comes at the cost of increased space-amp. Either configuration is fine
+if the resulting performance is what you want, I just want to highlight
+that there is a tradeoff here.
+
+Also, I think you are providing estimated write-amp values for leveled
+compaction where you assume the write-amp per-level for levels >= 2 is the
+fanout (default of 10, but you use 2). I have found that write-amp per
+level in practice is less than the fanout per level. So with a fanout of 10
+I get a write-amp per level between 5 and 7.
+
+Have you measured the write-amp in practice? Or are the numbers that you
+quote in previous messages (46, 68) estimates?
+
+On Tue, Jun 16, 2015 at 9:54 AM, yedf notifications@github.com wrote:
+
+> For space-amp, the worst case for levelDB is about 2.1 if the top level's
+> data size is the same as second level, which I observed in my real
+> application.
+> For a ratio of 2 instead of 10, the worst case is about 3 if the size on
+> top level is the same as second. I do a compact if top 4 level's size is
+> larger than 2.3*size of top level, which reduce the space-amp to at most
+> 2.3.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/637#issuecomment-112324663.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+With the default fanout of 10, the space-amp of overwriting records is ~1.1X only when the top level is almost full. In other cases, space-amp is larger than 1.1X, 2.1X in worst case when top level is the same size as second level. And the space-amp of MergeDB is reduced by a little extra write-amp.
+
+Although I didn't add log to measure the write-amp, but the real performance observed supports the estimates.
+
+In the performance page of RockSDB, LevelDB can only achieve 1.3M/s for random write while the sequential write is 146 MB/sec, whose write-amp is 2(1 to log, 1 to level0). Thus the I/O-amp is very large, maybe 46/68 for write-amp is an underestimate.
+
+My point is that the per-level write-amp from RocksDB with leveled
+compaction is usually much level than the per-level fanout. With the
+default fanout of 10 I usually get a write amp of 5 to 7 per level. I was
+surprised when I first looked at the data that the write-amp in practice
+was less than I predicted on paper. I know this because I measured it.
+RocksDB writes this into LOG so you can measure this too and avoid
+speculation.
+
+So please measure it if we are to continue discussing this.
+
+On Wed, Jun 17, 2015 at 4:09 AM, yedf notifications@github.com wrote:
+
+> With the default fanout of 10, the space-amp of overwriting records is
+> ~1.1X only when the top level is almost full. In other cases, space-amp is
+> larger than 1.1X, 2.1X in worst case when top level is the same size as
+> second level. And the space-amp of MergeDB is reduced by a little extra
+> write-amp.
+> 
+> What is "top level"? This thread has been very confusing too me with
+> undefined terms being introduced and then comparisons jumping between
+> different configurations. If "top level" is L0 and "second level" is L1
+> then their impact on space amp is irrelevant for an LSM that uses L0 to L6
+> and I think that was the example that started this thread.
+
+Make sure to set this to true, as the default is unfortunately false:
+level_compaction_dynamic_level_bytes
+https://github.com/facebook/rocksdb/blob/master/include/rocksdb/options.h#L442
+
+If MergeDB means to use fanout=2 then space amp approaches 2 for it, versus
+1.1 for RocksDB with leveled compaction and
+level_compaction_dynamic_level_bytes=true
+
+> Although I didn't add log to measure the write-amp, but the real
+> performance observed supports the estimates.
+> 
+> In the performance page of RockSDB, LevelDB can only achieve 1.3M/s for
+> random write while the sequential write is 146 MB/sec, whose write-amp is
+> 2(1 to log, 1 to level0). Thus the I/O-amp is very large, maybe 46/68 for
+> write-amp is an underestimate.
+> 
+> I assume that 46 and 68 is an estimate from you. Do you have data to
+> confirm it? Data means either compaction IO stats from the RocksDB LOG file
+> or use iostat to measure total bytes written and then have your app log the
+> input rate. Otherwise you are just guessing.
+
+There are many reasons why LevelDB cannot sustain high write rates. But I
+am here to speak about RocksDB.
+
+—
+
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/637#issuecomment-112623655.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+Without this option "level_compaction_dynamic_level_bytes" on, the space-amp can be 2.1X if level N (the non-empty level with largest n) size equal to the size of N-1 level. Now, with this option on, the space-amp is reduced to 1.1X.
+
+I may do a thorough bench test if I got enough free time.
+
+Yes we agree about that. This is a lousy behavior in leveled compaction
+that isn't widely understood. Hopefully we can increase awareness about it,
+change the default for this option to true, and motivate others (like
+Cassandra) to match the improvement in RocksDB.
+
+On Wed, Jun 17, 2015 at 9:04 AM, yedf notifications@github.com wrote:
+
+> Without this option "level_compaction_dynamic_level_bytes" on, the
+> space-amp can be 2.1X if level N (the non-empty level with largest n) size
+> equal to the size of N-1 level. Now, with this option on, the space-amp is
+> reduced to 1.1X.
+> 
+> I may do a thorough bench test if I got enough free time.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/637#issuecomment-112682795.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+I thought about the space-amp, and found that it is a quite simple problem for me. If I set kExtraSpace = 0.25, then I will only pay 4 extra write, and gain a space-amp of only 1.3X. because the space-amp is mainly influenced by the fanout of largest level.
+
+The key of my strategy is not only the fanout. Suppose the fanout of RocksDB is 2, then for a db with 20 levels, there may be 20*3 writes, result in writes about the same as fanout of 10. My compaction will take multiple levels as input and then result in level jumps. This compaction strategy only needs about n/2 write for a db with n levels whose fanout is set to 2.
+
+> My compaction will take multiple levels as input and then result in level jumps.
+
+This sounds very similar to multi-level universal compaction. Did you check out:  https://github.com/facebook/rocksdb/wiki/Universal-Compaction
+
+How does it compare?
+
+The core concept is similar.
+
+There maybe another problem for Universal-Compaction. It will take a long time to do a universal compaction including all data. If you stop writing after several files generated, then you may stop writing for a long time. If you keep writing with slow speed, then there may be too much files to slow down read operations.
+
+The main difference between mergeDb and universal compaction are:
+1. generate output as files in a level and release input files as compaction progressing to overcome the double size issue.
+2. compaction will take multiple levels but not all level, so in a compaction taking long time, another compaction only involving newer data may take place. For a db like 1 2 0 0 16 32 64 128, I will only pickup 16 32 64 128, and result in a little more write-amp but not stopping write ops.
+3. I don't set an number for total levels but make it increase as the db size increased.
+
+Large files with universal compaction is a problem today. Each compaction
+step (N input sorted runs, 1 output sorted run) is single-threaded. That
+thread can slow down from disk reads, decompression & compression before
+write. Sharding is the workaround today (via many column families or
+separate LSM instances). We have work in progress to make this better.
+
+On Fri, Jun 19, 2015 at 5:24 AM, yedf notifications@github.com wrote:
+
+> The core concept is similar.
+> 
+> There maybe another problem for Universal-Compaction. It will take a long
+> time to do a universal compaction including all data. If you stop writing
+> after several files generated, then you may stop writing for a long time.
+> If you keep writing with slow speed, then there may be too much files to
+> slow down read operations.
+> 
+> The main difference between mergeDb and universal compaction are:
+> 1. generate output as files in a level and release input files as
+> compaction progressing to overcome the double size issue.
+> 2. compaction will take multiple levels but not all level, so in a
+> compaction taking long time, another compaction only involving newer data
+> may take place. For a db like 1 2 0 0 16 32 64 128, I will only pickup 16
+> 32 64 128, and result in a little more write-amp but not stopping write ops.
+> 3. I don't set an number for total levels but make it increase as the db
+> size increased.
+> 
+> —
+> Reply to this email directly or view it on GitHub
+> https://github.com/facebook/rocksdb/issues/637#issuecomment-113356557.
+
+## 
+
+Mark Callaghan
+mdcallag@gmail.com
+
+@yedf For our "universal compaction":
+(1) if you set max_num_compactions > 1, smaller compactions can happen when a full compaction is going on, similar to what you mentioned.
+(2) start from last release, universal compaction's outputs are put into a leveled structure when possible, as you mentioned
+(3) Number of total levels are just logical numbers. In current universal compaction, you can set it to 20 for safe. Usually only less than 10 of them will be used. Similar effect as you mentioned.
+
+The problem you mentioned that non-partitionable compaction jobs is a problem of this approach, as what @mdcallag said. But I agree @mdcallag said that the fair comparison to your mergedb is not with leveled compaction with level multiplier 10, but with "universal" compaction. 
+
+I did not see universal compaction before. Since my strategy is similar as it, the effect should be similar. Setting default configuration to universal compaction maybe a good idea.
+

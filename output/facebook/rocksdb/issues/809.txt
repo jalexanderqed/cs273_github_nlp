@@ -1,0 +1,46 @@
+On Windows 10 with Vs2015. Compiling in VS2015 as either debug or release I get the following compile error.
+
+Severity    Code    Description Project File    Line
+Error   C2280   'std::once_flag::once_flag(const std::once_flag &)': attempting to reference a deleted function rocksdb \rocksdb\util\testutil.cc   114
+
+Severity    Code    Description Project File    Line
+Error (active)      function "std::once_flag::once_flag(const std::once_flag &)" (declared at line 403 of "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\include\mutex") cannot be referenced -- it is a deleted function  rocksdb \rocksdb\util\testutil.cc   114
+
+The line in question is this in testutil.cc is:
+
+> > static port::OnceType once = LEVELDB_ONCE_INIT;
+> > static const Comparator\* uint64comp;
+
+@gra-moore Would you like to propose a patch?
+
+I can take a look at making one. I don't have one to hand. I was initially just looking for some confirmation that this was an issue and not just an error on my part.
+
+@gra-moore I can not currently confirm one way or another as I do not have 2015 handy.
+
+The problems is that `static port::OnceType once = LEVELDB_ONCE_INIT` expands to `static port::OnceType once = std::once_flag::once_flag()` and Vc14 consider this as a copy-initialization.
+Defining `LEVELDB_ONCE_INIT` as `{}` in `port_win.h` is a possible workaround.
+
+The C++ version of `std::once_flag` ( header mutex) is not intended to get any value. It is not copyable nor moveable. And the assignment makes no sense as the constructor makes all right. There is also a C version of it (header threads.h) where those assingment is necessary. I think its a relict from C to set it explicit to a value. The assingment may work on some (or most) compilers. But it should not used. If all compilers are standard compliant the assingment could be removed.
+
+For additional informations:
+http://en.cppreference.com/w/cpp/thread/once_flag
+http://en.cppreference.com/w/c/thread/call_once
+
+In `port_posix.h` the `OnceType` id defined as `pthread_once_t`. As far as i see it could changed to the std version without explicit initialisation. If do so there is no need to keep `InitOnce` in the portings. A chance to get the code a little bit more simple.
+
+I think this code in `testutil.cc` should work for every compiler supporting C++11.
+
+`static std::once_flag once;`
+`static const Comparator* uint64comp;`
+
+`static void InitModule() {`
+`uint64comp = new Uint64ComparatorImpl;`
+`}`
+
+`const Comparator* Uint64Comparator() {`
+`std::call_once(once, InitModule);`
+`return uint64comp;`
+`}`
+
+But this has to be tested. The affected locations in the portings can be removed (`OnceType`, `InitOnce`...).
+

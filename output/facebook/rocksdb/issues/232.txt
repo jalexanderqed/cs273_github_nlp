@@ -1,0 +1,15 @@
+Summary:
+1. Check status of CreateNewBackup. If status is not OK, then throw.
+2. Add purgeOldBackups API
+
+make rocksdbjava
+make sample
+
+Reviewers: haobo, yhchiang, sdong, zzbennett, swapnilghike
+Reviewed By: yhchiang
+CC: leveldb
+
+Differential Revision: https://reviews.facebook.net/D21753
+
+Merged pull request in https://github.com/facebook/rocksdb/commit/2da53b1e06655792569505796ee3f91bf9bcbfd3
+

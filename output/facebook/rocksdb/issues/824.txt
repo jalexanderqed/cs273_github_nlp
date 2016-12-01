@@ -1,0 +1,34 @@
+
+@siying So it took 32 minutes which is pretty good. Two tests failed due to batch execution but they usually pass standalone. We can leave this like that.
+
+What does batch execution mean? Will we see Windows CI to fail all the time if we merge it?
+
+@siying This script runs db_tests OR other tests in parallel. I think I just need to play with concurrency options. Another option is to run certain tests sequentially just like Travis does. Let me play with it within this PR a few times. Also would you like me to add standalone tests to this as well?
+
+I think that some of the tests fail when we run them in parallel, so maybe we should disable running tests in parallel when running on appveyor
+
+@IslamAbdelRahman Running them not in parallel would take too long. I will add couple of options 1) Specify some tests to run serially only 2) Re-run failed tests serially at the end. This works well with us internally.
+
+On a related note, we can also run standalone test executables using the same script. However, many of them require GFLAGS now. We have an internal package for that. However, is it possible to host a pre-compiled gflags lib somewhere on GitHub so we could download it during the build. OR we can make it part of the build much like gtest. Thoughts?
+
+@yuslepukhin Right now we are running tests sequently in travis so I believe it should be ok (although it will take much longer time), but I think having an option to re-run failed tests serially is a good solution.
+
+for GFLAGS, can we have a solution similar to travis ? https://github.com/facebook/rocksdb/blob/master/.travis.yml#L19
+We download and make gflags
+
+Thanks !
+
+@yuslepukhin maybe just --gtest_filter=-NEGATIVE_PATTERNS to skip the longest tests.
+
+@IslamAbdelRahman I think we can do it but it will add to the build time. I will investigate.
+
+@siying Capability to exclude certain tests is already present. However, the latest run altogether took 32 mins. What target do you have in mind so it does not take longer than Travis?
+
+@yuslepukhin Right now travis take 35-40 minute (running everything sequently)
+
+@IslamAbdelRahman I should make a correction. 32 minutes was only for db_test cases.
+
+@yuslepukhin running any tests will be better than nothing, especially some db_test and env_test.
+
+@IslamAbdelRahman @siying This is better. I excluded DBTest.Randomized but add env_test per your request. Somehow nothing has failed this time so no need to retry.
+

@@ -1,0 +1,31 @@
+I have run make all . And it went fine.
+But when i started to build the java with make rocksdbjava, its giving me the following error:
+
+/usr/bin/ld: db/builder.o: relocation R_X86_64_32 against `.rodata' can not be used when making a shared object; recompile with -fPIC
+db/builder.o: error adding symbols: Bad value
+collect2: error: ld returned 1 exit status
+make: **\* [rocksdbjava] Error 1
+l
+Im using 64 bit machine with Ubuntu 14.04 LTS. I have installed all the perquisite dependency mentioned in the rocksdb installation page
+
+Please tell me how to resolve this issue?
+
+try `make clean` and then `make rocksdbjava`?
+
+No i have tried this. But same error. 
+
+Not sure what's going on here.  Would you mind trying our recent patch https://github.com/facebook/rocksdb/commit/ae7743f22688f10efd8bd5a8ef1871890f8a7ee1 where we fixed some rocksdb java compilation issues and past the whole log or errors you see when you run 'make clean' and 'make rocksdbjava'?
+
+Thanks a lot yhchiang!!
+
+I have implemented therecent patch as mentioned by you and the code is building properly with make clean and make rocksdbjava.
+I'm able to find rocksdbjni.jar and the .so files required for this..
+
+Great!  So does patch ae7743f work well itself on your side w/o further change, or you still need to change Makefile in order to make it work?
+
+Actually a error was coming for some warnings. So I have to remove -Werror  from the WARNING_FLAGS in the make file.Thereafter it all went smoothly..
+
+Actually it might just be an issue with Ubuntu14.04,because we have build and tested rocksdb on Centos as well as RedHat in Amazon EC2,it just went perfect. Glad to say that we are using rocksdb in our production. I will share the use-case and design soon.Because rocksDb along with Hbase has improved our product & application performance to great level. 
+
+Great to hear that! Look forward to seeing your use-case and design!
+

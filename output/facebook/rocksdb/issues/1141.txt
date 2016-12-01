@@ -1,0 +1,23 @@
+Hi,
+
+We are using the C-API in our current work with RocksDB. I have a question about the following limitation advertised here,
+
+https://github.com/facebook/rocksdb/blob/master/include/rocksdb/c.h
+
+Does not support:
+...
+  . capturing post-write-snapshot
+
+Can you guys be more explicit about what this means? What we would like to do is the following:
+- Thread 1 creates snapshot and iterates over snapshot
+- Thread 2 does writes after Thread 1 has created the snapshot but before Thread 1 releases the snapshot.
+- Thread 3 (different from Thread 1 and Thread 2) does reads after Thread 1 has created the snapshot but before Thread 1 releases the snapshot.
+
+The behavior we would like to have is that both Thread 2 and Thread 2 are able to read the updates created by Thread 2 after Thread 1 creates the snapshot. We are fine with (in fact we expect that) thread 1 doesn't see the updates created by Thread 2.
+
+Is this is allowed with the current C-API, then I would like to understand what the limitation explained in the C API involves.
+
+Thanks,
+
+Ethan.
+
