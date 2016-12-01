@@ -6,7 +6,7 @@ This page will provide an interface for finding GitHub users
 relevant to a particular set of terms or a full issue (depending on what the end user
 puts in the text box). It should contain a single large editable text field.
 Whenever this text field is updated (or alternatively whenever the user enters a new word),
-the page should make a POST call to the backend with the following contents:
+the page should make a POST call to the backend address `/users/search` with the following contents:
 
 ```javascript
 {
