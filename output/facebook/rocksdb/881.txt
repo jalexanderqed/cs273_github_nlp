@@ -1,0 +1,4 @@
+We aren't correctly handling the case where the header has a bad length
+or checksum. Add a test and fix it! As it happens several of the existing
+tests weren't behaving as they should in the recycled log case.
+

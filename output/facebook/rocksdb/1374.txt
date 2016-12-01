@@ -1,0 +1,17 @@
+Hi,
+
+I wonder if it would be possible to add SPDK(https://software.intel.com/en-us/articles/introduction-to-the-storage-performance-development-kit-spdk) support when running RocksDB instances inside VMs. As far as I understand this can improve Disk Access performance access a lot, when running from inside VMs.
+
+Based on this comment[https://news.ycombinator.com/item?id=12023092](not entirely scientific) seems like there could be some big benefits for using SPDK.
+
+Does RocksDB depend on the filesystem? How hard would it be to support this?
+
+Overall it looks like this could be a low hanging performance fruit. I'm completely new to RocksDB and don't know the internal structure, I may be talking crazy.
+
+The referenced comment:
+
+> Submitting and completing a 4k I/O using SPDK is about 7 times more CPU efficient than the equivalent operation with libaio, which is opening a raw block device with O_DIRECT.
+> Said another way, on a recent Xeon CPU you can expect to drive somewhere around 3 million 4k I/O per second with SPDK per core. With libaio, you can do about 450,000 per core off the top of my head.
+> SPDK has no locks or cross core communication required, so it scales linearly with additional CPU cores. Blk-mq in the kernel also helped the kernel scaling problem significantly, but I'm not sure if it is perfectly linear yet.
+> Most applications need something like a filesystem to function - there is no denying that. Using SPDK requires applications to implement at least the minimal set of features in the filesystem that their application needs. Many databases and storage services already bypass the filesystem or use the filesystem as a block allocator only, so it is not a big leap from there to SPDK.
+

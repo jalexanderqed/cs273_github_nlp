@@ -1,0 +1,25 @@
+Hello,
+
+I must be doing something wrong because when I try to open a 5.3gb database for read-only operation the process hangs for about a minute and then gets killed.
+
+The database has ten column families (which I pass during the open). The same code works fine for a smaller database.
+
+These are the column family options I use:
+
+``` c++
+ColumnFamilyOptions options = ColumnFamilyOptions();
+options.OptimizeForPointLookup(8);
+options.OptimizeLevelStyleCompaction();
+```
+
+These are the database options I use:
+
+``` c++
+DBOptions options;
+options.IncreaseParallelism();
+```
+
+If I strace the program, I see that it issues tons of `read()` calls for 32768 byte chunks and calls `brk()` every now and then. I did try a few additional options (e.g. `allow_mmap_reads`) but they don't seem to help.
+
+Is there anything I'm doing wrong, or not doing, that could make this work for a database of this size and bigger? Any special options etc.?
+

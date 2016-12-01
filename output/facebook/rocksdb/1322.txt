@@ -1,0 +1,21 @@
+Program terminated with signal SIGSEGV, Segmentation fault.
+in tcmalloc::SLL_Next(void_) () from /usr/lib/libtcmalloc.so.4
+ in tcmalloc::SLL_PopRange(void__, int, void__, void__) () from /usr/lib/libtcmalloc.so.4
+ in tcmalloc::ThreadCache::FreeList::PopRange(int, void__, void__) () from /usr/lib/libtcmalloc.so.4
+ in tcmalloc::ThreadCache::ReleaseToCentralCache(tcmalloc::ThreadCache::FreeList_, unsigned long, int) () from /usr/lib/libtcmalloc.so.4
+ in tcmalloc::ThreadCache::ListTooLong(tcmalloc::ThreadCache::FreeList_, unsigned long) () from /usr/lib/libtcmalloc.so.4
+ in tcmalloc::ThreadCache::Deallocate(void_, unsigned long) () from /usr/lib/libtcmalloc.so.4
+ in ?? () from /usr/lib/libtcmalloc.so.4
+ in ?? () from /usr/lib/libtcmalloc.so.4
+ in ?? () from /usr/lib/libtcmalloc.so.4
+ in tc_delete () from /usr/lib/libtcmalloc.so.4
+ in rocksdb::VersionSet::Recover(std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, bool) () from /usr/lib/librocksdb.so.4.1
+ in rocksdb::DBImpl::Recover(std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, bool, bool) () from /usr/lib/librocksdb.so.4.1
+ in rocksdb::DB::Open(rocksdb::DBOptions const&, std::string const&, std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, std::vector<rocksdb::ColumnFamilyHandle*, std::allocator<rocksdb::ColumnFamilyHandle*> >_, rocksdb::DB_*) () from /usr/lib/librocksdb.so.4.1
+ in KeyValueStore::StoreImpl::StoreImpl (this=0x31a1f00, store_root="path", options=...)
+    at store.cc:100
+ in std::make_unique<KeyValueStore::StoreImpl, std::string const&, rocksdb::Options const&> () at make_unique.h:12
+ in KeyValueStore::ModuleImpl::Store (this=0x317e210, kvs_root="path", options=...) at module.cc:46
+
+The rocksdb version is 4.1
+

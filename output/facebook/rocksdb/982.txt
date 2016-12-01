@@ -1,0 +1,5 @@
+I'm new to rocksdb and I compiled the examples and tried running the the c_simple_example from the example folder, but it fails with the following error 
+`Assertion failed: (!err), function main, file c_simple_example.c, line 28.
+Abort trap: 6` 
+What might be going wrong ? How to fix it ?
+

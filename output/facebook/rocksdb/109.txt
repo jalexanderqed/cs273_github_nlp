@@ -1,0 +1,4 @@
+would love to see an official rockdb binding for node.js :-)
+
+right now our only option is leveldb
+

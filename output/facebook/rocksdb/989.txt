@@ -1,0 +1,62 @@
+We had found the following problem when using rocksdbjni-3.13.1 in Samza unit test.
+
+The following code does not work and failed w/ UnsatisfiedLinkError:
+
+``` scala
+  def testFlush(): Unit = {
+    val map = new util.HashMap[String, String]()
+    val config = new MapConfig(map)
+    val flushOptions = new FlushOptions().setWaitForFlush(true)
+    val options = new Options()
+    options.setCreateIfMissing(true)
+    val rocksDB = RocksDbKeyValueStore.openDB(new File(System.getProperty("java.io.tmpdir")),
+                                              options,
+                                              config,
+                                              false,
+                                              "dbStore")
+    val key = "key".getBytes("UTF-8")
+    rocksDB.put(key, "val".getBytes("UTF-8"))
+    rocksDB.flush(flushOptions)
+    val dbDir = new File(System.getProperty("java.io.tmpdir")).toString
+    val rocksDBReadOnly = RocksDB.openReadOnly(options, dbDir)
+    Assert.assertEquals(new String(rocksDBReadOnly.get(key), "UTF-8"), "val")
+    rocksDB.close()
+    rocksDBReadOnly.close()
+  }
+```
+
+```
+testFlush FAILED
+    java.lang.UnsatisfiedLinkError: org.rocksdb.FlushOptions.newFlushOptions()V
+        at org.rocksdb.FlushOptions.newFlushOptions(Native Method)
+        at org.rocksdb.FlushOptions.<init>(FlushOptions.java:14)
+        at org.apache.samza.storage.kv.TestRocksDbKeyValueStore.testFlush(TestRocksDbKeyValueStore.scala:73)
+```
+
+I traced into the code and found out that when `new FlushOptions()` is called first, `NativeLibraryLoader.loadLibrary()` function is not triggered. So, I moved the creation of `FlushOptions()` after `new Options()` as the following:
+
+``` scala
+ class TestRocksDbKeyValueStore
+ {
+@@ -70,7 +66,6 @@ class TestRocksDbKeyValueStore
+   def testFlush(): Unit = {
+     val map = new util.HashMap[String, String]()
+     val config = new MapConfig(map)
+-    val flushOptions = new FlushOptions().setWaitForFlush(true)
+     val options = new Options()
+     options.setCreateIfMissing(true)
+     val rocksDB = RocksDbKeyValueStore.openDB(new File(System.getProperty("java.io.tmpdir")),
+@@ -80,6 +75,9 @@ class TestRocksDbKeyValueStore
+                                               "dbStore")
+     val key = "key".getBytes("UTF-8")
+     rocksDB.put(key, "val".getBytes("UTF-8"))
++    // SAMZA-836: Mysteriously,calling new FlushOptions() does not invoke the NativeLibraryLoader in rocksdbjni-3.13.1!
++    // Moving this line after calling new Options() resolve the issue.
++    val flushOptions = new FlushOptions().setWaitForFlush(true)
+     rocksDB.flush(flushOptions)
+     val dbDir = new File(System.getProperty("java.io.tmpdir")).toString
+     val rocksDBReadOnly = RocksDB.openReadOnly(options, dbDir)
+```
+
+And everything worked fine because calling `new Options()` does trigger `NativeLibraryLoader.loadLibrary()` function. It seems to me that it is a bug in rocksdbjni-3.13.1. Can someone look into it? I searched through the issues here and does not see the exact description reported before. The closest is issue #878. But that is not exactly same as the errors we saw either.
+

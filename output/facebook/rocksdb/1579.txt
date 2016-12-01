@@ -1,0 +1,1 @@
+Having -ve value for max_write_buffer_number does not make sense and cause us to do a left shift on a -ve value number

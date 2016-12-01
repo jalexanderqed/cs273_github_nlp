@@ -1,0 +1,24 @@
+The following commands will fail on windows because in order to execute them one needs `cmd /c` or otherwise specify the full path to the executable to run (like java or javah):
+
+```
+execute_process(COMMAND javac -cp ${JAVA_TESTCLASSPATH} -d ${PROJECT_SOURCE_DIR}/java/classes ${PROJECT_SOURCE_DIR}/java/src/main/java/org/rocksdb/util/*.java ${PROJECT_SOURCE_DIR}/java/src/main/java/org/rocksdb/*.java ${PROJECT_SOURCE_DIR}/java/src/test/java/org/rocksdb/*.java)
+execute_process(COMMAND javah -cp ${PROJECT_SOURCE_DIR}/java/classes -d ${PROJECT_SOURCE_DIR}/java/include -jni ${NATIVE_JAVA_CLASSES})
+```
+
+Currently this results in build not generating both class files and JNI headers for rocksdbjni project.
+
+The solution is to wrap commands in `cmd /c` as follows:
+
+```
+if(WIN32)
+  set(JAVAC cmd /c javac)
+  set(JAVAH cmd /c javah)
+else()
+  set(JAVAC javac)
+  set(JAVAH javah)
+endif()
+
+execute_process(COMMAND ${JAVAC} -cp ${JAVA_TESTCLASSPATH} -d ${PROJECT_SOURCE_DIR}/java/classes ${PROJECT_SOURCE_DIR}/java/src/main/java/org/rocksdb/util/*.java ${PROJECT_SOURCE_DIR}/java/src/main/java/org/rocksdb/*.java ${PROJECT_SOURCE_DIR}/java/src/test/java/org/rocksdb/*.java)
+execute_process(COMMAND ${JAVAH} -cp ${PROJECT_SOURCE_DIR}/java/classes -d ${PROJECT_SOURCE_DIR}/java/include -jni ${NATIVE_JAVA_CLASSES})
+```
+

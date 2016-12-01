@@ -1,0 +1,8 @@
+So after weeks on end of working with the RocksDB configuration to Visual Studio 12 C++ win64, I decided to build the test cases given in the msbuild and just write a test of Spatial_Database code on top of that. 
+
+![file](https://cloud.githubusercontent.com/assets/7003288/16204905/7fab90ec-36f7-11e6-984d-3db0721a520a.JPG)
+
+I have run into a few errors in hopes of solving. In relation to "Insert(write, rocksdb::spatial::.....)". Its an access reading violation, and has gotten the better of me. 
+
+![capture](https://cloud.githubusercontent.com/assets/7003288/16205002/e784e362-36f7-11e6-85b8-edcd3dcc9e7b.JPG)
+

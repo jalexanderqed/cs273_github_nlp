@@ -1,0 +1,7 @@
+The version change instruction is obsolete with the change
+that maven pulls versioning information from version.h.
+
+@adamretter can you look into this.
+
+See as reference: https://github.com/facebook/rocksdb/commit/b8d5e3f08e075fb37af73fdd9dceb7d369f38dd7
+

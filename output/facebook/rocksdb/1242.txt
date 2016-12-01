@@ -1,0 +1,2 @@
+If I do SetOptions for some column family handle and immediately do GetOptions for the same handle , I do not get the latest value. However if I do GetDescriptor for the same column family handle - i am able to retrieve the correct updated options value. 
+

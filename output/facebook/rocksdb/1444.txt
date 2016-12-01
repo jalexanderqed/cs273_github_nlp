@@ -1,0 +1,45 @@
+I have a question with the memory rocksdb use.
+the question is described as following:
+1. I use java-rocksdb
+2. I open about 8 rocksdb use in one jvm.
+3. I find the rocksdb::Arena::AllocateNewBlock use a lot of off-heap memory and it cant be gc with the java system. At last it will run out of physical memory and the programme will be very slow.
+
+Then what's the gc strategy the Arena use and how can i gc or reduce the memory rocksdb::Arena::AllocateNewBlock use.
+
+Here is some options i see and the memory of the off-heap memory the jvm use:
+options:
+        BlockBasedTableConfig table_options = new BlockBasedTableConfig();
+        table_options.setBlockSize(256 * SizeUnit.KB);
+        table_options.setBlockCacheSize(320 / n * SizeUnit.MB);//we have n rocksdb in one jvm
+        table_options.setFilter(new BloomFilter(10, false));
+        table_options.setCacheIndexAndFilterBlocks(false);
+        options.setCreateIfMissing(true);
+        options.setTableFormatConfig(table_options);
+        options.setMaxWriteBufferNumber(2);
+        options.setWriteBufferSize(32 / n * SizeUnit.MB);
+        options.setTargetFileSizeBase(32 * SizeUnit.MB);
+        options.setMaxBackgroundFlushes(1);
+        options.setMaxBackgroundCompactions(2);
+        options.setLevelZeroFileNumCompactionTrigger(4);
+        options.setLevelZeroSlowdownWritesTrigger(10);
+        options.setLevelZeroStopWritesTrigger(20);
+        options.setNumLevels(7);
+        options.setAllowOsBuffer(true);
+
+off-heap memory :
+Total: 3627.3 MB
+  3076.0  84.8%  84.8%   3076.0  84.8% rocksdb::Arena::AllocateNewBlock
+   348.1   9.6%  94.4%    348.1   9.6% rocksdb::UncompressBlockContents
+   149.3   4.1%  98.5%    497.3  13.7% rocksdb::ReadBlockContents
+    27.8   0.8%  99.3%     27.8   0.8% os::malloc
+    18.8   0.5%  99.8%     18.8   0.5% init
+     1.9   0.1%  99.8%      1.9   0.1% ObjectSynchronizer::omAlloc
+     1.9   0.1%  99.9%      1.9   0.1% readCEN
+     0.8   0.0%  99.9%      0.8   0.0% rocksdb::WritableFileWriter::WritableFileWriter
+     0.6   0.0%  99.9%      0.6   0.0% rocksdb::VersionSet::LogAndApply
+     0.5   0.0%  99.9%      0.5   0.0% updatewindow
+     0.4   0.0% 100.0%      0.4   0.0% tls_get_addr_tail
+     0.2   0.0% 100.0%      0.2   0.0% rocksdb::Cache::~Cache
+     0.2   0.0% 100.0%      0.2   0.0% rocksdb::NewLRUCache
+
+

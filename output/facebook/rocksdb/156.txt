@@ -1,0 +1,4 @@
+I hope this patch will fix the bug i mentioned in #155.
+
+[1] [How to print pthread_t](http://stackoverflow.com/questions/1759794/how-to-print-pthread-t#answer-1759846)
+

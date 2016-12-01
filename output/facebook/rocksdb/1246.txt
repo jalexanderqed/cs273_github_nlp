@@ -1,0 +1,43 @@
+I'm not sure if it's a bug or intentional. On Linux you need to set `ROCKSDB_PLATFORM_POSIX` explicitly if certain header files are used.
+
+Here's a minimal example:
+
+```
+#include "table/block_based_table_factory.h"
+
+int main() {
+  rocksdb::Options options;
+  rocksdb::BlockBasedTableOptions table_options;
+  options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
+
+  return 0;
+}
+```
+
+Put this file into the root of a RocksDB checkout and compile it e.g. with:
+
+```
+clang++ table_options.cc -L../ -Iinclude -I. -L. --std=c++11 -lrocksdb_debug -lpthread -lbz2 -lz -lsnappy
+```
+
+You'll get:
+
+```
+In file included from table_options.cc:1:
+In file included from ./table/block_based_table_factory.h:18:
+In file included from ./db/dbformat.h:20:
+./util/coding.h:84:7: error: use of undeclared identifier 'port'
+  if (port::kLittleEndian) {
+      ^
+./util/coding.h:98:7: error: use of undeclared identifier 'port'
+  if (port::kLittleEndian) {
+      ^
+2 errors generated
+```
+
+It compiles fine when `-DROCKSDB_PLATFORM_POSIX` is set:
+
+```
+clang++ table_options.cc -L../ -Iinclude -I. -L. --std=c++11 -lrocksdb_debug -lpthread -lbz2 -lz -lsnappy -DROCKSDB_PLATFORM_POSIX
+```
+

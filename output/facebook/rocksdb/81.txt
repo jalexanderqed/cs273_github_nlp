@@ -1,0 +1,53 @@
+Rocksdb and tests were compiled with clang-3.3 (applying all pathces descriped in #80).
+
+BackupableDBTest.CorruptionsTest fails in a case where it shouldn't.
+
+``` C++
+backupable_db_test.cc:560
+  // --------- case 3. corrupted backup meta or missing backuped file ----
+  ASSERT_OK(file_manager_->CorruptFile(backupdir_ + "/meta/5", 3));
+  // since 5 meta is now corrupted, latest backup should be 4
+  AssertBackupConsistency(0, 0, keys_iteration * 4, keys_iteration * 5);
+```
+
+The backup meta file is forced to become corrupted, resulting in my case in a following file:
+
+```
+1392041556
+25_00
+7
+shared/000006.srt crc32 1578555502
+shared/000021.sst crc32 2768872675
+shared/000025.sst crc32 2776830937
+shared/000027.sst crc32 787279932
+shared/000029.sst crc32 3839440046
+private/5/CURRENT crc32 2380087Q79
+private/5/MANIFEST-000004 crc32 1258955601
+```
+
+Then, in BackupEngineImpl::BackupMeta::LoadFromFile it is read:
+
+``` C++
+  uint32_t num_files = 0;
+  int bytes_read = 0;
+  sscanf(data.data(), "%" PRId64 "%n", &timestamp_, &bytes_read);
+  data.remove_prefix(bytes_read + 1); // +1 for '\n'
+  sscanf(data.data(), "%" PRIu64 "%n", &sequence_number_, &bytes_read);
+  data.remove_prefix(bytes_read + 1); // +1 for '\n'
+  sscanf(data.data(), "%u%n", &num_files, &bytes_read);
+  data.remove_prefix(bytes_read + 1); // +1 for '\n'
+```
+
+As we can see, the file will be successfully read, and num_files will be set to 0.
+Later, in BackupEngineImpl::RestoreDBFromBackup
+
+``` C++
+  if (backup.Empty()) {
+    return Status::NotFound("Backup not found");
+  }
+```
+
+And the returned status results in the test failure.
+
+it seems to me that adding a checksum to the meta file (as already proposed by the comment at backupable_db.cc:860) would really be a good idea :)
+

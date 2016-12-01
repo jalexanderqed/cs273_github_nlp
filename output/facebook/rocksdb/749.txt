@@ -1,0 +1,26 @@
+Sergey, is this failure connected with the new transaction code?
+
+CURRENT_TEST: rocksdb.show_engine
+CURRENT_TEST: rocksdb.select_lock_in_share_mode
+CURRENT_TEST: rocksdb.show_table_status
+CURRENT_TEST: rocksdb.statistics
+mysqltest: At line 38: query 'create index t3_1 on t3(b) comment 'cf_t3'' failed: 1815: Internal error: Operation failed. Try again.: Transaction could not check for conflicts for opearation at SequenceNumber 650126 as the MemTable only contains changes newer than SequenceNumber 650128.  Increasing the value of the max_write_buffer_number_to_maintain option could reduce the frequency o
+
+The result from queries just before the failure was:
+SET GLOBAL rocksdb_seconds_between_stat_computes=2;
+DROP TABLE IF EXISTS t1;
+DROP TABLE IF EXISTS t2;
+DROP TABLE IF EXISTS t3;
+DROP TABLE IF EXISTS t4;
+DROP TABLE IF EXISTS t5;
+create table t1(id bigint not null primary key auto_increment, a varchar(255) not null, b bigint) engine=rocksdb;
+create table t2(id bigint not null primary key auto_increment, a varchar(255) not null, b bigint) engine=rocksdb;
+insert t2(a, b) select a, b from t1;
+create table t3(id bigint not null primary key auto_increment, a varchar(255) not null, b bigint) engine=rocksdb;
+insert t3(a, b) select a, b from t1;
+create table t4(id bigint not null primary key auto_increment, a varchar(255) not null, b bigint) engine=rocksdb;
+insert t4(a, b) select a, b from t1;
+create table t5(id bigint not null primary key auto_increment, a varchar(255) not null, b bigint) engine=rocksdb;
+insert t5(a, b) select a, b from t1 where id < 50000;
+create index t1_1 on t1(b);
+

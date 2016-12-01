@@ -1,0 +1,36 @@
+During GC the C++ RocksDB object is being deleted twice causing a segfault. Once by the RocksDB finalizer which calls `delete` on the underlying C++ RocksDB object directly and also via `delete` being called via the BackupableDB finalizer.
+
+**RocksDB GC'd**:
+
+```
+C  [librocksdbjni.so+0x89c38]  Java_org_rocksdb_RocksDB_dispose+0x28
+j  org.rocksdb.RocksDB.dispose(J)V+0
+j  org.rocksdb.RocksDB.dispose()V+12
+j  org.rocksdb.RocksDB.close()V+1
+j  org.rocksdb.RocksDB.finalize()V+1
+J 428 C1 java.lang.ref.Finalizer.runFinalizer(Lsun/misc/JavaLangAccess;)V (62 bytes) @ 0x00007fe
+78120d444 [0x00007fe78120cec0+0x584]
+J 366 C1 java.lang.ref.Finalizer.access$100(Ljava/lang/ref/Finalizer;Lsun/misc/JavaLangAccess;)V
+ (6 bytes) @ 0x00007fe7811e189c [0x00007fe7811e1840+0x5c]
+j  java.lang.ref.Finalizer$FinalizerThread.run()V+45
+```
+
+**BackupableDB GC'd:**
+
+```
+C  [librocksdbjni.so+0x12788d]  rocksdb::BackupableDB::~BackupableDB()+0x6d
+C  [librocksdbjni.so+0x1278c1]  rocksdb::BackupableDB::~BackupableDB()+0x11
+j  org.rocksdb.RocksDB.dispose(J)V+0
+j  org.rocksdb.RocksDB.dispose()V+12
+j  org.rocksdb.RocksDB.close()V+1
+j  org.rocksdb.BackupableDB.close()V+8
+j  org.rocksdb.BackupableDB.finalize()V+1
+J 371 C1 java.lang.ref.Finalizer.runFinalizer(Lsun/misc/JavaLangAccess;)V (62 bytes) @ 0x00007f88
+b91e3294 [0x00007f88b91e2d00+0x594]
+J 370 C1 java.lang.ref.Finalizer.access$100(Ljava/lang/ref/Finalizer;Lsun/misc/JavaLangAccess;)V 
+(6 bytes) @ 0x00007f88b91e299c [0x00007f88b91e2940+0x5c]
+j  java.lang.ref.Finalizer$FinalizerThread.run()V+45
+```
+
+It seems like the appropriate behavior would be to have the nested RocksDB (db_ in Backupable.java) instance's finalizer be a no-op but I'm not sure the best way to accomplish this.
+

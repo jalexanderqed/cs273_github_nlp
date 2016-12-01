@@ -1,0 +1,7 @@
+I have observed in some tests that memory consumption of RocksDB increases as DB size grows.
+1. Does RocksDB use memory deterministically ?
+2. Is memory consumption expected to increase over time even when the flag "cache_index_and_filter_blocks = true" ?
+3. What are the major consumers of memory inside RocksDB ?
+
+I am trying to find a way to keep the memory consumption of RocksDB constant even if DB grows eventually.
+

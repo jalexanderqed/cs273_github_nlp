@@ -1,0 +1,6 @@
+It might be useful to others to set the JAVA_INCLUDE path relative to JAVA_HOME in cases where people don't have open jdk installed or pointed to the same path as in the Makefile.
+
+JAVA_INCLUDE = -I/usr/lib/jvm/java-openjdk/include/ -I/usr/lib/jvm/java-openjdk/include/linux
+
+JAVA_INCLUDE = -I$(JAVA_HOME)/include/ -$(JAVA_HOME)/include/linux
+

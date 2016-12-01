@@ -1,0 +1,3 @@
+The page size util/env_test.c:NewAligned is a fixed 4K size rather than using sysconf(_SC_PAGESIZE) to determine this like the rockdb does.
+
+This results in an assertion during make check on non-4K page size Linux kernels.

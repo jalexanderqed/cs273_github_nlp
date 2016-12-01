@@ -1,0 +1,5 @@
+Summary:
+Add avoid_flush_during_shutdown DB option.
+
+Test Plan:
+See the new unit test.

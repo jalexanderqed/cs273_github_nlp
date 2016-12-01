@@ -1,0 +1,2 @@
+Previously, calling it caused program abort.
+

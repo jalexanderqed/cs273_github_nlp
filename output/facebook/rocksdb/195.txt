@@ -1,0 +1,11 @@
+Summary:
+Package .so file with JNI jar
+
+make rocksdbjava
+
+Reviewers: haobo, yhchiang, dhruba, rsumbaly, zzbennett, swapnilghike
+Reviewed By: yhchiang
+CC: leveldb
+
+Differential Revision: https://reviews.facebook.net/D19437
+

@@ -1,0 +1,8 @@
+Summary: Changed BuildTable() (used for flush) to (1) add range
+tombstones to the aggregator, which is used by CompactionIterator to
+determine which keys can be removed; and (2) add aggregator's range
+tombstones to the table that is output for the flush.
+
+Test Plan: flush_job_test, also tested together with end-to-end tests in
+D63927
+

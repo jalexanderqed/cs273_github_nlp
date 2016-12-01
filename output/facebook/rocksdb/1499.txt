@@ -1,0 +1,12 @@
+Some places autodetected. These are the two places that didn't.
+
+closes #1498
+
+Still unsure if the following instances of 4 * 1024 need fixing in:
+util/io_posix.h
+include/rocksdb/table.h (appears to be blocksize and different)
+utilities/persistent_cache/block_cache_tier.cc
+utilities/persistent_cache/persistent_cache_test.h
+include/rocksdb/env.h
+util/env_posix.cc
+db/column_family.cc

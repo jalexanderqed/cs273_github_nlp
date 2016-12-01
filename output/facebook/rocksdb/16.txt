@@ -1,0 +1,10 @@
+In INSTALL.md, installation command of gflags for Linux platform is missing.
+Without it, users will get the following error while compiling db/db_bench.cc.
+
+db/db_bench.cc:14:27: fatal error: gflags/gflags.h: No such file or directory
+# include <gflags/gflags.h>
+
+```
+                       ^
+```
+

@@ -1,0 +1,3 @@
+  db_stress now runs on Windows
+  Redo some calculations without double, often not needed
+

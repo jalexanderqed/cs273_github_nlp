@@ -1,0 +1,25 @@
+Hello RocksDB team,
+
+I wrote about 3000 objects to RocksDB, and starts seeing errors:
+failed: IO error: /tmp/rdb1/001047.sst: Too many open files
+After this error all future writes fail and no more data is saved.
+
+Each obj is 1KB, key size is 10 bytes.
+ulimit -a shows my file open limit is 32768, so I don't think it is because of my file handle limit. 
+
+Here is my rocksdb option:
+rocksdb_options_set_create_if_missing(db->options, 1);
+rocksdb_options_set_compression(db->options, 0);                                                                                    rocksdb_options_set_max_open_files(db->options, 1000000);     /// big enough...
+
+ Any clues about what can be wrong?  Thanks!
+
+core file size          (blocks, -c) unlimited
+data seg size           (kbytes, -d) unlimited
+scheduling priority             (-e) 0
+file size               (blocks, -f) unlimited
+pending signals                 (-i) 59474
+max locked memory       (kbytes, -l) 64
+max memory size         (kbytes, -m) unlimited
+open files                      (-n) 32768
+pipe size            (512 bytes, -p) 8
+

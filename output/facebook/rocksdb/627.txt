@@ -1,0 +1,50 @@
+When compiling the rocksdb example from http://rocksdb.org/, we found the error of undefined reference to `rocksdb::ReadOptions::ReadOptions()'.
+Had someone encountered the same problem?
+- Complie env.
+  OS: Ubuntu 14.04.1 LTS, g++ 4.8.2
+- Install the rocksdb lib by cmd
+  `
+  sudo make install 
+  `
+- Compile the example by:
+  `
+  g++ rocksdb_example.cc -o rocksdb_example -L/usr/local/lib -lrocksdb -std=c++11
+  `
+
+Output:
+
+```
+ g++ rocksdb_example.cc -o rocksdb_example -L/usr/local/lib -lrocksdb -std=c++11 
+/tmp/ccNymlEb.o: In function `main':
+rocksdb_example.cc:(.text+0x20b): undefined reference to `rocksdb::ReadOptions::ReadOptions()'
+collect2: error: ld returned 1 exit status
+
+```
+
+The code of rocksdb_example.cc:
+
+```
+#include <assert.h>
+#include "rocksdb/db.h"
+
+int main() {
+  rocksdb::DB* db;
+  rocksdb::Options options;
+  options.create_if_missing = true;
+  rocksdb::Status status =
+    rocksdb::DB::Open(options, "/tmp/testdb", &db);
+  assert(status.ok());
+
+  std::string key1 = "key1";
+  std::string key2 = "key2";
+  std::string value;
+  rocksdb::Status s = db->Get(rocksdb::ReadOptions(), key1, &value);
+  if (s.ok()) s = db->Put(rocksdb::WriteOptions(), key2, value);
+  if (s.ok()) s = db->Delete(rocksdb::WriteOptions(), key1);
+
+  /* open the db as described above */
+  /* do something with db */
+  delete db;
+}
+```
+

@@ -1,0 +1,2 @@
+This is a small tweak to the Makefile that also verifies that the unity code added in 93e6b5e9 still builds when running 'make check'.
+

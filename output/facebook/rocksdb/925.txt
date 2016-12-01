@@ -1,0 +1,13 @@
+```
+  // Current Requirements:
+  // (1) Memtable is empty.
+  // (2) All existing files (if any) have sequence number = 0.
+  // (3) Key range in loaded table file don't overlap with existing
+  //     files key ranges.
+  // (4) No other writes happen during AddFile call, otherwise
+  //     DB may get corrupted.
+  // (5) Database have at least 2 levels.
+```
+
+ items 1 and 4 apply to the destination column family, not the whole db, correct?
+

@@ -1,0 +1,10 @@
+Are there any more details on how exactly tailing iterators behave?  The documentation says data "is not guaranteed to be seen."
+
+I have a logging application where I are append to a topic (`key=topic:auto_increment`).  I'd like to tail this log.  I can keep track of the tail and when things are written.  I'm trying to find the most efficient way to tail this topic.   Am I right to assume that even if I create a tailing iterator, I cannot guarantee that I'll see the appended records even if I wait until `Put` returns to `Next`?  Is there a better approach than just using `Get` and manually iterating.
+
+Docs:
+
+> Not all new data is guaranteed to be available to a tailing iterator. Seek() or SeekToFirst() on a tailing iterator can be thought of as creating an implicit snapshot -- anything written after it may, but is not guaranteed to be seen.
+
+https://github.com/facebook/rocksdb/wiki/Tailing-Iterator
+

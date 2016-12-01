@@ -1,0 +1,10 @@
+We are wondering about the operation of the bloom filters in rocksdb. It looks like the filter policy is a factory object that creates bloom filters on demand? To what does the bloom filter apply? The block right before it gets written out? Are the bloom filter contents stored on disk? Up to how many bloom filters can be consulted for a single fetch?
+
+Our (limited) understanding of the bloom filters is they work as follows:
+1. on a fetch, the files whose key space are candidate matches are put together in a list
+2. the bloom filter for the next file is consulted to determine a trivial reject
+3. if the bloom filter passes, a lookup is performed in the file
+4. go back to 2 until out of files or the key is found
+
+Is there a document that explains the operation of the bloom filters? Thanks
+

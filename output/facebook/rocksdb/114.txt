@@ -1,0 +1,37 @@
+I must be doing something stupid, but I can't build a simple program with rocksdb. I get a bunch of undefined references from standard functions. Can anyone give me some help? Any help would be appreciated!!
+
+I compile and build with the following commands:
+g++ -c -I./include -std=c++11 mytest.cc
+g++ -o mytest -L. -lrocksdb mytest.o
+
+The program (mytest.cc) is as follows:
+# include &lt;assert.h&gt;
+# include &lt;iostream&gt;
+# include "rocksdb/db.h"
+
+int
+main(int argc, char *argv[])
+{
+rocksdb::DB *db;
+rocksdb::Options options;
+
+options.create_if_missing = true;
+options.error_if_exists = true;
+
+rocksdb::Status status = rocksdb::DB::Open(options, "/tmp/testdb", &db);
+assert(status.ok());
+
+delete db;
+
+return 0;
+}
+
+I get back the following complaints:
+
+mytest.o: In function main':
+mytest.cc:(.text+0x11b): undefined reference torocksdb::DB::Open(rocksdb::Options const&, std::string const&, rocksdb::DB**)'
+mytest.o: In function rocksdb::Options::Options()':
+mytest.cc:(.text._ZN7rocksdb7OptionsC2Ev[_ZN7rocksdb7OptionsC5Ev]+0x15): undefined reference torocksdb::DBOptions::DBOptions()'
+mytest.cc:(.text._ZN7rocksdb7OptionsC2Ev[_ZN7rocksdb7OptionsC5Ev]+0x27): undefined reference to `rocksdb::ColumnFamilyOptions::ColumnFamilyOptions()'
+collect2: error: ld returned 1 exit status
+

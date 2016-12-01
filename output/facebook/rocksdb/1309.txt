@@ -1,0 +1,4 @@
+We mixed using `uint64_t` and `size_t` somewhere, which leads to a warning in Mac.
+
+Although Travis itself was not working normally, this PR does not break our Linux build (Windows build seems to break somewhere else).
+

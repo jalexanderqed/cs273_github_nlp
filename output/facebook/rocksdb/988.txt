@@ -1,0 +1,29 @@
+terminate called after throwing an instance of 'std::bad_alloc'
+  what():  std::bad_alloc.
+
+Received signal 6 (Aborted)
+#0   /lib64/libc.so.6(gsignal+0x35) [0x7eff70feb625]
+#1   /lib64/libc.so.6(abort+0x175) [0x7eff70fece05]
+#2   /usr/lib64/libstdc++.so.6(_ZN9__gnu_cxx27__verbose_terminate_handlerEv+0x12d) [0x7eff718a5a5d]
+#3   /usr/lib64/libstdc++.so.6(+0xbcbe6) [0x7eff718a3be6]
+#4   /usr/lib64/libstdc++.so.6(+0xbcc13) [0x7eff718a3c13]
+#5   /usr/lib64/libstdc++.so.6(+0xbcd0e) [0x7eff718a3d0e]
+#6   /usr/lib64/libstdc++.so.6(_Znwm+0x7d) [0x7eff718a40fd]
+#7   ./db_bench() [0x5620a2]
+#8   ./db_bench() [0x58b785]
+#9   ./db_bench() [0x565faa]
+#10  ./db_bench() [0x548416]
+#11  ./db_bench() [0x47dcb7]
+#12  ./db_bench() [0x4ea630]
+#13  ./db_bench() [0x4ed23d]
+#14  ./db_bench() [0x4b6b10]
+#15  ./db_bench() [0x4b735a]
+#16  ./db_bench() [0x4cc578]
+#17  ./db_bench() [0x5950ae]
+#18  /lib64/libpthread.so.0(+0x79d1) [0x7eff725429d1]
+#19  /lib64/libc.so.6(clone+0x6d) [0x7eff710a18fd]
+
+could anyone let  me know what exactly is happening.
+
+Regards
+

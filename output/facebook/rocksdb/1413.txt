@@ -1,0 +1,16 @@
+In one deployment we saw high latencies (presumably from slow iterator operations) and a lot of CPU time reported by perf with this stack:
+
+```
+  rocksdb::MergingIterator::Next
+  rocksdb::DBIter::FindNextUserEntryInternal
+  rocksdb::DBIter::Seek
+```
+
+I think what's happening is:
+1. we create a snapshot iterator,
+2. we do lots of Put()s for the same key x; this creates lots of entries in memtable,
+3. we seek the iterator to a key slightly smaller than x,
+4. the seek walks over lots of entries in memtable for key x, skipping them because of high sequence numbers.
+
+CC @IslamAbdelRahman
+

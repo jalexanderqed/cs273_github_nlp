@@ -1,0 +1,15 @@
+GCC 5.4 will complain (see also options_parser.cc):
+
+```
+/home/abuild/rpmbuild/BUILD/arangodb-3.0.0r1/3rdParty/rocksdb/rocksdb/util/options_builder.cc: In function 'rocksdb::CompactionStyle rocksdb::{anonymous}::PickCompactionStyle(size_t, int, int, uint64_t)':
+/home/abuild/rpmbuild/BUILD/arangodb-3.0.0r1/3rdParty/rocksdb/rocksdb/util/options_builder.cc:29:7: error: 'log' is not a member of 'std'
+       std::log(target_db_size / write_buffer_size) / std::log(kBytesForLevelMultiplier)));
+       ^
+/home/abuild/rpmbuild/BUILD/arangodb-3.0.0r1/3rdParty/rocksdb/rocksdb/util/options_builder.cc:29:7: note: suggested alternative:
+In file included from /usr/include/features.h:365:0,
+                 from /usr/include/math.h:26,
+                 from /home/abuild/rpmbuild/BUILD/arangodb-3.0.0r1/3rdParty/rocksdb/rocksdb/util/options_builder.cc:6:
+/usr/include/bits/mathcalls.h:109:1: note:   'log'
+ __MATHCALL_VEC (log,, (_Mdouble_ __x));
+```
+

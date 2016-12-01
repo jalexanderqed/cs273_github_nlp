@@ -1,0 +1,34 @@
+Hi:
+
+I have tried to compile rocksdb 3.1, 3.2, and 3.3 by running "make  all". The compilation failed. Here is the error messages from compiling rocksdb 3.2
+
+g++ -g -Wall -Werror -I. -I./include -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_
+LINUX -fno-builtin-memcmp -DROCKSDB_ATOMIC_PRESENT -DROCKSDB_FALLOCATE_PRESENT -
+DGFLAGS=google -DZLIB   -DHAVE_JEMALLOC -O2 -fno-omit-frame-pointer -Woverloaded
+-virtual -c table/table_reader_bench.cc -o table/table_reader_bench.o
+table/table_reader_bench.cc: In function ‘void rocksdb::{anonymous}::TableReader
+Benchmark(rocksdb::Options&, rocksdb::EnvOptions&, rocksdb::ReadOptions&, int, i
+nt, int, int, bool, bool, bool, bool)’:
+table/table_reader_bench.cc:147:11: error: ‘MemoryBarrier’ is not a member of ‘rocksdb::port’
+           port::MemoryBarrier();
+           ^
+table/table_reader_bench.cc:154:11: error: ‘MemoryBarrier’ is not a member of ‘rocksdb::port’
+           port::MemoryBarrier();
+           ^
+table/table_reader_bench.cc:170:11: error: ‘MemoryBarrier’ is not a member of ‘rocksdb::port’
+           port::MemoryBarrier();
+           ^
+table/table_reader_bench.cc:183:13: error: ‘MemoryBarrier’ is not a member of ‘rocksdb::port’
+             port::MemoryBarrier();
+             ^
+table/table_reader_bench.cc:198:11: error: ‘MemoryBarrier’ is not a member of ‘rocksdb::port’
+           port::MemoryBarrier();
+           ^
+make: **\* [table/table_reader_bench.o] Error 1
+
+Please let me know what can be done to get around of this error.
+
+Thanks,
+
+David
+

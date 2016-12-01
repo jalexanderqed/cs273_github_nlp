@@ -1,0 +1,41 @@
+The merge_operator.h states that the "new_value" parameter passed to MergeOperator::FullMerge interface would be a empty string. But DBIter does not follow the rule:
+
+``` c++
+// db_iter:562 DBIter::FindValueForCurrentKeyUsingSeek()
+user_merge_operator_->FullMerge(saved_key_.GetKey(), nullptr, operands, &saved_value_, logger_);
+```
+
+The "saved_value_" is sometimes not empty while iterating the db. Consequence is that the value() returned from iterator maybe wrong.
+
+Codes below shows how data could be inconsistent.
+[tests.tar.gz](https://github.com/facebook/rocksdb/files/79396/tests.tar.gz)
+test output:
+
+```
+Running main() from gtest_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from BytesPendingMerger
+[ RUN      ] BytesPendingMerger.Merge
+BytesPendingMerger_unittest.cpp:65: Failure
+Value of: it->value().ToString()
+  Actual: "abccddefthebrownfoxjumps=.="
+Expected: util::str::Join(ikey->second.begin(), ikey->second.end(), "")
+Which is: "thebrownfoxjumps=.="
+key2
+BytesPendingMerger_unittest.cpp:65: Failure
+Value of: it->value().ToString()
+  Actual: "abccddefthebrownfoxjumps=.=12233"
+Expected: util::str::Join(ikey->second.begin(), ikey->second.end(), "")
+Which is: "12233"
+key1
+[  FAILED  ] BytesPendingMerger.Merge (30 ms)
+[----------] 1 test from BytesPendingMerger (30 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (30 ms total)
+[  PASSED  ] 0 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] BytesPendingMerger.Merge
+```
+

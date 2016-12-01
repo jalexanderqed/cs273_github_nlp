@@ -1,0 +1,2 @@
+This is a extension to the last commit which made the BloomFilter available again. Now it is possible to choose between block based and full bloom filter.
+

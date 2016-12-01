@@ -1,0 +1,9 @@
+Summary:
+Added a few options to configure when to add range tombstones during
+any benchmark involving writes.
+
+Test Plan:
+ran locally, verified with sst_dump that the range tombstones are
+added and considered during flush/compaction
+
+Differential Revision: https://reviews.facebook.net/D64287

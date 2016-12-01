@@ -1,0 +1,3 @@
+- Omit some gcc flags not present on Power 
+- Allow additional C,CXX,LDFLAGS to point to custom dependency install path
+

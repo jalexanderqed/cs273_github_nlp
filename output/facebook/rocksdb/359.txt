@@ -1,0 +1,32 @@
+Is this crash known? Let me know if you need more info, I have the crash dump.
+
+frame 1
+info locals
+min_len = -8
+r = <optimized out>
+info args
+b = <optimized out>
+this = <optimized out>
+bt
+#0 0x000000000059c428 in __memcmp_sse4_1 ()
+#1 0x0000000000492fae in compare (b=..., this=<optimized out>) at ./include/rocksdb/slice.h:127
+#2 rocksdb::(anonymous namespace)::BytewiseComparatorImpl::Compare (this=<optimized out>, a=..., b=...) at util/comparator.cc:31
+#3 0x00000000004b0c3e in rocksdb::InternalKeyComparator::Compare (this=<optimized out>, akey=..., bkey=...) at db/dbformat.cc:61
+#4 0x00000000004822f6 in Compare (b=..., a=..., this=<optimized out>) at ./db/dbformat.h:164
+#5 BySmallestKey (cmp=<optimized out>, b=0x7f685c9f5670, a=0x7f685c9f5730) at db/version_set.cc:81
+#6 operator() (this=0x7f685c1ed7c0, this=0x7f685c1ed7c0, f2=0x7f685c9f5670, f1=0x7f685c9f5730) at db/version_set.cc:1502
+#7 _M_get_insert_unique_pos (__k=<synthetic pointer>, this=0x7f685c1ed7c0) at /usr/include/c++/4.8/bits/stl_tree.h:1324
+#8 _M_insert_unique<rocksdb::FileMetaData* const&> (__v=<synthetic pointer>, this=0x7f685c1ed7c0) at /usr/include/c++/4.8/bits/stl_tree.h:1377
+#9 insert (__x=<synthetic pointer>, this=0x7f685c1ed7c0) at /usr/include/c++/4.8/bits/stl_set.h:463
+#10 rocksdb::VersionSet::Builder::Apply (this=this@entry=0x7f685c002620, edit=<optimized out>) at db/version_set.cc:1658
+#11 0x0000000000476d20 in rocksdb::VersionSet::LogAndApplyHelper (this=this@entry=0x237d100, cfd=cfd@entry=0x2380280, builder=builder@entry=0x7f685c002620, v=v@entry=0x7f685dd6d4c0, edit=<optimized out>, mu=mu@entry=0x237b250) at db/version_set.cc:2064
+#12 0x000000000047dd78 in rocksdb::VersionSet::LogAndApply (this=0x237d100, column_family_data=0x2380280, edit=0x7f685c003a50, mu=mu@entry=0x237b250, db_directory=0x237f030, new_descriptor_log=new_descriptor_log@entry=false, options=options@entry=0x0) at db/version_set.cc:1834
+#13 0x000000000043c791 in rocksdb::DBImpl::InstallCompactionResults (this=this@entry=0x237b120, compact=compact@entry=0x7f685c014920, log_buffer=log_buffer@entry=0x7f68d63523b0) at db/db_impl.cc:2559
+#14 0x00000000004439ed in rocksdb::DBImpl::DoCompactionWork (this=this@entry=0x237b120, compact=compact@entry=0x7f685c014920, deletion_state=..., log_buffer=log_buffer@entry=0x7f68d63523b0) at db/db_impl.cc:3289
+#15 0x00000000004456b8 in rocksdb::DBImpl::BackgroundCompaction (this=this@entry=0x237b120, madeProgress=madeProgress@entry=0x7f68d635222f, deletion_state=..., log_buffer=log_buffer@entry=0x7f68d63523b0) at db/db_impl.cc:2321
+#16 0x000000000044d727 in rocksdb::DBImpl::BackgroundCallCompaction (this=0x237b120) at db/db_impl.cc:2123
+#17 0x0000000000496c31 in BGThread (thread_id=9, this=0x2378070) at util/env_posix.cc:1616
+#18 rocksdb::(anonymous namespace)::PosixEnv::ThreadPool::BGThreadWrapper (arg=<optimized out>) at util/env_posix.cc:1633
+#19 0x000000000055af02 in start_thread (arg=0x7f68d6353700) at pthread_create.c:312
+#20 0x00000000005c1a49 in clone ()
+

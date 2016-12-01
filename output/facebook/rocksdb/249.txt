@@ -1,0 +1,10 @@
+This replaces a mishmash of pointers in the Block and BlockContents classes with std::unique_ptr. It also changes the semantics of BlockContents to be limited to use as a constructor parameter for Block objects, as it owns any block buffers handed to it
+
+Furthermore, it has a lot of refactoring. This was needed mostly within ReadBlockContents, which did some tricky abuse of function calls and booleans to switch between using a heap pointer or stack pointer. This drops that boolean by replacing it with a simple pointer while at the same time allowing a unique_ptr to handle any cleanup that might escape the previous version of ReadBlockContents.
+
+In many places, the placement of BlockContents and Status have been swapped to take advantage of return value optimizations, automatically generated move constructors, and to reduce the number of times a Status object is moved around for an otherwise OK result.
+
+Finally, perf timers have been refactored to automatically stop (exactly the same as calling `PERF_TIMER_STOP(metric))` by way of handling this in their destructors. Zero significant change in performance metrics has been observed. This eliminates the burden of developers remembering to call `PERF_TIMER_STOP(metric)` immediately before any return statement which brings more correctness and predictability into their use.
+
+Zero leaks have been detected since these changes, all unit tests pass, and complexity is greatly reduced.
+

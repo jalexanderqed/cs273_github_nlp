@@ -1,0 +1,11 @@
+"Cumulative compaction:" metrics are printed by https://github.com/facebook/rocksdb/blob/master/db/internal_stats.cc#L652
+
+They show zeros when running linkbench with column families. This is incorrect.
+https://gist.github.com/mdcallag/4f00526662636b53243497c92bf141f0
+
+They show non-zero values when running linkbench without column families. This is correct.
+
+I assume the problem is in db/compaction_job.cc. Not sure whether it is the calls to Add*() function that update stats or whether it is in UpdateCompactionStats https://github.com/facebook/rocksdb/blob/master/db/compaction_job.cc#L1063
+
+Is this is bug from subcompaction code? I am not using subcompaction but UpdateCompactionStats was changed because of it.
+

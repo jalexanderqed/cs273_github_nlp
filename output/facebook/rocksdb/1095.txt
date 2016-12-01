@@ -1,0 +1,32 @@
+The code below will segfault.
+
+The expectation is that a call to rocksdb_slicetransform_create_fixed_prefix() should be paired with a call to rocksdb_slicetransform_destroy().
+
+However, once the rocksdb_slicetransform_t is associated with an rocksdb_options_t, it gets destroyed when the rocksdb_options_t is destroyed, and so if you call rocksdb_slicetransform_destroy() it segfaults.
+
+This makes language bindings exceedingly clumsy as you have to keep track of whether the rocksdb_slicetransform_t has been associated with a rocksdb_options_t somewhere.
+
+Is this desired behavior?
+
+``` c
+/*
+ The code below segfaults.
+ Lines marked (B) and (C) appear to be mutually exclusive.  Is this the desired behavior?
+*/
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <assert.h>
+#include "rocksdb/c.h"
+int main(int argc, char **argv) {
+  rocksdb_slicetransform_t *prefix = rocksdb_slicetransform_create_fixed_prefix(8);  // <-- (A) Create Prefix Extractor
+  rocksdb_options_t *options = rocksdb_options_create();
+  rocksdb_options_set_create_if_missing(options, 1);
+  rocksdb_options_set_prefix_extractor(options, prefix); // <-- (B) Set Prefix Extractor
+  /* ... */
+  rocksdb_options_destroy(options);
+  rocksdb_slicetransform_destroy(prefix); // <-- (C) Destroy Prefix Extractor
+  return 0;
+}
+```
+

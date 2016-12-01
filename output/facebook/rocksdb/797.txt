@@ -1,0 +1,4 @@
+See https://github.com/facebook/rocksdb/issues/793 
+- Added GetPlainTableOptionsFromMap() for string option parser
+- Added corresponding test for GetPlainTableOptionsFromMap()
+

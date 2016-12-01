@@ -1,0 +1,8 @@
+I would like to alter `void Logv(const InfoLogLevel log_level, const char* format, va_list ap)` to virtual. That`s because i would like to add a Logger for RocksJava. 
+
+Logging from a higher level API would require to know about the log level which is not easily accessible from `virtual void Logv(const char* format, va_list ap)`. It would also offer the possibility to override the loglevel from API, what`s not possible if this method remains as is.
+
+@igorcanadi can you look into this please?  
+
+I checked the build using `make all` and everything compiles.
+

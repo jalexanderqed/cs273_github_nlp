@@ -1,0 +1,81 @@
+In my application, a snapshot is used to hold a specific version at a specific time, but I found some keys are updated unexpectedly, while some are still the same.
+I wrote several demos to narrow down the problem. Finally, I got it.
+
+I found if `inplace_update_support` is set to false, the problem will disappear.
+I guess Iterator will have the same problem, because Iterator use snapshot internally. Right?
+
+Thanks.
+
+Here is the demo (test on tag rocksdb-3.3)
+
+``` cpp
+using namespace std;
+using namespace rocksdb;
+
+DB* g_db;
+string g_target_key;
+const Snapshot *g_snapshot = NULL;
+
+void open_db() {
+    Options options;
+    options.create_if_missing = true;
+    options.inplace_update_support = true;
+
+    Status s = DB::Open(options, "./data", &g_db);
+    if (!s.ok()) {
+        printf("open db failed. %s", s.ToString().c_str());
+        exit(1);
+    }
+    assert(s.ok());
+}
+
+void close_db() {
+    delete g_db;
+}
+
+string put_target_key(string value) {
+    Status s = g_db->Put(WriteOptions(), g_target_key, value);
+    assert(s.ok());
+    return value;
+}
+
+void check_target_key(string expected) {
+    std::string got_value;
+    Status s = g_db->Get(ReadOptions(), g_target_key, &got_value);
+    assert(s.ok());
+    assert(got_value == expected);
+}
+
+void check_target_key_in_snapshot(string expected) {
+    std::string got_value;
+    ReadOptions options;
+    options.snapshot = g_snapshot;
+    Status s = g_db->Get(options, g_target_key, &got_value);
+    assert(s.ok());
+    assert(got_value == expected);
+}
+
+void test() {
+    open_db();
+
+    g_target_key = "abc";
+
+    put_target_key("1");
+    check_target_key("1");
+
+    g_snapshot = g_db->GetSnapshot();
+
+    put_target_key("2");
+    check_target_key("2");
+
+    check_target_key_in_snapshot("1");
+
+    close_db();
+}
+
+int main() {
+    test();
+    return 0;
+}
+```
+

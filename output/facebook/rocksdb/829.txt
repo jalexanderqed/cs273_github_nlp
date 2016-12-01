@@ -1,0 +1,44 @@
+#0  0x00007f23d1e9a625 in raise () from /lib64/libc.so.6
+#1  0x00007f23d1e9be05 in abort () from /lib64/libc.so.6
+#2  0x00007f23d2754a7d in __gnu_cxx::__verbose_terminate_handler() () from /usr/lib64/libstdc++.so.6
+#3  0x00007f23d2752bd6 in ?? () from /usr/lib64/libstdc++.so.6
+#4  0x00007f23d2752c03 in std::terminate() () from /usr/lib64/libstdc++.so.6
+#5  0x00007f23d275355f in __cxa_pure_virtual () from /usr/lib64/libstdc++.so.6
+#6  0x0000000000725d85 in rocksdb::InternalKeyComparator::Compare (this=0x25e3ec8, akey=..., bkey=...) at db/dbformat.cc:73
+#7  0x00000000007980fe in rocksdb::VersionStorageInfo::__lambda0::operator() (__closure=0x7f23cb7fc0f0, f1=..., f2=...) at db/version_set.cc:1350
+#8  0x00000000007a484c in std::__insertion_sort<__gnu_cxx::__normal_iterator<rocksdb::FdWithKeyRange*, std::vector<rocksdb::FdWithKeyRange> >, rocksdb::VersionStorageInfo::GenerateLevel0NonOverlapping()::__lambda0>(__gnu_cxx::__normal_iterator<rocksdb::FdWithKeyRange*, std::vector<rocksdb::FdWithKeyRange, std::allocator<rocksdb::FdWithKeyRange> > >, __gnu_cxx::__normal_iterator<rocksdb::FdWithKeyRange*, std::vector<rocksdb::FdWithKeyRange, std::allocator<rocksdb::FdWithKeyRange> > >, rocksdb::VersionStorageInfo::__lambda0) (__first=..., __last=..., __comp=...)
+
+```
+at /opt/rh/devtoolset-2/root/usr/include/c++/4.8.2/bits/stl_algo.h:2159
+```
+#9  0x00000000007a3bb7 in std::__final_insertion_sort<__gnu_cxx::__normal_iterator<rocksdb::FdWithKeyRange*, std::vector<rocksdb::FdWithKeyRange> >, rocksdb::VersionStorageInfo::GenerateLevel0NonOverlapping()::__lambda0>(__gnu_cxx::__normal_iterator<rocksdb::FdWithKeyRange*, std::vector<rocksdb::FdWithKeyRange, std::allocator<rocksdb::FdWithKeyRange> > >, __gnu_cxx::__normal_iterator<rocksdb::FdWithKeyRange*, std::vector<rocksdb::FdWithKeyRange, std::allocator<rocksdb::FdWithKeyRange> > >, rocksdb::VersionStorageInfo::__lambda0) (__first=..., __last=..., __comp=...)
+
+```
+at /opt/rh/devtoolset-2/root/usr/include/c++/4.8.2/bits/stl_algo.h:2231
+```
+#10 0x00000000007a333f in std::sort<__gnu_cxx::__normal_iterator<rocksdb::FdWithKeyRange*, std::vector<rocksdb::FdWithKeyRange> >, rocksdb::VersionStorageInfo::GenerateLevel0NonOverlapping()::__lambda0>(__gnu_cxx::__normal_iterator<rocksdb::FdWithKeyRange*, std::vector<rocksdb::FdWithKeyRange, std::allocator<rocksdb::FdWithKeyRange> > >, __gnu_cxx::__normal_iterator<rocksdb::FdWithKeyRange*, std::vector<rocksdb::FdWithKeyRange, std::allocator<rocksdb::FdWithKeyRange> > >, rocksdb::VersionStorageInfo::__lambda0) (__first=..., __last=..., __comp=...)
+
+```
+at /opt/rh/devtoolset-2/root/usr/include/c++/4.8.2/bits/stl_algo.h:5491
+```
+#11 0x000000000079821f in rocksdb::VersionStorageInfo::GenerateLevel0NonOverlapping (this=0x7f23b4001950) at db/version_set.cc:1352
+#12 0x00000000007967b6 in rocksdb::Version::PrepareApply (this=0x7f23b4001920, mutable_cf_options=..., update_stats=true) at db/version_set.cc:929
+#13 0x000000000079b117 in rocksdb::VersionSet::LogAndApply (this=0x25e05b0, column_family_data=0x25e3ea0, mutable_cf_options=...,
+
+```
+edit=0x7f23c0025090, mu=0x25dbb90, db_directory=0x25e28e0, new_descriptor_log=false, new_cf_options=0x0) at db/version_set.cc:2077
+```
+#14 0x0000000000787863 in rocksdb::MemTableList::InstallMemtableFlushResults (this=0x25e4458, cfd=0x25e3ea0, mutable_cf_options=..., mems=...,
+
+```
+vset=0x25e05b0, mu=0x25dbb90, file_number=48, to_delete=0x7f23cb7fd1a8, db_directory=0x25e28e0, log_buffer=0x7f23cb7fd300)
+at db/memtable_list.cc:319
+```
+
+pure virtual method called
+terminate called without an active exception
+Aborted (core dumped)
+
+multithread using rocksdb，core~~
+anybody meet this?
+

@@ -1,0 +1,2 @@
+  Implement GetUniqueIdFromFile to support new tests and the feature.
+

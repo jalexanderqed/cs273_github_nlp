@@ -1,0 +1,19 @@
+Preparational pull request. The main point about these changes is
+to enable RocksJava in a next step to provide custom ColumnFamilyOptions.
+DBOptions and ColumnFamilyOptions are now available as well as Interfaces
+which describe those methods.
+
+Methods in interfaces and class definitions of DBOptions and ColumnFamilyOptions
+are ordered according to C++ implementation.
+
+Optimize methods were ported to Java. (OptimizeForPointLookup,
+OptimizeLevelCompaction, OptimizeUniversalCompaction).
+
+To align BuiltinComparator with every other Enum it was moved to
+a separate file.
+
+A new test was introduced which includes some basic testing of
+ColumnFamilyOptions and DBOptions.
+
+Note: The changes are fully downwards compatible.
+

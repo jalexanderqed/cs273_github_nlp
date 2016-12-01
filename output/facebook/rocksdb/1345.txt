@@ -1,0 +1,3 @@
+Hi, 
+    I have a problem that when I open two db(A and B) in one progress, then called addfile interface to import sst file to`db A`, there was much(compare with don't called addfile interface) timeout when I called multi-get on `db B`. When timeout happened, the load of machine is low and there is no share block-cache.
+

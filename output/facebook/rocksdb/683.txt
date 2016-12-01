@@ -1,0 +1,6 @@
+Hi,
+
+What is the timeline of publishing rocksdb-jni 3.13.0 to maven? I see there is a java release today.
+
+https://github.com/facebook/rocksdb/commit/102ac118b26a8906f95f57975b6ae1f3a17c30c5
+

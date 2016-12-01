@@ -1,0 +1,14 @@
+I am using Centos 6 in a Docker file. When I run the following as part of my Docker file, it fails.
+
+```
+make rocksdbjavastatic
+```
+
+Unfortunately, I don't have time to replicate the error and paste it here.
+
+The issue it complains about is `unmappable character for encoding ASCII` in some of the java test files (the files with Chinese characters IIRC). I was able to fix the issue locally by modifying the [java Makefile line 170](https://github.com/facebook/rocksdb/blob/master/java/Makefile#L170) to
+
+```
+javac -encoding UTF-8 -cp $(MAIN_CLASSES):$(JAVA_TESTCLASSPATH) -d $(TEST_CLASSES)\
+```
+

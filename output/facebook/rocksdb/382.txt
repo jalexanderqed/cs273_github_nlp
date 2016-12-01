@@ -1,0 +1,8 @@
+Hi,
+
+I am consistently able to reproduce SIGSEGV when filter object is finalized by JAVA. Code to reproduce this issue: [1]. Interesting part is if options = null statement in this code is removed then segmentation fault doesn't happen.
+
+Can someone please look into this issue? Thanks!
+
+[1] -https://gist.github.com/ankgup87/93ae1630bc7c8fddf326
+

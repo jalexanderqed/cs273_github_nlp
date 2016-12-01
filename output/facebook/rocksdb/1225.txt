@@ -1,0 +1,4 @@
+The tests run by `make check` require Bash. On Debian you'd need to run
+the test as `make SHELL=/bin/bash check`. This commit makes it work on
+all POSIX compatible shells (tested on Debian with `dash`).
+

@@ -1,0 +1,1 @@
+When using universal compaction and multiple dbpathes(two in my case, and on two different SSD), just first dbpath is used, when the first SSD is full(target_size was configured as half of available space), insertion always failed, and the second SSD is never used.

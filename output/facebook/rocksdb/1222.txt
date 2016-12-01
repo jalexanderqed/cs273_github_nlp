@@ -1,0 +1,41 @@
+EnvLibrados is a customized RocksDB Env to use RADOS as the backend file system of RocksDB. It overrides all file system related API of default Env. The easiest way to use it is just like following:
+
+```
+std::string db_name = "test_db";
+std::string config_path = "path/to/ceph/config";
+DB* db;
+Options options;
+options.env = EnvLibrados(db_name, config_path);
+Status s = DB::Open(options, kDBPath, &db);
+```
+
+Then EnvLibrados will forward all file read/write operation to the RADOS cluster assigned by config_path. Default pool is db_name+"_pool".
+
+There are some options that users could set for EnvLibrados.
+- write_buffer_size. This variable is the max buffer size for WritableFile. After reaching the buffer_max_size, EnvLibrados will sync buffer content to RADOS, then clear buffer.
+- db_pool. Rather than using default pool, users could set their own db pool name
+- wal_dir. The dir for WAL files. Because RocksDB only has 2-level structure (dir_name/file_name), the format of wal_dir is "/dir_name"(CAN'T be "/dir1/dir2"). Default wal_dir is "/wal".
+- wal_pool. Corresponding pool name for WAL files. Default value is db_name+"_wal_pool"
+
+The example of setting options looks like following:
+
+```
+db_name = "test_db";
+db_pool = db_name+"_pool";
+wal_dir = "/wal";
+wal_pool = db_name+"_wal_pool";
+write_buffer_size = 1 << 20;
+env_ = new EnvLibrados(db_name, config, db_pool, wal_dir, wal_pool, write_buffer_size);
+
+DB* db;
+Options options;
+options.env = env_;
+// The last level dir name should match the dir name in prefix_pool_map
+options.wal_dir = "/tmp/wal";
+
+// open DB
+Status s = DB::Open(options, kDBPath, &db);
+```
+
+Librados is required to compile EnvLibrados. Then use "$make LIBRADOS=1" to compile RocksDB. If you want to only compile EnvLibrados test, just run "$ make env_librados_test LIBRADOS=1". To run env_librados_test, you need to have a running RADOS cluster with the configure file located in "../ceph/src/ceph.conf" related to "rocksdb/".
+

@@ -1,0 +1,138 @@
+First off, thanks for the great project!
+
+I'm looking into a problem (https://github.com/cockroachdb/cockroach/issues/8784) that cockroachdb is having with an apparent deadlock that seems like it may be due to an underlying deadlock in our embedded rocksdb instance. We're running version 4.8 of rocksdb, and seeing this happen fairly regularly on Google Compute Engine with standard persistent disks (and now at least once with a pd-ssd).
+
+Here's the info we have so far on where the process is stuck:
+
+At the top level, cockroachdb is blocked waiting on a rocksdb operation:
+
+```
+goroutine 784393 [syscall, 47 minutes, locked to thread]:
+github.com/cockroachdb/cockroach/storage/engine._Cfunc_DBApplyBatchRepr(0x7f6bfb844ee0, 0xc820a02000, 0x7076, 0x0, 0x0)
+    ??:0 +0x53
+github.com/cockroachdb/cockroach/storage/engine.dbApplyBatchRepr(0x7f6bfb844ee0, 0xc820a02000, 0x7076, 0x8000, 0x0, 0x0)
+    /go/src/github.com/cockroachdb/cockroach/storage/engine/rocksdb.go:1365 +0x138
+github.com/cockroachdb/cockroach/storage/engine.(*RocksDB).ApplyBatchRepr(0xc8202ebaa0, 0xc820a02000, 0x7076, 0x8000, 0x0, 0x0)
+    /go/src/github.com/cockroachdb/cockroach/storage/engine/rocksdb.go:448 +0x4e
+github.com/cockroachdb/cockroach/storage/engine.(*rocksDBBatch).Commit(0xc8208f3a40, 0x0, 0x0)
+    /go/src/github.com/cockroachdb/cockroach/storage/engine/rocksdb.go:993 +0x430
+github.com/cockroachdb/cockroach/storage.(*Replica).handleRaftReady(0xc820777400, 0x0, 0x0)
+    /go/src/github.com/cockroachdb/cockroach/storage/replica.go:1502 +0x77e
+github.com/cockroachdb/cockroach/storage.(*Store).processRaft.func1.1(0xc8216aa0f0, 0xc8202c02a0, 0xc820777400)
+    /go/src/github.com/cockroachdb/cockroach/storage/store.go:2575 +0x25
+created by github.com/cockroachdb/cockroach/storage.(*Store).processRaft.func1
+    /go/src/github.com/cockroachdb/cockroach/storage/store.go:2580 +0x4da
+```
+
+There is basically zero disk output from the process, but the disk is currently working fine (https://github.com/cockroachdb/cockroach/issues/8784#issuecomment-242096242).
+
+There are only 10 threads running in the process:
+
+```
+(gdb) info threads
+  Id   Target Id         Frame
+  10   Thread 0x7ff6e33ff700 (LWP 499) "cockroach" 0x000000000064d713 in runtime.futex ()
+  9    Thread 0x7ff6e2bfe700 (LWP 500) "cockroach" 0x000000000064d713 in runtime.futex ()
+  8    Thread 0x7ff6e1bc6700 (LWP 501) "cockroach" 0x000000000064d713 in runtime.futex ()
+  7    Thread 0x7ff6e13c5700 (LWP 504) "cockroach" 0x000000000064d713 in runtime.futex ()
+  6    Thread 0x7ff6e07ff700 (LWP 505) "cockroach" pthread_cond_wait@@GLIBC_2.3.2 ()
+    at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+  5    Thread 0x7ff6dfbff700 (LWP 506) "cockroach" 0x000000000064d713 in runtime.futex ()
+* 4    Thread 0x7ff6dd3ff700 (LWP 511) "rocksdb:bg0" pthread_cond_wait@@GLIBC_2.3.2 ()
+    at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+  3    Thread 0x7ff6d9fff700 (LWP 574) "cockroach" 0x000000000064d713 in runtime.futex ()
+  2    Thread 0x7ff6d97fe700 (LWP 579) "cockroach" 0x000000000064d899 in runtime.epollwait ()
+  1    Thread 0x7ff6e4599980 (LWP 498) "cockroach" 0x000000000064d713 in runtime.futex ()
+```
+
+Most of them aren't particularly interesting:
+
+```
+(gdb) thread 1
+[Switching to thread 1 (Thread 0x7ff6e4599980 (LWP 498))]
+#0  0x000000000064d713 in runtime.futex ()
+(gdb) bt
+#0  0x000000000064d713 in runtime.futex ()
+#1  0x00000000006168b3 in runtime.futexsleep ()
+#2  0x0000000002aa4620 in runtime.finptrmask ()
+#3  0x0000000000000000 in ?? ()
+(gdb) thread 2
+[Switching to thread 2 (Thread 0x7ff6d97fe700 (LWP 579))]
+#0  0x000000000064d899 in runtime.epollwait ()
+(gdb) bt
+#0  0x000000000064d899 in runtime.epollwait ()
+#1  0x00000000006166d4 in runtime.netpoll ()
+#2  0x00007ff600000007 in ?? ()
+#3  0x00007ff6d97fd568 in ?? ()
+#4  0xffffffff00000080 in ?? ()
+#5  0x0000000100000000 in ?? ()
+#6  0x00000000ffffffff in ?? ()
+#7  0x000000c82026d980 in ?? ()
+#8  0x0000000000000000 in ?? ()
+```
+
+But threads 4 and 6 are. Thread 6 is where our go code called down into rocksdb to try to do a write:
+
+```
+(gdb) thread 6
+[Switching to thread 6 (Thread 0x7ff6e07ff700 (LWP 505))]
+#0  pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+185     ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S: No such file or directory.
+(gdb) bt
+#0  pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+#1  0x00000000015543ed in rocksdb::port::CondVar::Wait() ()
+#2  0x00000000014ed0e8 in rocksdb::InstrumentedCondVar::Wait() ()
+#3  0x0000000001419b7e in rocksdb::DBImpl::DelayWrite(unsigned long) ()
+#4  0x000000000143d780 in rocksdb::DBImpl::WriteImpl(rocksdb::WriteOptions const&, rocksdb::WriteBatch*, rocksdb::WriteCallback*) ()
+#5  0x000000000143ea04 in rocksdb::DBImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch*) [clone .localalias.1430] ()
+#6  0x0000000001295031 in DBImpl::ApplyBatchRepr(DBSlice) ()
+#7  0x000000000129222a in DBApplyBatchRepr ()
+#8  0x0000000001247515 in _cgo_6915c59f3272_Cfunc_DBApplyBatchRepr ()
+#9  0x000000000064b720 in runtime.asmcgocall ()
+#10 0x0000000000000008 in ?? ()
+#11 0x000000c8207692b8 in ?? ()
+#12 0x00000000005ee46a in runtime.cgocall ()
+#13 0x000000c8207692c8 in ?? ()
+#14 0x000000c82091b9c0 in ?? ()
+#15 0x0000000000000d10 in ?? ()
+#16 0x000000c820909200 in ?? ()
+#17 0x0000000000649d59 in runtime.systemstack ()
+#18 0x000000000061dce0 in runtime.startTheWorldWithSema ()
+#19 0x000000c820016000 in ?? ()
+#20 0x00007ff6e07ff700 in ?? ()
+#21 0x000000c8201acd80 in ?? ()
+#22 0x000000000061dd52 in runtime.mstart ()
+#23 0x0000000000800000 in github.com/cockroachdb/cockroach/roachpb.(*OpRequiresTxnError).Unmarshal ()
+#24 0x0000000001248733 in crosscall_amd64 ()
+#25 0x00007ff6e07ff700 in ?? ()
+#26 0x0000000000000000 in ?? ()
+```
+
+It appears to be stuck waiting on a condition variable to trigger and indicate that a background flush is done (IIUC):
+https://github.com/facebook/rocksdb/blob/56dd03411534d0957a6f698f460609bf7cea4b63/db/db_impl.cc#L4872
+https://github.com/facebook/rocksdb/blob/56dd03411534d0957a6f698f460609bf7cea4b63/db/db_impl.h#L730
+
+Thread 4, on the other hand, appears to be the main background thread:
+
+```
+(gdb) thread 4
+[Switching to thread 4 (Thread 0x7ff6dd3ff700 (LWP 511))]
+#0  pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+185     in ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S
+(gdb) bt
+#0  pthread_cond_wait@@GLIBC_2.3.2 () at ../nptl/sysdeps/unix/sysv/linux/x86_64/pthread_cond_wait.S:185
+#1  0x0000000001513337 in rocksdb::ThreadPool::BGThread(unsigned long) ()
+#2  0x0000000001513543 in rocksdb::BGThreadWrapper(void*) ()
+#3  0x00007ff6e3f660a4 in start_thread (arg=0x7ff6dd3ff700) at pthread_create.c:309
+#4  0x00007ff6e399a87d in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:111
+```
+
+I'm a little less clear on what it's doing, but it looks like it's just waiting to be signaled about work to do:
+https://github.com/facebook/rocksdb/blob/56dd03411534d0957a6f698f460609bf7cea4b63/util/threadpool.cc#L176
+
+My understanding may be wrong since this is my first time looking at the code, but the combination of the two seems to indicate that something is wrong -- the main thread is waiting on the background thread to signal it's done doing something, while the background thread is waiting to be told there's something to do.
+
+Does any of this ring any bells? Are there any suggestions on what we should look into in more detail to get to the bottom of it? It's been happening pretty regularly lately, at least on Compute Engine.
+
+cc @tschottdorf @sploiselle @petermattis
+

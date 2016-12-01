@@ -1,0 +1,26 @@
+As we had the discussion some weeks ago. Java needs a test framework and should support code coverage analysis. This pull request includes:
+- Move Tests from main method functionality to Junit4
+- Move WriteBatchTest to test package
+- Adjust the Makefile to run Junit4 
+- Download dependencies in Makefile from Maven (once if not-present)
+- Adjustment of the rocksjni.pom to run coverage analysis using jacoco
+- Javadoc excludes now tests
+- Two bugfixes regarding GC cleanup which came up within the test runs
+
+Make can be used as beforehand to build and run RocksJava. `make test` runs tests using the command-line version of Junit4.
+
+Maven can be used to retrieve code coverage reports using `mvn -f rocksjni.pom package`. Code coverage reports can then be found as usual in the site folder.
+
+Testing libraries available within Java
+- Junit4 (incl. hamcrest-core dependency)
+- AssertJ (providing fluent syntax for assertions, cglib dependency)
+- Mockito to provide mocktests
+
+Libraries as said before are not statically within this commit or filesystem instead they are downloaded using curl. Make checks if files are present, if so it will perform tests without downloading the libraries again.
+
+Note: Libraries are only necessary to compile & run tests.
+
+Next steps after merge: 
+- Get the maven build into travis-ci and coveralls.io
+- Filling up the missing test spots (based on coverage data)
+

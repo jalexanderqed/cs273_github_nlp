@@ -1,0 +1,3 @@
+DirectSlice fix for non terminated String copy. This lead sometimes
+to problems with DirectSliceTest.
+

@@ -1,0 +1,2 @@
+If FAIL_ON_WARNINGS is OFF, compilation will succeed if there were compile
+warnings.

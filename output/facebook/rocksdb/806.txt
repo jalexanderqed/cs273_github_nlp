@@ -1,0 +1,3 @@
+  The code compiles cleanly for the most part. Fix db_test.
+  Move debug file to testutil library.
+

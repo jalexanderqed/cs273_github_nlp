@@ -1,0 +1,5 @@
+All reported findbugs(3.x) issues fixed. Listing below:
+- BackupableDB missing call to super.finalize(major)
+- WriteBatchTest inefficient String usage(minor)
+- RocksDB local dead variable store(medium)
+

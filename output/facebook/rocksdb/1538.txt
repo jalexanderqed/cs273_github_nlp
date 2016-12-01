@@ -1,0 +1,2 @@
+I encountered an error: "File is too large for PlainTableReader!" when using universal compaction and table factory is PlainTableFactory, and target_file_size_mulitplier is 2, and level_num is 7.
+Why PlainTableBuilder can build a table which can not be read?

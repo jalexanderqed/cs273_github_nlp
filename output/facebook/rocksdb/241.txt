@@ -1,0 +1,5 @@
+Dear guys 
+
+recently I have met a problem during I study RocksDB. Because I want to distinguish the rocksdb data file through some rules or some common characteristics. For example , the files on level-0 are one kind of files, the files on level-1 are another kind of files etc. 
+I know it may be good to distinguish the log file from the data file , but what else rules or any other common characteristics can be used to distinguish these files? Do you have any creative ideas about this? Thanks for your suggestions!
+

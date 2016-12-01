@@ -1,0 +1,2 @@
+Along with some changes in the Java part a ReverseBytewiseComparator was introduced. This made the definition in that Testcase obsolete. 
+

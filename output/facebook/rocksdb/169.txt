@@ -1,0 +1,2 @@
+There are some obstacles in compiling RocksDB with the latest Visual Studio. For example, use of `__thread` and `__attribute__`. I would like to have a Windows port. I'm okay with having a "port_cxx11.h" (i.e. ported to C++11, using `std::mutex`, `std::condition_variable`, et. al.). This would be useful for other platforms that support C++11 as well. But I'm stumped on some of the non standard language constructs. Thoughts?
+

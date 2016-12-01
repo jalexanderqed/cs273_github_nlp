@@ -1,0 +1,1 @@
+In dynamic leveled compaction, when calculating read bytes, output level bytes may be wronglyl calculated as input level inputs. Fix it.

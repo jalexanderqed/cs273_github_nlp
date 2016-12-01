@@ -1,0 +1,6 @@
+Summary:
+- Deprecated RateLimiterConfig and GenericRateLimiterConfig
+- Introduced RateLimiter
+
+Closes https://github.com/facebook/rocksdb/pull/549
+

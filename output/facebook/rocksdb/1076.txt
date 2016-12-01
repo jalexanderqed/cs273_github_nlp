@@ -1,0 +1,14 @@
+Hi,
+
+I got latest code from Master (4/12/2016), noticed the dispose() has been deprecated and close() was added which is fine.
+
+I am trying to understand, from my java code, whether I should call close() explicitly for resources  like RocksIterator, RocksDB, ReadOptions etc.
+
+Specifically, when looking at the test code AbstractComparatorTest.java, I saw it does not call close() on RocksIterator or RocksDB, but it calls close() on ColumnFamilyHandle.
+
+Questions (in latest Master):
+1) What resources I should call close()?
+2) Is there any order on calling close()? like RocksIterator -> ReadOptions -> RocksDB, or no ordering?
+
+Thanks.
+

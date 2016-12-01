@@ -1,0 +1,17 @@
+I am having a maven project where I am using rockdb java dependency like:
+     <dependency>
+          <groupId>org.rocksdb</groupId>
+          <artifactId>rocksdbjni</artifactId>
+          <version>3.5.1</version>
+      </dependency>
+When I am running it in intellij, it is running fine but when I am trying to run it from the command line using mvn command, it is throwing the following exception:
+Caused by: java.lang.RuntimeException: librocksdbjni-osx.jnilib was not found inside JAR.
+    at org.rocksdb.NativeLibraryLoader.loadLibraryFromJar(NativeLibraryLoader.java:34)
+    at org.rocksdb.RocksDB.loadLibrary(RocksDB.java:50)
+    at org.rocksdb.RocksDB.<clinit>(RocksDB.java:28)
+    ... 27 more
+mvn command used: mvn exec:java -Dexec.mainClass="com.application.Application"
+Can someone please tell me what am I missing?
+
+thanks
+

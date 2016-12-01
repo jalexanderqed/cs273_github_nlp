@@ -1,0 +1,86 @@
+Hello and thank you for RocksDB,
+ 
+Rather than `sst_dump --show_compression_sizes` just showing the compression sizes:
+
+    Compression: kNoCompression Size:     65040323 
+    Compression: kSnappyCompression Size: 64355577 
+    Compression: kZlibCompression Size:   63778913 
+    Compression: kLZ4Compression Size:    64209486
+    Compression: kLZ4HCCompression Size:  64041757
+
+I found also showing the number of blocks compressed and not compressed to be valuable:
+ 
+    Compression: kNoCompression     Size: 65040323 Blocks compressed:   0 Blocks not compressed:    0
+    Compression: kSnappyCompression Size: 64355577 Blocks compressed: 212 Blocks not compressed: 1849
+    Compression: kZlibCompression   Size: 63778913 Blocks compressed: 358 Blocks not compressed: 1703
+    Compression: kLZ4Compression    Size: 64209486 Blocks compressed: 249 Blocks not compressed: 1812
+    Compression: kLZ4HCCompression  Size: 64041757 Blocks compressed: 292 Blocks not compressed: 1769
+ 
+I am testing compression options on values that are already compressed with LZ4, and have bumped up against the 12.5% threshold for `GoodCompressionRatio` (originally from ldb) as I have datasets where many blocks compress by 10%.
+ 
+Currently `NUMBER_BLOCK_NOT_COMPRESSED` is only incremented when compression is aborted because the block is too big or did not pass verification ( added in https://github.com/facebook/rocksdb/commit/f43c8262c264b3aa2ff571ff63e4cdb5eb3288cd ) , it does not require `ShouldReportDetailedTime(r->ioptions.env, r->ioptions.statistics)` to be true, it is not incremented when a block is not compressed because it does not compress by 12.5%.  `NUMBER_BLOCK_COMPRESSED` is incremented when a compressed block is used/written, it requries `ShouldReportDetailedTime(r->ioptions.env, r->ioptions.statistics)` to be true, it was added in https://github.com/facebook/rocksdb/commit/9430333f84635ffb2586f6b5e4debc6051258943 .
+ 
+When the code ( with `NUMBER_BLOCK_NOT_COMPRESSED` (aborted compression) ) had `NUMBER_BLOCK_COMPRESSED` (compression meets threshold) added, I suspect counting blocks that fail to meet the the threshold was overlooked, or maybe just not a priority.
+ 
+The output above with the number of blocks not compressed uses a change that changes `NUMBER_BLOCK_NOT_COMPRESSED` to also be incremented when a block does not compress by 12.5%.  This is a change in behaviour that is likely not acceptable:
+ 
+    > diff -du tools/sst_dump_tool.cc.orig tools/sst_dump_tool.cc
+    --- tools/sst_dump_tool.cc.orig 2016-11-04 09:33:20.505992575 -0400
+    +++ tools/sst_dump_tool.cc      2016-11-08 11:37:45.503881967 -0500
+    @@ -178,6 +178,8 @@
+     int SstFileReader::ShowAllCompressionSizes(size_t block_size) {
+       ReadOptions read_options;
+       Options opts;
+    +  opts.statistics = rocksdb::CreateDBStatistics();
+    +  opts.statistics->stats_level_ = StatsLevel::kAll;
+       const ImmutableCFOptions imoptions(opts);
+       rocksdb::InternalKeyComparator ikc(opts.comparator);
+       std::vector<std::unique_ptr<IntTblPropCollectorFactory> >
+    @@ -206,7 +208,9 @@
+                                       false /* skip_filters */, column_family_name);
+           uint64_t file_size = CalculateCompressedTableSize(tb_opts, block_size);
+           fprintf(stdout, "Compression: %s", i.second);
+    -      fprintf(stdout, " Size: %" PRIu64 "\n", file_size);
+    +      fprintf(stdout, " Size: %" PRIu64, file_size);
+    +      fprintf(stdout, " Number of blocks compressed: %" PRIu64, opts.statistics->getAndResetTickerCount(NUMBER_BLOCK_COMPRESSED));
+    +      fprintf(stdout, " Number of blocks not compressed: %" PRIu64 "\n", opts.statistics->getAndResetTickerCount(NUMBER_BLOCK_NOT_COMPRESSED));
+         } else {
+           fprintf(stdout, "Unsupported compression type: %s.\n", i.second);
+         }
+ 
+    > diff -du4 table/block_based_table_builder.cc.orig table/block_based_table_builder.cc
+    --- table/block_based_table_builder.cc.orig     2016-11-08 11:39:50.682322192 -0500
+    +++ table/block_based_table_builder.cc  2016-11-08 07:46:55.875903674 -0500
+    @@ -706,17 +706,19 @@
+       if (abort_compression) {
+         RecordTick(r->ioptions.statistics, NUMBER_BLOCK_NOT_COMPRESSED);
+         type = kNoCompression;
+         block_contents = raw_block_contents;
+    -  }
+    -  else if (type != kNoCompression &&
+    -            ShouldReportDetailedTime(r->ioptions.env,
+    -              r->ioptions.statistics)) {
+    -    MeasureTime(r->ioptions.statistics, COMPRESSION_TIMES_NANOS,
+    -      timer.ElapsedNanos());
+    -    MeasureTime(r->ioptions.statistics, BYTES_COMPRESSED,
+    -      raw_block_contents.size());
+    -    RecordTick(r->ioptions.statistics, NUMBER_BLOCK_COMPRESSED);
+    +  } else if (ShouldReportDetailedTime(r->ioptions.env,
+    +                                     r->ioptions.statistics)) {
+    +    if (type != kNoCompression) {
+    +      MeasureTime(r->ioptions.statistics, COMPRESSION_TIMES_NANOS,
+    +                 timer.ElapsedNanos());
+    +      MeasureTime(r->ioptions.statistics, BYTES_COMPRESSED,
+    +                 raw_block_contents.size());
+    +      RecordTick(r->ioptions.statistics, NUMBER_BLOCK_COMPRESSED);
+    +    } else if (type != r->compression_type) {
+    +      RecordTick(r->ioptions.statistics, NUMBER_BLOCK_NOT_COMPRESSED);
+    +    }
+       }
+    
+       WriteRawBlock(block_contents, type, handle);
+       r->compressed_output.clear();
+ 
+Alternatively `NUMBER_BLOCK_NOT_COMPRESSED` could be left unchanged and a new metric, `NUMBER_BLOCK_COMPRESSION_RATIO_FAIL` added.  Avoiding any change in behaviour (for existing counters) for consumers.
+ 
+Or `NUMBER_BLOCK_ABORT_COMPRESSION` could be added and used as `NUMBER_BLOCK_NOT_COMPRESSED` is used now (aborts), and `NUMBER_BLOCK_NOT_COMPRESSED` used for ratio fails (when ShouldReportDetailedTime) and aborted compression due to size or failed verify.

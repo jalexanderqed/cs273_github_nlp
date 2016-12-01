@@ -1,0 +1,2 @@
+These are mainly minor fixes/warning issues. Note that it fixes potential issues on 32-bit platforms.
+

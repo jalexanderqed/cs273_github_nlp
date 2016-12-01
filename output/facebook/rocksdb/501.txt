@@ -1,0 +1,2 @@
+If I iterate a database is it guaranteed that there will be no duplicate keys?
+

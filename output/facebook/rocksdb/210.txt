@@ -1,0 +1,72 @@
+Like many people suffers, write amplification becomes our bottleneck in some senarios.
+
+_It’s a long post_
+#### Backgroud
+
+We're using LevelDB on a box with 700GB SSD(24 CPUs, 128G RAM). It's pre-shared to 16 smaller LevelDBs. Currently, total data size is about 160GB. Data size of every shard is about 10GB, occupied L0 ~ L3. Write-amp is between 8-10.
+Write throughput from application is about 12MB/s (4K ops, avg value size 3K). Because of write-amp, DISK IO write throughput is 100MB/s, read throughput is 40MB/s(mainly from compaction). DISK is very very busy right now.
+Write-amp will increase as the data growth to level larger than L3. The entire DISK situation will be worser.
+#### First Trial
+
+I tried many ways to reduce write amplication, including #19. Thanks to the RocksDB, I adjusted many parameter of compaction of Level Sytle Compaction, and also tried Universal Style Compaction. Write-amp is still not satisfied.
+Our test on Universal Sytle Compaction: because it only picks up a few files that are chronologically adjacent, theses files probably don't have too much overlap. So the compaction may be not highly-efficient.
+
+Here I want to skip over many details, since these tests cannot reduce write-amp dramaticly.
+#### Finaly Trial
+
+I switched back to Level Style Compaction again. Write-amp becomes larger after data flushed to level higher than 1. So I set the max level to 2 (means only L0 and L1) and split total data input many small Column Families to control the data size of L0 and L1.
+
+Here are the details:
+Assume total data size is 512GB, `R`(=1) RocksDB, pre-splited to `N`(=128) CFs, 4GB per CF, L0 size is set to `SL0`(=2GB), L1 size `SL1` will expected to be 2GB.
+max_total_wal_size is set to `W`(=4GB), file size in L0 is expected to `W/N`(=32MB), file number in L0 will be `SL0/(W/N)` (=SL0*N/W=64MB).
+
+**Write-amp**: 2~3 (1 + 1 + X). 1 for WAL, 1 for memtable to L0, X for L0 to L1. if we set size of L0 larger than L1, X will less than 1, which sacrified space-amp. So write-amp can be **limited and predictable** to **2~3**, if we tune those parameters carefully.
+**Read-amp**: mainly depends on the file num of L0.
+**Space-amp**: >2, can be tuned. It can be about 2, if we set total data size of L0 is actual data size. But it’s hard to estimate and adjust real-time.
+
+I write a demo after the idea. Bulk load 100M items with avg item size 2K.
+Then start to measure and write 200M items randomly.
+Write throughput from demo is 400GB(200M writes \* 2K), DISK READ is 424GB, DISK WRITE is 1070GB. write-amp is about 2.5.
+
+A good news is RocksDB supports to write WAL seperatly, which I'll write to a HDD on production environment. It will also reduce work load on SSD.
+
+As you can see, parameters R, N, SL0, W can be tuned to precisely control write-amp, which will scarify read-amp and space-amp.
+#### Problem
+
+Here are the problems I've met.
+
+After restart, RocksDB need to recover from 128 rolling WALs to all CFs.
+
+**Problem A**: it may cost several minutes because there’re several GBs of WALs.
+
+**Problem B**: L0 file num in every CF will burst to a number larger than `level0_file_num_compaction_trigger`, which I set to 64. Then RocksDB starts to compact L0 and L1 of all CFs, which is about hundreds of GBs, and RocksDB slow down all write operations during a very long time.
+
+This may be because I use too many CFs.
+#### Candidate Solutions
+
+RocksDB is still my best choice.
+
+**Problem A**:
+1. I can trigger a Flush of all memtable before restart, expected to reduce the WAL need to recover next restart. I do find db->Flush in the API.
+   So the problem is not so big.
+   Maybe there are other bad situations, the program doesn’t have a chance to Flush before restart, i.e. segment fault, but they’re rarely happened after the program is stable.
+2. reduce `max_total_wal_size` or adjust other parameters
+
+**Problem B**:
+
+I want to try a new compaction strategy. Maybe called Mixed Style Compaction.
+1. Try to compact small files in L0 which are smaller than target_file_size_base, and, we can pick up as many as we can, expected to generate a file larger than target_file_size_base. Then new file is put to L0 again. This step should control every file in L0 is compacted only once.
+2. Compact all files in L0 with L1, only when total data size of L0 exceeds our limit.
+
+Brief idea is, try to merge small files from L0 to L0, if total file number in L0 exceed our limit. But if total data size of L0 exceeds our limit, do a compaction from L0 to L1.
+There still remain many more ideas in step 1 to control the write-amp.
+
+After that, I realized that this is much like the minor and major compaction of HBase.
+#### Any Comments?
+1. Does anyone have the same idea? May be a plan or even mature solution?
+2. Does the Mixed Style Compaction have any bad case, which I haven’t catched?
+
+I planed to test it by myself if no better solution is available.
+
+Thanks for your patient to reach the last word. Any comment is welcome and appreciate.
+

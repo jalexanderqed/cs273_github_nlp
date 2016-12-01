@@ -1,0 +1,3 @@
+that i try to write a MemTableRep implement used fixed memory block ...
+so how do i notify rocksdb this MemTableRep is full ?
+

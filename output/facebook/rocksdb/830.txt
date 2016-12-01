@@ -1,0 +1,17 @@
+Hi,
+does rocksdb using cpplint?
+
+I just run it for one file and got:
+
+```
+\rocksdb\util\auto_roll_logger_test.cc(8):  Include "cmath" not in alphabetical order  [build/include_alpha] [4]
+\rocksdb\util\auto_roll_logger_test.cc(16):  Found C system header after other header. Should be: auto_roll_logger_test.h, c system, c++ system, other.  [build/include_order] [4]
+\rocksdb\util\auto_roll_logger_test.cc(19):  Do not use namespace using-directives.  Use using-declarations instead.  [build/namespaces] [5]
+\rocksdb\util\auto_roll_logger_test.cc(36):  Consider using ASSERT_EQ instead of ASSERT_TRUE(a == b)  [readability/check] [2]
+\rocksdb\util\auto_roll_logger_test.cc(212):  Extra space after ( in function call  [whitespace/parens] [4]
+\rocksdb\util\auto_roll_logger_test.cc(217):  Missing username in TODO; it should look like "// TODO(my_username): Stuff."  [readability/todo] [2]
+\rocksdb\util\auto_roll_logger_test.cc(354):  Redundant blank line at the start of a code block should be deleted.  [whitespace/blank_line] [2]
+```
+
+may be better use cpplint in pre commit hook?
+

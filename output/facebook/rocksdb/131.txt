@@ -1,0 +1,15 @@
+Summary:
+1. Add multi-get JNI bindings
+2. Unit-tests for multi-get
+
+make rocksdbjava
+make sample
+
+Reviewers: haobo, yhchiang, sdong, dhruba, rsumbaly, zzbennett, swapnilghike
+
+Reviewed By: yhchiang
+
+CC: leveldb
+
+Differential Revision: https://reviews.facebook.net/D18369
+

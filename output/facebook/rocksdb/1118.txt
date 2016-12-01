@@ -1,0 +1,22 @@
+Hi ,
+
+We want to be able to do fast prefix iteration but we are a bit confused as to how the prefix iteration feature will help us.
+
+Our use case is the following,
+
+1- Call DB::Open
+
+2- Put some data (potentially, lots of data)
+
+3- Do fast "prefix iteration" on the data put on 2-. 
+
+Note that we don't know by the time we call 1- all the prefixes we want to do iterations with in 3-. From reading the explanation of the feature, it would seem that prefixes need to be specify in Options at the time of calling DB:Open. Even the so called "Seek API" https://github.com/facebook/rocksdb/wiki/Prefix-Seek-API-Changes seems to imply this. 
+
+What we would like to be able to do is when we do some of the "Puts" is to tell RocksDB: this prefix is important, pay attention to future puts that share the same prefix so we can do fast iteration on them.
+
+Any insight will be appreciated.
+
+Thanks,
+
+Ethan. 
+

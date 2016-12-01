@@ -1,0 +1,22 @@
+This is a first pass at a solution to bug #222, a merge request opened for initial discussion of a solution.
+
+Unit tests crash due to a double delete. In the constructor for a block, one passes in a BlockContents object. The Block's data_ field is set to the underlying Slice's pointer to the data. When passing in a BlockContents object that is allocated on the stack, the unique_ptr deletes the previously allocated memory once it goes out of scope, leaving the Block with a dangling pointer. An example can be pulled from block_based_table_builder.cc in BlockBasedTableBuilder::InsertBlockInCache:
+
+``` c++
+[...]
+std::unique_ptr<char[]> ubuf(new char[size+1]);
+ubuf[size] = type;
+
+BlockContents results;
+Slice sl(ubuf.get(), size);
+results.data = sl;
+results.cachable = true;
+results.allocation = std::move(buf);
+results.compression_type = type;
+
+Block *block = new Block(results);
+[...]
+```
+
+I'm not sure of the best way to proceed from here, but my gut tells me that sticking a std::unique_ptr in here will end up touching a lot more code than initially expected.
+

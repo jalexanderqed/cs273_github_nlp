@@ -1,0 +1,8 @@
+- Adjusted HashLinkedList to 3.6.0
+- Adjusted SkipList to 3.6.0
+- Introduced a memtable test
+
+Test:
+`make rocksdbjava`
+`make jtest`
+

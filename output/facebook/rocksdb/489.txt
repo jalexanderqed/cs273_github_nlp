@@ -1,0 +1,10 @@
+Fixed build issue from https://github.com/facebook/rocksdb/pull/486
+
+In reply to @mdcallag, the original paper uses CAS(compare and swap) to synchronize updates of MappingTable(a table that maintains logical pages(nodes) to physical pages(nodes)). Since RocksDB guarantees that there is only one writer, my implementation does not need to utilize CAS to ensure that there are no multiple writers.
+
+---
+
+This is a BW-Tree implementation of Memtable for RocksDB.
+It was done as part of Facebook Open Academy.
+The original paper by Microsoft Research can be viewed at http://research.microsoft.com/pubs/178758/bw-tree-icde2013-final.pdf
+

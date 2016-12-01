@@ -1,0 +1,4 @@
+The slice concept is extremely powerful and significant performance boost - to the point the c++ standard libraries will include soon std::string_view http://en.cppreference.com/w/cpp/experimental/basic_string_view. Most of the compilers already offer an experimental version of it and more and more projects commit to it.
+
+What about adding support for stl string_view, as part of the current interfaces or even migrate Slice to match the standard and use the stl version directly when available.
+

@@ -1,0 +1,1 @@
+Add C API to set base_backgroud_compactions

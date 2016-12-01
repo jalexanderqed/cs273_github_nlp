@@ -1,0 +1,11 @@
+Hi,
+
+Can anyone please comment what are the recommended versions for following:
+1. **GCC** - Install.md mentioned that atleast GCC 4.7 is required. Is any GCC version > 4.7 fine?
+2. **zlib**
+3. **bzip2**
+4. **snappy**
+5. **gflags**
+
+Thanks.!
+

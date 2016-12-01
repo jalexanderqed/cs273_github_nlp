@@ -1,0 +1,6 @@
+Implemented:
+1. `WriteBatch#setSavePoint`
+2. `WriteBatch#rollbackToSavePoint`
+3. `WriteBatchWithIndex#setSavePoint`
+4. `WriteBatchWithIndex#rollbackToSavePoint`
+

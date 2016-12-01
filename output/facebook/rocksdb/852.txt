@@ -1,0 +1,10 @@
+## Why my librocksdb.so file size is 60MB?it's too big,how to optimization the size？thanks!
+
+```
+-rw-r--r--  1 root root 196853756 Nov 21 06:55 librocksdb.a
+lrwxrwxrwx  1 root root        19 Nov 21 07:00 librocksdb.so -> librocksdb.so.4.1.0
+lrwxrwxrwx  1 root root        19 Nov 21 07:00 librocksdb.so.4 -> librocksdb.so.4.1.0
+lrwxrwxrwx  1 root root        19 Nov 21 07:00 librocksdb.so.4.1 -> librocksdb.so.4.1.0
+-rwxr-xr-x  1 root root  60865048 Nov 21 07:00 librocksdb.so.4.1.0
+```
+

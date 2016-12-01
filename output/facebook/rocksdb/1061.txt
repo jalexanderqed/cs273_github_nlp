@@ -1,0 +1,2 @@
+fix wrong assignment of level0_stop_writes_trigger in spatialdb's function GetColumnFamilyOptions.
+

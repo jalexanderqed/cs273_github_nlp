@@ -1,0 +1,6 @@
+Hi,
+
+I had a question regarding whether DB operations are blocked while the caller is taking a backup. Also, during backup is it fine to issue mutation operations like PUT, DELETE, MERGE to DB or will it corrupt the state of backup?
+
+Ankit
+

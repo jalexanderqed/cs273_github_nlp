@@ -1,0 +1,5 @@
+There is a trouble with me, about rocksdb core. The core-dump shows below. Pls help me, any suggestion is welcome. The version is _**4.8**_
+![image](https://cloud.githubusercontent.com/assets/19619615/19968178/69cecab4-a20e-11e6-90ce-05fae92a07c0.png)
+
+<img width="1175" alt="2016-11-03 21 43 37" src="https://cloud.githubusercontent.com/assets/19619615/19968222/a449b190-a20e-11e6-9b52-212a3552c6ab.png">
+

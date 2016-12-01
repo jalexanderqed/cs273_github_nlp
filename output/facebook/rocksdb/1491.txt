@@ -1,0 +1,24 @@
+Using really new compiler:
+<pre>
++ x86_64-unknown-linux-gnu-g++ --version
+x86_64-unknown-linux-gnu-g++ (crosstool-NG crosstool-ng-1.22.0-201-g11cb2dd) 7.0.0 20161109 (experimental)
+..
+..
+x86_64-unknown-linux-gnu-g++ -I/usr/include -I/usr/include/x86_64-linux-gnu -m64 -O3 -g -mtune=native -std=c++11  -g -W -Wextra -Wall -Wsign-compare -Wshadow -Wno-unused-parameter -Werror -I. -I./include -std=c++11 -I/usr/include -I/usr/include/x86_64-linux-gnu -m64 -O3 -g -mtune=native -std=c++11 -DROCKSDB_PLATFORM_POSIX -DROCKSDB_LIB_IO_POSIX -I/usr/include -I/usr/include/x86_64-linux-gnu -m64 -O3 -g -mtune=native -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_FALLOCATE_PRESENT -DSNAPPY -DGFLAGS=gflags -DZLIB -DBZIP2 -DROCKSDB_MALLOC_USABLE_SIZE -DROCKSDB_PTHREAD_ADAPTIVE_MUTEX -DROCKSDB_BACKTRACE -march=native   -isystem ./third-party/gtest-1.7.0/fused-src -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -Wnon-virtual-dtor -Wno-missing-field-initializers -c db/internal_stats.cc -o db/internal_stats.o 
+db/internal_stats.cc: In member function 'void rocksdb::InternalStats::DumpCFStats(std::__cxx11::string*)':
+db/internal_stats.cc:719:6: error: '%.2f' directive output truncated writing between 4 and 317 bytes into a region of size 0 [-Werror=format-length=]
+ void InternalStats::DumpCFStats(std::string* value) {
+      ^~~~~~~~~~~~~
+db/internal_stats.cc:854:42: note: format output between 98 and 1664 bytes into a destination of size 1000
+            compact_micros / kMicrosInSec);
+                                          ^
+db/internal_stats.cc:719:6: error: '%.2f' directive output truncated writing between 4 and 317 bytes into a region of size 0 [-Werror=format-length=]
+ void InternalStats::DumpCFStats(std::string* value) {
+      ^~~~~~~~~~~~~
+db/internal_stats.cc:873:46: note: format output between 96 and 1662 bytes into a destination of size 1000
+       interval_compact_micros / kMicrosInSec);
+                                              ^
+cc1plus: all warnings being treated as errors
+</pre>
+
+Changing buf size from 1k -> 2k would be sufficient.

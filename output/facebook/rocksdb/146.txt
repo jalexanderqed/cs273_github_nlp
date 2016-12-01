@@ -1,0 +1,8 @@
+The architecture document (https://github.com/facebook/rocksdb/wiki/Rocksdb-Architecture-Guide) mentions that "There is no limit to the size of a key or a value."
+
+However when trying to run db_bench (release 2.8), I get the following error:
+$<code>./db_bench --benchmarks=fillrandom  --statistics=1 --histogram=1 --db=./testDB --key_size=256 --num=3000000 --numdistinct=3000000 --readwritepercent=10 --value_size=256</code>
+$<code>Invalid value for --key_size: 256, must be < 128 ERROR: failed validation of new value '256' for flag 'key_size' </code>
+
+Is there a way to increase the key size to 256 _bytes_?
+

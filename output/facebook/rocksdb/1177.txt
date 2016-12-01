@@ -1,0 +1,2 @@
+It would be very helpful if you could include the dll for windows support in the maven package , we are having trouble building it 
+

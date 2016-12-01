@@ -1,0 +1,7 @@
+Hello!
+
+I want to make a cyclic database periodically deleting old records for this i'm use function GetLiveFilesMetaData, which is determined by the oldest file and delete it using the DeleteFile, but if the application is corrupt, sst files remain at level-1, which are not moving to a new level and the next time the function DeleteFile does not remove them!
+
+Any idea what to do in this situation?
+There is an option to delete all records from smallestkey to largestkey using the Delete but it is very slow ...
+

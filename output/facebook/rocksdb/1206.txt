@@ -1,0 +1,6 @@
+Trying to follow the official instruction to build RocksDb on windows . I am using VS 2015.
+
+`msbuild rocksdb.sln /p:Configuration=Release /p:Platform=X64` gets me multiple build errors. Attaching the logs. What could be going wrong here?
+
+[buildlog.txt](https://github.com/facebook/rocksdb/files/360952/buildlog.txt)
+

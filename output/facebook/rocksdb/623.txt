@@ -1,0 +1,20 @@
+I  set the compression  options ：
+options.compression_per_level.resize(options.num_levels);//  num_levels=7
+options.compression = kZlibCompression;
+options.compression_per_level[0] = kSnappyCompression;
+options.compression_per_level[1] = kSnappyCompression;
+ options.compression = kZlibCompression;
+for(int i = 4;i<options.num_levels;i++){
+  options.compression_per_level[i] = kZlibCompression;
+}
+
+but the log about  compresion  is 
+
+117 2015/06/02-20:32:57.380493 7fa432a4a920 [WARN]        Options.compression[0]: NoCompression
+118 2015/06/02-20:32:57.380496 7fa432a4a920 [WARN]        Options.compression[1]: NoCompression
+119 2015/06/02-20:32:57.380500 7fa432a4a920 [WARN]        Options.compression[2]: Snappy
+120 2015/06/02-20:32:57.380503 7fa432a4a920 [WARN]        Options.compression[3]: Snappy
+121 2015/06/02-20:32:57.380506 7fa432a4a920 [WARN]        Options.compression[4]: Snappy
+122 2015/06/02-20:32:57.380509 7fa432a4a920 [WARN]        Options.compression[5]: Snappy
+123 2015/06/02-20:32:57.380512 7fa432a4a920 [WARN]        Options.compression[6]: Snappy
+

@@ -1,0 +1,6 @@
+1) There is no need to download and install the Snappy library twice
+just to get access to its header file during the compile phase.
+2) Ensure that the compression library headers files used during the
+compile phase are the same ones used to build the static library that
+is linked into the library.
+

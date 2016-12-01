@@ -1,0 +1,2 @@
+When running on a ppc64 architecture, the JNI wrapper should not try to use the pre-built librocksdbjni-linux64.so, which only runs on x64 architectures. Consequently, the shared library naming convention should consider the whole architecture name (e.g. X64/PPC64 instead of only 64).
+

@@ -1,0 +1,2 @@
+It's possible that we set min_write_buffer_number_to_merge to 0.
+This should never happen

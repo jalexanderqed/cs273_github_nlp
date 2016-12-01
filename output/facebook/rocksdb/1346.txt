@@ -1,0 +1,6 @@
+Summary: We didn't recompute compaction score on SetOptions, and end up not having compaction if no flush happens afterward. The PR fixing it.
+
+Test Plan: See unit test.
+
+Differential Revision: https://reviews.facebook.net/D64167
+

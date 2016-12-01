@@ -1,0 +1,2 @@
+Use 16384 as e.g .value for ldb the --compression_max_dict_bytes option.
+I think 14 was copy and pasted from the options in the lines above.

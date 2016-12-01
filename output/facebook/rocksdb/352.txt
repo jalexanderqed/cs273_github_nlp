@@ -1,0 +1,2 @@
+Options return now the correct value for createMissingColumnFamilies.
+

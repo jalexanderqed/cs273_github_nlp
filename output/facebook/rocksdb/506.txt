@@ -1,0 +1,2 @@
+Resolved raw use of parametrized class issues.
+

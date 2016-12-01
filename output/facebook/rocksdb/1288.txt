@@ -1,0 +1,3 @@
+There  is a restriction on the SST files ingested into a DB, is that the key ranges in the sst files can not overlap  with each other or existing/deleted keys in the DB, why? we want to write s single sst file and than 
+add it to an existing DB, but failed due to the restriction. Could you tell us  what about  the restriction you consider? And what can I do to add sst filea to DB if the keys ranges overlap with the the files in the DB?
+

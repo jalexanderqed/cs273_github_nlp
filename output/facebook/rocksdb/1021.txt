@@ -1,0 +1,17 @@
+Hello.
+I use next config for java+rocksdb
+1. java 8
+2. rocksdb 3.1.13
+3. CentOS 6.5
+
+I start 4 data bases inside one jvm (all are in read only mode). Each data base ~ 8 Gb on disk.
+After start everything looks fine. But after 1-2 hours db is going to increase CPU usage.
+Check screenshot: [here](http://postimg.org/image/49uhiy71l/)
+If I restart JVM everything looks fine next 1-2 hours.
+
+HW config:
+1. CPU E5-2430
+2. 72Gb of RAM
+
+All db files are in memory + I use blocks cache.
+

@@ -1,0 +1,3 @@
+a) more c++11 way noncopyable
+b) keep parameter's name of constructor consistent
+

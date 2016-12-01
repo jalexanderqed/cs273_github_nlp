@@ -1,0 +1,3 @@
+We aren't correctly handling the case where the header has a bad length
+or checksum.  Add a test and fix it!
+

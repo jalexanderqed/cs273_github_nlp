@@ -1,0 +1,2 @@
+Recent change break Windows build for warning C4351. Disable the warning temporarily.
+

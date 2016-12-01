@@ -1,0 +1,11 @@
+Hey guys,
+                 I compiled RocksDb without snappy and tried using it from java. When I set the compression type of snappy (I was expecting an error), the put and get options still seem to work without any issues. 
+
+``` java
+val options = new Options();
+   options.setCompressionType(CompressionType.SNAPPY_COMPRESSION).setCreateIfMissing(true);
+var db = RocksDB.open(options, "testdbpath");
+```
+
+Is the compression type silently ignored ? 
+

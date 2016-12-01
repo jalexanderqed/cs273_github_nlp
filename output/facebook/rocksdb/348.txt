@@ -1,0 +1,44 @@
+Hi,
+
+I'm running 8 different processes on one box, sharing the same SSD. Every process has one rocksdb instance.
+I found out many slow put operations in these rocksdb instances, almost happened at the same time.
+
+```
+process timestamp proc_time(us)
+5575 16:00:38.823 169878
+5579 16:00:38.823 168830
+5573 16:00:38.823 157049
+5578 16:00:38.823 166701
+5574 16:00:38.823 168724
+5580 16:00:38.823 169366
+5577 16:00:38.823 170997
+5576 16:00:38.824 171616
+5564 16:00:40.994 166867
+5561 16:00:40.994 140321
+5559 16:00:40.994 163448
+5560 16:00:40.994 167488
+```
+
+Then I went deeper into perf_context and rocksdb codes.
+
+```
+2014/10/13-17:49:57.461943 7faa1cbfd700 PosixWritableFile::Flush write slow. cost: 148485 us
+2014-10-13 17:49:57.462022 7faa1cbfd700 slow perf. write, cost 148534 us, user_key_comparison_count = 16, block_cache_hit_count = 0, block_read_count = 0, block_read_byte = 0, block_read_time = 0, block_checksum_time = 0, block_decompress_time = 0, internal_key_skipped_count = 0, internal_delete_skipped_count = 0, write_wal_time = 148506786, get_snapshot_time = 0, get_from_memtable_time = 0, get_from_memtable_count = 0, get_post_process_time = 0, get_from_output_files_time = 0, seek_child_seek_time = 0, seek_child_seek_count = 0, seek_min_heap_time = 0, seek_internal_seek_time = 0, find_next_user_entry_time = 0, write_pre_and_post_process_time = 7787, write_memtable_time = 17639,
+
+2014/10/13-17:51:11.473171 7faa1cbfd700 PosixWritableFile::Append PrepareWrite slow. cost: 563977 us
+2014/10/13-17:51:11.473185 7faa1cbfd700 PosixWritableFile::Append slow. cost: 563991 us
+2014-10-13 17:51:11.473279 7faa1cbfd700 slow perf. write, cost 564045 us, user_key_comparison_count = 25, block_cache_hit_count = 0, block_read_count = 0, block_read_byte = 0, block_read_time = 0, block_checksum_time = 0, block_decompress_time = 0, internal_key_skipped_count = 0, internal_delete_skipped_count = 0, write_wal_time = 564013846, get_snapshot_time = 0, get_from_memtable_time = 0, get_from_memtable_count = 0, get_post_process_time = 0, get_from_output_files_time = 0, seek_child_seek_time = 0, seek_child_seek_count = 0, seek_min_heap_time = 0, seek_internal_seek_time = 0, find_next_user_entry_time = 0, write_pre_and_post_process_time = 4745, write_memtable_time = 24159,
+```
+
+According to the perf log, write_wal_time was significant large. It was affected by PrepareWrite() in PosixWritableFile::Append() or write() in PosixWritableFile::Flush(). Meanwhile, io util of the SSD was a little bit high for some while, because of background flush or compaction.
+
+Because different processes slowed at the exact same time, the disk I/O should be the issue.
+
+I guess, 
+1) write may be stalled if dirty page size is too large. But actually, dirty page size was under a low level. Is there any other reason may stall write operation? i.e. fdatasync?
+2) Does fallocate slow under heavy workload?
+
+Any suggestions to tuning this?
+
+Thanks in advance.
+

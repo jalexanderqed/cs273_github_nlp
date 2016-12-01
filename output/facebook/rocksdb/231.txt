@@ -1,0 +1,78 @@
+I have implemented the Java API for Comparator and Slice.
+(I have also signed the Facebook Contributors Agreement)
+
+I offer two implementations which are selectable by a developer through implementing either of the abstract classes `org.rocksdb.Comparator` or `org.rocksdb.DirectComparator` for Comparators and likewise `org.rocksdb.Slice` or `org.rocksdb.DirectSlice` for Slices.
+
+The classes named Direct, use a DirectByteBuffer to transfer data between C++ and Java, and may be faster when large keys or values are used. The non-Direct classes simply use java byte arrays, and appear to be faster for small keys and values due to the lower object-creation overhead.
+
+Note: Using a `DirectComparator`, will result in receiving `DirectSlices`s in it's `compare` method callback.
+
+Non-Direct Example:
+
+``` java
+
+final Comparator myComparator = new TestComparator();
+...
+options.setComparator(myComparator);
+...
+
+public class TestComparator extends Comparator {
+    @Override
+    public String name() {
+      return "Test-Comparator";
+    }
+
+    @Override
+    public int compare(final Slice a, final Slice b) {
+      final byte[] keyA = getKey(a);
+      final byte[] keyB = getKey(b);
+      return new BigInteger(keyA).compareTo(new BigInteger(keyB));
+    }
+
+    private byte[] getKey(final Slice s) {
+      return s.data();
+    }
+  }
+
+...
+
+myComparator.dispose();
+```
+
+Direct Example:
+
+``` java
+
+final DirectComparator myComparator = new TestDirectComparator();
+...
+options.setComparator(myComparator);
+...
+
+public class TestDirectComparator extends DirectComparator {
+    @Override
+    public String name() {
+      return "Test-Direct-Comparator";
+    }
+
+    @Override
+    public int compare(final DirectSlice a, final DirectSlice b) {
+      final byte[] keyA = getKey(a);
+      final byte[] keyB = getKey(b);
+
+      return new BigInteger(keyA).compareTo(new BigInteger(keyB));
+    }
+
+    private byte[] getKey(final DirectSlice s) {
+      final byte[] key = new byte[KEY_LENGTH];
+      s.data().get(key);
+      return key;
+    }
+  }
+
+...
+
+myComparator.dispose();
+```
+
+I have not written any serious C++ for many years, so this was a bit of a challenge! I hope the code, is acceptable, let me know of any revisions you require. The only thing I know I am unsure of currently is line 139 of java/rocksjni/slice.cc.
+

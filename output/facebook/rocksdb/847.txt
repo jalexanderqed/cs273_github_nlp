@@ -1,0 +1,37 @@
+in my case，if turn options_.rate_limiter on, when close rocksdb by kill -9，rocksdb can not start again，it is hanged~~~
+gdb attach the process, find the stack like that:
+#0  0x00007f9b785d1a0e in pthread_cond_timedwait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+#1  0x0000000000586412 in rocksdb::port::CondVar::TimedWait (this=Unhandled dwarf expression opcode 0xf3
+
+) at port/port_posix.cc:100
+#2  0x0000000000501dc3 in rocksdb::GenericRateLimiter::Request (this=0x18fff70, bytes=Unhandled dwarf expression opcode 0xf3
+
+) at util/rate_limiter.cc:107
+#3  0x00000000004e7953 in rocksdb::WritableFileWriter::RequestToken (this=0x190d7d0, bytes=16343) at util/file_reader_writer.cc:223
+#4  0x00000000004e7a47 in rocksdb::WritableFileWriter::Flush (this=0x190d7d0) at util/file_reader_writer.cc:120
+#5  0x0000000000588849 in rocksdb::BlockBasedTableBuilder::Flush (this=Unhandled dwarf expression opcode 0xf3
+
+) at table/block_based_table_builder.cc:594
+#6  0x0000000000588a00 in rocksdb::BlockBasedTableBuilder::Add (this=0x190d9f0, key=..., value=...) at table/block_based_table_builder.cc:556
+#7  0x000000000059810f in rocksdb::BuildTable (dbname=Unhandled dwarf expression opcode 0xf3
+
+) at db/builder.cc:100
+#8  0x0000000000531515 in rocksdb::DBImpl::WriteLevel0TableForRecovery (this=0x1903230, job_id=1, cfd=0x1909030, mem=Unhandled dwarf expression opcode 0xf3
+
+) at db/db_impl.cc:1305
+#9  0x0000000000532dc0 in rocksdb::DBImpl::RecoverLogFiles (this=Unhandled dwarf expression opcode 0xf3
+
+) at db/db_impl.cc:1179
+#10 0x00000000005339e6 in rocksdb::DBImpl::Recover (this=0x1903230, column_families=Unhandled dwarf expression opcode 0xf3
+
+) at db/db_impl.cc:993
+#11 0x0000000000534a2e in rocksdb::DB::Open (db_options=..., dbname="/home/wangfaqiang/testdb",
+
+```
+column_families=std::vector of length 1, capacity 1 = {...}, handles=0x7ffcd956b110, dbptr=0x7ffcd956afd8) at db/db_impl.cc:4402
+```
+#12 0x00000000004eb5d5 in rocksdb::DBWithTTL::Open (db_options=..., dbname="/home/wangfaqiang/testdb", column_families=Unhandled dwarf expression opcode 0xf3
+
+i have to clear all files which in db dir to start rocksdb~~~
+is there anyway i can solve this problem?
+

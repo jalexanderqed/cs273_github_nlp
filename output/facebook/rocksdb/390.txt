@@ -1,0 +1,6 @@
+This pull request depends on: https://github.com/facebook/rocksdb/pull/375
+
+This pull request contains two cleanup commits:
+- Removed code which produced warnings with Java7. Used Java7 diamond operator syntax consequently.
+- JavaDoc adjustments based on Warnings produced by Java8. 
+

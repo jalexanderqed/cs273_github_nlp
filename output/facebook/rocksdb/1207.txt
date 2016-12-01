@@ -1,0 +1,9 @@
+getline on std::cin can be very inefficient when ldb is loading large values, with high CPU usage in libc _IO_(un)getc, this is because of the performance penalty that comes from synchronizing stdio and iostream buffers.
+See the reproducers and tests in #1133 .
+If an ifstream on /dev/stdin is used (when available) then using ldb to load large values can be much more efficient.
+I thought for ldb load, that this approach is preferable to using <cstdio> or std::ios_base::sync_with_stdio(false).
+I couldn't think of a use case where ldb load would need to support reading unbuffered input, an alternative approach would be to add support for passing --input_file=/dev/stdin.
+I have a CLA in place, thanks.
+
+The CI tests were failing at the time of https://github.com/facebook/rocksdb/pull/1156, so this change and PR will supersede it.
+

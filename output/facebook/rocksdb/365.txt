@@ -1,0 +1,27 @@
+This is not easy to reproduce, it happened after hours of stress
+
+bt
+#0 0x0000000000425bdb in raise (sig=6) at ../nptl/sysdeps/unix/sysv/linux/pt-raise.c:37
+#1 0x0000000000599768 in abort ()
+#2 0x0000000000593eb4 in __assert_fail_base ()
+#3 0x0000000000593f0e in __assert_fail ()
+#4 0x000000000048a71d in rocksdb::InternalKey::Encode (this=<optimized out>) at ./db/dbformat.h:146
+#5 0x000000000049b6ed in Encode (this=<optimized out>) at db/version_set.cc:80
+#6 Compare (b=..., a=..., this=<optimized out>) at ./db/dbformat.h:164
+#7 BySmallestKey (cmp=<optimized out>, b=<optimized out>, a=<optimized out>) at db/version_set.cc:85
+#8 operator() (this=<optimized out>, this=<optimized out>, f2=<optimized out>, f1=<optimized out>) at db/version_set.cc:1382
+#9 _M_get_insert_unique_pos (__k=@0x7fab99d6c6f0: 0x7faa0bb0a1b0, this=0x7faab4c8d2f0) at /usr/include/c++/4.9/bits/stl_tree.h:1445
+#10 std::_Rb_tree<rocksdb::FileMetaData*, rocksdb::FileMetaData*, std::_Identity<rocksdb::FileMetaData*>, rocksdb::VersionSet::Builder::FileComparator, std::allocatorrocksdb::FileMetaData* >::_M_insert_unique<rocksdb::FileMetaData* const&> (this=0x7faab4c8d2f0, __v=@0x7fab99d6c6f0: 0x7faa0bb0a1b0) at /usr/include/c++/4.9/bits/stl_tree.h:1498
+#11 0x000000000049b995 in insert (__x=@0x7fab99d6c6f0: 0x7faa0bb0a1b0, this=<optimized out>) at /usr/include/c++/4.9/bits/stl_set.h:502
+#12 rocksdb::VersionSet::Builder::Apply (this=this@entry=0x7faa0bb0af90, edit=0x7faab4527100) at db/version_set.cc:1538
+#13 0x0000000000490167 in rocksdb::VersionSet::LogAndApplyHelper (this=this@entry=0xeeff80, cfd=cfd@entry=0xefa8a0, builder=builder@entry=0x7faa0bb0af90, v=v@entry=0x7faa0bb0a410, edit=<optimized out>, mu=mu@entry=0xeedd50) at db/version_set.cc:1948
+#14 0x00000000004936d3 in rocksdb::VersionSet::LogAndApply (this=0xeeff80, column_family_data=0xefa8a0, mutable_cf_options=..., edit=0x7faab4527100, mu=mu@entry=0xeedd50, db_directory=0xefa760, new_descriptor_log=false, new_cf_options=0x0) at db/version_set.cc:1716
+#15 0x000000000044a544 in rocksdb::DBImpl::InstallCompactionResults (this=this@entry=0xeedc20, compact=compact@entry=0x7faab4c8cdf0, mutable_cf_options=..., log_buffer=log_buffer@entry=0x7fab99d6e330) at db/db_impl.cc:2633
+#16 0x000000000045292a in rocksdb::DBImpl::DoCompactionWork (this=this@entry=0xeedc20, compact=compact@entry=0x7faab4c8cdf0, mutable_cf_options=..., deletion_state=..., log_buffer=log_buffer@entry=0x7fab99d6e330) at db/db_impl.cc:3386
+#17 0x0000000000454bca in rocksdb::DBImpl::BackgroundCompaction (this=this@entry=0xeedc20, madeProgress=madeProgress@entry=0x7fab99d6e1af, deletion_state=..., log_buffer=log_buffer@entry=0x7fab99d6e330) at db/db_impl.cc:2391
+#18 0x000000000045fbe7 in rocksdb::DBImpl::BackgroundCallCompaction (this=0xeedc20) at db/db_impl.cc:2168
+#19 0x00000000004bcb68 in BGThread (thread_id=11, this=0xee9940) at util/env_posix.cc:1616
+#20 rocksdb::(anonymous namespace)::PosixEnv::ThreadPool::BGThreadWrapper (arg=<optimized out>) at util/env_posix.cc:1633
+#21 0x000000000041e4a5 in start_thread (arg=0x7fab99d6f700) at pthread_create.c:309
+#22 0x00000000005f52b9 in clone ()
+

@@ -1,0 +1,3 @@
+This is an Env implementation that mirrors all file-related activity on two different
+backend Env's.  It's been very helpful while debugging a custom Env implementation.
+

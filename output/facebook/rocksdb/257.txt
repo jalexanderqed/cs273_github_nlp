@@ -1,0 +1,10 @@
+g++ -g -Wall -Werror -Wsign-compare -I. -I./include -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_ATOMIC_PRESENT -DROCKSDB_FALLOCATE_PRESENT   -DHAVE_JEMALLOC -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c db/version_edit.cc -o db/version_edit.o 
+g++ -g -Wall -Werror -Wsign-compare -I. -I./include -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_ATOMIC_PRESENT -DROCKSDB_FALLOCATE_PRESENT   -DHAVE_JEMALLOC -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c db/version_set.cc -o db/version_set.o 
+In file included from ./table/meta_blocks.h:17:0,
+                 from db/version_set.cc:36:
+./table/block_builder.h:53:55: error: ‘unused’ attribute ignored [-Werror=attributes]
+   const Comparator\* comparator_ **attribute**((unused));  // only used in assert
+                                                       ^
+cc1plus: all warnings being treated as errors
+make: **\* [db/version_set.o] Error 1
+

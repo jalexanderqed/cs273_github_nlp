@@ -1,0 +1,2 @@
+Exposed IncreaseParallelism option to Java API as setIncreaseParallelism
+

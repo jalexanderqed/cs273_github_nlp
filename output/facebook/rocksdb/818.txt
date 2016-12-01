@@ -1,0 +1,16 @@
+  PowerShell seems to have a hard time when a flood of async tasks is
+  scheduled at the same time.
+  WaitForMultipleObjects() in Windows can only take up
+  to 64 process handles and if you want to handle more than you should write
+  some additional code which can be sub-optimal. I.e to implement Wait-Job -Any.
+  Introduced a $Concurrency parameter with a default value of 62.
+  So in the new version the script fires up up to $Concurrency value
+  and wait for anything to complete before starting any more processes.
+  This improved matters greatly. Individual tests against ramdrive now
+  run in 8 minutes and all of the 200+ db_tests run in 9 minutes with concurrency
+  values of 8-16. About 48 is required to load a CPU on my box running against HD
+  but that does not improve running times much.
+
+  Other changes include respect -EnableJE for the individual test exes.
+  Enforce exclusions for the individual tests.
+

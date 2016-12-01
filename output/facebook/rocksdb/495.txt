@@ -1,0 +1,8 @@
+Bytes are currently misinterpreted by RocksJava if the byte array contains zero bytes within its content. For Strings it is usually not useful that zero bytes are present but every kind of byte array values are allowed. It might be the case that zero padding or other kinds of byte values are applied.
+- Removed additional string copy
+- Added 3 new tests
+
+@xpromache there you are.
+
+Differential: https://reviews.facebook.net/D33165
+

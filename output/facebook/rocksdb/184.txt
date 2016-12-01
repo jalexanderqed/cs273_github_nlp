@@ -1,0 +1,5 @@
+that's the formula i used ,but it seems do not work well. sometimes,the real value may be higher then the estimated one.
+ `block_cache + write_buffer_size*max_write_buffer_number`
+
+thanks.
+

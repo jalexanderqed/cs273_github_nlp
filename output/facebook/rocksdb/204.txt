@@ -1,0 +1,2 @@
+rocksdb supports prefix_extractor, namely supports range queries, but there is no get_range() like interface for us to call? so, how do I perform range scan? using Get()?
+

@@ -1,0 +1,16 @@
+I test this example locally and it run failed.  After remove the assert in code,  the output is below:
+
+chenhengdeMacBook-Pro:examples chenheng$ ./compaction_filter_example
+FilterMerge(0)
+FilterMerge(1)
+FilterMerge(1)
+FilterMerge(1)
+FilterMerge(1)
+Merge(data1)
+Merge(data2)
+FilterMerge(3)
+filter.count_ = 0
+filter.merge_count_ = 6
+
+
+I am a newbie for rocksdb,  is there anything wrong i make?

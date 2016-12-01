@@ -1,0 +1,20 @@
+This is the initial commit with the templates necessary to have our RocksDB user documentation hosted on GitHub pages.
+
+Ensure you meet requirements here: https://help.github.com/articles/setting-up-your-github-pages-site-locally-with-jekyll/#requirements
+
+Then you can run this right now by doing the following:
+
+```
+% bundle install
+% bundle exec jekyll serve --config=_config.yml,_config_local_dev.yml
+```
+
+Then go to: http://127.0.0.1:4000/
+
+Obviously, this is just the skeleton. Moving forward we will do these things in separate pull requests:
+- Replace logos with RocksDB logos
+- Update the color schemes
+- Add current information on rocksdb.org to markdown in this infra
+- Migrate current Wordpress blog to Jekyll and Disqus comments
+- Etc.
+

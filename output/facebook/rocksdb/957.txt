@@ -1,0 +1,7 @@
+Hi,
+
+I'm interested in storing a map of string to set. What is the recommended way of doing this?
+
+Thanks,
+Gideon.
+

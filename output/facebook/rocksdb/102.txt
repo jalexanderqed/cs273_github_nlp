@@ -1,0 +1,21 @@
+```
+    from db/db_bench.cc:16:
+```
+
+/usr/include/gflags/gflags_declare.h:45:8: error: operator '&&' has no left operand
+db/db_bench.cc:372:5: error: ‘google’ has not been declared
+db/db_bench.cc:525:3: error: ‘google’ has not been declared
+db/db_bench.cc:529:3: error: ‘google’ has not been declared
+db/db_bench.cc:532:3: error: ‘google’ has not been declared
+db/db_bench.cc:535:3: error: ‘google’ has not been declared
+db/db_bench.cc:538:3: error: ‘google’ has not been declared
+db/db_bench.cc:542:3: error: ‘google’ has not been declared
+db/db_bench.cc:546:3: error: ‘google’ has not been declared
+db/db_bench.cc:550:3: error: ‘google’ has not been declared
+db/db_bench.cc: In function ‘int main(int, char*_)’:
+db/db_bench.cc:2742:3: error: ‘google’ has not been declared
+db/db_bench.cc:2744:3: error: ‘google’ has not been declared
+make: *_\* [db/db_bench.o] Error 1
+
+Any idea what this is? librocksdb.a builds fine
+

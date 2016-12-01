@@ -1,0 +1,2 @@
+Cuckoo table options are missing in the C interface. I started making changes to add them, but I realized there are currently two ways how this is handled. For block-based table you have a separate options type with functions to be called on it, for plain table you have just a single function call to set the factory with options as multiple parameters. Which way is preferred for new code?
+

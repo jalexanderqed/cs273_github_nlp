@@ -1,0 +1,2 @@
+VWO, the flagship product of Wingify, uses RocksDB to populate the list of URLs where clients can run A/B test campaigns. It is also used to provide a way for the clients to see if VWO's Smart Code is installed on a specific URL of their account.
+

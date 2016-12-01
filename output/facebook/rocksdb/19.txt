@@ -1,0 +1,8 @@
+From the bentch marks, we can see the bottleneck of rocksdb is also the write amplification. Write throughput is one tenth of the read throughput.
+The amplification can be calculated as 2_(N+1)_(L-1). N is Dn / Dn-1, Dn is the total data size of level n, which is 10 in leveldb. L is total level, which is lg (Total Data Size), may be 6 or 7.
+Because each key-value migrate to the highest level, it need to migrate L-1 times from Ln-1 to Ln. each migrate it need to read 1file in current level plus N files in higher level and write N+1 files in higher level.
+In the bentch mark test, write amplification may be just about 2_(10+1)_(6-1) = 110
+given the read throughput is much larger than write. There may be 2 strategies to reduce the amplification.
+1. Store more data in memory. if you store 80G data in memory and given N=10, then you need only one more level in disk. So the write amplification can be dramatically reduced. The shortcoming is that recovering the data in memory takes more time, may be about a minute. You can optimize the recover further.
+2. Change N, if you change N to 5, then L will be about 8, the amplification is 2_(5+1)_(8-1)=84. The short coming is that read speed will go down, may be only 3/4 of the origin.
+

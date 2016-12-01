@@ -1,0 +1,17 @@
+When running rocksdbjni 3.10.0 in Mac, have the following error:
+
+```
+dyld: lazy symbol binding failed: Symbol not found: __ZNKSt8__detail20_Prime_rehash_policy11_M_next_bktEm
+  Referenced from: /private/var/folders/n9/39w5lyps5_gf6t7n5hvcm5x80000gn/T/librocksdbjni1705547947610216590..jnilib
+  Expected in: /usr/lib/libstdc++.6.dylib
+
+dyld: Symbol not found: __ZNKSt8__detail20_Prime_rehash_policy11_M_next_bktEm
+  Referenced from: /private/var/folders/n9/39w5lyps5_gf6t7n5hvcm5x80000gn/T/librocksdbjni1705547947610216590..jnilib
+  Expected in: /usr/lib/libstdc++.6.dylib
+```
+
+Mac version: 10.9.5
+Java version: 1.7.0_65
+
+Thank you.
+

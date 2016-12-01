@@ -1,0 +1,5 @@
+- Assertion if Buffer was initialized with Non-Direct memory
+- Tests + coverage for DirectSlice
+- Slice SigSegv fixes when initializing from String and Byte-Arrays
+- Slice Tests
+

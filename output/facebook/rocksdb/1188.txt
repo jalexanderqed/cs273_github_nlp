@@ -1,0 +1,17 @@
+Hi,
+
+I see that when it comes to logging features, the C-API provides these two functions,
+
+`
+extern ROCKSDB_LIBRARY_API void rocksdb_options_set_env(rocksdb_options_t*,
+                                                        rocksdb_env_t*);
+extern ROCKSDB_LIBRARY_API void rocksdb_options_set_info_log(rocksdb_options_t*,
+rocksdb_logger_t*);
+`
+
+However, I don't see that it provides for the creation of objects of type rocksdb_logger_t. 
+
+Thank you in advance,
+
+Ethan.
+

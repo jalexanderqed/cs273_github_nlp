@@ -1,0 +1,48 @@
+Hi,
+
+I was doing a long running YCSB test, of which I cannot give a lot of details other than I had two processes: client and server -both java-, with the server running rocksDB.
+
+ I got a crash with the following stack trace on the server,
+
+(gdb) bt
+#0  0x00000034bf8328a5 in raise () from /lib64/libc.so.6
+#1  0x00000034bf834085 in abort () from /lib64/libc.so.6
+#2  0x00000034bf82ba1e in __assert_fail_base () from /lib64/libc.so.6
+#3  0x00000034bf82bae0 in __assert_fail () from /lib64/libc.so.6
+#4  0x00007ff846a838b1 in rocksdb::DBImpl::MarkLogsSynced (this=0x7ff8582692e0, up_to=377959, synced_dir=Unhandled dwarf expression opcode 0xf3
+
+) at db/db_impl.cc:2209
+#5  0x00007ff846a9d09c in rocksdb::DBImpl::WriteImpl (this=0x7ff8582692e0, write_options=Unhandled dwarf expression opcode 0xf3
+
+) at db/db_impl.cc:4494
+#6  0x00007ff846a9dc64 in rocksdb::DBImpl::Write (this=Unhandled dwarf expression opcode 0xf3
+
+) at db/db_impl.cc:4077
+#7  0x00007ff846a9dcfa in rocksdb::DB::Put (this=0x7ff8582692e0, opt=..., column_family=0x7ff8584d7440, key=..., value=...) at db/db_impl.cc:5225
+#8  0x00007ff846a9dd41 in rocksdb::DBImpl::Put (this=Unhandled dwarf expression opcode 0xf3
+
+) at db/db_impl.cc:4052
+#9  0x00007ff846a59e1a in rocksdb::DB::Put (this=0x7ff8582692e0, options=..., key=..., value=...) at ./include/rocksdb/db.h:185
+#10 0x00007ff846a27ffa in rocksdb_put_helper (env=0x7ff8582729d0, db=0x7ff8582692e0, write_options=..., cf_handle=0x0, jkey=0x7ff83eed6638, jkey_len=23, jentry_value=0x7ff83eed6648, jentry_value_len=1081)
+
+```
+at java/rocksjni/rocksjni.cc:300
+```
+
+The workload was,
+
+fieldcount=10
+recordcount=50000000
+operationcount=10000000
+workload=com.yahoo.ycsb.workloads.CoreWorkload
+readallfields=true
+readproportion=0.5
+updateproportion=0.5
+scanproportion=0
+insertproportion=0
+requestdistribution=zipfian
+
+Shortly before crashing, the server process logged the following in the standard error,
+
+java: db/db_impl.cc:2209: void rocksdb::DBImpl::MarkLogsSynced(uint64_t, bool, const rocksdb::Status&): Assertion `log.getting_synced' failed.
+

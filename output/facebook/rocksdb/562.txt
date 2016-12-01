@@ -1,0 +1,4 @@
+I have a custom merge operator, which I use to delete specific things from the value. If the part of the value I intend to delete, is the only thing in the value, I will end up with an empty value after applying my merge operator.
+
+These empty values are a pain as subsequent bloom filter (KeyMayExist) queries will succeed for the key, even though the value is empty. I am interested in deleting any keys that end up with an empty value when apply my RMW merge operator. Any ideas on how I could do this from within my merge operator implementation such that overall the operation remains atomic? (I could do a subsequent Get() after Merge() and then issue a subsequent Delete() if the value was found to be empty, but this would not be failure atomic).
+

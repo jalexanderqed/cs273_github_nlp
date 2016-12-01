@@ -1,0 +1,6 @@
+Hi,
+
+Working on the erlang binding of rocksdb I tried to compile it on SmartOS but got the error reported here in leo-project/erocksdb#12 . Is there a recommended version of gcc/clang to build rocksdb?
+
+ Any idea on how to compile rocksdb on old versions?
+

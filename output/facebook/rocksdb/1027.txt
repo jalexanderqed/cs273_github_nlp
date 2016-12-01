@@ -1,0 +1,10 @@
+hi, guys
+
+I have a problem that may need your help .
+
+I have 1 billion tags can be seen as read-only after initial bulk-load, so I want to know if there are any useful tricks to optimize the *_random read speed *_ in this particular case ?
+
+do you have any good ideas?
+
+Thanks ~
+

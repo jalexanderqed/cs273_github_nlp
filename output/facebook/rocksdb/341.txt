@@ -1,0 +1,4 @@
+Changed code is not anymore in the API. Methods to access those settings are also marked as deprecated. 
+
+Without setting those configuration attributes `arc lint` works as expected given both repositorys are updated to head and `pep8` is installed.
+

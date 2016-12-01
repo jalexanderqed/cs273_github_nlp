@@ -1,0 +1,2 @@
+the whole sst file must be loaded when doing sst merge, some useless value will be read into memory repeatedly, a lot of useless values can cost much memory,is it right?
+

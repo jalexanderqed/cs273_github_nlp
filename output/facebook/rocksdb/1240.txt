@@ -1,0 +1,2 @@
+Can i according the prefixKey to find out all the total key number immediately?
+

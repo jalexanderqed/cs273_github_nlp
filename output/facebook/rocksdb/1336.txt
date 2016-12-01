@@ -1,0 +1,2 @@
+Fix bug in UnSchedule() function requested a return-value and add function to set and get the delay_write_rate option
+

@@ -1,0 +1,19 @@
+Hi,
+
+I have a quick question. We are thinking about doing some encoding for keys in a way that results in something like,
+
+key = value1|value2
+
+The idea would be then to iterate over value1 as some sort of prefix (it is not exactly this, but it is a good first order approximation). 
+
+We were not thinking about inserting a value associated to each key originally, just call rocksdb_iter_key and then decode the key. It could simplify our design if we did something like,
+
+key = value1
+value = value2
+
+so that we would call both rocksdb_iter_key and rocksdb_iter_value and not do the decoding of the key. The question is, is there any advantage, performance wise, of doing one thing (calling only rocksdb_iter_key and then decoding the key) vs the other (calling rocksdb_iter_key and rocksdb_iter_value). The decoding of the key is essentially free compared with the cost of I/O so we are not trying to save there, only simplifying the design. In other words, I am interested in gauging the cost of these calls from RocksDB point of view. Is rocksdb_iter_seek/next where most of the I/O cost is, or is the I/O cost distributed among rocksdb_iter_seek/next, rocksdb_iter_key and rocksdb_iter_value?
+
+Thanks,
+
+Ethan.
+

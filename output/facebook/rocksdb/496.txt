@@ -1,0 +1,15 @@
+My compilation of rocksdb is failing with following errrors:
+
+/home/storagevisor/rocksdb/librocksdb.a(format.o): In function `BZip2_Uncompress':
+/home/storagevisor/rocksdb/./port/port_posix.h:374: undefined reference to`BZ2_bzDecompressInit'
+/home/storagevisor/rocksdb/./port/port_posix.h:393: undefined reference to `BZ2_bzDecompress'
+/home/storagevisor/rocksdb/./port/port_posix.h:412: undefined reference to`BZ2_bzDecompressEnd'
+/home/storagevisor/rocksdb/./port/port_posix.h:418: undefined reference to `BZ2_bzDecompressEnd'
+/home/storagevisor/rocksdb/librocksdb.a(block_based_table_builder.o): In function`BZip2_Compress':
+/home/storagevisor/rocksdb/./port/port_posix.h:321: undefined reference to `BZ2_bzCompressInit'
+/home/storagevisor/rocksdb/./port/port_posix.h:340: undefined reference to`BZ2_bzCompress'
+/home/storagevisor/rocksdb/./port/port_posix.h:356: undefined reference to `BZ2_bzCompressEnd'
+/home/storagevisor/rocksdb/./port/port_posix.h:362: undefined reference to`BZ2_bzCompressEnd'
+
+I tried adding -lrt -lz in my LIBS. It used to work but started failing again. I believe I had just recompiled the static rocksdb library when I started seeing these failures again.
+

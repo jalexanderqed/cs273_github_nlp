@@ -1,0 +1,3 @@
+- Modified the code to make it work on Visual Studio too
+- Now using fast crc for the first and the last bytes of the data (STEP1)
+

@@ -1,0 +1,20 @@
+I have met difficulties for using the rocksdb. And when I tried to use a Hashskiplistrep, I can not open the db. And the docs is found helpless.
+I set the options as:
+
+rocksdb::Options opt = rocksdb::Options();
+opt.IncreaseParallelism(2);
+opt.create_if_missing = true;
+opt.max_open_files = 300000;
+auto prefix_extractor = NewFixedPrefixTransform(8);
+opt.prefix_extractor.reset(prefix_extractor);
+opt.memtable_factory.reset(NewHashSkipListRepFactory(bucket_count, skiplist_height, skiplist_branching_factor));
+opt.table_factory.reset(NewPlainTableFactory());
+rocksdb::Status s = rocksdb::DB::Open(opt, DBPath, &db);
+
+when run with this , the error come as:
+
+ db/memtable.cc:55: rocksdb::MemTable::MemTable(const rocksdb::InternalKeyComparator&, const rocksdb::Options&): Assertion `!should_flush_' failed.
+
+I am using the latest version of the RocksDB on ubuntu 14.04.
+Could any one help me? Thanks a lot!
+

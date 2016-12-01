@@ -1,0 +1,10 @@
+If you want to easily build Jemalloc for RocksDB purposes I have created a PR for a CMake build.
+
+https://github.com/jemalloc/jemalloc/pull/328
+
+Any comments are welcome.
+
+Be aware that there are Windows specific bugs in the latest source which will hopefully get fixed soon.
+
+Also, the current RocksDB source performs early je_init() call under the covers but the latest Jemalloc does not seem to require it.
+

@@ -1,0 +1,2 @@
+I the first to use git clone out on the clone source code, and then carried out the make static_lib command to compile the rocksdb, and execute successfully created librocksdb. A file, but I can't find where to start rocksdb. I'm very sorry, I had almost no contact with centos. And on Google can't find the corresponding answers, can you tell me how to start the compiled? thank you very much
+

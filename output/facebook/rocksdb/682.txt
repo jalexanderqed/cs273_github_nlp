@@ -1,0 +1,33 @@
+Bug: `RocksIterator.prev()` sometimes results in a key which is _larger_ than the previous key.
+
+To run this test:
+
+```
+$ git clone git@gist.github.com:c34e092a88d58d3c7a67.git bug
+$ cd bug
+$ ./run.sh 
+```
+
+Here's an example output:
+
+```
+...
+created KVIterator[minKey=null,maxKey=95,reverse]
+seek to 95
+valid, seek to previous before 95
+resulting starting position is {9f,712a3083afda9c5c}
+Runner[0]: got exception
+java.lang.AssertionError: first key 9f >= 95 max key
+    at KVIterator.<init>(KVIterator.java:98)
+    at Runner$1.<init>(Test.java:207)
+    at Runner.iterator(Test.java:207)
+```
+
+Explanation of the above output:
+- Initially an iterator is created and `seek()` is invoked with target `95`
+- Result is valid, meaning a key >= `95` exists
+- `prev()` is invoked
+- result is `9f`, which is not smaller than `95`
+
+The test is randomized so you will get different values each time.
+

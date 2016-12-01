@@ -1,0 +1,6 @@
+With this pull request a iterator can be retrieved using a Snapshot.
+
+This pull request depends on: https://github.com/facebook/rocksdb/pull/462
+
+Differential: https://reviews.facebook.net/D31857
+

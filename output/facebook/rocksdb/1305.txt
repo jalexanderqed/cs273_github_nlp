@@ -1,0 +1,37 @@
+At the moment the RocksJava releases for Linux are built on CentOS 5.6 which provides `glibc 2.5` and `libstdc++ 4.1`.
+
+Obviously that version of glibc and libstdc++ is quite outdated now; However I am trying to understand forwards and backwards compatibility between glibc versions.
+
+Using a `librocksdbjni-linux64.so` file built on CentOS 5.6 (`glibc 2.5`) on CentOS 7.2 (`glibc 2.17`) seems to work fine.
+
+However a version of `librocksdbjni-linux64.so` built on TinyCore Linux 7.2 (`glibc 2.22`) will not work on CentOS 7.2 and instead results in the error:
+
+```
+Exception in thread "main" java.lang.UnsatisfiedLinkError: /tmp/librocksdbjni8724249777028282150.so: /lib64/libstdc++.so.6: version `GLIBCXX_3.4.20' not found (required by /tmp/librocksdbjni8724249777028282150.so)
+    at java.lang.ClassLoader$NativeLibrary.load(Native Method)
+    at java.lang.ClassLoader.loadLibrary1(ClassLoader.java:1968)
+    at java.lang.ClassLoader.loadLibrary0(ClassLoader.java:1893)
+    at java.lang.ClassLoader.loadLibrary(ClassLoader.java:1854)
+    at java.lang.Runtime.load0(Runtime.java:795)
+    at java.lang.System.load(System.java:1062)
+    at org.rocksdb.NativeLibraryLoader.loadLibraryFromJar(NativeLibraryLoader.java:78)
+```
+
+Running `ldd /tmp/librocksdbjni8724249777028282150.so` shows:
+
+```
+./librocksdbjni-linux64.so: /lib64/libstdc++.so.6: version `GLIBCXX_3.4.20' not found (required by ./librocksdbjni-linux64.so)
+./librocksdbjni-linux64.so: /lib64/libstdc++.so.6: version `CXXABI_1.3.8' not found (required by ./librocksdbjni-linux64.so)
+./librocksdbjni-linux64.so: /lib64/libstdc++.so.6: version `GLIBCXX_3.4.21' not found (required by ./librocksdbjni-linux64.so)
+    linux-vdso.so.1 =>  (0x00007ffeb2cd0000)
+    libpthread.so.0 => /lib64/libpthread.so.0 (0x00007ff06229e000)
+    librt.so.1 => /lib64/librt.so.1 (0x00007ff062096000)
+    libstdc++.so.6 => /lib64/libstdc++.so.6 (0x00007ff061d8d000)
+    libm.so.6 => /lib64/libm.so.6 (0x00007ff061a8b000)
+    libgcc_s.so.1 => /lib64/libgcc_s.so.1 (0x00007ff061875000)
+    libc.so.6 => /lib64/libc.so.6 (0x00007ff0614b2000)
+    /lib64/ld-linux-x86-64.so.2 (0x00007ff062b90000)
+```
+
+Can someone with a better understanding of glibc linking issues shed some light on this? I am wondering ultimately if we need different builds for different Linux distributions depending on what glibc versions they provide? 
+

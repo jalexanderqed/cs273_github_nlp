@@ -1,0 +1,1 @@
+Fix division by zero in compaction_job.cc 

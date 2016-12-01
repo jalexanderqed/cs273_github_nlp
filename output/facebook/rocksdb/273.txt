@@ -1,0 +1,2 @@
+Code reviews and static analysis tools revealed a few issues with RocksDB. This pull squashes off-by-one errors, file handle/memory leaks, and a few other small things that were identified.
+

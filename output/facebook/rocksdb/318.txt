@@ -1,0 +1,27 @@
+Initial pass at a RocksDB JNI cross-platform fat jar.
+
+Building a cross-platform JAR requires:
+- [Vagrant](https://www.vagrantup.com/)
+- [Virtualbox](https://www.virtualbox.org/)
+- A Mac OSX machine that can compile RocksDB.
+
+Once you have these items, run this make command from RocksDB's root source directory:
+
+```
+make jclean clean rocksdbjavastaticrelease
+```
+
+This command will build RocksDB natively on OSX, and will then spin up two Vagrant Virtualbox Ubuntu images to build RocksDB for both 32-bit and 64-bit Linux.
+
+You can find all native binaries and JARs in the java directory upon completion:
+
+```
+librocksdbjni-linux32.so
+librocksdbjni-linux64.so
+librocksdbjni-osx.jnilib
+rocksdbjni-all.jar
+rocksdbjni-linux32.jar
+rocksdbjni-linux64.jar
+rocksdbjni-osx.jar
+```
+

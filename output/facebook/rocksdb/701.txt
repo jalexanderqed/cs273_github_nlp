@@ -1,0 +1,4 @@
+This change switches Windows port files from using C runtime for file I/O to Windows API. C runtime runs into file handle limitation which creates problems when a large number of files are opened.
+
+Changes are in Windows port files only.
+

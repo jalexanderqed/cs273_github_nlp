@@ -1,0 +1,11 @@
+Summary:
+Fix the following RocksDB Lite build failure in c_test.cc
+
+db/c_test.c:1051:3: error: implicit declaration of function 'fprintf' is invalid in C99 [-Werror,-Wimplicit-function-declaration]
+  fprintf(stderr, "SKIPPED\n");
+  ^
+db/c_test.c:1051:3: error: declaration of built-in function 'fprintf' requires inclusion of the header <stdio.h> [-Werror,-Wbuiltin-requires-header]
+db/c_test.c:1051:11: error: use of undeclared identifier 'stderr'
+  fprintf(stderr, "SKIPPED\n");
+          ^
+3 errors generated.

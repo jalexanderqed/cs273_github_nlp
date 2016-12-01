@@ -1,0 +1,15 @@
+copied from: https://github.com/mdlugajczyk/rocksdb/commit/5ebfd2623a01e69a4cbeae3ed2b788f2a84056ad
+
+Opening existing RocksDB attempts recovery from log files, which uses
+wrong sequence number to create the memtable. This is a regression
+introduced in change a400336.
+
+This change includes a test demonstrating the problem, without the fix
+the test fails with "Operation failed. Try again.: Transaction could not
+check for conflicts for operation at SequenceNumber 1 as the MemTable
+only contains changes newer than SequenceNumber 2.  Increasing the value
+of the max_write_buffer_number_to_maintain option could reduce the
+frequency of this error"
+
+This change is a joint effort by Peter 'Stig' Edwards @thatsafunnyname
+and me.

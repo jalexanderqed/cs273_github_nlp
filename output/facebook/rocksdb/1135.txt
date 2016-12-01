@@ -1,0 +1,19 @@
+Summary:
+cmake was previously supported only on windows.
+This diff makes it possible to use cmake on linux
+and adds support for building debs and rpms.
+
+Distributions may want to package the binaries
+differently to meet their standards
+
+Test Plan:
+mkdir build
+cd build; cmake ..
+make -j
+
+Reviewers: IslamAbdelRahman, sdong
+
+Subscribers: andrewkr, dhruba
+
+Differential Revision: https://reviews.facebook.net/D58713
+

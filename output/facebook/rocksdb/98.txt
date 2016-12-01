@@ -1,0 +1,31 @@
+➜  rocksdb git:(master) make
+.....
+g++ -g -Wall -Werror -I. -I./include -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_MACOSX -DROCKSDB_ATOMIC_PRESENT -DSNAPPY -DZLIB -DBZIP2   -DHAVE_JEMALLOC -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c db/memtable.cc -o db/memtable.o 
+db/memtable.cc:565:9: error: logical not is only applied to the left hand side
+      of this comparison [-Werror,-Wlogical-not-parentheses]
+    if (!comparator_.comparator.user_comparator()->Compare(
+        ^
+db/memtable.cc:565:9: note: add parentheses after the '!' to evaluate the
+      comparison first
+    if (!comparator_.comparator.user_comparator()->Compare(
+        ^
+db/memtable.cc:565:9: note: add parentheses around left hand side expression to
+      silence this warning
+    if (!comparator_.comparator.user_comparator()->Compare(
+        ^
+1 error generated.
+make: **\* [db/memtable.o] Error 1
+
+➜  rocksdb git:(master) gcc -v
+Using built-in specs.
+COLLECT_GCC=gcc
+COLLECT_LTO_WRAPPER=/usr/local/Cellar/gcc48/4.8.2/libexec/gcc/x86_64-apple-darwin13.1.0/4.8.2/lto-wrapper
+Target: x86_64-apple-darwin13.1.0
+Configured with: ../configure --build=x86_64-apple-darwin13.1.0 --prefix=/usr/local/Cellar/gcc48/4.8.2 --enable-languages=c,c++,objc,obj-c++ --program-suffix=-4.8 --with-gmp=/usr/local/opt/gmp4 --with-mpfr=/usr/local/opt/mpfr2 --with-mpc=/usr/local/opt/libmpc08 --with-cloog=/usr/local/opt/cloog018 --with-isl=/usr/local/opt/isl011 --with-system-zlib --enable-version-specific-runtime-libs --enable-libstdcxx-time=yes --enable-stage1-checking --enable-checking=release --enable-lto --disable-werror --enable-plugin --disable-nls --disable-multilib
+Thread model: posix
+gcc version 4.8.2 (GCC) 
+
+OS name: "mac os x", version: "10.9.2", arch: "x86_64", family: "mac"
+
+thanks for reply!
+

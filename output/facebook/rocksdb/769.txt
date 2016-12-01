@@ -1,0 +1,45 @@
+d:\new folder\rocksdb\db\db_test_util.cc(782): error C2039: 'TEST_CompactRange'
+ : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\build\rocksdblib
+.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+  :DBImpl'
+d:\new folder\rocksdb\db\db_test_util.cc(784): error C2039: 'TEST_CompactRange'
+ : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\build\rocksdblib
+.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+  :DBImpl'
+d:\new folder\rocksdb\db\db_test_util.cc(792): error C2039: 'TEST_MaxNextLevelO
+verlappingBytes' : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\
+build\rocksdblib.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+  :DBImpl'
+d:\new folder\rocksdb\db\db_test_util.cc(833): error C2039: 'TEST_WaitForFlushM
+emTable' : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\build\ro
+cksdblib.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+  :DBImpl'
+d:\new folder\rocksdb\db\db_test_util.cc(834): error C2039: 'TEST_WaitForCompac
+t' : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\build\rocksdbl
+ib.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+  :DBImpl'
+d:\new folder\rocksdb\db\db_test_util.cc(845): error C2039: 'TEST_WaitForFlushM
+emTable' : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\build\ro
+cksdblib.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+  :DBImpl'
+d:\new folder\rocksdb\db\db_test_util.cc(846): error C2039: 'TEST_WaitForCompac
+t' : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\build\rocksdbl
+ib.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+  :DBImpl'
+d:\new folder\rocksdb\db\db_test_util.cc(856): error C2039: 'TEST_WaitForFlushM
+emTable' : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\build\ro
+cksdblib.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+  :DBImpl'
+d:\new folder\rocksdb\db\db_test_util.cc(857): error C2039: 'TEST_WaitForCompac
+t' : is not a member of 'rocksdb::DBImpl' [D:\New folder\rocksdb\build\rocksdbl
+ib.vcxproj]
+          d:\new folder\rocksdb\db\db_impl.h(59) : see declaration of 'rocksdb:
+

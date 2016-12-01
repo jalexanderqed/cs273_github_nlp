@@ -1,0 +1,7 @@
+This change is to make wal_filter understand if a given record is applicable to a column_family (since the log record could have been flushed for some column family but not the other, so it may or may not apply to a given column family).
+
+This change contains the following:
+1) Column-family name/number map exposed to wal_filter - this is because this is during open, client doesn't have CF handles yet, and can only understand name.
+2) CF number/lognumber map exposed to wal_filter - so that wal_filter can know if log is applicable to a given column-family.
+3) Providing lognumber with the record to wal_filter callback - so it can check if the given record applies to a column-family.
+

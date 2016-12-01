@@ -1,0 +1,1 @@
+We can support SST files >2GB but we don't support blocks >2GB

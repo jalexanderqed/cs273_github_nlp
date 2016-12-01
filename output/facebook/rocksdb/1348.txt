@@ -1,0 +1,12 @@
+Set the "disable_auto_compaction" to true when create DB in order to get good performance by bulkload, after all data are flushed to level 0, do like follow:
+     db->SetOptions(handles[2], {{"disable_auto_compaction","false"}});
+     Options opt = db->GetOptions(handles[2]);
+     cout<<"after change: disable_auto_compaction = "<<opt.disable_auto_compaction<<endl;
+it prints:
+       true, 
+     e.g, the SetOptions() function does not work well. 
+
+handles is a vector of ColumnFamilyHandle.
+
+Is this a bug whill rocksdb-4.5.1?
+

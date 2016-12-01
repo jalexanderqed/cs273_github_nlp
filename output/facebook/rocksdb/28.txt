@@ -1,0 +1,4 @@
+On Debian/testing and RHEL6 builds would fail due to undefined references to
+google::FlagRegisterer::FlagRegisterer.  It would seem that -lgflags was
+missing from the build script.
+

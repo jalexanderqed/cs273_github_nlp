@@ -1,0 +1,8 @@
+Previous to this commit ColumnFamilyDescriptor took a String as name for the ColumnFamily name. String is however encoding dependent which is bad because listColumnFamilies returns byte arrays without any encoding information.
+
+All public API calls were deprecated and flagged to be removed in 3.10.0
+
+Differential: https://reviews.facebook.net/D30525
+
+Solves issue: https://github.com/facebook/rocksdb/pull/441
+

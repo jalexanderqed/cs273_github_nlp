@@ -1,0 +1,19 @@
+I was running one of the benchmark tests, I have inserted a billion hashes sequentially and now reading the stored billion hashes using 32threads with keysize=10 and value size=20, I looking at the histogram which prints something like this
+
+"*\* Level 5 read latency histogram (micros):
+Count: 3785899206  Average: 479.8372  StdDev: 309.33
+Min: 0.0000  Median: 550.8261  Max: 202206.0000
+## Percentiles: P50: 550.83 P75: 651.14 P99: 993.01 P99.9: 2058.84 P99.99: 3202.52
+
+[       0,       1 ) 14582566   0.385%   0.385%
+[       1,       2 ) 363931149   9.613%   9.998% ##
+[       2,       3 ) 303080021   8.005%  18.003% ##
+[       3,       4 ) 24051920   0.635%  18.639%
+[       4,       5 ) 26594111   0.702%  19.341%
+[       5,       6 ) 34635852   0.915%  20.256%
+[       6,       7 ) 12133841   0.321%  20.577%
+
+more
+"
+How is the count 3785899206  when I have only stored1000000000 hashes , is this stat rt ? also could anyone please provide a good explanation for variable in histogram and what they stand for? is there a wiki for this ? 
+

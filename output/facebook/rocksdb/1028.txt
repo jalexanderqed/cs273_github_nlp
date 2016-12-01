@@ -1,0 +1,2 @@
+Currently C bindings only support flush the default column family explicitly. There should be a method to flush specified column family explicitly too.
+

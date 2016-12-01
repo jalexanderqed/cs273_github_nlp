@@ -1,0 +1,13 @@
+Summary:
+
+This handles two issues: (1) range deletion iterator sometimes outlives
+the table reader that created it, in which case the block must not be destroyed
+during table reader destruction; and (2) we prefer to read these range tombstone
+meta-blocks from file fewer times.
+
+- Extracted cache-populating logic from NewDataBlockIterator() into a separate function: MaybeLoadDataBlockToCache()
+- Use MaybeLoadDataBlockToCache() to load range deletion meta-block and pin it through the reader's lifetime. This code reuse works since range deletion meta-block has same format as data blocks.
+- Use NewDataBlockIterator() to create range deletion iterators, which uses block cache if enabled, otherwise reads the block from file. Either way, the underlying block won't disappear until after the iterator is destroyed.
+
+Test Plan: new unit test in table_test that uses the range deletion
+iterator after reader deletion. This used to fail ASAN.

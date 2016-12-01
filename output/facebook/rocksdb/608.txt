@@ -1,0 +1,6 @@
+I am trying to atomically write 5,305,512 key/value pairs into RocksDB. The performance of this feels slow to me, at about 60 seconds. 
+
+I am writing to a single WriteBatchWithIndex through calling `org.rocksdb.WriteBatchWithIndex#put(byte[], int, byte[], int, long)`, this takes some ~50 seconds. Whereas subsequently writing that batch into Rocks using `org.rocksdb.RocksDB#write(org.rocksdb.WriteOptions, org.rocksdb.WriteBatchWithIndex)` takes just ~8 seconds.
+
+Is WriteBatchWithIndex known to be slow? I was under the impression that it was all in-memory in a skip-list and so would be quite quick.
+

@@ -1,0 +1,98 @@
+Example code
+```
+#include <cstdio>
+#include <iostream>
+#include <string>
+
+#include "rocksdb/db.h"
+#include "rocksdb/slice.h"
+#include "rocksdb/options.h"
+#include "rocksdb/merge_operator.h"
+#include "rocksdb/env.h"
+
+using namespace rocksdb;
+
+std::string kDBPath = "/ssd1/data/test";
+
+class RocksDbMerger : public MergeOperator {
+ public:
+  bool FullMerge(const Slice& key,
+                 const Slice* existing_value,
+                 const std::deque<std::string>& operand_list,
+                 std::string* new_value,
+                 Logger* logger) const override {
+    Log(InfoLogLevel::INFO_LEVEL, logger, "FullMerge new_value size:%ld", new_value->size());
+    if (existing_value) {
+      new_value->append(existing_value->data(), existing_value->size());
+    }
+    for (auto& operand : operand_list) {
+      new_value->append(operand);
+    }
+    return true;
+  }
+
+  bool PartialMerge(const Slice& key,
+                    const Slice& left_operand,
+                    const Slice& right_operand,
+                    std::string* new_value,
+                    Logger* logger) const override {
+    return false;
+  }
+
+  const char* Name() const override {
+    return "rocksdb_merger";
+  }
+};
+
+int main() {
+  DB* db;
+  Options options;
+  // Optimize RocksDB. This is the easiest way to get RocksDB to perform well
+  options.IncreaseParallelism();
+  options.OptimizeLevelStyleCompaction();
+  // create the DB if it's not already present
+  options.create_if_missing = true;
+
+  options.merge_operator.reset(new RocksDbMerger());
+
+  // open DB
+  Status s = DB::Open(options, kDBPath, &db);
+  assert(s.ok());
+
+  // Put key-value
+  s = db->Merge(WriteOptions(), "key1", "value1");
+  assert(s.ok());
+
+  s = db->Merge(WriteOptions(), "key2", "value2");
+  assert(s.ok());
+
+  s = db->Merge(WriteOptions(), "key3", "value3");
+  assert(s.ok());
+
+  auto itr = db->NewIterator(ReadOptions());
+  itr->SeekToFirst();
+  while (itr->Valid()) {
+    std::cout << itr->value().ToString() << std::endl;
+    itr->Next();
+  }
+  delete itr;
+
+  delete db;
+
+  return 0;
+}
+```
+
+Output
+```
+value1
+value1value2
+value1value2value3
+```
+
+LOG from FullMerge
+```
+2016/11/24-17:17:40.904639 7fa94cb5c940 FullMerge new_value size:0
+2016/11/24-17:17:40.904704 7fa94cb5c940 FullMerge new_value size:6
+2016/11/24-17:17:40.904723 7fa94cb5c940 FullMerge new_value size:12
+```

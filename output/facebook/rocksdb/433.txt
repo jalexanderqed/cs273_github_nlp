@@ -1,0 +1,4 @@
+In my application I need to put a value in the database only if the given key does not already exist, similar with ConcurrentHashMap.putIfAbsent method
+
+Currently to achieve this functionality, the get operation has to be used causing the whole operation not to be atomic.
+

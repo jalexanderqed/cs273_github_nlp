@@ -1,0 +1,31 @@
+Included util/compression.h in headers
+Added if-else with the condition CompressionTypeSupported in the for loop of ShowAllCompressionSizes
+
+Test plan is to run ./sst_dump_test to verify the code of the pull request.
+
+./sst_dump_test result **after** the code change of the pull request:
+
+...
+Compression: kNoCompression Size: 28056
+Compression: kSnappyCompression Size: 7066
+Compression: kZlibCompression Size: 3868
+Compression: kBZip2Compression Size: 2896
+Unsupported compression type: kLZ4Compression. Size is not shown.
+Unsupported compression type: kLZ4HCCompression. Size is not shown.
+Unsupported compression type: kXpressCompression. Size is not shown.
+Unsupported compression type: kZSTDNotFinalCompression. Size is not shown.
+...
+
+./sst_dump_test result **before** the code change of the pull request:
+
+...
+Compression: kNoCompression Size: 28056
+Compression: kSnappyCompression Size: 7066
+Compression: kZlibCompression Size: 3868
+Compression: kBZip2Compression Size: 2896
+Compression: kLZ4Compression Size: 28056
+Compression: kLZ4HCCompression Size: 28056
+Compression: kXpressCompression Size: 28056
+Compression: kZSTDNotFinalCompression Size: 28056
+…
+

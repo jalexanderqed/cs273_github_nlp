@@ -1,0 +1,16 @@
+Summary:
+This diff includes an implementation of CompactionFilter that allows
+users to write CompactionFilter in Lua.  With this ability, users can
+dynamically change compaction filter logic without requiring building
+the rocksdb binary and restarting the database.
+
+To compile, WITH_LUA_PATH must be specified to the base directory
+of lua.
+
+Test Plan:
+WITH_LUA_PATH=/path/to/lua make lua_test
+./lua_test
+make clean
+make lua_test
+./lua_test
+

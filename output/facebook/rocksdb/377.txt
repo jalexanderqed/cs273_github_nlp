@@ -1,0 +1,2 @@
+Currently there is only support for keyMayExist calls with Column Families in RocksJava. This pull request includes the extension to do keyMayExist calls without CFs.
+

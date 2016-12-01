@@ -1,0 +1,17 @@
+Hi,
+
+I'm using rocksdbjni.dll(V4.3.1) on Windows.
+Its performance is better than leveldb.
+
+But I have one issue. And this issue occurs in LevelDB jni also.
+Windows keeps  .sst files as Active state in RAM even if finish to read/write data.
+I checked by using RAMMap.exe
+So finally memory usage leach maximum in my system.
+
+Now my workaround is using Dynamic Chache Service that can restrict memory chache amount.
+
+Do you have any plan to fix it?
+
+And when will package include locksdbjni.dll?
+I struggled to create it manually...
+

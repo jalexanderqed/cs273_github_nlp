@@ -1,0 +1,12 @@
+Heya,
+
+First off I'd like to thank you for all the great work on rocksdb. It matches pretty perfectly to a use case we have been having recently and we've ended up using it all over the place.
+
+We've been having a problem with rocksdbs that open in read only mode that still apparently read and change files!
+
+Specifically, in java, when opening a rocksdb with openReadOnly, some files still change, namely the LOG files.
+
+Now, this wouldn't be a problem, but we are using rocksdb by placing the database in a single zip file, throwing it on S3 and downloading the zip and decompressing the rocksdb as it is required. When used in this use case the rocksdb is never being written to, just read. The way we are checking whether this download/decompress operation actually needs to occur is by checking the file names and file sizes. Should certain files just be ignored for such a check? Or is this is a silly way to approach this problem overall
+
+Any thoughts?
+

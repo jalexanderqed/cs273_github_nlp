@@ -1,0 +1,2 @@
+Add make clean in examples makefile
+

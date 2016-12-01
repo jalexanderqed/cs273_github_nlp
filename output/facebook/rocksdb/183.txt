@@ -1,0 +1,13 @@
+Summary:
+1. Add statistics collector which collects statistics periodically at a period specified by caller.
+2. Added unit-test for StatsCollector
+
+make rocksdbjava
+make test
+
+Reviewers: haobo, yhchiang, sdong, dhruba, rsumbaly, zzbennett, swapnilghike
+Reviewed By: yhchiang
+CC: leveldb
+
+Differential Revision: https://reviews.facebook.net/19215
+

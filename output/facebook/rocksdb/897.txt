@@ -1,0 +1,4 @@
+  Status is a class which is frequently returned by value from functions.
+  Making it movable avoids 99% of the copies automatically
+  on return by value.
+

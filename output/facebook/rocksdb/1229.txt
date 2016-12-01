@@ -1,0 +1,6 @@
+In db_bench_tool.cc, the following code at the line 2707 clears the previous configuration of options.compression_per_level based upon the min_level_to_compression parameter.  As a result, all the levels starting from L0 use the same compression type regardless to the min_level_to_compression parameter. After commenting out this statement, min_level_to_compression configuration works as expected in db_bench. 
+
+if (FLAGS_min_level_to_compress >= 0) {
+      options.compression_per_level.clear();
+    }
+

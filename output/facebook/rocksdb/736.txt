@@ -1,0 +1,6 @@
+OPT needs this on OS X to compile master.
+
+```
+-Wno-unused-private-field
+```
+

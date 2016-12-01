@@ -1,0 +1,3 @@
+By "mid" concurrency I mean when the number of clients is less than the number of HW threads. By "high" concurrency I mean when the number of clients is much larger than the number of HW threads. And this assumes clients don't stall on storage reads. In my tests, results are not public yet, I see RocksDB (or MyRocks) with the concurrent memtable helping QPS at mid concurrency and hurting at high concurrency.
+
+It would be nice to explain why it hurts at high concurrency.

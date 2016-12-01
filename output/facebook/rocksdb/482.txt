@@ -1,0 +1,3 @@
+While fixing the RocksDB ColumnFamily name the TTL DB
+wasn`t touched. This commit resolves this.
+

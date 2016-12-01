@@ -1,0 +1,2 @@
+The comment says "we need to use the highest-numbered ValueType", but the value is actually from the middle of the enum, presumably because it wasn't updated when values were added to the enum. I'm guessing no one ever puts these new enum values into memtables and ssts, and I'm guessing no one uses kValueTypeForSeek for anything except memtables and ssts, so this probably didn't break anything. Fixing it just for cleanness.
+

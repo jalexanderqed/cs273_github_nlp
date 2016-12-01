@@ -1,0 +1,2 @@
+Add a new benchmark to memtablerep_bench for inserting keys from multiple streams. Each stream consist of ordered keys, or can be slightly reordered up to a small window.
+

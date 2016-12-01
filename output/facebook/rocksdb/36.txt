@@ -1,0 +1,2 @@
+leveldb support -fno-excpetions, troubled when switch to rocksdb。
+

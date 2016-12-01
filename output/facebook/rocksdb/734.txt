@@ -1,0 +1,8 @@
+Hello,
+
+I'm not sure if you're already supporting Android as a platform (I'm guessing yes because a quick search shows there are precompiler directives to check `OS_ANDROID`).
+
+Basically trying to initialize the native library via `RocksDB.loadLibrary()` fails at https://github.com/facebook/rocksdb/blob/master/java/src/main/java/org/rocksdb/NativeLibraryLoader.java#L101 due to missing `Files`, `File#toPath` and `StandardCopyOption`.
+
+I'm using the [jar in Maven](http://search.maven.org/#artifactdetails%7Corg.rocksdb%7Crocksdbjni%7C3.13.1%7Cjar).
+

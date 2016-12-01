@@ -1,0 +1,9 @@
+Now that we use TableCache::NewIterator() for multiple purposes (data
+block iterator and range deletion iterator), it is inconvenient to
+return non-ok status in the data block iterator since the caller might
+not use it. This diff changes TableCache::NewIterator() to update
+value-result arguments and return a status code.
+
+This fixes a valgrind error where NewIterator() returns a non-ok status
+in data block iterator, and the caller fails to check/free it since the
+caller is interested in range deletion block only (https://github.com/facebook/rocksdb/blob/9e7cf3469bc626b092ec48366d12873ecab22b4e/db/version_set.cc#L965-L973).

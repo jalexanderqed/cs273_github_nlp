@@ -1,0 +1,25 @@
+The break trace as below:
+
+```
+(gdb) bt
+#0  0x00000000004937db in rocksdb::DBImpl::WriteImpl(rocksdb::WriteOptions const&, rocksdb::WriteBatch*, rocksdb::WriteCallback*) () at /usr/local/gcc/include/c++/5.1.0/bits/atomic_base.h:396
+#1  0x00000000004952b4 in rocksdb::DBImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch*) () at db/db_impl.cc:4260
+#2  0x000000000043983b in writeDataEntryForFamily(rocksdb::DB*, HmsetEntry const&, unsigned long long, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&) ()
+```
+
+the code of atomic_base.h:396 as blow:
+
+```
+      _GLIBCXX_ALWAYS_INLINE __int_type
+      load(memory_order __m = memory_order_seq_cst) const noexcept
+      {
+       memory_order __b = __m & __memory_order_mask;
+  __glibcxx_assert(__b != memory_order_release);
+  __glibcxx_assert(__b != memory_order_acq_rel);
+
+  return __atomic_load_n(&_M_i, __m);
+      }
+```
+
+Who can help me? Thank you.
+

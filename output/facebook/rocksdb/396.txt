@@ -1,0 +1,3 @@
+It's now possible to set a LogLevel in Options and
+DBOptions to control LOG verbosity.
+

@@ -1,0 +1,7 @@
+PrefixMayMatch previously seeked in the prefix index using an internal
+key with a sequence number of 0. This would cause the prefix index seek
+to fall off the end if the last key in the index had a user-key greater
+than or equal to the key being looked for. Falling off the end of the
+index in turn results in PrefixMayMatch returning false if the index is
+in memory.
+

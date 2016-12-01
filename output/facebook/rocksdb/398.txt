@@ -1,0 +1,4 @@
+RocksDB supports two ways of saving snapshots. In
+memory and on disk. The later one was not available
+in Java.
+

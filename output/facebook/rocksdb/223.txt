@@ -1,0 +1,31 @@
+"make check" only has problem with bloom_test:
+
+****\* Running bloom_test
+==== Test BloomTest.EmptyFilter
+==== Test BloomTest.Small
+==== Test BloomTest.VaryingLengths
+False positives:  0.00% @ length =      1 ; bytes =      9
+False positives:  0.00% @ length =      2 ; bytes =      9
+False positives:  0.00% @ length =      3 ; bytes =      9
+False positives:  0.00% @ length =      4 ; bytes =      9
+False positives:  0.00% @ length =      5 ; bytes =      9
+False positives:  0.00% @ length =      6 ; bytes =      9
+False positives:  1.50% @ length =      7 ; bytes =     10
+False positives:  0.00% @ length =      8 ; bytes =     11
+False positives:  2.56% @ length =      9 ; bytes =     13
+util/bloom_test.cc:161: failed: 0.0256 <= 0.02
+#0   ./bloom_test() [0x1002e9e8] ~BloomTest     /tmp/rocksdb/rocksdb-rocksdb-3.2
+
+/util/bloom_test.cc:49
+#1   ./bloom_test() [0x10163590] rocksdb::test::RunAllTests()   /tmp/rocksdb/roc
+
+ksdb-rocksdb-3.2/util/testharness.cc:59
+#2   ./bloom_test() [0x1000c844] main   /tmp/rocksdb/rocksdb-rocksdb-3.2/util/bl
+
+oom_test.cc:179
+#3   /opt/at7.0/lib64/power7/libc.so.6(+0x44a8c) [0xfff9fbf4a8c] ??     ??:0
+#4   /opt/at7.0/lib64/power7/libc.so.6(__libc_start_main-0x188964) [0xfff9fbf4cb
+
+4] ??   ??:0
+make: **\* [check] Error 1
+

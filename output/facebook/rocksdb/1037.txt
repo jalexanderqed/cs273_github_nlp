@@ -1,0 +1,3 @@
+Fixed the error in 
+https://ci.appveyor.com/project/Facebook/rocksdb/build/1.0.755
+

@@ -1,0 +1,14 @@
+This is part question, part issue, and part request for comment/advice.  I have developed a [.Net (C#) library for RocksDB](https://github.com/warrenfalk/rocksdb-sharp) and am now adding Column Family support to it.
+
+I'm confused by the design of the interface for column families. When I open the db, I must specify every column family it contains and none that it doesn't.  If I miss one the database won't open.  If I have an extra, the database won't open.  I therefore must know the state of the database before I open it (or open it read only, figure out the current state of column families, match that state temporarily in order to open the database again for write, then correct the state).
+
+Furthermore, this makes column families seem somewhat incompatible with the db option `create_if_missing = true`.  I may open a db whether it exists or not and it will be created as required unless I need column families.  Then I must know in advance whether the column families have been added to the database already, and so also whether or not the database exists.
+
+The result is that it is hard to write code which is backward compatible with older versions of a database.
+
+As part of the C# library, I was considering trying to ease this issue, but wonder if there's a good reason why the C++ interface doesn't already do this.
+
+The way I want it to work is that if I specify `create_if_missing = true` on the db and I specify column family descriptors, then I expect it to create any column families I specified which don't already exist (backward compatibility), while it could still if I fail to specify a column that does exist.
+
+So this is either a question or a feature request.  Can't it work that way?  Why doesn't it?  Is it advisable to write this behavior into the C# library?
+

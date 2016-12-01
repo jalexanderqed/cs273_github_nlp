@@ -1,0 +1,7 @@
+Changes:
+- new Method: RocksDB openReadOnly(String path)
+- new Method: RocksDB openReadOnly(Options options, String path)
+
+Missing:
+- Column family support is blocked by #319
+

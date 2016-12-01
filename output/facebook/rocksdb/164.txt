@@ -1,0 +1,26 @@
+Hi,
+
+I got an error message
+
+org.rocksdb.RocksDBException: IO error: /Volumes/Backup/pbf/planet-140514/nodes/021806.log: Too many open files
+    at org.rocksdb.RocksDB.put(Native Method)
+    at org.rocksdb.RocksDB.put(RocksDB.java:139)
+
+Does the max open files have any limits ?
+
+I open rocksdb with following options:
+
+options = new Options();
+options.setCreateIfMissing(true);
+options.setMaxOpenFiles(-1);
+options.setAllowMmapReads(false);
+options.setAllowMmapWrites(false);
+options.setMaxWriteBufferNumber(4);
+
+When error occurs, the db folder contains about 9620 sst files and folder size is about 19GB.
+The version of RocksDB is 3.0.
+
+Does any one have any suggestion?
+
+Thanks.
+

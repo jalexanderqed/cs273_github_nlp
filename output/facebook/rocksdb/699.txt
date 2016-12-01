@@ -1,0 +1,11 @@
+Summary:
+This patch adds the helper functions and variables to allow a backend
+implementing WritableFile to support direct IO when persisting a
+memtable.
+
+Test Plan:
+Since there is no upstream implementation of WritableFile supporting
+direct IO, the new behavior is disabled.
+
+Tests should be provided by the backend implementing WritableFile.
+

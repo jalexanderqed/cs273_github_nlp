@@ -1,0 +1,6 @@
+  Add missing file from CMake that breaks a build
+  Add port include to options_parser that makes use of snprintf
+  Is there a way to enforce CMake additions for internal changes that seem to come
+  w/o a PR?
+  Add notifications for daily appveyor
+

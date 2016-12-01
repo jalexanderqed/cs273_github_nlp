@@ -1,0 +1,2 @@
+made rockdb_fifo_compaction_options_t type in case options are added later, if there's no plan of that it would be nice to not have it since there's only one option. 
+

@@ -1,0 +1,4 @@
+I noticed something odd. If I manually compact the db twice, then the size of the compacted SST is about 20% lower. (In one test 2.2G vs. 2.7G.) More oddly, the output of ls -sh and ls -lh don't agree, with the latter showing 2.2G in both cases.
+
+Is this to be expected?
+

@@ -1,0 +1,6 @@
+This pull request adds enhancements to the API which I need for my Go wrapper: https://github.com/tecbot/gorocksdb
+
+Please review careful the part with the merge operator because I am not a C expert so maybe I did something wrong.
+
+I completed the CLA.
+

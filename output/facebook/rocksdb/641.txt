@@ -1,0 +1,5 @@
+The iterator's valid_ flag was not always being correctly updated
+after a reverse seek.
+
+See also issue #636.
+

@@ -1,0 +1,3 @@
+  VS 2013 does not support noexcept.
+   Complains about usage of ineteger constant within lambda requiring explicit capture.
+

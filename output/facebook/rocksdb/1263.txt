@@ -1,0 +1,2 @@
+In traversing DB using Iterator API ,  it show significant difference between c++ API and Java API. Why?
+

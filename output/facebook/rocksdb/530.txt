@@ -1,0 +1,2 @@
+How big is the block cache by default? What's a good rule of thumb for setting it?
+

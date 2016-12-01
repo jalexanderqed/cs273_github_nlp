@@ -1,0 +1,6 @@
+What's the intended policy for handling the SONAME when building rocksdb with PLATFORM_SHARED_VERSIONED:=true?  Normally, the SONAME for a shared library will be bumped for a change that breaks the ABI.
+
+The case that motivates the question is a change in 3.10, where Env::Schedule() has a new parameter, but the SONAME remains librocksdb.so.3.  Every minor release is likely to be binary incompatible with the previous one, so librocksdb.so.$(MAJOR).$(MINOR) might be a better choice along with reviewing patch releases to ensure they're binary compatible.
+
+[note to those who may doubt the utility of C++11's override:  I caught the problem while building my application, not at load time]
+

@@ -1,0 +1,2 @@
+DB Stats now are truncated if there are too many CFs. Extend the buffer size to allow more to be printed out. Also, separate out malloc to another log line.
+

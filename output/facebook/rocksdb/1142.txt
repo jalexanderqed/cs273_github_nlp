@@ -1,0 +1,25 @@
+version:
+release 4.5.1
+
+build with:
+
+```
+make release -j8
+```
+
+while running `db_bench`,get a core: Program terminated with signal SIGSEGV, Segmentation fault.
+back tarce:
+
+```
+#0  0x00007f67db1b3ae7 in std::__detail::_List_node_base::_M_unhook() () from /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+#1  0x00000000004e4103 in _M_erase (this=0x7f67d9aedd98, __position=...) at /usr/local/include/c++/4.9.3/bits/stl_list.h:1697
+#2  erase (this=0x7f67d9aedd98, __position=...) at /usr/local/include/c++/4.9.3/bits/list.tcc:154
+#3  ReleaseFileNumberFromPendingOutputs (v=..., this=0x7f67d9aed800) at db/db_impl.cc:4965
+#4  rocksdb::DBImpl::BackgroundCallFlush (this=0x7f67d9aed800) at db/db_impl.cc:2663
+#5  0x00000000005ba580 in rocksdb::ThreadPool::BGThread (this=this@entry=0x7f67d9831620, thread_id=thread_id@entry=0) at util/thread_posix.cc:119
+#6  0x00000000005ba6a3 in rocksdb::BGThreadWrapper (arg=0x7f67d8809050) at util/thread_posix.cc:143
+#7  0x00007f67dc338e9a in start_thread (arg=0x7f67d7fff700) at pthread_create.c:308
+#8  0x00007f67da93738d in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:112
+#9  0x0000000000000000 in ?? ()
+```
+

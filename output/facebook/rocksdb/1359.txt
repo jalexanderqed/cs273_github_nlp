@@ -1,0 +1,9 @@
+random write 100000000  kv into DB , the length of key is 8bytes, value is 80 bytes. Traver the DB ,take one  key per  5000,  and push it into a vector, so the size of vector is 2000，clear the system cache,  then read the values from the DB of the all keys in vector to test the performance. 
+
+first way:
+        Bulk load with disable_auto_compaction=false, all data are stored to level-1 and level-2, the time is 38s.
+second way:
+      Bulk load with disable_auto_compaction=true, and then call CompactRange(). After compaction ,all data are stored to level-1, the time is 100ms.
+
+I find the performance between the two ways have a big difference , the second way has a much better performance the the first one, is it right?
+

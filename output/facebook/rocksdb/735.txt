@@ -1,0 +1,14 @@
+The previous memory allocation procedures tried to allocate memory
+via `new` or `mmap` and inserted the pointer to the memory into an
+std::vector afterwards. In case `new` or `mmap` threw or returned
+a nullptr, no memory was leaking. If `new` or `mmap` worked ok, the
+following `vector::push_back` could still fail and throw an exception.
+In this case, the memory just allocated was leaked.
+
+The fix is to reserve space in the target memory pointer vector
+beforehand. If this throws, then no memory is allocated nor leaked.
+If the reserve works but the actual allocation fails, still no
+memory is leaked, only the target vector will have space for at
+least one more element than actually required (but this may be
+reused for the next allocation)
+

@@ -1,0 +1,3 @@
+Closes https://github.com/facebook/rocksdb/issues/697
+Closes https://github.com/facebook/rocksdb/issues/1151
+

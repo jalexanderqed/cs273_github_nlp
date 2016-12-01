@@ -20,9 +20,10 @@ public class CommandLinePrompt {
             System.out.println("Enter a query:");
             query = reader.nextLine();
             ArrayList<StringDoubleTuple> users = userSet.getUsersForString(query);
-            for (StringDoubleTuple tup : users) {
-                System.out.println(tup);
+            for (int i = 0; i < 20; i++) {
+                System.out.println(users.get(i));
             }
+            System.out.println();
         } while (!query.equals("exit"));
     }
 }

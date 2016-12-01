@@ -1,0 +1,4 @@
+-momit-leaf-frame-pointer is only supported on certain archs.
+Detect this automatically based on which flags the compiler
+understands.
+

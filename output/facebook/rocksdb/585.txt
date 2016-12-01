@@ -1,0 +1,15 @@
+Summary:
+- Removed deprecated ColumnFamilyDescriptor constructor methods
+- Removed deprecated skipLogErrorOnRecovery methods
+- Removed deprecated tableCacheRemoveScanCountLimit methods
+
+Test Plan:
+make rocksdbjava
+make jtest
+
+Reviewers: yhchiang, adamretter, ankgup87
+
+Subscribers: dhruba
+
+Differential Revision: https://reviews.facebook.net/D37191
+

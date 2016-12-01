@@ -1,0 +1,109 @@
+i'm not sure if this is best documented as a quirk or fixed in the implementation, but the value of the comparator pointer returned via DB::GetOptions() is surprising in a few ways:
+1. The value doesn't match.
+2. The name doesn't match.
+3. The Compare() result doesn't always match.
+
+It's pretty clear why this is the case: the column family's options returned by GetOptions() have been modified to contain implementation details.  Maybe it'd be a good idea to cache the options provided when the column family is opened and return that in GetOptions() rather than the options that are actually used at runtime?  I think a decent second choice would be to simply document that DB::GetOptionsI() returns implementation details that may not match what the client provided.  Oh, and don't use the comparator for comparing slices that ... I haven't read the code to understand the rules, do the inputs need to live in the same column family data?
+
+sample code below.  first the output:
+
+```
+ my comparator: 0x7fff504b6438 name: TestComparator
+db1 comparator: 0x7f9e30d005c8 name: rocksdb.InternalKeyComparator:TestComparator
+db2 comparator: 0x7f9e30d03b08 name: rocksdb.InternalKeyComparator:TestComparator
+Slice::compare 0
+my comparator  0
+db1 comparator 192
+db2 comparator 192
+```
+
+```
+#undef NDEBUG
+#include <cstdlib>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <assert.h>
+
+#include <rocksdb/options.h>
+#include <rocksdb/comparator.h>
+#include <rocksdb/db.h>
+
+class TestComparator : public rocksdb::Comparator {
+    const rocksdb::Comparator* c_{rocksdb::BytewiseComparator()};
+
+public:
+    int Compare(const rocksdb::Slice& x, const rocksdb::Slice& y) const override {
+        return c_->Compare(x, y);
+    }
+
+    const char* Name() const override {
+        return "TestComparator";
+    }
+
+    void FindShortestSeparator(std::string* x, const rocksdb::Slice& y) const override {
+        return c_->FindShortestSeparator(x, y);
+    }
+
+    void FindShortSuccessor(std::string* x) const override {
+        return c_->FindShortSuccessor(x);
+    }
+};
+
+static std::unique_ptr<rocksdb::DB> create_test_db(const std::string& name,
+        const rocksdb::Options& options)
+{
+    rocksdb::DB* p{};
+    rocksdb::Status s{rocksdb::DB::Open(options, name, &p)};
+
+    if (s.ok())
+        s = p->Put({}, "key", "value");
+
+    if (!s.ok()) {
+        std::cerr << "fatal: " << s.code() << ": " << s.ToString() << '\n';
+        std::exit(1);
+    }
+
+    return std::unique_ptr<rocksdb::DB>{p};
+}
+
+int main(int argc, char** argv)
+{
+    const TestComparator cmp{};
+    const std::string base{argc == 2 ? argv[1] : "test.db"};
+    rocksdb::Options options;
+    options.error_if_exists = true;
+    options.create_if_missing = true;
+    options.comparator = &cmp;
+
+    std::unique_ptr<rocksdb::DB> db1{create_test_db(base + ".1", options)};
+    std::unique_ptr<rocksdb::DB> db2{create_test_db(base + ".2", options)};
+
+    const rocksdb::Comparator* cmp1{db1->GetOptions().comparator};
+    const rocksdb::Comparator* cmp2{db2->GetOptions().comparator};
+
+    assert(cmp1);
+    assert(cmp2);
+
+    std::cout << " my comparator: " << &cmp << " name: " << cmp.Name() << '\n';
+    std::cout << "db1 comparator: " << cmp1 << " name: " << cmp1->Name() << '\n';
+    std::cout << "db2 comparator: " << cmp2 << " name: " << cmp2->Name() << '\n';
+
+    std::unique_ptr<rocksdb::Iterator> it1{db1->NewIterator({})};
+    std::unique_ptr<rocksdb::Iterator> it2{db2->NewIterator({})};
+
+    it1->SeekToFirst();
+    assert(it1->status().ok() && it1->Valid());
+
+    it2->SeekToFirst();
+    assert(it2->status().ok() && it2->Valid());
+
+    std::cout << "Slice::compare " << it1->key().compare(it2->key()) << '\n';
+    std::cout << "my comparator  " << cmp.Compare(it1->key(), it2->key()) << '\n';
+    std::cout << "db1 comparator " << cmp1->Compare(it1->key(), it2->key()) << '\n';
+    std::cout << "db2 comparator " << cmp2->Compare(it1->key(), it2->key()) << '\n';
+
+    return 0;
+}
+```
+

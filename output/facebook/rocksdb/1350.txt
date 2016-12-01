@@ -1,0 +1,11 @@
+Summary:
+Revert the behavior where we don't read sequence id from WAL, but increase it as we replay the log. We still keep the behave for 2PC for now but will fix later.
+
+This change fixes github issue 1339, where some writes come with WAL disabled and we may recover records with wrong sequence id.
+
+Test Plan: Added unit test.
+
+Subscribers: andrewkr, dhruba
+
+Differential Revision: https://reviews.facebook.net/D64275
+

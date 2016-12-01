@@ -1,0 +1,14 @@
+Summary: 
+Fixed TODO. Added correct serialization
+of negative integers.
+
+Test Plan: make all check
+
+Reviewers: igor, sdong
+
+Reviewed By: igor
+
+Subscribers: dhruba, leveldb
+
+Differential Revision: https://reviews.facebook.net/D31065
+

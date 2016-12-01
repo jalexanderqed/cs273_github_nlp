@@ -1,0 +1,12 @@
+Summary:
+Add compression type to options
+
+make rocksdbjava
+make sample
+
+Reviewers: haobo, yhchiang, sdong, dhruba, rsumbaly, zzbennett, swapnilghike
+Reviewed By: yhchiang, sdong
+CC: leveldb
+
+Differential Revision: https://reviews.facebook.net/D19473
+

@@ -1,0 +1,24 @@
+Hi, 
+
+I integrated our system with the RocksDB HDFS backup engine and when we try to backup a instance data (around 3G) to HDFS, the process crashes. But when we backup some relatively smaller amount of data, it can always work.
+
+ Here is the stacktrace from the core file:
+#0  0x00007f0fb54aa0d5 in raise () from /mnt/realpin/bin/libc.so.6
+
+(gdb) where
+#0  0x00007f0fb54aa0d5 in raise () from /mnt/realpin/bin/libc.so.6
+#1  0x00007f0fb54ad83b in abort () from /mnt/realpin/bin/libc.so.6
+#2  0x00007f0fb2d37a37 in os::abort(bool) () from /usr/lib/jvm/java-6-sun/jre/lib/amd64/server/libjvm.so
+#3  0x00007f0fb2e8bf28 in VMError::report_and_die() () from /usr/lib/jvm/java-6-sun/jre/lib/amd64/server/libjvm.so
+#4  0x00007f0fb2d3e3f5 in JVM_handle_linux_signal () from /usr/lib/jvm/java-6-sun/jre/lib/amd64/server/libjvm.so
+#5  0x00007f0fb2d3a6fe in signalHandler(int, siginfo_, void_) ()
+
+   from /usr/lib/jvm/java-6-sun/jre/lib/amd64/server/libjvm.so
+#6  <signal handler called>
+#7  0x00007f0adf05ca13 in ?? ()
+#8  0x00007f0adf00496e in ?? ()
+#9  0x00007f0adf00496e in ?? ()
+#10 0x0000000000000000 in ?? ()
+
+From the stacktrace, it doesn't tell a lot. Is there a known issue on backing up large data to HDFS? Any thought or recommendation how we fix it?
+

@@ -1,0 +1,13 @@
+```
+ ~ $ ls -l .../data/ | grep ".*\.log" | wc -l
+1230
+ ~ $ ls -l .../data/ | grep ".*\.sst" | wc -l
+2
+```
+
+this is really a new issue we're seeing, and we're curious if it's a bug of some kind. seems that log files should be dropped (we have 110GB of .log and 40MB of .sst). upon restart, db will process and scrap all the log files and we go back down to ok level. we're using universal compaction with the default IncreaseParallelism() and OptimizeUniversalStyleCompaction(). we had the max of `options.keep_log_file_num` set to 1000, as default, and it appears we have 1230 open, so we're not so hopeful that lowering that value will fix this issue. 
+
+here's our LOG with options and shows a lot of "skipping file" and "not a candidate to reduce size amp". http://pastebin.com/qLJPEej5
+
+any fixes / where to look and I'd be happy to help or test any theories. Thanks!
+

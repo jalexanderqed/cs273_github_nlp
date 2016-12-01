@@ -1,0 +1,9 @@
+Summary: This patch splits the posix storage backend into Env and
+the actual *File implementations. The motivation is to allow other Envs
+to use posix as a library. This enables a storage backend different from
+posix to split its secondary storage between a normal file system
+partition managed by posix, and it own media.
+
+Test Plan: No new functionality is added to posix Env or the library,
+thus the current tests should suffice.
+

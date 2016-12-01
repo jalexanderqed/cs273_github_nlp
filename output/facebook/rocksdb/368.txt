@@ -1,0 +1,20 @@
+RocksIterator will sometimes Sigsegv on dispose. Mainly thats related
+to dispose order. If the related RocksDB instance is freed beforehand
+RocksIterator.dispose() will fail.
+
+Within this commit there is a major change to RocksIterator. RocksIterator
+will hold a private reference to the RocksDB instance which created the
+RocksIterator. So even if RocksDB is freed in the same GC cycle the
+RocksIterator instances will be freed prior to related RocksDB instances.
+
+Another aspect targets the dispose logic if the RocksDB is freed previously
+and already gc`ed. On dispose of a RocksIterator the dispose logic will check
+if the RocksDB instance points to an initialized DB. If not the dispose logic
+will not perform any further action.
+
+The crash can be reproduced by using the related test provided within this
+commit.
+
+Related information: This relates to @adamretter`s facebook rocksdb-dev group
+post about SigSegv on RocksIterator.dispose().
+

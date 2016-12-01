@@ -1,0 +1,107 @@
+I'm trying to compare the difference between "prefix_hash" and "skip_list" representation of the memtable.
+
+I tried running db_bench via this setting but it fails to complete after many hours (relative to the "skip_list" version that runs fine). I also tried "cuckoo" and it seemed to work. Is there something wrong with the params I'm using, and is this the right way to evaluate the difference between hash indexing versus binary search?
+
+```
+./db_bench --use_hash_search=1 --memtablerep="prefix_hash" --use_block_based_filter=1 --prefix_size=8 --compression_type="zlib"
+LevelDB:    version 4.4
+Date:       Fri Feb 19 06:40:31 2016
+CPU:        32 * Intel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz
+CPUCache:   25600 KB
+Keys:       16 bytes each
+Values:     100 bytes each (50 bytes after compression)
+Entries:    1000000
+Prefix:    8 bytes
+Keys per prefix:    0
+RawSize:    110.6 MB (estimated)
+FileSize:   62.9 MB (estimated)
+Write rate: 0 bytes/second
+Compression: Zlib
+Memtablerep: prefix_hash
+Perf Level: 0
+------------------------------------------------
+DB path: [/tmp/rocksdbtest-0/dbbench]
+... finished 200000 ops
+(still here after many hours)
+```
+
+```
+./db_bench --prefix_size=10 --compression_type="zlib"
+LevelDB:    version 4.4
+Date:       Fri Feb 19 02:45:54 2016
+CPU:        32 * Intel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz
+CPUCache:   25600 KB
+Keys:       16 bytes each
+Values:     100 bytes each (50 bytes after compression)
+Entries:    1000000
+Prefix:    10 bytes
+Keys per prefix:    0
+RawSize:    110.6 MB (estimated)
+FileSize:   62.9 MB (estimated)
+Write rate: 0 bytes/second
+Compression: Zlib
+Memtablerep: skip_list
+Perf Level: 0
+------------------------------------------------
+DB path: [/tmp/rocksdbtest-0/dbbench]
+fillseq      :       3.586 micros/op 278842 ops/sec;   30.8 MB/s
+DB path: [/tmp/rocksdbtest-0/dbbench]
+fillsync     :     400.857 micros/op 2494 ops/sec;    0.3 MB/s (1000 ops)
+DB path: [/tmp/rocksdbtest-0/dbbench]
+fillrandom   :       4.093 micros/op 244291 ops/sec;   27.0 MB/s
+DB path: [/tmp/rocksdbtest-0/dbbench]
+overwrite    :       7.974 micros/op 125412 ops/sec;   13.9 MB/s
+DB path: [/tmp/rocksdbtest-0/dbbench]
+readrandom   :      26.346 micros/op 37956 ops/sec;    4.2 MB/s (1000000 of 1000000 found)
+
+DB path: [/tmp/rocksdbtest-0/dbbench]
+newiterator  :       0.873 micros/op 1145912 ops/sec;
+DB path: [/tmp/rocksdbtest-0/dbbench]
+newiteratorwhilewriting :       5.337 micros/op 187355 ops/sec;
+DB path: [/tmp/rocksdbtest-0/dbbench]
+seekrandom   :      47.588 micros/op 21013 ops/sec; (816350 of 1000000 found)
+
+DB path: [/tmp/rocksdbtest-0/dbbench]
+seekrandomwhilewriting :     407.681 micros/op 2452 ops/sec; (984125 of 1000000 found)
+```
+
+```
+./db_bench --use_hash_search=1 --memtablerep="cuckoo" --use_block_based_filter=1 --prefix_size=8 --compression_type="zlib"
+LevelDB:    version 4.4
+Date:       Fri Feb 19 04:55:05 2016
+CPU:        32 * Intel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz
+CPUCache:   25600 KB
+Keys:       16 bytes each
+Values:     100 bytes each (50 bytes after compression)
+Entries:    1000000
+Prefix:    8 bytes
+Keys per prefix:    0
+RawSize:    110.6 MB (estimated)
+FileSize:   62.9 MB (estimated)
+Write rate: 0 bytes/second
+Compression: Zlib
+Memtablerep: cuckoo
+Perf Level: 0
+------------------------------------------------
+DB path: [/tmp/rocksdbtest-0/dbbench]
+fillseq      :       4.342 micros/op 230314 ops/sec;   25.5 MB/s
+DB path: [/tmp/rocksdbtest-0/dbbench]
+fillsync     :     403.132 micros/op 2480 ops/sec;    0.3 MB/s (1000 ops)
+DB path: [/tmp/rocksdbtest-0/dbbench]
+fillrandom   :       4.723 micros/op 211743 ops/sec;   23.4 MB/s
+DB path: [/tmp/rocksdbtest-0/dbbench]
+overwrite    :      11.712 micros/op 85380 ops/sec;    9.4 MB/s
+DB path: [/tmp/rocksdbtest-0/dbbench]
+readrandom   :      21.827 micros/op 45813 ops/sec;    5.1 MB/s (1000000 of 1000000 found)
+
+DB path: [/tmp/rocksdbtest-0/dbbench]
+newiterator  :     101.191 micros/op 9882 ops/sec;
+DB path: [/tmp/rocksdbtest-0/dbbench]
+newiteratorwhilewriting :     122.809 micros/op 8142 ops/sec;
+DB path: [/tmp/rocksdbtest-0/dbbench]
+seekrandom   :     292.638 micros/op 3417 ops/sec; (999965 of 1000000 found)
+
+DB path: [/tmp/rocksdbtest-0/dbbench]
+seekrandomwhilewriting :     211.797 micros/op 4721 ops/sec; (999967 of 1000000 found)
+```
+

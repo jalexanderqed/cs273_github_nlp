@@ -1,0 +1,2 @@
+Fixes merge problems from options refactoring which brake the build currently.
+

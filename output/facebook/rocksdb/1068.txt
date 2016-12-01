@@ -1,0 +1,2 @@
+Exposing `PurgeOldBackups` for C libraries.
+

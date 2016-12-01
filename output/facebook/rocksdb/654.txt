@@ -1,0 +1,2 @@
+A general compaction filter that will remove key/value pairs during compaction that have empty-values. Also added support to the Java API for using this.
+

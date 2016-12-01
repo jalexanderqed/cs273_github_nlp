@@ -1,0 +1,15 @@
+I have compiled rocksdb with Visual Studio 2015 x64 using cmake as static library with --DSNAPPY=1 option according to tutorial for Windows in CMakeLists.txt and tried to use the c_simple_example (because only C API works, c++ example gets unresolved externals). All compiles well,but when i am calling
+`db = rocksdb_open(options, &nodesFileName[0], &err);`
+i get error 
+Invalid argument: Compression type Snappy is not linked with the binary.
+It doesn´t even work if i specify exactly not to use compression.
+`rocksdb_options_set_compression(options, 0);`
+
+I linked rocksdb with this version of snappy https://bitbucket.org/robertvazan/snappy-visual-cpp. Linking rocksdblib into project results in unresolved external snappy::RawCompress, so it can´t be compiled that way.
+
+How do you compile this on Windows without the Snappy error? I am pretty sure i have tried all combinations of
+Configuration type -> Static lib / Dynamic library
+and
+Code generation -> Multithreaded / Multithreaded DLL.
+Only  Static lib/Multithreaded compiles it correctly, but maybe because of bugged C API it still throws the snappy error?
+

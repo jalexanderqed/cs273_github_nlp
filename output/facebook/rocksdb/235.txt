@@ -1,0 +1,6 @@
+Hey guys,
+                  I had earlier asked a question about how to build RocksDB with all the dependencies included as a part of the shared library (https://github.com/facebook/rocksdb/issues/209). This is a patch with the first stab at this.  I have also made changes to load the shared library from the jar without the user not having to load it explicitly. 
+
+Thanks,
+Naveen
+

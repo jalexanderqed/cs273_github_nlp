@@ -1,0 +1,2 @@
+In Makefile there are lib.a builds for four compression libraries (libz, libbz2, libsnappy, liblz4), but the new experimental zstd is missing.
+

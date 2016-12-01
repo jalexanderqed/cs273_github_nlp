@@ -1,0 +1,2 @@
+Small fix to make compilation work again on Mac OS X. I trust this will also work on Linux?
+

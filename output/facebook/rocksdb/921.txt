@@ -1,0 +1,30 @@
+Pasting my sample code below:
+# include "rocksdb/db.h"
+# include "rocksdb/utilities/backupable_db.h"
+# include <iostream>
+
+using namespace rocksdb;     
+
+int main() {
+
+Options options;
+options.create_if_missing = true;
+DB\* db;
+DB::Open(options, "/tmp/rocksdb", &db);
+db->Put(WriteOptions(), "key1", "value");
+BackupEngine\* backup_engine;
+Status s = BackupEngine::Open(Env::Default(), BackupableDBOptions("/tmp/rocksdb_backup",nullptr,false,nullptr,false,true,true,0,0) , &backup_engine);
+std::cout << s.ToString() << std::endl;
+backup_engine->CreateNewBackup(db);
+delete db;
+delete backup_engine;
+}
+
+I specify the value for "share_table_files" as "false", and "destroy_old_data" as "true" - i do not want incremental backups and all the older backups should be deleted. However this gives the following error(when I run the above code):
+
+IO error: /tmp/rocksdb_backup/shared/: No such file or directory
+Segmentation fault (core dumped)
+
+I suspect we are checking for the "/shared/" folder by default in GarbageCollect() - {which is being called by Initialize}, even when we can provide an option where the shared folder does not get created. The line is : 
+https://github.com/facebook/rocksdb/blob/7810aa802a1b596612769b011ea7872ea4bba248/utilities/backupable/backupable_db.cc#L1350
+

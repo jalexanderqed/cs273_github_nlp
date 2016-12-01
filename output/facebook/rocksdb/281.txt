@@ -1,0 +1,5 @@
+From the source code, I know rocksdb has support redis's list structure.
+
+Will rocksdb support some other structure, such as map, set?  
+Is this in you plan?
+

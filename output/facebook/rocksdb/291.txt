@@ -1,0 +1,62 @@
+Recently, I use YCSB to test RocksDB, and find RocksDB always compact almost all files of level 0 and level 1, as below. I checked the source code of RocksDB, and find for level 0, RocksDB will choose one file in level0 first, get the key range from it's smallest key to largest key, then choose all files which keys are overlap the key range in level 0 and level 1 and do compaction. 
+
+```
+(Original Log Time 2014/09/16-20:51:21.419761) [default] Compacting 98@0 + 334@1 files, score 10000.00 slots available 6
+(Original Log Time 2014/09/16-20:53:37.263218) [default] Compacting 98@0 + 334@1 files, score 10000.00 slots available 6
+(Original Log Time 2014/09/16-20:55:55.147865) [default] Compacting 99@0 + 334@1 files, score 10000.00 slots available 5
+(Original Log Time 2014/09/16-20:58:11.503693) [default] Compacting 99@0 + 334@1 files, score 10000.00 slots available 5
+```
+
+I get the key range of the files in level 0 from manifest, as below, and find the key range of every file is from user100xxxxxxxxxx to user999xxxxxxxxxx, the key is created by YCSB in random mode. This key range almost overlaps all data in database, so RocksDB will choose all files of level 0 and level 1 when do compaction in level 0.
+
+ 8935:1044501['user10013668312413176' @ 5864263 : 1 .. 'user997127350798602990' @ 5863871 : 1]
+ 8933:1037352['user1024217006872008438' @ 5862212 : 1 .. 'user989795509366005388' @ 5862588 : 1]
+ 8931:1034923['user1000971235424350841' @ 5861806 : 1 .. 'user997252540122266127' @ 5861306 : 1]
+ 8929:1027756['user101390370444497032' @ 5860715 : 1 .. 'user994431273086147254' @ 5860232 : 1]
+
+In this compaction strategy, for example, once I modify the values of smallest key and largest key, RocksDB should compact all files of level 0 and level 1, is it right?
+I think this strategy may be not appropriate, or there is something wrong with my config, can you give me some suggestion to avoid this situation? Thanks
+
+ This is my config:
+ rocksdb:
+    # in GB
+    cache_size: 1
+    # in KB
+    block_size: 4
+    # in MB
+    write_buffer_size: 32
+    # yes|no
+    compression: yes
+    # default 200
+    max_open_files: 500000
+
+```
+#Speed strategy - Level 0
+level0_file_num_compaction_trigger: 16
+level0_slowdown_writes_trigger: 64
+level0_stop_writes_trigger: 256
+
+#Speed strategy - Level N (N > 0)
+# in MB
+target_file_size_base: 32
+target_file_size_multiplier: 1
+# in MB
+max_bytes_for_level_base: 1024
+max_bytes_for_level_multiplier: 10
+
+#just for bulk loading data: yes|no
+disableDataSync:  no
+max_background_compactions: 8
+max_write_buffer_number: 20
+rate_limit_delay_max_milliseconds: 1000
+# in KB, write_buffer_size / 10
+arena_block_size:   3200
+# in second
+delete_obsolete_files_period_micros: 300
+
+#disable_seek_compaction
+disable_seek_compaction: no
+num_levels: 7
+min_write_buffer_number_to_merge: 1
+```
+

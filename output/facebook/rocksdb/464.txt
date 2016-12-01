@@ -1,0 +1,4 @@
+This pull request includes two commits:
+- Java8 JavaDoc corrections. Some illegal tags were used which broke JavaDoc generation.
+- WriteBatchWithIndex was using incorrect assert statements. These statements make use now as inteded equals method for comparison.
+

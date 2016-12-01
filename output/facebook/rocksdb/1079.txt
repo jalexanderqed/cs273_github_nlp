@@ -1,0 +1,12 @@
+when my rocksdb instance run a few time , i find some error in rocksdb LOG,
+
+2016/04/14-15:46:14.280843 7f68a4bff700 Move log file ./db_data/rt_mc_1_11/089425.log to ./db_data/rt_mc_1_11/archive/089425.log -- OK
+2016/04/14-15:46:14.280885 7f68a4bff700 Move log file ./db_data/rt_mc_1_11/089426.log to ./db_data/rt_mc_1_11/archive/089412.log -- OK
+2016/04/14-15:46:14.280931 7f68a4bff700 Move log file ./db_data/rt_mc_1_11//089425.log to ./db_data/rt_mc_1_11/archive/089427.log -- IO error: ./db_data/rt_m
+c_1_11//089427.log: No such file or directory
+2016/04/14-15:46:14.280953 7f68a4bff700 Move log file ./db_data/rt_mc_1_11//089426.log to ./db_data/rt_mc_1_11/archive/089426.log -- IO error: ./db_data/rt_m
+c_1_11//089426.log: No such file or directory
+
+this situation only happen in PurgeObsoleteFiles()---->wal_manager_.ArchiveWALFile(fname, number),
+i am confused that why this happen twice? is this error very bad ?
+

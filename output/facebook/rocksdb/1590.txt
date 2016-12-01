@@ -1,0 +1,4 @@
+
+If we don't wait for the threads to finish after each run, the thread queue may not be empty while the next test starts to run, which can cause unexpected behaviors.
+
+Also make some of the relaxed read/write more restrict.

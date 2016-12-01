@@ -1,0 +1,2 @@
+Firstly flush all data(8.7G) into level-0, then call CompactRange() to compact data into level-1, I found that the data will increase to more than 16G gradually and the SST file will be more and more during compaction。What can I do to control the expand factor of data and to delete source SST file immediately after compaction?
+

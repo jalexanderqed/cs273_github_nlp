@@ -1,0 +1,4 @@
+There is an assertion check in the constructor 
+WinRandomAccessFile():
+ assert(!options.use_mmap_reads);
+

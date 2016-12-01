@@ -1,0 +1,3 @@
+these functions were too complicated to change with exit points everywhere, so refactored them.
+
+btw, please review urgently, this is a prereq to fix the 5.0 perf regression

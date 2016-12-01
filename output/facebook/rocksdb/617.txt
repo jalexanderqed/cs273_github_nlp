@@ -1,0 +1,4 @@
+also hooked up WriteBatchInternal
+
+not sure if there were some caveats I'm not aware of in hooking this up, it just seemed missing. 
+

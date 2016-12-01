@@ -1,0 +1,54 @@
+I see the following crash in my application that is using rocksdb 3.10.2
+
+(gdb) info threads
+  Id   Target Id         Frame
+  2    Thread 0x7ff96484db60 (LWP 4427) 0x0000003f12878395 in _int_free () from /lib64/libc.so.6
+- 1    Thread 0x7ff9646a3700 (LWP 4428) 0x0000003f12832625 in raise () from /lib64/libc.so.6
+  (gdb) bt
+  #0  0x0000003f12832625 in raise () from /lib64/libc.so.6
+  #1  0x0000003f12833e05 in abort () from /lib64/libc.so.6
+  #2  0x0000003f1282b74e in __assert_fail_base () from /lib64/libc.so.6
+  #3  0x0000003f1282b810 in __assert_fail () from /lib64/libc.so.6
+  #4  0x00007ff9658c9e82 in rocksdb::CuckooTableBuilder::Add (this=0x7ff95c01a790, key=..., value=...) at table/cuckoo_table_builder.cc:112
+  #5  0x00007ff9658a2add in rocksdb::CompactionJob::ProcessKeyValueCompaction (this=this@entry=0x7ff9646a1ae0, imm_micros=imm_micros@entry=0x7ff9646a1748, input=input@entry=
+  0x7ff95c004630, is_compaction_v2=is_compaction_v2@entry=false) at db/compaction_job.cc:818
+  #6  0x00007ff9658a5d17 in rocksdb::CompactionJob::Run (this=this@entry=0x7ff9646a1ae0) at db/compaction_job.cc:312
+  #7  0x00007ff9658061b6 in rocksdb::DBImpl::BackgroundCompaction (this=this@entry=0xc30d00, madeProgress=madeProgress@entry=0x7ff9646a1f2e,
+  job_context=job_context@entry=0x7ff9646a1f50, log_buffer=log_buffer@entry=0x7ff9646a20b0) at db/db_impl.cc:2282
+  #8  0x00007ff965811a3e in rocksdb::DBImpl::BackgroundCallCompaction (this=this@entry=0xc30d00) at db/db_impl.cc:2014
+  #9  0x00007ff965811ea5 in rocksdb::DBImpl::BGWorkCompaction (db=0xc30d00) at db/db_impl.cc:1883
+  #10 0x00007ff965873f5f in BGThread (thread_id=<optimized out>, this=0xc2f480) at util/env_posix.cc:1696
+  #11 rocksdb::(anonymous namespace)::PosixEnv::ThreadPool::BGThreadWrapper (arg=<optimized out>) at util/env_posix.cc:1720
+  #12 0x0000003fef2079d1 in start_thread () from /lib64/libpthread.so.0
+  #13 0x0000003f128e88fd in clone () from /lib64/libc.so.6
+
+this is the other thread
+(gdb) bt
+#0  0x0000003f12878395 in _int_free () from /lib64/libc.so.6
+#1  0x00007ff965941979 in _M_dispose (__a=..., this=<optimized out>) at /home/shanbin/gcc-bld/x86_64-redhat-linux/libstdc++-v3/include/bits/basic_string.h:229
+#2  std::string::assign (this=0x7fffe150f540, __str=...) at /home/shanbin/gcc-bld/x86_64-redhat-linux/libstdc++-v3/include/bits/basic_string.tcc:250
+#3  0x00007ff965480c07 in operator= (__str=..., this=<optimized out>)
+
+```
+at /nfs/ystools/vol/ystools/releng/build/Linux_2.6_rh4_x86_64/tools/gcc/4.1.1/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.1.1/../../../../include/c++/4.1.1/bits/basic_string.h:486
+```
+#4  log4cxx::helpers::CharMessageBuffer::str (this=0x7fffe150f540) at messagebuffer.cpp:75
+#5  0x00007ff96579d2b5 in libnqss::RocksDBDataStore::init (this=0xc2ccc8, identifier=..., userGuids=..., flags=<optimized out>)
+
+```
+at /home/hyadava/git/fb/libnqss/src/datastore/RocksDBDataStore.cc:233
+```
+#6  0x00007ff9657a5284 in libnqss::DataStoreFactory::createDataStore (type=type@entry=libnqss::kInMemLocal, provider=provider@entry=libnqss::kRocksDB, location=..., userGuids=...,
+
+```
+flags=flags@entry=12) at /home/hyadava/git/fb/libnqss/src/datastore/DataStoreFactory.cc:21
+```
+#7  0x00000000004155e7 in main (argc=17, argv=0x7fffe1528e78) at /home/hyadava/git/fb/libnqss/src/tools/RocksDBDataLoader.cc:784
+
+Some information about my application
+
+rocksdb version : 3.10.2
+OS: Linux XXX.XXX.XXX 2.6.32-431.23.3.el6.XXXXX.20140804.x86_64 #1 SMP Mon Aug 4 04:44:59 UTC 2014 x86_64 x86_64 x86_64 GNU/Linux
+
+My application creates 1400 column families. I see this crash if I try to re-insert the same set of records in some of the column families. Is there an upper limit on the number of column families? I could not find anything in the documentation.
+

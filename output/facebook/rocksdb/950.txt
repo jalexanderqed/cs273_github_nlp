@@ -1,0 +1,41 @@
+I have been testing RocksDB (both Master and v4.1 branches) in a Fedora 23
+PPC64LE environment using the stock GCC 5.1.1 compilers. During "make check" one
+and only one test fails, ldb_cmd_test:
+
+```
+[bcbrock@ppc64le]$ ./ldb_cmd_test
+[==========] Running 2 tests from 1 test case.
+[----------] Global test environment set-up.
+[----------] 2 tests from LdbCmdTest
+[ RUN      ] LdbCmdTest.HexToString
+util/ldb_cmd_test.cc:22: Failure
+Value of: static_cast<int>(actual[i])
+  Actual: 255
+Expected: expected[i]
+Which is: -1
+[  FAILED  ] LdbCmdTest.HexToString (0 ms)
+[ RUN      ] LdbCmdTest.HexToStringBadInputs
+Invalid hex input 123.  Must start with 0x
+Invalid hex input Ox12.  Must start with 0x
+[       OK ] LdbCmdTest.HexToStringBadInputs (0 ms)
+[----------] 2 tests from LdbCmdTest (1 ms total)
+
+[----------] Global test environment tear-down
+[==========] 2 tests from 1 test case ran. (2 ms total)
+[  PASSED  ] 1 test.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] LdbCmdTest.HexToString
+
+ 1 FAILED TEST
+```
+
+Simply exporting
+
+```
+EXTRA_CFLAGS=-fsigned-char EXTRA_CXXFLAGS=-fsigned-char
+```
+
+prior to the build solves the problem. However, given that this is the only
+test that fails I wonder if the solution is actually to modify how the test
+checks the result of HexToString?
+

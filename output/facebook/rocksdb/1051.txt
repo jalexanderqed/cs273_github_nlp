@@ -1,0 +1,14 @@
+In quasardb to make profiling easier we added the following method in Env:
+
+``` cpp
+void Env::UnsafeDeallocate()
+{
+    delete envptr;
+    envptr = nullptr;
+}
+```
+
+The goal of this function is to deallocate all structures before exiting the program to make hunting for memory leaks easier. It's unsafe in the sense it cannot be called at any other moment but before all RocksDB threads and objects have been terminated.
+
+Would you like us to do a PR? It's still not 100% working on Windows because of the way the threads are hooked.
+

@@ -1,0 +1,7 @@
+in https://github.com/facebook/rocksdb/wiki/RocksDB-Bloom-Filter
+it is written:
+We are working on a new Bloom filter option called "full filter" which contains a filter for all keys in the SST file. This may improve read performance, because it avoids traveling in a complicated SST format. However, it requires more memory to build, because all keys must be in-memory for a given SST file.
+
+Why is it required to store all the keys in-memory?
+Can't you just add each block keys to the file bloom filter during the file creation?
+

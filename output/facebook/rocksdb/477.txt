@@ -1,0 +1,2 @@
+There is no C API for backing up RocksDB. So one cannot backup RocksDB db from Go, for example.
+

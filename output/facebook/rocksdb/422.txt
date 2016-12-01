@@ -1,0 +1,7 @@
+Some quality improvements:
+- Addressed some FindBugs issues
+- Added some missing Tests
+- Removed obsolete test code in Comparator Test
+
+Differential is: https://reviews.facebook.net/D29571
+

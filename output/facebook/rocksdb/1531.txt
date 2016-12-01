@@ -1,0 +1,8 @@
+Summary:
+Remove the ticker count because:
+* Having to reset the ticker count in WriteImpl is ineffiecent;
+* It doesn't make sense to have it as a ticker count if multiple db
+  instance share a statistics object.
+
+Test Plan:
+`make all check`

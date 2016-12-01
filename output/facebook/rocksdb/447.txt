@@ -1,0 +1,9 @@
+I was reading about the Prefix Seek API and I have some questions/inquiries.
+- Why were `ReadOptions.prefix` & `ReadOptions.prefix_seek` deprecated? The wiki stated that the use case for these two variants is very rare. However, if I have understood the new API correctly, these two variants were the only easy way to achieve a dynamic prefix seek. (could you please confirm if this is the case)
+
+Say you have an inverted search index stored in the database and you want to perform search queries. The old style would allow to create an iterator per search query, where the prefix is the keyword being searched for or a substring of it. For his use case I would have gone with the `ReadOptions.prefix` but it's deprecated, hence the next questions:
+- Is the `prefix_extractor` static/fixed, i.e. can dynamic slice transformation be performed or redefined on iterator creation without rolling my own implementation?
+- How would a `prefix_extractor` look like for the use case above, the inverted search index? One idea I had is to pass the keyword to my `SliceTransform` and do all the checking and transforming myself, which seems a little bit too cumbersome compared to the deprecated variants using the `ReadOptions.prefix` & `ReadOptions.prefix_seek`.
+
+Thanks in advance :)
+

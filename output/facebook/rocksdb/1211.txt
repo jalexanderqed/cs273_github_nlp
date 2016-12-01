@@ -1,0 +1,3 @@
+It's an xml for starters, plus Maven expects it to be named pom.xml.
+There's no other pom.xml in this directory which makes this change trivial.
+

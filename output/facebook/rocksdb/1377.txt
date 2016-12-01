@@ -1,0 +1,6 @@
+`1>d:\workspace\rocksdb\memtable\hash_cuckoo_rep.cc(43): error C2610: 'rocksdb::`anonymous-namespace'::CuckooStep::CuckooStep(rocksdb::`anonymous-namespace'::CuckooStep &&)' : is not a special member function which can be defaulted```
+
+That is because VS 2013 does not support this C++11 feature.  See https://msdn.microsoft.com/en-us/library/dn457344.aspx.
+
+`Visual Studio does not support defaulted move constructors or move-assignment operators as the C++11 standard mandates. For more information, see the Defaulted and Deleted functions section of Support For C++11/14/17 Features (Modern C++).`
+

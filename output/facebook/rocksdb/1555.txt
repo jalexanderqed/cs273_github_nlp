@@ -1,0 +1,17 @@
+I have a rather large database of about 3Tb in size and billions of rows. It was created using `PrepareForBulkLoad()` options set.
+
+Trying to reopen database (even in read-only mode) and either positioning iterator to the first key or reading any key ends up in quick (minutes) allocation of the whole RAM (32Gb) and OOM.
+
+I experimented with `BlockBasedTableOptions` but it doesn't seem to help.
+
+Attached LOG dumped every 60 seconds. It was made with `disable_auto_compactions = true;` option when trying to position iterator to the first key. Iterator's options are:
+```
+                ro.managed = true;
+                ro.fill_cache = false;
+                ro.verify_checksums = false;
+```
+but I tried many other combinations without any luck.
+[LOG.txt](https://github.com/facebook/rocksdb/files/603857/LOG.txt)
+
+What are the best options to read large database without getting into OOM? I use current rocksdb version as of commit a0deec960f3a8190831c673e5ba998fe6fb7ea90
+

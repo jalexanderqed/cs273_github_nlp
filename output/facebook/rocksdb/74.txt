@@ -1,0 +1,14 @@
+Support for LZ4 compression.
+
+CPU: 4 \* Intel(R) Core(TM) i7-3540M CPU @ 3.00GHz
+
+Compression:
+snappy: 4.928 micros/op 202905 ops/sec; 792.6 MB/s (output: 55.1%)
+lz4: 5.973 micros/op 167427 ops/sec; 654.0 MB/s (output: 55.4%)
+lz4hc: 65.445 micros/op 15279 ops/sec; 59.7 MB/s (output: 55.4%)
+
+Decompression:
+snappy: 0.837 micros/op 1194871 ops/sec; 4667.5 MB/s
+lz4: 0.659 micros/op 1517871 ops/sec; 5929.2 MB/s
+lz4hc: 0.667 micros/op 1498213 ops/sec; 5852.4 MB/s
+

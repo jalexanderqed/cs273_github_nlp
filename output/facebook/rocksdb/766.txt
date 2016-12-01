@@ -1,0 +1,4 @@
+Need to move debug variable under #ifndef NDEBUG. Sorry it was missed earlier.
+
+Changes are in Windows port only.
+

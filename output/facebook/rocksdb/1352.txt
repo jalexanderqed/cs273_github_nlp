@@ -1,0 +1,2 @@
+I have a use case where RocksDB performs well once the cache is warmed up, but until then the latency suffers. I am planning on adding a hack for this, which is to have cache just the keys at application layer, persist it before shutdown, and on startup read all the keys again to force RocksDB cache to be warmed up. It would be nice to have RocksDB do this instead, so that we can get reliable, stable performance even immediately after startup.
+

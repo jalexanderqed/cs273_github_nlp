@@ -59,7 +59,7 @@ public class UserScores {
         TopicInferencer inferencer = tModel.model.getInferencer();
         InstanceList temp = new InstanceList(tModel.instances.getPipe());
         temp.addThruPipe(new Instance(query, null, "test instance", null));
-        double[] queryTopics = inferencer.getSampledDistribution(temp.get(0), 10, 1, 5);
+        double[] queryTopics = inferencer.getSampledDistribution(temp.get(0), 100, 1, 5);
 
         for(String user : userScores.keySet()) {
             scores.add(new StringDoubleTuple(user, Util.dot(userScores.get(user), queryTopics)));

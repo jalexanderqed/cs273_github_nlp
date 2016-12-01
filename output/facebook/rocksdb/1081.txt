@@ -1,0 +1,5 @@
+  Comparable with Snappy on comp ratio.
+  Implemented using Windows API, does not require external package.
+  Avaiable since Windows 8 and server 2012.
+  Use -DXPRESS=1 with CMake to enable.
+

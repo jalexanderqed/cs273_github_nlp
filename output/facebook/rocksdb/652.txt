@@ -1,0 +1,4 @@
+  Introduce include/rocksdb/public_port.h with minimum porting required for Windows
+  Add a new file util/db_test_util.cc to CMake file. Would be nice for now to enforce this in code review until
+  CI is in effect and we find a better solution.
+

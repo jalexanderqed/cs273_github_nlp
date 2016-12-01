@@ -1,0 +1,8 @@
+Trying to manually (offline) compact a fairly large database, I ran into 2 issues:
+
+First: compaction has no indication about how far along it is (I could take seconds, minutes, hours or days to run this I guess?)
+
+Second: Not all database options are exposed, neither are options for running compactions with as many threads as possible. Maybe some of these options could be actually read from the database itself instead of me having to specify it explicitly. I feel like I'm risking to mess with the application that uses the database afterwards, which might for example expect a slightly different file size and then will again have to re-organize everything killing all the benefits of compacting offline.
+
+The reason I did this in the first place was that it seemed the application could not catch up with compactions (I increased the file size and it took/takes forever to migrate to this different format) so I thought of splitting the task a bit, letting the database optimize itself first and then start writing to it again when everything is fine.
+

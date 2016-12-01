@@ -1,0 +1,7 @@
+- conversion from 'size_t' to 'type', by add static_cast
+- extend type from int to int64_t
+
+Tested:
+- by build solution on Windows, Linux locally,
+- run tests
+

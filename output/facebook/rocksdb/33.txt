@@ -1,0 +1,36 @@
+in my local computer, there are compilation errors.
+
+```
+g++ -g -Wall -Werror -I. -I./include -std=gnu++11  -DROCKSDB_PLATFORM_POSIX  -DOS_MACOSX -DROCKSDB_ATOMIC_PRESENT -DSNAPPY -DGFLAGS -DZLIB -DBZIP2   -DHAVE_JEMALLOC -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c utilities/backupable/backupable_db.cc -o utilities/backupable/backupable_db.o 
+utilities/backupable/backupable_db.cc:251:25: error: format specifies type 'unsigned long' but the argument has type 'uint64_t'
+      (aka 'unsigned long long') [-Werror,-Wformat]
+          backup.first, backup.second.GetSequenceNumber(), sequence_number);
+                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+utilities/backupable/backupable_db.cc:251:60: error: format specifies type 'unsigned long' but the argument has type 'uint64_t'
+      (aka 'unsigned long long') [-Werror,-Wformat]
+          backup.first, backup.second.GetSequenceNumber(), sequence_number);
+                                                           ^~~~~~~~~~~~~~~
+utilities/backupable/backupable_db.cc:745:32: error: format specifies type 'long *' but the argument has type 'int64_t *'
+      (aka 'long long *') [-Werror,-Wformat]
+  sscanf(data.data(), "%ld%n", &timestamp_, &bytes_read);
+                       ~~~     ^~~~~~~~~~~
+                       %lld
+utilities/backupable/backupable_db.cc:747:32: error: format specifies type 'unsigned long *' but the argument has type
+      'uint64_t *' (aka 'unsigned long long *') [-Werror,-Wformat]
+  sscanf(data.data(), "%lu%n", &sequence_number_, &bytes_read);
+                       ~~~     ^~~~~~~~~~~~~~~~~
+                       %llu
+4 errors generated.
+```
+
+local environment to compile is
+
+```
+$ uname -a; g++ --version
+Darwin junyoung.local 13.0.0 Darwin Kernel Version 13.0.0: Thu Sep 19 22:22:27 PDT 2013; root:xnu-2422.1.72~6/RELEASE_X86_64 x86_64
+Configured with: --prefix=/Applications/Xcode.app/Contents/Developer/usr --with-gxx-include-dir=/usr/include/c++/4.2.1
+Apple LLVM version 5.0 (clang-500.2.79) (based on LLVM 3.3svn)
+Target: x86_64-apple-darwin13.0.0
+Thread model: posix
+```
+

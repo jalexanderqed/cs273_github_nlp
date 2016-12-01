@@ -1,0 +1,3 @@
+when the file deletions are disabled, this interface returns value that > 0, and if the file deletions are enabled, it returns value that = 0.
+I think it should be reversed.
+

@@ -1,0 +1,4 @@
+This changeset plugs a memory leak that exists in `DocumentDBImpl::CreateIndex`: if `CreateColumnFamily` fails, then we never deallocate the `Index` that we allocated a few lines back.
+
+Additionally, the variable names used in `VersionEdit::AddFile` were swapped, which could cause confusion when reviewing the code. Fix the issue. Note that all the call sites are _correctly_ passing the arguments in and the problem is entirely localized in `AddFile`.
+

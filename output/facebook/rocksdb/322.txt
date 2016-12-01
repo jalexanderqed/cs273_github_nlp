@@ -1,0 +1,15 @@
+==== PASSED 5 tests
+****\* Running listener_test
+==== Test EventListenerTest.OnSingleDBFlushTest
+==== Test EventListenerTest.AddAndRemove
+==== Test EventListenerTest.MultiDBMultiListeners
+==== Test EventListenerTest.DisableBGCompaction
+db/listener_test.cc:338: failed: 155018933 == 6
+#0   ./listener_test() [0x427945] Tester        /home/wasa/github/rocksdb/./util/testharness.h:56
+#1   ./listener_test() [0x4315db] ~_Test_DisableBGCompaction    /home/wasa/github/rocksdb/db/listener_test.cc:314
+#2   ./listener_test() [0x551fb3] rocksdb::test::RunAllTests()  /home/wasa/github/rocksdb/util/testharness.cc:48
+#3   /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf5) [0x2b80556b7ec5] ??        ??:0
+#4   ./listener_test() [0x424bce] _start        ??:?
+
+make: **\* [check] Error 1
+

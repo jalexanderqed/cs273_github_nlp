@@ -1,0 +1,4 @@
+Running: gcc version 4.8.1 on Ubuntu 12.04.3 LTS
+
+Error "cc1plus: error: unrecognized command line option ‘-std=gnu++11’"
+

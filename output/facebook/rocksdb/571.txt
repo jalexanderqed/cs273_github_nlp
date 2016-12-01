@@ -1,0 +1,28 @@
+I am seeing a strange issue with WriteBatchWithIndex. Whilst I am using this from Java, I suspect the underlying problem is in the C++ code of WriteBatchWithIndex or its BaseDeltaIterator. I am not the strongest C++ developer, so I would appreciate it if someone could take a look.
+
+``` java
+Options opts = new Options()
+                    .setCreateIfMissing(true)
+                    .setIncreaseParallelism(4)
+                    .optimizeLevelStyleCompaction()
+                    .setMaxBackgroundCompactions(4);
+
+RocksDB rocks = RocksDB.open(opts, "/tmp/test1");
+Snapshot snapshot = rocks.getSnapshot();
+ReadOptions readOptions = new ReadOptions().setSnapshot(snapshot);
+WriteBatchWithIndex writeBatch = new WriteBatchWithIndex(true);
+
+RocksIterator baseIterator = db.newIterator(readOptions);
+RocksIterator iterator = writeBatch.newIteratorWithBase(baseIterator);
+```
+
+First, I write various PUT and DELETE into the `writeBatch`.
+
+Subsequently, in a loop after calling `next()` on `iterator`, if I call `getKey` then I get returned 9 bytes all of which are zero. However, if I call `getKey` on baseIterator then I get 12 bytes with a possibly correct value.
+
+`iterator.isValid` and `baseIterator.isValid` both report `true`.
+
+In this instance, the keys are numbers. When `iterator.key()` mistakenly returns 0 (i.e. nine zero bytes), `baseIterator.key()` returns 12 bytes which decode to `4374136231`. If I inspect the WriteBatchWithIndex with a debugger I can confirm that there are no entires in the WriteBatchWithIndex for the key `4374136231` or for the preceding key `4374136230` or even the following key `4374136232`.
+
+So, if I have not modified the entry in the WriteBatchWithIndex, then how can I get a key from the iterator which is nine bytes of zero, whilst the baseIterator shows a valid key? This is a mystery!
+

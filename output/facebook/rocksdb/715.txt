@@ -1,0 +1,5 @@
+Hi I have seen that you release rocksdb 4.0
+
+would be nice if you can mention the new 'compaction_readahead_size' option in the "HISTORY.md" file.
+If found it accidentally by calling diff on the include directory between 3.13 and 4.0
+

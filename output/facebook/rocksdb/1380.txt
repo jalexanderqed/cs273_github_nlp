@@ -1,0 +1,17 @@
+platform: `Mac OS X 10.11`
+branch: `master`
+step: `make static_lib`
+then it will have the follow info:
+
+```
+  CC       utilities/write_batch_with_index/write_batch_with_index_internal.o
+  CC       tools/ldb_cmd.o
+  CC       tools/ldb_tool.o
+  CC       tools/sst_dump_tool.o
+  AR       librocksdb.a
+ar: creating archive librocksdb.a
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: file: librocksdb.a(db_impl_debug.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: file: librocksdb.a(thread_status_util_debug.o) has no symbols
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib: file: librocksdb.a(xfunc.o) has no symbols
+```
+

@@ -1,0 +1,14 @@
+When running make jtest, I get a failure:
+java -ea -Djava.library.path=.:../ -cp "rocksdbjni.jar:.:./_" org.rocksdb.test.OptionsTest
+Exception in thread "main" java.lang.AssertionError
+        at org.rocksdb.test.OptionsTest.main(OptionsTest.java:94)
+make[1]: *_\* [test] Error 1
+
+I think it's because setMaxLogFileSize takes a long as it's argument but the long is converted to size_t in C++ and that's 32 bits.
+Could be solved by using in the test case
+ long longValue = rand.nextInt(Integer.MAX_VALUE);
+instead of
+ long longValue = rand.nextLong()
+
+Same error is present in other test cases as well.
+

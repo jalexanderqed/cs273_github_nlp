@@ -1,0 +1,150 @@
+# The issue:
+
+Right now the 'default' build is to build with -march=native. Specified in the INSTALL.md. However, this default installation has the unexpected behavior that when you run it you get a `SIGILL`
+
+The default compiler flags for both satic (librocksdb.a) and dynamic librocksdb.so.3.11.2 are compiled with  `-march=native`
+## Background
+
+```
+g++ -shared -Wl,-soname -Wl,librocksdb.so.3.11 -g -W -Wextra -Wall -Wsign-compare -Wshadow -Wno-unused-parameter -I. -I./include -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_FALLOCATE_PRESENT -DSNAPPY -DGFLAGS=google -DZLIB -DBZIP2 -DLZ4 -march=native   -isystem ./third-party/gtest-1.7.0/fused-src -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -DNDEBUG -Woverloaded-virtual -Wnon-virtual-dtor -Wno-missing-field-initializers -fPIC db/builder.cc db/c.cc ........
+
+```
+
+The issue with this is that my build box CPU has instructions that my cluster CPU's do not support. 
+
+Specifically this line 
+
+```
+    cache.c:474  int num_shards = 1 << num_shard_bits_; 
+```
+
+causes a `shlx` optimization. It is an AVX instruction
+
+https://software.intel.com/sites/default/files/4f/5b/36945
+## Debug information
+
+My build machine CPU is a:
+
+```
+Intel(R) Core(TM) i7-5960X CPU @ 3.00GHz
+```
+
+My cluster computer cpus are:
+
+```
+Intel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz
+```
+### GDB  bt
+
+```
+(gdb) bt
+#0  0x00007ffff144c851 in ShardedLRUCache (num_shard_bits=4, capacity=8388608, this=0x60d000003790) at util/cache.cc:474
+#1  construct<rocksdb::(anonymous namespace)::ShardedLRUCache, unsigned long&, int&> (this=<optimized out>, __p=0x60d000003790) at /usr/include/c++/4.9/ext/new_allocator.h:120
+#2  _S_construct<rocksdb::(anonymous namespace)::ShardedLRUCache, unsigned long&, int&> (__a=..., __p=0x60d000003790) at /usr/include/c++/4.9/bits/alloc_traits.h:253
+#3  construct<rocksdb::(anonymous namespace)::ShardedLRUCache, unsigned long&, int&> (__a=..., __p=0x60d000003790) at /usr/include/c++/4.9/bits/alloc_traits.h:399
+#4  _Sp_counted_ptr_inplace<unsigned long&, int&> (__a=..., this=0x60d000003780) at /usr/include/c++/4.9/bits/shared_ptr_base.h:515
+#5  construct<std::_Sp_counted_ptr_inplace<rocksdb::(anonymous namespace)::ShardedLRUCache, std::allocator<rocksdb::(anonymous namespace)::ShardedLRUCache>, (__gnu_cxx::_Lock_policy)2>, std::allocator<rocksdb::(anonymous namespace)::ShardedLRUCache> const, unsigned long&, int&> (this=<optimized out>, __p=<optimized out>) at /usr/include/c++/4.9/ext/new_allocator.h:120
+#6  _S_construct<std::_Sp_counted_ptr_inplace<rocksdb::(anonymous namespace)::ShardedLRUCache, std::allocator<rocksdb::(anonymous namespace)::ShardedLRUCache>, (__gnu_cxx::_Lock_policy)2>, std::allocator<rocksdb::(anonymous namespace)::ShardedLRUCache> const, unsigned long&, int&> (__a=..., __p=<optimized out>) at /usr/include/c++/4.9/bits/alloc_traits.h:253
+#7  construct<std::_Sp_counted_ptr_inplace<rocksdb::(anonymous namespace)::ShardedLRUCache, std::allocator<rocksdb::(anonymous namespace)::ShardedLRUCache>, (__gnu_cxx::_Lock_policy)2>, std::allocator<rocksdb::(anonymous namespace)::ShardedLRUCache> const, unsigned long&, int&> (__a=..., __p=<optimized out>) at /usr/include/c++/4.9/bits/alloc_traits.h:399
+#8  __shared_count<rocksdb::(anonymous namespace)::ShardedLRUCache, std::allocator<rocksdb::(anonymous namespace)::ShardedLRUCache>, unsigned long&, int&> (__a=..., this=<optimized out>) at /usr/include/c++/4.9/bits/shared_ptr_base.h:619
+#9  __shared_ptr<std::allocator<rocksdb::(anonymous namespace)::ShardedLRUCache>, unsigned long&, int&> (__a=..., this=<optimized out>, __tag=...) at /usr/include/c++/4.9/bits/shared_ptr_base.h:1090
+#10 shared_ptr<std::allocator<rocksdb::(anonymous namespace)::ShardedLRUCache>, unsigned long&, int&> (__a=..., this=<optimized out>, __tag=...) at /usr/include/c++/4.9/bits/shared_ptr.h:316
+#11 allocate_shared<rocksdb::(anonymous namespace)::ShardedLRUCache, std::allocator<rocksdb::(anonymous namespace)::ShardedLRUCache>, unsigned long&, int&> (__a=...) at /usr/include/c++/4.9/bits/shared_ptr.h:588
+#12 make_shared<rocksdb::(anonymous namespace)::ShardedLRUCache, unsigned long&, int&> () at /usr/include/c++/4.9/bits/shared_ptr.h:604
+#13 rocksdb::NewLRUCache (capacity=capacity@entry=8388608, num_shard_bits=num_shard_bits@entry=4) at util/cache.cc:552
+#14 0x00007ffff144cc06 in rocksdb::NewLRUCache (capacity=capacity@entry=8388608) at util/cache.cc:545
+#15 0x00007ffff1413c19 in rocksdb::BlockBasedTableFactory::BlockBasedTableFactory (this=0x60b000009d00, table_options=...) at table/block_based_table_factory.cc:36
+#16 0x00007ffff14d3254 in rocksdb::ColumnFamilyOptions::ColumnFamilyOptions (this=0x7fffffffb738) at util/options.cc:135
+#17 0x00007ffff67224e5 in Options (this=0x7fffffffb630) at /usr/local/include/rocksdb/options.h:1024
+```
+### Disasembler
+
+```
+(gdb) disassemble
+Dump of assembler code for function rocksdb::NewLRUCache(unsigned long, int):
+   0x00007ffff144c790 <+0>:     push   %rbp
+   0x00007ffff144c791 <+1>:     mov    %rsp,%rbp
+   0x00007ffff144c794 <+4>:     push   %r15
+   0x00007ffff144c796 <+6>:     push   %r14
+   0x00007ffff144c798 <+8>:     push   %r13
+   0x00007ffff144c79a <+10>:    push   %r12
+   0x00007ffff144c79c <+12>:    push   %rbx
+   0x00007ffff144c79d <+13>:    mov    %edx,%ebx
+   0x00007ffff144c79f <+15>:    sub    $0x58,%rsp
+   0x00007ffff144c7a3 <+19>:    cmp    $0x13,%edx
+   0x00007ffff144c7a6 <+22>:    mov    %rdi,-0x58(%rbp)
+   0x00007ffff144c7aa <+26>:    mov    %rsi,-0x60(%rbp)
+   0x00007ffff144c7ae <+30>:    jle    0x7ffff144c7d2 <rocksdb::NewLRUCache(unsigned long, int)+66>
+   0x00007ffff144c7b0 <+32>:    movq   $0x0,(%rdi)
+   0x00007ffff144c7b7 <+39>:    movq   $0x0,0x8(%rdi)
+   0x00007ffff144c7bf <+47>:    mov    -0x58(%rbp),%rax
+   0x00007ffff144c7c3 <+51>:    add    $0x58,%rsp
+   0x00007ffff144c7c7 <+55>:    pop    %rbx
+   0x00007ffff144c7c8 <+56>:    pop    %r12
+   0x00007ffff144c7ca <+58>:    pop    %r13
+   0x00007ffff144c7cc <+60>:    pop    %r14
+   0x00007ffff144c7ce <+62>:    pop    %r15
+   0x00007ffff144c7d0 <+64>:    pop    %rbp
+   0x00007ffff144c7d1 <+65>:    retq
+   0x00007ffff144c7d2 <+66>:    mov    $0x88,%edi
+   0x00007ffff144c7d7 <+71>:    callq  0x7ffff1313fb0 <_Znwm@plt>
+   0x00007ffff144c7dc <+76>:    mov    %rax,%r14
+   0x00007ffff144c7df <+79>:    movl   $0x1,0x8(%rax)
+   0x00007ffff144c7e6 <+86>:    movl   $0x1,0xc(%rax)
+   0x00007ffff144c7ed <+93>:    lea    0x2f5ddc(%rip),%rax        # 0x7ffff17425d0 <_ZTVSt23_Sp_counted_ptr_inplaceIN7rocksdb12_GLOBAL__N_115ShardedLRUCacheESaIS2_ELN9__gnu_cxx12_Lock_policyE2EE+16>
+   0x00007ffff144c7f4 <+100>:   xor    %esi,%esi
+   0x00007ffff144c7f6 <+102>:   mov    %rax,(%r14)
+   0x00007ffff144c7f9 <+105>:   lea    0x10(%r14),%rax
+   0x00007ffff144c7fd <+109>:   mov    %rax,-0x50(%rbp)
+   0x00007ffff144c801 <+113>:   lea    0x2f5d48(%rip),%rax        # 0x7ffff1742550 <_ZTVN7rocksdb12_GLOBAL__N_115ShardedLRUCacheE+16>
+   0x00007ffff144c808 <+120>:   mov    %rax,0x10(%r14)
+   0x00007ffff144c80c <+124>:   lea    0x20(%r14),%rax
+   0x00007ffff144c810 <+128>:   mov    %rax,%rdi
+   0x00007ffff144c813 <+131>:   mov    %rax,-0x68(%rbp)
+   0x00007ffff144c817 <+135>:   callq  0x7ffff1316db0 <_ZN7rocksdb4port5MutexC1Eb@plt>
+   0x00007ffff144c81c <+140>:   lea    0x48(%r14),%rax
+   0x00007ffff144c820 <+144>:   xor    %esi,%esi
+   0x00007ffff144c822 <+146>:   mov    %rax,%rdi
+   0x00007ffff144c825 <+149>:   mov    %rax,-0x70(%rbp)
+   0x00007ffff144c829 <+153>:   callq  0x7ffff1316db0 <_ZN7rocksdb4port5MutexC1Eb@plt>
+   0x00007ffff144c82e <+158>:   mov    -0x60(%rbp),%rax
+   0x00007ffff144c832 <+162>:   mov    %ebx,0x78(%r14)
+   0x00007ffff144c836 <+166>:   mov    $0xffffffffffffffff,%rdi
+   0x00007ffff144c83d <+173>:   movq   $0x0,0x70(%r14)
+   0x00007ffff144c845 <+181>:   mov    %rax,0x80(%r14)
+   0x00007ffff144c84c <+188>:   mov    $0x1,%eax
+=> 0x00007ffff144c851 <+193>:   shlx   %ebx,%eax,%eax
+   0x00007ffff144c856 <+198>:   mov    %eax,-0x74(%rbp)
+   0x00007ffff144c859 <+201>:   cltq
+   0x00007ffff144c85b <+203>:   mov    %rax,%rbx
+   0x00007ffff144c85e <+206>:   mov    %rax,-0x48(%rbp)
+   0x00007ffff144c862 <+210>:   movabs $0xe2000000000000,%rax
+   0x00007ffff144c86c <+220>:   cmp    %rax,%rbx
+
+```
+
+This line: 
+
+```
+=> 0x00007ffff144c851 <+193>:   shlx   %ebx,%eax,%eax
+```
+
+Is the culprit. 
+## Solution
+
+Default `PORTABLE=1` on the Makefile
+## Other debug information.
+
+I un`jar`ed the rocksdb-3.10\* libs to inspect the instructions in them:
+
+The JNI bindings **Do not** include these instructions as well, which just means that its built with PORTABLE=1.
+
+```
+$ objdump -d librocksdbjni-linux64.so | grep shlx
+
+```
+
+Thanks again! 
+
+I'm only filing an issue because my previous rocksdb build `3.5` did not behave like this 
+

@@ -1,0 +1,12 @@
+Hey the team,
+
+I use C API to set some parameters to tune performance.  However it seems the values I gave aren't used by the DB.   What's shown in the LOG file differs from the values I assign.
+
+For example, I set write_buffer_size and max_write_buffer_number like below:
+rocksdb_options_set_write_buffer_size(db->options, 1024L \* 1024);
+rocksdb_options_set_max_write_buffer_number(db->options, 32);
+
+but LOG file still shows the old config value (64K, 6).
+
+I'm wondering if C API is deprecated? If so I can switch to C++.  Just want a definitive statement from your team.  Thanks!
+

@@ -1,0 +1,2 @@
+This popped up using AWS Ec2 instances going from a c4 to a c3 instance using Ubuntu LTS 14; invalid opcode calls, and invalid instruction dumps. This was triggered when using librocksdb.so.4.0.0 with pyrocksdb when simply calling rocksdb.Options(). It did not happen with other calls.
+

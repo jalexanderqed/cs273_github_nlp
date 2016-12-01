@@ -1,0 +1,6 @@
+ARM (Automatic Resource Management)
+
+The purpose of these commits is to move away from relying on the Garbage Collector to call `finalize` on the various Objects of the Rocks Java API in order to free the underlying C++ objects and memory. Instead we will require users of the Java API to explicitly free the Java Objects, by calling `close`; To this end we have implemented `java.lang.AutoCloseable` throughout the API, which allows the user to make use of Java 7's `try-with-resources`.
+
+Along the way, improvements have also been made around the Java/C++ JNI bridge with respect to object creation/initialization and destruction. These changes require thorough testing as the synchronization of object cleanup has been changed.
+

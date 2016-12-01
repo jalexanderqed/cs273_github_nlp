@@ -1,0 +1,4 @@
+`rocksdb::DB::OpenForReadOnly` will fail if the db has been opened by another process. However, if the db is being opened read-only, what is preventing multiple accessors? These work fine internally within one process, with multiple threads accessing the db.
+
+Could I resolve this by forcing the opening process not to take a lock on the db if it is read-only?
+

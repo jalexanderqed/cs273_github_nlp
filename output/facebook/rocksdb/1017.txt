@@ -1,0 +1,2 @@
+hi.I find an empty rocksdb's database need 145 MB of space.I use "du -h" to find the phenomenon.Why and can I fix it.
+

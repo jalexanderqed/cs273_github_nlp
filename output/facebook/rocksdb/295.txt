@@ -1,0 +1,30 @@
+There is another crash in rocksdb when application doing a manual compacting.
+This is the crash stack trace.
+(gdb) bt
+#0  0x00007fadfc62b3e9 in raise () from /home/opt/compiler/gcc-4.8.2.09/lib64/libc-2.18.so
+#1  0x00007fadfc62c7e8 in abort () from /home/opt/compiler/gcc-4.8.2.09/lib64/libc-2.18.so
+#2  0x00007fadfc624516 in __assert_fail_base () from /home/opt/compiler/gcc-4.8.2.09/lib64/libc-2.18.so
+#3  0x00007fadfc6245c2 in __assert_fail () from /home/opt/compiler/gcc-4.8.2.09/lib64/libc-2.18.so
+#4  0x000000000051f852 in rocksdb::DBImpl::RunManualCompaction (this=this@entry=0x7fadfbebf400, cfd=cfd@entry=0x7fadfbc17f00, input_level=input_level@entry=3, output_level=output_level@entry=4, output_path_id=output_path_id@entry=0,
+
+```
+begin=begin@entry=0x0, end=end@entry=0x0) at db/db_impl.cc:1881
+```
+#5  0x0000000000529e40 in rocksdb::DBImpl::CompactRange (this=this@entry=0x7fadfbebf400, column_family=<optimized out>, begin=begin@entry=0x0, end=end@entry=0x0, reduce_level=reduce_level@entry=false,
+
+```
+target_level=target_level@entry=-1, target_path_id=target_path_id@entry=0) at db/db_impl.cc:1673
+```
+#6  0x000000000053bcc1 in rocksdb::DB::CompactRange (this=0x7fadfbebf400, begin=0x0, end=0x0, reduce_level=<optimized out>, target_level=-1, target_path_id=0) at ./include/rocksdb/db.h:360
+#7  0x0000000000517983 in ardb::RocksDBEngine::CompactRange (this=<optimized out>, begin=..., end=...) at engine/rocksdb_engine.cpp:299
+#8  0x00000000004a0778 in ardb::Ardb::DoCompact (this=0x7fffa07e8670, start=..., end=...) at command/server.cpp:749
+#9  0x000000000044ac77 in ardb::CompactTask::Run (this=<optimized out>) at cron.cpp:117
+#10 0x0000000000497698 in ardb::Timer::Routine (this=this@entry=0x7fadf05cc500) at common/channel/timer/timer.cpp:217
+#11 0x0000000000496afc in ardb::TimerChannel::TimeoutCB (eventLoop=<optimized out>, id=<optimized out>, clientData=0x7fadf05cc500) at common/channel/timer/timer_channel.cpp:39
+#12 0x000000000049f721 in processTimeEvents (eventLoop=0x7fadfbc10a68) at common/channel/redis/ae.c:305
+#13 aeProcessEvents (eventLoop=eventLoop@entry=0x7fadfbc10a68, flags=flags@entry=3) at common/channel/redis/ae.c:441
+#14 0x000000000049fa3b in aeMain (eventLoop=0x7fadfbc10a68) at common/channel/redis/ae.c:485
+#15 0x0000000000477520 in ardb::Thread::ThreadFunc (data=0x7fffa07e8bc8) at common/thread/thread.cpp:38
+#16 0x00007fadfd7f71c1 in start_thread () from /home/opt/compiler/gcc-4.8.2.09/lib64/libpthread-2.18.so
+#17 0x00007fadfc6dd0ad in clone () from /home/opt/compiler/gcc-4.8.2.09/lib64/libc-2.18.so
+

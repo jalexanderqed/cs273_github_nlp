@@ -1,0 +1,22 @@
+I would like to know if the rocksdb data is persistent across process restart.
+If there is way, can you please share the steps.
+
+TEST CASE:
+Rocksdb Version: 3.10
+
+An instance of rocksdb is started with the follwing options:
+WAL = enabled
+WAL dir = rocksdb dir
+Sync = true
+check_if_missing = true
+
+Rocksdb directory and WAL directory are persisted on SSD.
+Some I/O is performed to the rocksdb, WAL file gets populated and SST file is created.
+The process is killed at this point.
+
+Rocksdb is restarted with check_if_missing = false option this time.
+Rocksdb restart returns an error "Invalid argument, <DB location> does not exist (create_if_missing is false)"
+DB directory is present and all the files are present in the DB, but restart fails.
+
+Can you please confirm if data persistence is supported across process restart?
+

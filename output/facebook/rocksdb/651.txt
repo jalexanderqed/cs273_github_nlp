@@ -1,0 +1,2 @@
+I'm trying to understand the allocation semantics of the iterator API in C. When are the keys & values that I inspect via the iterator freed? Are they pinned in memory via MMAP, and the files locked from being GCed? Or are they malloced, and a bulk free occurs when I destroy the iterator? Or are they freed every time I move the iterator, so they're only valid for a brief inspection?
+

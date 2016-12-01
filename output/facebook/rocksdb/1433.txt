@@ -1,0 +1,2 @@
+Add simple comment to Vagrant file
+

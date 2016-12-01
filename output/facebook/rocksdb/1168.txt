@@ -1,0 +1,6 @@
+I have not been able to use `arc` with RocksDB for months and months, and I was under the impression that the problem lay with Arcanist. Eventually I became frustrated enough with this, to look into it on a deeper level - http://stackoverflow.com/questions/37808307/arcanist-error-on-fresh-install-mac-os-x/37825369#37825369
+
+I have now realised that the issue is not with Arcanist but is actually with the RocksDB `arcanist_util` module for Arcanist, which relies on an older version of Arcanist. I have made the changes to bring the module up to date with the latest APIs for Arcanist and libphutil.
+
+Please keep in mind that I am in no sense a PHP developer. I have just made the changes which seemed logical from reading the API. The latest version of `arc lint` now seems to work again with RocksDB... This definitely needs a second pair of eyes ;-)
+

@@ -1,0 +1,4 @@
+Hi, I see adamretter has implement the API, see: https://github.com/adamretter/rocksdb/blob/java-transactions/java/src/main/java/org/rocksdb/OptimisticTransactionDB.java
+
+When you merge into the repository and release new version?
+

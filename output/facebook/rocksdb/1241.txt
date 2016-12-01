@@ -1,0 +1,2 @@
+This PR also includes some cleanup, bugfixes and refactoring of the Java API. However these are really pre-cursors on the road to CompactionFilterFactory support. 
+

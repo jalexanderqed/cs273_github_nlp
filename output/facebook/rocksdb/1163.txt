@@ -1,0 +1,14 @@
+Hey guys,
+
+I seem to be running into some issues with the Visual Studio 12 2013. I don't exactly know which libraries to link, 
+I am currently attempting to create a test database and close it in C++. 
+![image](https://cloud.githubusercontent.com/assets/7003288/16020651/659b41ec-3185-11e6-9b70-9dcb8c904d7d.png)
+
+The linker errors I seem to be receiving seem to be a library-linker problem. However, I do not know if I should explicitly link it to 
+
+rocksdblib.lib 
+rocksdb.lib or testutillib.lib
+
+Any help is appreciated!
+Hawley
+

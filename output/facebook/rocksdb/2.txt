@@ -1,0 +1,8 @@
+Thanks for open sourcing your work.
+
+I think it would be extremely helpful if OSX were a supported platform for the purposes of _experimentation_.
+
+I'm curious to hear your thoughts as I've begun preparing a patch that takes this approach with some tradeoffs, notably:
+- only microsecond timer accuracy
+- sacrificing some of the `posix_fadvise` hinting that is supported on other platforms
+

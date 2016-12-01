@@ -1,0 +1,2 @@
+while reader & writer belongs to different applications, but i want them to share the same rocksdb instance , any suggest will be appreciated;
+

@@ -1,0 +1,2 @@
+As clear from the question: is rocksDB just as easy on RAM as LevelDB? 
+

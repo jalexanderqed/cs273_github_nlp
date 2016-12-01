@@ -1,0 +1,11 @@
+hi.
+Today, I find my disk used 90%.So I use "delete" API to delete old dates.I only delete 30 days ago dates.After 9 hours ，my program core dump. When it restart ,rocksdb open fail.I find "sst" files lost.If sst file's num  is more than max_open_files,  rocksdb will delete db?
+
+LOG has error info:
+
+2015/12/28-14:44:05.055091 7f52b51b7700 [ERROR] [JOB 2534] Failed to delete /media/ssd/sentryd/dataV3/171720.sst type=2 #171720 -- IO error: /media/ssd/sentryd/dataV3/171720.sst: No such file or directory
+2015/12/28-14:44:05.055110 7f52b51b7700 EVENT_LOG_v1 {"time_micros": 1451285045055104, "job": 2534, "event": "table_file_deletion", "file_number": 171720, "status": "IO error: /media/ssd/sentryd/dataV3/171720.sst: No such file or directory"}
+2015/12/28-14:44:05.059226 7f52b51b7700 [ERROR] [JOB 2534] Failed to delete /media/ssd/sentryd/dataV3/171719.sst type=2 #171719 -- IO error: /media/ssd/sentryd/dataV3/171719.sst: No such file or directory
+2015/12/28-14:44:05.059248 7f52b51b7700 EVENT_LOG_v1 {"time_micros": 1451285045059241, "job": 2534, "event": "table_file_deletion", "file_number": 171719, "status": "IO error: /media/ssd/sentryd/dataV3/171719.sst: No such file or directory"}
+2015/12/28-14:44:05.063744 7f52b51b7700 [ERROR] [JOB 2534] Failed to delete /media/ssd/sentryd/dataV3/171718.sst type=2 #171718 -- IO error: /media/ssd/sentryd/dataV3/171718.sst: No such file or directory
+

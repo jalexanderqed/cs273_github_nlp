@@ -1,0 +1,3 @@
+If We want to split a big sst file into two smaller sst files according to the middle-key, What can we do?
+Can we travel a specified Block directly？
+

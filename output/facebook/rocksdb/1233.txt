@@ -1,0 +1,9 @@
+When compiling by Clang 3.8.0 the following error was observed:
+
+```
+util/thread_posix.cc:22:5: error: use of undeclared identifier 'abort'
+    abort();
+```
+
+To fix it, add include of stdlib.h to thread_posix.cc
+

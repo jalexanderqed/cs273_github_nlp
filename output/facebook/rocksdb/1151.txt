@@ -1,0 +1,10 @@
+Hi, 
+
+I am assuming that these two classes are missing in rocksdbjni.
+It would be great if I can achieve atomicity of my transaction using either TransactionDB or OptimisticTransactionDB.
+
+I request to add these two classes to rocksdbjni.
+It would be great if you have any planned release day for the new rocksdbjni with these (or one of these) classes.
+
+RocksDB rocks!!
+

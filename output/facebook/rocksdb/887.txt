@@ -1,0 +1,8 @@
+I am new to this community, wanted  to try out different stuff using rocksdb. I downloaded the rocksdb package and have installed it on my centos 6. I was successfully able to provide all these commands.
+- make all
+  - make share_lib
+  - make static_lib
+    but all these produce ".0" files or  ".so " or ".a" files.  I am unsure as to how to execute or run. 
+    I wanted to tinker around so thought of looking into the examples. I am not sure how to run the c example and execute the same. There is no documentation as to how to run compile these and run these examples. 
+    Any insights on this is greatly appreciated. 
+

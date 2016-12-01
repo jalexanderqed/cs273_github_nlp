@@ -1,0 +1,2 @@
+I remeber it is mentioned in the wiki  that the size of index block would too large  if the corresponding SST file is too big. Is there a good way can be used  to solve the problem?
+

@@ -1,0 +1,1 @@
+I want to use rocksdb in java application on x86 windows pc. is it possible or it will require too much changes?

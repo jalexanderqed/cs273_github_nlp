@@ -1,0 +1,3 @@
+  Use constructor style initialization instead of a cast for
+  simplicity.
+

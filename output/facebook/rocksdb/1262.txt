@@ -1,0 +1,4 @@
+Currently c bindings only has ABI to create compaction filter with IgnoreSnapshots being false by default. And there is no way to change this value.
+
+IgnoreSnapshots will be useful when snapshot is used very frequently and the consistent view can be ensured by the application even calling the filter on keys written before the snapshot.
+

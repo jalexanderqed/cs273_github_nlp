@@ -1,0 +1,16 @@
+Adding the following asserts makes the second one fail in reduce_levels_test
+
+reduce_levels_test_je State: Completed
+[==========] Running 3 tests from 1 test case.
+[----------] Global test environment set-up.
+[----------] 3 tests from ReduceLevelTest
+[ RUN      ] ReduceLevelTest.Last_Level
+reduce_levels_test_je.exe : Assertion failed: level < num_levels_, file c:\dev\rocksdb\rocksdb\db\version_set.h, line 227
+
+  const std::vector<FileMetaData*>& LevelFiles(int level) const {
+    assert(level >= 0);
+    assert(level < num_levels_);
+    assert(files_ != nullptr);
+     return files_[level];
+   }
+

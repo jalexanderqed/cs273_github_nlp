@@ -1,0 +1,11 @@
+Some wiki pages are missing:
+
+```
+https://github.com/facebook/rocksdb/wiki/Rocksdb-Table-Format
+https://github.com/facebook/rocksdb/wiki/Rocksdb-Architecture-Guide
+```
+
+Did you moved it or merge into other pages?
+
+Thanks
+

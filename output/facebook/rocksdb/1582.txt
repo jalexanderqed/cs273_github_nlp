@@ -1,0 +1,2 @@
+https://github.com/facebook/rocksdb/commit/99c052a34f93d119b75eccdcd489ecd581d48ee9 fixes integer overflow in GetL0ThresholdSpeedupCompaction() by checking if int become -ve.
+UBSAN will complain about that since this is still an overflow, we can fix the issue by simply using int64_t

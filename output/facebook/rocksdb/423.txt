@@ -1,0 +1,2 @@
+The C interface function for setting [`iterate_upper_bound`](https://github.com/facebook/rocksdb/blob/274ba62707c92548c84de835aae49a96292d7aa4/db/c.cc#L1891) stored a pointer to a stack variable in the `ReadOptions` structure, which led to crashes. This PR first adds a simple test ported from the C++ version of the iterator upper bounds test, then fixes the code so that it passes the test.
+

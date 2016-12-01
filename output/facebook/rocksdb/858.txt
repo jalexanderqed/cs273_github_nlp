@@ -1,0 +1,27 @@
+I am using RocksDB java with version 4.1. While storing data in the db, I am getting the following error:
+
+```
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  SIGSEGV (0xb) at pc=0x00007f26c07b1dcc, pid=12133, tid=139804314543872
+#
+# JRE version: Java(TM) SE Runtime Environment (7.0_51-b13) (build 1.7.0_51-b13)
+# Java VM: Java HotSpot(TM) 64-Bit Server VM (24.51-b03 mixed mode linux-amd64 compressed oops)
+# Problematic frame:
+# C  [librocksdbjni4560549102675383784..so+0x162dcc]  rocksdb::DBImpl::GetImpl(rocksdb::ReadOptions const&, rocksdb::ColumnFamilyHandle*, rocksdb::Slice const&, std::string*, bool*)+0xdc
+#
+# Core dump written. Default location: core or core.12133
+#
+# An error report file with more information is saved as: hs_err_pid12133.log
+#
+# If you would like to submit a bug report, please visit:
+#   http://bugreport.sun.com/bugreport/crash.jsp
+# The crash happened outside the Java Virtual Machine in native code.
+# See problematic frame for where to report the bug.
+#
+Aborted (core dumped)
+```
+
+Please help.
+

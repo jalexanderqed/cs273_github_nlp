@@ -1,0 +1,15 @@
+hi all,
+
+I compile rocksdb on i386 server(Ubuntu 14.04) ,  the following  error happened :
+
+In file included from util/env_posix.cc:36:0:
+./include/rocksdb/env.h:467:18: error: ‘virtual rocksdb::Status rocksdb::WritableFile::RangeSync(off_t, off_t)’ was hidden [-Werror=overloaded-virtual]
+   virtual Status RangeSync(off_t offset, off_t nbytes) {
+                  ^
+util/env_posix.cc:824:18: error:   by ‘virtual rocksdb::Status rocksdb::{anonymous}::PosixWritableFile::RangeSync(off64_t, off64_t)’ [-Werror=overloaded-virtual]
+   virtual Status RangeSync(off64_t offset, off64_t nbytes) {
+                  ^  
+cc1plus: all warnings being treated as errors
+
+any idea about this?
+

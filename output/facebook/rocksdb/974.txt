@@ -1,0 +1,39 @@
+Currently with the Java API, you have to explicitly free any `ColumnFamilyHandle` before you free the `RocksDB` object. This provides for a symmetrical open/close pattern, i.e.:
+
+``` java
+final List<ColumnFamilyHandle> cfHandles = new ArrayList<>();
+try (final RocksDB db = RocksDB.open(options, dbFolder.getRoot().getAbsolutePath(), cfDescriptors, cfHandles)) {
+  try {
+    /* do stuff... */
+  } finally {
+    for (final ColumnFamilyHandle columnFamilyHandle : cfHandles) {
+      columnFamilyHandle.close();
+    }
+  }
+}
+```
+
+A more desirable symmetrical pattern would involved freeing any `ColumnFamilyHandle` after the `RocksDB` object. This seems to be possible using the C++ example given in https://github.com/facebook/rocksdb/blob/master/examples/column_families_example.cc#L31. The Java approach would then look like:
+
+``` java
+final List<ColumnFamilyHandle> cfHandles = new ArrayList<>();
+try (final RocksDB db = RocksDB.open(options, dbFolder.getRoot().getAbsolutePath(), cfDescriptors, cfHandles)) {
+    /* do stuff... */
+} finally {
+  for (final ColumnFamilyHandle columnFamilyHandle : cfHandles) {
+    columnFamilyHandle.close();
+  }
+}
+```
+
+Perhaps an even nicer approach for the Java API would be to associate any `ColumnFamilyHandle` with the `RocksDB` object, and then closing the `RocksDB` object would also take care of freeing any `ColumnFamilyHandle` object too. Which would leave us with the easiest approach for Java users, e.g.:
+
+``` java
+final List<ColumnFamilyHandle> cfHandles = new ArrayList<>();
+try (final RocksDB db = RocksDB.open(options, dbFolder.getRoot().getAbsolutePath(), cfDescriptors, cfHandles)) {
+    /* do stuff... */
+}
+```
+
+@yhchiang Any comments?
+

@@ -1,0 +1,22 @@
+I can reproduce this by the following step:
+0. start a thrift server (in java) which wraps a rocksdb instance using java api.
+1. send some request to put a couple keys into the db.
+2. send a request to do a prefix seek
+
+everything fine so far
+
+3 kill the server using control-C, and restart the server.
+4 redo 1 and 2, and I got the following core dump at server side:
+
+C  [librocksdbjni8260164094736835274..jnilib+0x93dbb]  rocksdb::BlockBasedFilterBlockReader::PrefixMayMatch(rocksdb::Slice const&, unsigned long long)+0x5b
+C  [librocksdbjni8260164094736835274..jnilib+0x9e4a3]  rocksdb::BlockBasedTable::PrefixMayMatch(rocksdb::Slice const&)+0x303
+C  [librocksdbjni8260164094736835274..jnilib+0x9fd95]  rocksdb::BlockBasedTable::BlockEntryIteratorState::PrefixMayMatch(rocksdb::Slice const&)+0x15
+C  [librocksdbjni8260164094736835274..jnilib+0xc2450]  rocksdb::(anonymous namespace)::TwoLevelIterator::Seek(rocksdb::Slice const&)+0x20
+C  [librocksdbjni8260164094736835274..jnilib+0xafa84]  rocksdb::MergingIterator::Seek(rocksdb::Slice const&)+0xf4
+C  [librocksdbjni8260164094736835274..jnilib+0x5579d]  rocksdb::DBIter::Seek(rocksdb::Slice const&)+0x27d
+C  [librocksdbjni8260164094736835274..jnilib+0x2057]  Java_org_rocksdb_RocksIterator_seek0+0x47
+j  org.rocksdb.RocksIterator.seek0(J[BI)V+0
+j  org.rocksdb.RocksIterator.seek([B)V+29
+
+I tried to do a db close before shutting down the server, but it does not fix the issue.
+

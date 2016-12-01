@@ -1,0 +1,2 @@
+`make install` is a standard way to copy all the library files to the system. rocksdb should have `make install` as well.
+

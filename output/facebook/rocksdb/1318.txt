@@ -1,0 +1,2 @@
+`HISTORY.md` refers to releases 4.10 and 4.11, and branches for those releases exist (`4.*.fb`, and those branches contain patch releases 4.10.1 and 4.11.1), but the latest release tag is `rocksdb-4.9`. Please create tags for these releases (in accordance with your [release methodology](https://github.com/facebook/rocksdb/wiki/RocksDB-Release-Methodology) unless those releases are incomplete or withdrawn for some reason. 
+

@@ -1,0 +1,12 @@
+Summary: Added LevelCompactionDynamicLevelBytes to Options.
+
+Test Plan:
+make clean jclean rocksdbjava jtest
+mvn -f rocksjni.pom package
+
+Reviewers: adamretter, ankgup87, yhchiang
+
+Subscribers: dhruba
+
+Differential Revision: https://reviews.facebook.net/D34857
+

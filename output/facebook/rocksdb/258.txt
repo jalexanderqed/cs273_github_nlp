@@ -1,0 +1,9 @@
+rocksdb 3.4 fails to build:
+
+```
+util/benchharness.cc:211:17: error: comparison of integers of different signs: 'const unsigned long long' and 'const long long' [-Werror,-Wsign-compare]
+      if (nsecs < minNanoseconds) {
+          ~~~~~ ^ ~~~~~~~~~~~~~~
+1 error generated.
+```
+

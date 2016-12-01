@@ -1,0 +1,2 @@
+Is there a way to load the compressed tables into memory without using a tmpfs or ramfs?
+

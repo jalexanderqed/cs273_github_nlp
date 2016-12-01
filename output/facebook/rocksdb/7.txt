@@ -1,0 +1,17 @@
+This check from build_tools/build_platform_detect won't define LEVELDB_CSTDATOMIC_PRESENT because <cstdatomic> doesn't exist for gcc 4.7. Maybe it did for older gcc versions, but I don't track modern gcc/g++ enough to understand it. I think the check might need to use "include <atomic>" instead.
+
+```
+# If -std=c++0x works, use <cstdatomic>.  Otherwise use port_posix.h.
+$CXX $CFLAGS -std=c++0x -x c++ - -o /dev/null 2>/dev/null  <<EOF
+  #include <cstdatomic>
+  int main() {}
+```
+
+EOF
+    if [ "$?" = 0 ]; then
+        COMMON_FLAGS="$COMMON_FLAGS -DLEVELDB_PLATFORM_POSIX -DLEVELDB_CSTDATOMIC_PRESENT"
+        PLATFORM_CXXFLAGS="-std=c++0x"
+    else
+        COMMON_FLAGS="$COMMON_FLAGS -DLEVELDB_PLATFORM_POSIX"
+    fi
+

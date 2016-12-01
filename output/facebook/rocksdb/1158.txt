@@ -1,0 +1,33 @@
+There are three sets of mechanisms for gathering statistics over Rocksdb
+
+1) Per DB Instance counters: Tickers and Histograms exposed through statistics.h interface 
+    [https://github.com/facebook/rocksdb/blob/master/include/rocksdb/statistics.h#L23](url)
+    [https://github.com/facebook/rocksdb/blob/master/include/rocksdb/statistics.h#L286](url)
+2) Per Column family counters: Internal statistics exposed through db->GetProperty() interface
+    [https://github.com/facebook/rocksdb/blob/master/include/rocksdb/db.h#L335](url)
+3) Per Thread counters: Perf and IO related numbers are exposed in perf_context.h and iostat_context.h
+    [https://github.com/facebook/rocksdb/blob/master/include/rocksdb/perf_context.h#L20](url)
+    [https://github.com/facebook/rocksdb/blob/master/include/rocksdb/iostats_context.h](url)
+
+There are overlaps of and duplicated of counters in these three interfaces and the definitions of some counters are obscure.
+
+I am proposing to unify them and expose them in a single interface. The best candidate for unification would be Statistics class. 
+1) Statistics class already has the extent-ability for adding more counters
+`enum TickersInternal : uint32_t {`
+`INTERNAL_TICKER_ENUM_START = TICKER_ENUM_MAX,`
+`INTERNAL_TICKER_ENUM_MAX`
+`};`
+
+`enum HistogramsInternal : uint32_t {`
+`INTERNAL_HISTOGRAM_START = HISTOGRAM_ENUM_MAX,`
+`INTERNAL_HISTOGRAM_ENUM_MAX`
+`};`
+
+2) To expose per-column family counters: two overriding interface function can be added
+`uint64_t getTickerCount(ColumnFamilyHandle* column_family, uint32_t tickerType) const;` 
+`uint64_t histogramData(ColumnFamilyHandle* column_family, uint32_t type, HistogramData* const data) const;`
+
+3) From the user monitoring perspective, there is actually little reason for having per-thread counters. They should be presented in aggregated manor. 
+
+Thoughts? @siying @yhchiang @igorcanadi @IslamAbdelRahman
+

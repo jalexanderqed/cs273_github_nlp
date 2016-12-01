@@ -1,0 +1,2 @@
+Added rocksdb_options_set_memtable_prefix_bloom_size_ratio function implemented in c.cc but not exported via c.h
+

@@ -1,0 +1,2 @@
+OptionChangeMigration() to avoid full compaction if the old and new options indicate the same LSM setting.
+

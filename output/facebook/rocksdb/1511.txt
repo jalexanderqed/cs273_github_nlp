@@ -1,0 +1,9 @@
+Summary:
+It is hard to measure acutal memory usage by std containers. Even
+providing a custom allocator will miss count some of the usage. Here we
+only do a wild guess on its memory usage.
+
+Test Plan:
+Have a piece of custom code to open a DB, insert multiple keys with hint
+and verify the number is report through
+DB::Properties::kCurSizeAllMemTables property.

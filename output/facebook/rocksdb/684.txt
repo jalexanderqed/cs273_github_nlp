@@ -1,0 +1,5 @@
+Hallo,
+I have posted this thread in stackoverflow. I am getting no answer and I hope you can help me (and others) with  the probelm.
+http://stackoverflow.com/questions/31872945/rocksdb-fails-to-create-more-than-one-database-instance-concurrently
+Thanks.
+

@@ -1,0 +1,31 @@
+Ran "make" and then "make check"
+I am using Ubuntu 12.10
+
+My repo is at:
+commit 75df72f2a5e829299ee5881641cfa403bd0a0bee
+Author: Kai Liu hfevers@gmail.com
+Date:   Sat Nov 16 22:59:22 2013 -0800
+
+```
+Change the logic in KeyMayExist()
+```
+
+---
+
+==== Test DBTest.CompressedCache
+db/db_test.cc:1890: failed: 0 > 0
+Created bg thread 0x2ada30469700
+make: **\* [check] Error 1
+
+---
+
+The ASSERT_GT fails
+
+   1885       case 1:
+   1886         // no block cache, only compressed cache
+   1887         ASSERT_EQ(options.statistics.get()->getTickerCount(BLOCK_CACHE_MISS),
+   1888                   0);
+   1889         ASSERT_GT(options.statistics.get()->getTickerCount
+   1890                   (BLOCK_CACHE_COMPRESSED_MISS), 0);
+   1891         break;
+

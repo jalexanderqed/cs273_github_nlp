@@ -1,0 +1,27 @@
+Within this commit a new AbstractLogger was introduced
+which allows to handle log messages at an application level.
+
+Log messages are passed up to Java using a JNI callback.
+
+This allows a Java-Developer to use common Java APIs for log
+messages e.g. SLF4J, LOG4J, etc. Within this commit no new
+dependencies were introduced, which keeps the RocksDB API clean
+and doesn`t force a developer to use a predefined high-level Java API.
+
+Another feature is to dynamically set a custom loggers verbosity at
+runtime using its public method `setInfoLogLevel` and to retrieve
+the currently active level using the `infoLogLevel` method.
+
+Example:
+
+```
+      Logger logger = new Logger(options) {
+        @Override
+        protected void log(InfoLogLevel infoLogLevel, String logMsg) {
+          // handle log message with log level infoLogLevel
+        }
+      };
+```
+
+Differential: https://reviews.facebook.net/D34755
+

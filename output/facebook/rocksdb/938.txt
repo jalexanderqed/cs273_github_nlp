@@ -1,0 +1,2 @@
+Adding an option to ldb to make it possible to dump keys only, without values.
+

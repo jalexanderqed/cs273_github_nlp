@@ -1,0 +1,12 @@
+I have been trying to implement Counter using RocksDB
+What i have implemented is a simple hit Counter using rest-Express which increments the counter
+I have two counters in place 
+A Rocksdb Counter using merge operator
+and a simple java atomic-Long Counter.
+the Rocksdb counter does not store the right values compared with the atomic-Long counter
+I fired the requests using Apache Benchmark with high concurrency
+I'm not sure if the implementation is right or if there is some other issues here
+I have the sample code of my implementation here 
+
+https://github.com/vishnu667/rocksdbSample/blob/master/src/main/java/org/example/RocksDBConnector.java
+

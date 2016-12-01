@@ -1,0 +1,22 @@
+Summary:
+Before this change: overflowing size_t values led to a checked Exception.
+
+After that change:
+
+size_t overflows on 32-Bit architecture, throw now an IllegalArgumentException,
+which removes the necessity for a developer to catch these Exceptions explicitly.
+
+This is especially an advantage for developers targeting 64-Bit systems because
+it is not necessary anymore to catch exceptions which are never thrown on a 64-Bit
+system.
+
+Test Plan:
+make clean jclean rocksdbjava jtest
+mvn -f rocksjni.pom package
+
+Reviewers: adamretter, yhchiang, ankgup87
+
+Subscribers: dhruba
+
+Differential Revision: https://reviews.facebook.net/D34923
+

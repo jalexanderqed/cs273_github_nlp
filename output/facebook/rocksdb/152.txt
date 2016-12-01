@@ -1,0 +1,28 @@
+Hi,
+
+I've been observing the behaviour of rocksdb when used in conjunction with the rippled project. Recently an option has been added to permit the use of snappy compression and while grep-ing the LOG file to witness the compression gains I noticed that  the amplification figures seem high. Here's a snippet from the log showing some level 5 compactions where compression is occurring for the first time and also where compression has already occurred:
+
+```
+2014/05/16-14:56:03.645657 19b8ff000 compacted to: files[0 0 39 194 937 3804 392 ], 148.5 MB/sec, level 5, files in(1, 4) out(2) MB in(1.4, 393.1) out(187.3), read-write-amplify(416.0) write-amplify(133.9) OK
+2014/05/16-15:05:06.355783 19b8ff000 compacted to: files[0 0 24 198 936 3802 392 ], 196.2 MB/sec, level 5, files in(1, 4) out(2) MB in(1.4, 388.1) out(184.7), read-write-amplify(398.9) write-amplify(128.3) OK
+2014/05/16-16:16:35.044224 19b8ff000 compacted to: files[0 0 37 193 940 3802 392 ], 122.2 MB/sec, level 5, files in(1, 4) out(4) MB in(0.4, 376.4) out(376.9), read-write-amplify(1686.4) write-amplify(843.1) OK
+2014/05/16-16:46:39.179892 19b8ff000 compacted to: files[0 0 20 197 939 3802 392 ], 109.8 MB/sec, level 5, files in(1, 3) out(3) MB in(0.4, 330.0) out(330.4), read-write-amplify(1701.1) write-amplify(850.5) OK
+```
+
+Here's where the rocksdb options are being set in the codebase:
+https://github.com/ripple/rippled/blob/develop/src/ripple_core/nodestore/backend/RocksDBFactory.cpp#L101-L164
+For my instance, from where the above LOG snippet comes, I've used these settings:
+
+```
+open_files=6000
+filter_bits=12
+compression=1
+cache_mb=256
+file_size_mb=8
+file_size_mult=2
+```
+
+I was wondering if you had any optimisation suggestions for this scenario? Keys are always 32 bytes in length and values can be variable length usually between 100 bytes and 8000 bytes, but average at just under 500 bytes. The whole database is about 500GB and consists of 5380 .sst files. Bear in mind that rippled currently uses version 2.5.fb, but there are plans to catch up to the latest release.
+
+Thanks for any help!
+

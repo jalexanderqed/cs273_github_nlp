@@ -1,0 +1,65 @@
+when i compiled rocksdb(make clean; make), i got the error as followings:
+
+```
+db/table_properties_collector_test.cc:137:15: error: converting to ‘rocksdb::TableProperties::UserCollectedProperties {aka std::unordered_map<std::basic_string<char>, std::basic_string<char> >}’ from initializer list would use explicit constructor ‘std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::size_type, const hasher&, const key_equal&, const allocator_type&) [with _Key = std::basic_string<char>; _Tp = std::basic_string<char>; _Hash = std::hash<std::basic_string<char> >; _Pred = std::equal_to<std::basic_string<char> >; _Alloc = std::allocator<std::pair<const std::basic_string<char>, std::basic_string<char> > >; std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::size_type = long unsigned int; std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::hasher = std::hash<std::basic_string<char> >; std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::key_equal = std::equal_to<std::basic_string<char> >; std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::allocator_type = std::allocator<std::pair<const std::basic_string<char>, std::basic_string<char> > >]’
+   return {};
+           ^
+make: *** [db/table_properties_collector_test.o] Error 1
+```
+
+my environment:
+
+uname -a
+
+```
+Darwin icycrystal4-MBP.local 13.0.0 Darwin Kernel Version 13.0.0: Thu Sep 19 22:22:27 PDT 2013; root:xnu-2422.1.72~6/RELEASE_X86_64 x86_64
+```
+
+g++ -v
+
+```
+Using built-in specs.
+COLLECT_GCC=g++
+COLLECT_LTO_WRAPPER=/usr/local/libexec/gcc/x86_64-apple-darwin13.0.0/4.9.0/lto-wrapper
+Target: x86_64-apple-darwin13.0.0
+Configured with: ../gcc-4.9-20130929/configure --enable-languages=c,c++,fortran
+Thread model: posix
+gcc version 4.9.0 20130929 (experimental) (GCC)
+```
+
+ll
+
+```
+-rw-r--r--    1 crystal  staff       607 Dec 20 17:40 CONTRIBUTING.md
+-rw-r--r--    1 crystal  staff      2431 Dec 20 17:40 INSTALL.md
+-rw-r--r--    1 crystal  staff      1646 Dec 20 17:40 LICENSE
+-rw-r--r--    1 crystal  staff     17154 Dec 20 17:40 Makefile
+-rw-r--r--    1 crystal  staff      1408 Dec 20 17:40 PATENTS
+-rw-r--r--    1 crystal  staff      2892 Dec 20 17:40 README
+-rw-r--r--    1 crystal  staff        96 Dec 20 17:40 README.fb
+-rw-r--r--    1 crystal  staff      2165 Dec 23 11:31 build_config.mk
+drwxr-xr-x   10 crystal  staff       340 Dec 23 10:32 build_tools
+drwxr-xr-x    4 crystal  staff       136 Dec 20 17:40 coverage
+drwxr-xr-x  116 crystal  staff      3944 Dec 23 11:13 db
+-rwxr-xr-x    1 crystal  staff   2248372 Dec 23 11:31 db_bench
+-rwxr-xr-x    1 crystal  staff   2688068 Dec 23 11:31 db_test
+drwxr-xr-x    7 crystal  staff       238 Dec 20 17:40 doc
+drwxr-xr-x    6 crystal  staff       204 Dec 20 17:40 hdfs
+drwxr-xr-x    3 crystal  staff       102 Dec 20 17:40 helpers
+drwxr-xr-x    4 crystal  staff       136 Dec 20 17:40 include
+-rw-r--r--    1 crystal  staff  29860872 Dec 23 11:31 librocksdb.a
+drwxr-xr-x    3 crystal  staff       102 Dec 20 17:40 linters
+drwxr-xr-x   14 crystal  staff       476 Dec 23 11:13 port
+-rwxr-xr-x    1 crystal  staff   2094136 Dec 23 11:31 signal_test
+drwxr-xr-x   50 crystal  staff      1700 Dec 23 11:11 table
+drwxr-xr-x   12 crystal  staff       408 Dec 22 17:09 tools
+drwxr-xr-x  128 crystal  staff      4352 Dec 23 11:31 util
+drwxr-xr-x    7 crystal  staff       238 Dec 20 17:40 utilities
+```
+
+git pull
+
+```
+Already up-to-date
+```
+

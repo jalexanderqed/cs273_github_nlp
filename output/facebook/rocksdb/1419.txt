@@ -1,0 +1,16 @@
+Summary: Currently our skip-list have an optimization to speedup sequential
+inserts from a single stream, by remembering the last insert position.
+We extend the idea to support sequential inserts from multiple streams,
+and even tolerate small reordering wihtin each stream.
+
+This PR is the interface part adding the following:
+- Add `memtable_insert_prefix_extractor` to allow specifying prefix for each key.
+- Add `InsertWithHint()` interface to memtable, to allow underlying
+  implementation to return a hint of insert position, which can be later
+  pass back to optimize inserts.
+- Memtable will maintain a map from prefix to hints and pass the hint
+  via `InsertWithHint()` if `memtable_insert_prefix_extractor` is non-null.
+
+Test Plan: `make all check`. Will add more test and benchmarks in later
+PR.
+

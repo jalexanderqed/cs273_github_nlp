@@ -1,0 +1,18 @@
+It's currently fixed to 1, parallelism can only be increased for compaction:
+
+``` cpp
+...
+DBOptions* DBOptions::IncreaseParallelism(int total_threads) {
+  max_background_compactions = total_threads - 1;
+  max_background_flushes = 1;
+  env->SetBackgroundThreads(total_threads, Env::LOW);
+  env->SetBackgroundThreads(1, Env::HIGH);
+  return this;
+}
+...
+```
+
+But according to the [RocksDB tuning guide](https://github.com/facebook/rocksdb/wiki/RocksDB-Tuning-Guide#parallelism-options) states that both can be executed concurrently and thus may benefit from increasing parallelism.
+
+It looks like `env->SetBackgroundThreads(1, Env::HIGH);` can be safely removed and an additional method could be introduced to increase flush parallelism.
+

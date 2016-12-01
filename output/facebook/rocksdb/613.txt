@@ -1,0 +1,2 @@
+Includes the LDFLAGS so that the correct libraries will be linked.  This links rt to resolve the issue https://github.com/facebook/rocksdb/issues/606.
+

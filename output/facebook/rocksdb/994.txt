@@ -1,0 +1,11 @@
+Can i delete the   files of  ColumnFamily ? 
+
+step1. 
+  virtual Status DropColumnFamily(ColumnFamilyHandle\* column_family);
+
+step2. 
+   virtual void GetColumnFamilyMetaData(ColumnFamilyHandle\* column_family,ColumnFamilyMetaData\* metadata)
+
+step3.
+   DeleteFile(std::string name)
+

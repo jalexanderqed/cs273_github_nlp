@@ -1,0 +1,11 @@
+Adding LOG parser and modify some logging parts to make it easier to parse.
+
+Mainly parse below 5 types:
+- CompactionEvent
+- FlushEvent
+- StatisticsEvent(from DB Stats)
+- OptionsEvent(Once, at the begging of LOG)
+- Delete Event
+
+I wonder where I should put parse_db_log.\* , so I temporarily put these files in utilities/parse_db_log.
+

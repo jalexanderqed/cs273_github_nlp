@@ -1,0 +1,7 @@
+Snapshots integration into RocksJava. Added support for the following functionalities:
+- getSnapshot
+- releaseSnapshot
+- ReadOptions support to set a Snapshot
+- ReadOptions support to retrieve Snapshot
+- SnapshotTest
+

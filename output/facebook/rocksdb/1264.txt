@@ -1,0 +1,6 @@
+See https://github.com/facebook/rocksdb/pull/1247#issuecomment-237323012 for further information on the requirement.
+
+The only potential concern here is perhaps that previously we used `JNIEnv::GetByteArrayElements` which _may_ or _may not_ have made a copy of the entire array, whereas we now use `JNIEnv::GetByteArrayRegion` which explicitly makes a copy of part of the array (or the entire array) that we are interested in.
+
+From what I have read, it is likely that the JVM would have made a copy when calling `GetByteArrayElements`, but this is not certain and would have varied from platform to platform. For those who want to avoid the transient memory increase of copying data, we can look at adding support for `DirectSlice` to these operations in future.
+

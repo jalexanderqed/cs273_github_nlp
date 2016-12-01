@@ -1,0 +1,12 @@
+So judging from previous blog posts[1] and a conversation on twitter[2], I'm lead to believe that I should be able to read in a leveldb and begin working with it with rocks. However, I've noticed the first issue in doing this is that rocks is looking for sst files when leveldb is using ldb files.
+
+`Can't access /27799377.sst: IO error: /path/goes/here/27799377.sst: No such file or directory`
+
+The second issue, if I just go "Sure, i'll just rename them" is that it generates lots of warnings processing the files[3].
+
+So is it generally possible to migrate/move/dump/load/whatever this existing leveldb into rocksdb without having to do the heavy processing that generated the initial database.
+
+1 - http://rocksdb.org/blog/1811/migrating-from-leveldb-to-rocksdb-2/
+2 - https://twitter.com/OverlordQ/status/626887860944248832
+3 - http://pastebin.com/5quBh96f
+

@@ -1,0 +1,8 @@
+`compile 'org.rocksdb:rocksdbjni:4.1'`
+`java.lang.UnsatisfiedLinkError 1): Library not loaded: /usr/local/lib/libgflags.2.dylib`
+
+`compile 'org.rocksdb:rocksdbjni:4.0'`
+work fine
+
+seems like a bug
+

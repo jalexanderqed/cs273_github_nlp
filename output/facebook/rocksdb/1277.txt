@@ -1,0 +1,4 @@
+Given the use of WriteBatch I think that "groups" or "commit groups" is a better term than "batches" for reporting the number of commit groups.
+
+https://www.facebook.com/groups/rocksdb.dev/permalink/999367556828425/
+

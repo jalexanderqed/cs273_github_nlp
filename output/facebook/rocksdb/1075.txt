@@ -1,0 +1,2 @@
+We are currently using 4.1.0 in our streaming library as a state storage, and we saw transient segfaults in our integration tests; we tested with 4.2.0 and the segfaults seems even more frequent than 4.1.0. cc @ijuma
+

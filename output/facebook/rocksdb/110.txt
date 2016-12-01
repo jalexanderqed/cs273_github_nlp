@@ -1,0 +1,18 @@
+Added JNI bindings for following options:
+
+block_size
+max_write_buffer_number
+write_buffer_size
+disable_seek_compaction
+max_background_compactions
+
+Test Plan: make sample
+
+Reviewers: haobo, dhruba, yhchiang
+
+Reviewed By: yhchiang
+
+CC: leveldb
+
+Differential Revision: https://reviews.facebook.net/D17523
+

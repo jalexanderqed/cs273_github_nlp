@@ -1,0 +1,38 @@
+On an Ubuntu 14.04.2 32 bit (i686) system with gcc 4.8.2, after correcting #633 and hacking around #634, db_test fails with the following:
+
+```
+[==========] Running 253 tests from 6 test cases.
+[----------] Global test environment set-up.
+[----------] 202 tests from DBTest
+[ RUN      ] DBTest.Empty
+db_test: db/memtable.cc:83: rocksdb::MemTable::MemTable(const rocksdb::InternalKeyComparator&, const rocksdb::ImmutableCFOptions&, const rocksdb::MutableCFOptions&, rocksdb::WriteBuffer*): Assertion `!should_flush_' failed.
+Received signal 6 (Aborted)
+#0   [0xb76ebd22] ??    ??:0    
+#1   /lib/i386-linux-gnu/libc.so.6(gsignal+0x47) [0xb73b6607] ??    ??:0    
+#2   /lib/i386-linux-gnu/libc.so.6(abort+0x143) [0xb73b9a33] ?? ??:0    
+#3   /lib/i386-linux-gnu/libc.so.6(+0x27757) [0xb73af757] ??    ??:0    
+#4   /lib/i386-linux-gnu/libc.so.6(+0x27807) [0xb73af807] ??    ??:0    
+#5   ./db_test() [0x82967f9] rocksdb::MemTable::MemTable(rocksdb::InternalKeyComparator const&, rocksdb::ImmutableCFOptions const&, rocksdb::MutableCFOptions const&, rocksdb::WriteBuffer*)/home/buildbot/rocksdb/db/memtable.cc:83 (discriminator 1)  
+#6   ./db_test() [0x822ea3a] rocksdb::ColumnFamilyData::ConstructNewMemtable(rocksdb::MutableCFOptions const&)  /home/buildbot/rocksdb/db/column_family.cc:513  
+#7   ./db_test() [0x822eaac] rocksdb::ColumnFamilyData::SetMemtable(rocksdb::MemTable*) /home/buildbot/rocksdb/./db/column_family.h:228 
+#8   ./db_test() [0x82b7353] rocksdb::ColumnFamilyData::SetLogNumber(unsigned long long)    /home/buildbot/rocksdb/./db/column_family.h:192 (discriminator 1)   
+#9   ./db_test() [0x82b96f2] rocksdb::VersionSet::Recover(std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, bool)  /home/buildbot/rocksdb/db/version_set.cc:2141   
+#10  ./db_test() [0x8267548] rocksdb::DBImpl::Recover(std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, bool, bool)    /home/buildbot/rocksdb/db/db_impl.cc:855    
+#11  ./db_test() [0x82684f6] rocksdb::DB::Open(rocksdb::DBOptions const&, std::string const&, std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, std::vector<rocksdb::ColumnFamilyHandle*, std::allocator<rocksdb::ColumnFamilyHandle*> >*, rocksdb::DB**)  /home/buildbot/rocksdb/db/db_impl.cc:3961   
+#12  ./db_test() [0x82695be] rocksdb::DB::Open(rocksdb::Options const&, std::string const&, rocksdb::DB**)  /home/buildbot/rocksdb/db/db_impl.cc:3896   
+#13  ./db_test() [0x81f8724] rocksdb::DBTest::DestroyAndReopen(rocksdb::Options const&) /home/buildbot/rocksdb/db/db_test.cc:782    
+#14  ./db_test() [0x812e4c3] ~Options   /home/buildbot/rocksdb/./include/rocksdb/options.h:1020 
+#15  ./db_test() [0x83c7e2c] void testing::internal::HandleExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*)   /home/buildbot/rocksdb/third-party/gtest-1.7.0/fused-src/gtest/gtest-all.cc:3880    
+#16  ./db_test() [0x83ba483] testing::Test::Run()   /home/buildbot/rocksdb/third-party/gtest-1.7.0/fused-src/gtest/gtest-all.cc:3895    
+#17  ./db_test() [0x83ba566] testing::TestInfo::Run()   /home/buildbot/rocksdb/third-party/gtest-1.7.0/fused-src/gtest/gtest-all.cc:4074    
+#18  ./db_test() [0x83ba6f7] std::vector<testing::TestInfo*, std::allocator<testing::TestInfo*> >::size() const /usr/include/c++/4.8/bits/stl_vector.h:646 (discriminator 2)    
+#19  ./db_test() [0x83baa06] testing::internal::UnitTestImpl::RunAllTests() /home/buildbot/rocksdb/third-party/gtest-1.7.0/fused-src/gtest/gtest-all.cc:2183    
+#20  ./db_test() [0x83bad8a] testing::UnitTest::Run()   /home/buildbot/rocksdb/third-party/gtest-1.7.0/fused-src/gtest/gtest-all.cc:5681    
+#21  ./db_test() [0x804fd1d] main   /home/buildbot/rocksdb/db/db_test.cc:12954  
+#22  /lib/i386-linux-gnu/libc.so.6(__libc_start_main+0xf3) [0xb73a1a83] ??  ??:0    
+#23  ./db_test() [0x809bdbb] _start ??:?    
+Aborted (core dumped)
+```
+
+This may be a consequence of my hack to fix #634 (#undef **SSE4_2** at the top of util/crc32c.cc) but I doubt it.
+

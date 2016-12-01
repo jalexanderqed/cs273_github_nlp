@@ -1,0 +1,9 @@
+Hi,
+
+It would be great to have a binary distribution available, that would include multi-platform builds (linux, macosx) and bindings (java, etc).
+
+Earlier, I have made an attempt on an automated build VM environment setup using Vagrant / Ansible: https://github.com/phraktle/rocksdb-build – this might serve as useful starting point, but I don't have time to maintain this.
+
+Thanks,
+  Viktor
+

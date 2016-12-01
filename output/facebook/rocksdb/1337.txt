@@ -1,0 +1,67 @@
+I try to migrate from rocksdb-4.3 to rocksdb-4.12.
+After 24 hours of my app work on new code, 
+rocksdb has prodused too many WAL files. (compared with  rocksdb-4.3). 
+WAL directory configured to work separate with options.wal_dir
+Also dbopen stay slower.
+After run previous version app (with rocksdb-4.3) log files 
+redused to few and startup doing so fast.
+
+Please advice, how to update my code to work around this problem. (Or it is a db bug?)
+Log files from db attached:
+[LOG.4.12.txt](https://github.com/facebook/rocksdb/files/474003/LOG.4.12.txt)
+[LOG.4.3.0.txt](https://github.com/facebook/rocksdb/files/473999/LOG.4.3.0.txt)
+
+ls -l (on 4.12)
+-rw-rw-r--. 1 user user      861 Sep 14 11:35 000003.log
+-rw-rw-r--. 1 user user   138346 Sep 14 11:37 000017.log
+-rw-rw-r--. 1 user user    43157 Sep 14 12:03 000021.log
+-rw-rw-r--. 1 user user        0 Sep 14 12:05 000027.log
+-rw-rw-r--. 1 user user     9853 Sep 14 12:08 000030.log
+-rw-rw-r--. 1 user user     6085 Sep 14 12:10 000036.log
+-rw-rw-r--. 1 user user     6085 Sep 14 12:16 000043.log
+-rw-rw-r--. 1 user user      645 Sep 14 12:19 000047.log
+-rw-rw-r--. 1 user user    51467 Sep 14 12:23 000051.log
+-rw-rw-r--. 1 user user     3060 Sep 14 12:25 000060.log
+-rw-rw-r--. 1 user user    14724 Sep 14 12:31 000068.log
+-rw-rw-r--. 1 user user    26363 Sep 14 12:31 000072.log
+-rw-rw-r--. 1 user user     3499 Sep 14 12:33 000081.log
+-rw-rw-r--. 1 user user     3541 Sep 14 12:34 000085.log
+-rw-rw-r--. 1 user user   166086 Sep 14 13:42 000089.log
+-rw-rw-r--. 1 user user    20791 Sep 14 13:47 000098.log
+-rw-rw-r--. 1 user user  1023468 Sep 14 15:15 000102.log
+-rw-rw-r--. 1 user user    41594 Sep 14 15:16 000108.log
+-rw-rw-r--. 1 user user    29829 Sep 14 15:19 000117.log
+-rw-rw-r--. 1 user user   244358 Sep 14 15:24 000121.log
+-rw-rw-r--. 1 user user    38215 Sep 14 15:27 000126.log
+-rw-rw-r--. 1 user user   202870 Sep 14 15:35 000133.log
+-rw-rw-r--. 1 user user   412206 Sep 14 15:44 000137.log
+-rw-rw-r--. 1 user user   838326 Sep 14 15:59 000142.log
+-rw-rw-r--. 1 user user   127082 Sep 14 17:03 000149.log
+-rw-rw-r--. 1 user user 56140811 Sep 15 08:52 000155.log
+-rw-rw-r--. 1 user user    23030 Sep 15 08:53 000165.log
+-rw-rw-r--. 1 user user        0 Sep 15 08:54 000172.log
+-rw-rw-r--. 1 user user 11015549 Sep 15 12:00 000175.log
+-rw-rw-r--. 1 user user        0 Sep 15 12:08 000181.log
+-rw-rw-r--. 1 user user        0 Sep 15 12:14 000187.log
+-rw-rw-r--. 1 user user        0 Sep 15 12:23 000190.log
+-rw-rw-r--. 1 user user        0 Sep 15 12:25 000193.log
+-rw-rw-r--. 1 user user        0 Sep 15 12:33 000196.log
+-rw-rw-r--. 1 user user        0 Sep 15 12:34 000199.log
+-rw-rw-r--. 1 user user        0 Sep 15 12:36 000202.log
+-rw-rw-r--. 1 user user    75931 Sep 15 12:47 000205.log
+-rw-rw-r--. 1 user user        0 Sep 15 12:49 000210.log
+-rw-rw-r--. 1 user user        0 Sep 15 12:54 000217.log
+-rw-rw-r--. 1 user user    29762 Sep 15 12:58 000220.log
+-rw-rw-r--. 1 user user    89792 Sep 15 13:00 000224.log
+-rw-rw-r--. 1 user user    29859 Sep 15 13:03 000230.log
+-rw-rw-r--. 1 user user   140524 Sep 15 13:06 000236.log
+-rw-rw-r--. 1 user user    74455 Sep 15 13:14 000243.log
+-rw-rw-r--. 1 user user    53396 Sep 15 13:22 000247.log
+-rw-rw-r--. 1 user user    22988 Sep 15 13:23 000252.log
+-rw-rw-r--. 1 user user    22988 Sep 15 13:28 000259.log
+-rw-rw-r--. 1 user user        0 Sep 15 13:31 000267.log
+-rw-r--r--. 1 user user        0 Sep 15 14:15 000270.log
+
+ls -l (on 4.3.0)
+-rw-r--r--. 1 user user 236783 Sep 15 14:13 000270.log
+

@@ -1,0 +1,57 @@
+Hello and thank you for RocksDB,
+
+I noticed when using log_write_bench that writes were always 88 bytes:
+
+```
+> strace -e trace=write ./log_write_bench -num_records 2 2>&1 | head -n 2
+write(3, "\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371"..., 88) = 88
+write(3, "\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371\371"..., 88) = 88
+```
+
+```
+> strace -e trace=write ./log_write_bench -record_size 4096 -num_records 2 2>&1 | head -n 2
+write(3, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"..., 88) = 88
+write(3, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"..., 88) = 88
+```
+
+I think this should be:
+
+```
+<<    record.assign('X', FLAGS_record_size);
+>>    record.assign(FLAGS_record_size, 'X');
+```
+
+So fill and not buffer. Otherwise I always see writes of size 88 (the decimal value for chr `"X"`).
+
+```
+string& assign (const char* s, size_t n);
+buffer - Copies the first n characters from the array of characters pointed by s.
+
+string& assign (size_t n, char c);
+fill   - Replaces the current value by n consecutive copies of character c.
+```
+
+```
+perl -le 'print ord "X"'
+88
+```
+
+With the change:
+
+```
+> strace -e trace=write ./log_write_bench -record_size 4096 -num_records 2 2>&1 | head -n 2
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 4096) = 4096
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 4096) = 4096
+```
+
+```
+> strace -e trace=write ./log_write_bench -num_records 2 2>&1 | head -n 2
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 249) = 249
+write(3, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"..., 249) = 249
+```
+
+Thanks.
+
+https://github.com/facebook/rocksdb/commit/01c27be5fb42524c5052b4b4a23e05501e1d1421
+https://reviews.facebook.net/D16239
+

@@ -1,0 +1,5 @@
+Added a byte by byte XOR merge operator, and a corresponding test in
+db/db_bench. Also added two bash scripts to facilitate benchmarks and document properties.
+
+Signed-off-by: Pooya Shareghi shareghi@gmail.com
+

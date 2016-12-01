@@ -1,0 +1,2 @@
+Added support to use xxhash as the default checksum type.  Small backwards compatible change with the ondisk 'type' byte.
+

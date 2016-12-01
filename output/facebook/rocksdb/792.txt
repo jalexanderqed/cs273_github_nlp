@@ -1,0 +1,19 @@
+In the current implementation, for building blockbase table, every data_block is flushed when it's full. 
+For buffered io, this is fine, since os will take care of the write caching and actual IO. 
+For unbuffered io, this is not be the ideal behavior, since small unbuffered write is expensive and undesirable. For example, block size of 4k would result in a lot of 8k disk write (write need to aligned). 
+To solve this problem, we can use the aligned buffer in WritableFileWriter to aggregate more data before we do the actual disk I/O. A simple logic would be wait until the buffer is full before we issue a disk write.
+
+During the implementation of this, I found server issues: 
+1) FlushBlockPolicy actually determines the condition when the data_block is full. A better name for it would be SealBlockPolicy
+2) BlockBasedTableBuilder::Flush() writes the data_block to WritableFileWriter's buffer and issue the Flush to WritableFileWriter. These two steps should be decouple to two independent functions.
+
+To fix 2), I suggest 
+- Refactor BlockBasedTableBuilder::Flush() into two functions: SealBlock(), FlushBlock()
+
+To fix 1) and implement the write-behind algorithm described above, there are two options:
+a) Extend FlushBlockPolicy such that it return two conditions: should_seal_block, should_flush_block
+or
+b) Introduce an function MaybeFlush() to WritableFileWriter, which will determine whether to flush the buffer according to the use_os_buffer setting and it's own status
+
+Any suggestions? 
+

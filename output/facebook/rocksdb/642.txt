@@ -1,0 +1,4 @@
+Let's use this issue to track the efforts to improve write throughput to mem tables.
+
+As a discussion with @guyg8, I'll work on branch `sdong_write` and port necessary from branch `write_throughput`, which contains changes @guyg8 made. Hopefully branch `sdong_write`  can have a running codes after a week and let's see whether there can be any improvements.
+

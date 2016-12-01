@@ -1,0 +1,10 @@
+Currently RocksDB "leaks" memory on exit.
+
+This is not a serious problem in itself as since the executable is exiting, it doesn't matter if not all resources are freed.
+
+However it has the disadvantage of triggering a lot of false alerts (noise) in tools that track memory leaks.
+
+It would therefore be really nice if RocksDB could capture the main thread exit and properly deallocate all structures. That problem is especially true on the Windows port where the main thread exit is ignored.
+
+It may also require adding "UnsafeCleanXXX" function in the environement as you may want to manually destroy some object when you know your application is exiting.
+

@@ -1,0 +1,2 @@
+Running "make -j" seems to work fine until it hits the tests section, then things get sad.
+

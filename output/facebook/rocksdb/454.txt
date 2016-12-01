@@ -1,0 +1,6 @@
+May add a method to class org.rocksdb.RocksDB ? 
+like: "public RocksIterator newIterator(ReadOptions opt)"
+It's available in C++ version
+For we want use snapshot feature  in both GET and ITERATE
+thanks
+

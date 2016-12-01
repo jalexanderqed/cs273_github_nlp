@@ -1,0 +1,325 @@
+I hope that this is just me doing something wrong during the build process. I've done some sanity checking but can't seem to get things back to normal. Hoping that I can get some help debugging/building/benchmarking to make sure that it's just me who's insane :) Context: we updated from 3.8 to 3.10 and saw a performance regression where throughput was halved and latency was ~7x worse in our tests. So we started investigating and today tested using the `db_bench` tool against version 3.8 and 3.10. I'll post the commands ran below with results, but it's pretty jarring. I've tried building v3.10 with `PORTABLE=1 make all` and the difference was negligible between the normal build (i.e. `-march=native`). I built either one using `make all` against gcc 4.9.2 in linux. The goal isn't so much to benchmark the thing (you'll notice the tests are short) under certain settings to get big numbers (happy to finagle, just shouldn't regress with same settings I don't think) -- just wanted to see that things haven't regressed. let me know if/what additional information you need to help diagnose. 
+### 3.8:
+
+TL;DR this takes ~1 second to complete at 245MB/s -- perfectly ok, like I said, didn't care what the original numbers are so much, just want them as a metric for comparison -- and these seem sane.
+
+command:
+
+```
+$ bpl=10485760;overlap=10;mcz=2;del=300000000;levels=2;ctrig=10000000; delay=10000000; stop=10000000; wbn=30; mbc=20; mb=1073741824;wbs=268435456; dds=1; sync=0; r=100000; t=1; vs=800; bs=65536; cs=1048576; of=500000; si=1000000; ./db_bench --benchmarks=fillrandom --disable_seek_compaction=1 --mmap_read=0 --statistics=1 --histogram=1 --num=$r --threads=$t --value_size=$vs --block_size=$bs --cache_size=$cs --bloom_bits=10 --cache_numshardbits=4 --open_files=$of --verify_checksum=1 --db=rdb10test --sync=$sync --disable_wal=1 --compression_type=snappy --stats_interval=$si --compression_ratio=0.5 --disable_data_sync=$dds --write_buffer_size=$wbs --target_file_size_base=$mb --max_write_buffer_number=$wbn --max_background_compactions=$mbc --level0_file_num_compaction_trigger=$ctrig --level0_slowdown_writes_trigger=$delay --level0_stop_writes_trigger=$stop --num_levels=$levels --delete_obsolete_files_period_micros=$del --min_level_to_compress=$mcz --max_grandparent_overlap_factor=$overlap --stats_per_interval=1 --max_bytes_for_level_base=$bpl --memtablerep=vector --use_existing_db=0 --disable_auto_compactions=1 --source_compaction_factor=10000000 && date
+```
+
+output:
+
+```
+LevelDB:    version 3.8
+Date:       Fri Apr 10 16:42:50 2015
+CPU:        2 * Intel(R) Core(TM) i5-5257U CPU @ 2.70GHz
+CPUCache:   6144 KB
+Keys:       16 bytes each
+Values:     800 bytes each (400 bytes after compression)
+Entries:    100000
+Prefix:    0 bytes
+Keys per prefix:    0
+RawSize:    77.8 MB (estimated)
+FileSize:   39.7 MB (estimated)
+Write rate limit: 0
+Compression: snappy
+Memtablerep: vector
+Perf Level: 0
+WARNING: Assertions are enabled; benchmarks unnecessarily slow
+------------------------------------------------
+DB path: [rdb10test]
+fillrandom   :       3.175 micros/op 314982 ops/sec;  245.1 MB/s
+Microseconds per op:
+Count: 100000  Average: 3.1737  StdDev: 30.10
+Min: 0.0000  Median: 1.9888  Max: 7520.0000
+Percentiles: P50: 1.99 P75: 2.75 P99: 6.76 P99.9: 69.20 P99.99: 400.00
+------------------------------------------------------
+[       0,       1 )       13   0.013%   0.013% 
+[       1,       2 )    50554  50.554%  50.567% ##########
+[       2,       3 )    32593  32.593%  83.160% #######
+[       3,       4 )    11352  11.352%  94.512% ##
+[       4,       5 )     2934   2.934%  97.446% #
+[       5,       6 )     1244   1.244%  98.690% 
+[       6,       7 )      408   0.408%  99.098% 
+[       7,       8 )      219   0.219%  99.317% 
+[       8,       9 )       82   0.082%  99.399% 
+[       9,      10 )       52   0.052%  99.451% 
+[      10,      12 )       48   0.048%  99.499% 
+[      12,      14 )       53   0.053%  99.552% 
+[      14,      16 )       35   0.035%  99.587% 
+[      16,      18 )       34   0.034%  99.621% 
+[      18,      20 )       29   0.029%  99.650% 
+[      20,      25 )       33   0.033%  99.683% 
+[      25,      30 )       35   0.035%  99.718% 
+[      30,      35 )       43   0.043%  99.761% 
+[      35,      40 )       42   0.042%  99.803% 
+[      40,      45 )       25   0.025%  99.828% 
+[      45,      50 )       21   0.021%  99.849% 
+[      50,      60 )       28   0.028%  99.877% 
+[      60,      70 )       25   0.025%  99.902% 
+[      70,      80 )       19   0.019%  99.921% 
+[      80,      90 )        4   0.004%  99.925% 
+[      90,     100 )        9   0.009%  99.934% 
+[     100,     120 )       16   0.016%  99.950% 
+[     120,     140 )       13   0.013%  99.963% 
+[     140,     160 )        4   0.004%  99.967% 
+[     160,     180 )        3   0.003%  99.970% 
+[     180,     200 )        5   0.005%  99.975% 
+[     200,     250 )        6   0.006%  99.981% 
+[     250,     300 )        3   0.003%  99.984% 
+[     300,     350 )        4   0.004%  99.988% 
+[     350,     400 )        2   0.002%  99.990% 
+[     400,     450 )        1   0.001%  99.991% 
+[     600,     700 )        2   0.002%  99.993% 
+[     700,     800 )        1   0.001%  99.994% 
+[     900,    1000 )        1   0.001%  99.995% 
+[    1200,    1400 )        3   0.003%  99.998% 
+[    4500,    5000 )        1   0.001%  99.999% 
+[    7000,    8000 )        1   0.001% 100.000% 
+
+STATISTICS:
+rocksdb.block.cache.miss COUNT : 0
+rocksdb.block.cache.hit COUNT : 0
+rocksdb.block.cache.add COUNT : 0
+rocksdb.block.cache.index.miss COUNT : 0
+rocksdb.block.cache.index.hit COUNT : 0
+rocksdb.block.cache.filter.miss COUNT : 0
+rocksdb.block.cache.filter.hit COUNT : 0
+rocksdb.block.cache.data.miss COUNT : 0
+rocksdb.block.cache.data.hit COUNT : 0
+rocksdb.bloom.filter.useful COUNT : 0
+rocksdb.memtable.hit COUNT : 0
+rocksdb.memtable.miss COUNT : 0
+rocksdb.compaction.key.drop.new COUNT : 0
+rocksdb.compaction.key.drop.obsolete COUNT : 0
+rocksdb.compaction.key.drop.user COUNT : 0
+rocksdb.number.keys.written COUNT : 100000
+rocksdb.number.keys.read COUNT : 0
+rocksdb.number.keys.updated COUNT : 0
+rocksdb.bytes.written COUNT : 83200000
+rocksdb.bytes.read COUNT : 0
+rocksdb.no.file.closes COUNT : 0
+rocksdb.no.file.opens COUNT : 0
+rocksdb.no.file.errors COUNT : 0
+rocksdb.l0.slowdown.micros COUNT : 0
+rocksdb.memtable.compaction.micros COUNT : 0
+rocksdb.l0.num.files.stall.micros COUNT : 0
+rocksdb.rate.limit.delay.millis COUNT : 0
+rocksdb.num.iterators COUNT : 0
+rocksdb.number.multiget.get COUNT : 0
+rocksdb.number.multiget.keys.read COUNT : 0
+rocksdb.number.multiget.bytes.read COUNT : 0
+rocksdb.number.deletes.filtered COUNT : 0
+rocksdb.number.merge.failures COUNT : 0
+rocksdb.sequence.number COUNT : 100000
+rocksdb.bloom.filter.prefix.checked COUNT : 0
+rocksdb.bloom.filter.prefix.useful COUNT : 0
+rocksdb.number.reseeks.iteration COUNT : 0
+rocksdb.getupdatessince.calls COUNT : 0
+rocksdb.block.cachecompressed.miss COUNT : 0
+rocksdb.block.cachecompressed.hit COUNT : 0
+rocksdb.wal.synced COUNT : 0
+rocksdb.wal.bytes COUNT : 0
+rocksdb.write.self COUNT : 100000
+rocksdb.write.other COUNT : 0
+rocksdb.write.timedout COUNT : 0
+rocksdb.write.wal COUNT : 0
+rocksdb.flush.write.bytes COUNT : 0
+rocksdb.compact.read.bytes COUNT : 0
+rocksdb.compact.write.bytes COUNT : 0
+rocksdb.number.direct.load.table.properties COUNT : 0
+rocksdb.number.superversion_acquires COUNT : 0
+rocksdb.number.superversion_releases COUNT : 0
+rocksdb.number.superversion_cleanups COUNT : 0
+rocksdb.number.block.not_compressed COUNT : 0
+rocksdb.db.get.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.db.write.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.compaction.times.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.table.sync.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.compaction.outfile.sync.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.wal.file.sync.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.manifest.file.sync.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.table.open.io.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.db.multiget.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.read.block.compaction.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.read.block.get.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.write.raw.block.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.l0.slowdown.count statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.memtable.compaction.count statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.num.files.stall.count statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.hard.rate.limit.delay.count statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.soft.rate.limit.delay.count statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.numfiles.in.singlecompaction statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+rocksdb.db.seek.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+
+Fri Apr 10 16:42:51 PDT 2015
+```
+### 3.10:
+
+TL;DR takes ~40 seconds at 2 MB/s, a > 100x performance regression.
+
+command (same as above):
+
+```
+$ bpl=10485760;overlap=10;mcz=2;del=300000000;levels=2;ctrig=10000000; delay=10000000; stop=10000000; wbn=30; mbc=20; mb=1073741824;wbs=268435456; dds=1; sync=0; r=100000; t=1; vs=800; bs=65536; cs=1048576; o[98/1971]
+ si=1000000; ./db_bench --benchmarks=fillrandom --disable_seek_compaction=1 --mmap_read=0 --statistics=1 --histogram=1 --num=$r --threads=$t --value_size=$vs --block_size=$bs --cache_size=$cs --bloom_bits=10 --cache_numshardbits=4 --open_
+ files=$of --verify_checksum=1 --db=rdb10test --sync=$sync --disable_wal=1 --compression_type=snappy --stats_interval=$si --compression_ratio=0.5 --disable_data_sync=$dds --write_buffer_size=$wbs --target_file_size_base=$mb --max_write_buf
+ fer_number=$wbn --max_background_compactions=$mbc --level0_file_num_compaction_trigger=$ctrig --level0_slowdown_writes_trigger=$delay --level0_stop_writes_trigger=$stop --num_levels=$levels --delete_obsolete_files_period_micros=$del --min
+ _level_to_compress=$mcz --max_grandparent_overlap_factor=$overlap --stats_per_interval=1 --max_bytes_for_level_base=$bpl --memtablerep=vector --use_existing_db=0 --disable_auto_compactions=1 --source_compaction_factor=10000000 && date
+```
+
+results: 
+
+```
+ LevelDB:    version 3.10
+ Date:       Fri Apr 10 16:05:49 2015
+ CPU:        2 * Intel(R) Core(TM) i5-5257U CPU @ 2.70GHz
+ CPUCache:   6144 KB
+ Keys:       16 bytes each
+ Values:     800 bytes each (400 bytes after compression)
+ Entries:    100000
+ Prefix:    0 bytes
+ Keys per prefix:    0
+ RawSize:    77.8 MB (estimated)
+ FileSize:   39.7 MB (estimated)
+ Write rate limit: 0
+ Compression: snappy
+ Memtablerep: vector
+ Perf Level: 0
+ WARNING: Assertions are enabled; benchmarks unnecessarily slow
+ ------------------------------------------------
+ DB path: [rdb10test]
+ fillrandom   :     383.781 micros/op 2605 ops/sec;    2.0 MB/s
+ Microseconds per op:
+ Count: 100000  Average: 383.7785  StdDev: 870.93
+ Min: 123.0000  Median: 230.9580  Max: 17470.0000
+ Percentiles: P50: 230.96 P75: 249.74 P99: 5625.96 P99.9: 7577.78 P99.99: 11911.11
+ ------------------------------------------------------
+ [     120,     140 )        3   0.003%   0.003% 
+ [     140,     160 )      147   0.147%   0.150% 
+ [     160,     180 )      337   0.337%   0.487% 
+ [     180,     200 )     8316   8.316%   8.803% ##
+ [     200,     250 )    66537  66.537%  75.340% #############
+ [     250,     300 )    12292  12.292%  87.632% ##
+ [     300,     350 )     5054   5.054%  92.686% #
+ [     350,     400 )     1647   1.647%  94.333% 
+ [     400,     450 )      791   0.791%  95.124% 
+ [     450,     500 )      411   0.411%  95.535% 
+ [     500,     600 )      557   0.557%  96.092% 
+ [     600,     700 )      270   0.270%  96.362% 
+ [     700,     800 )      182   0.182%  96.544% 
+ [     800,     900 )      107   0.107%  96.651% 
+ [     900,    1000 )      113   0.113%  96.764% 
+ [    1000,    1200 )      152   0.152%  96.916% 
+ [    1200,    1400 )      117   0.117%  97.033% 
+ [    1400,    1600 )       97   0.097%  97.130% 
+ [    1600,    1800 )       65   0.065%  97.195% 
+ [    1800,    2000 )       53   0.053%  97.248% 
+ [    2000,    2500 )      119   0.119%  97.367% 
+ [    2500,    3000 )      113   0.113%  97.480% 
+ [    3000,    3500 )       87   0.087%  97.567% 
+ [    3500,    4000 )       74   0.074%  97.641% 
+ [    4000,    4500 )       71   0.071%  97.712% 
+ [    4500,    5000 )      150   0.150%  97.862% 
+ [    5000,    6000 )     1818   1.818%  99.680% 
+ [    6000,    7000 )      194   0.194%  99.874% 
+ [    7000,    8000 )       45   0.045%  99.919% 
+ [    8000,    9000 )       15   0.015%  99.934% 
+ [    9000,   10000 )       13   0.013%  99.947% 
+ [   10000,   12000 )       45   0.045%  99.992% 
+ [   12000,   14000 )        5   0.005%  99.997% 
+ [   14000,   16000 )        2   0.002%  99.999% 
+ [   16000,   18000 )        1   0.001% 100.000% 
+
+ STATISTICS:
+ rocksdb.block.cache.miss COUNT : 0
+ rocksdb.block.cache.hit COUNT : 0
+ rocksdb.block.cache.add COUNT : 0
+ rocksdb.block.cache.index.miss COUNT : 0
+ rocksdb.block.cache.index.hit COUNT : 0
+ rocksdb.block.cache.filter.miss COUNT : 0
+ rocksdb.block.cache.filter.hit COUNT : 0
+ rocksdb.block.cache.data.miss COUNT : 0
+ rocksdb.block.cache.data.hit COUNT : 0
+ rocksdb.bloom.filter.useful COUNT : 0
+ rocksdb.memtable.hit COUNT : 0
+ rocksdb.memtable.miss COUNT : 0
+ rocksdb.l0.hit COUNT : 0
+ rocksdb.l1.hit COUNT : 0
+ rocksdb.l2andup.hit COUNT : 0
+ rocksdb.compaction.key.drop.new COUNT : 0
+ rocksdb.compaction.key.drop.obsolete COUNT : 0
+ rocksdb.compaction.key.drop.user COUNT : 0
+ rocksdb.number.keys.written COUNT : 100000
+ rocksdb.number.keys.read COUNT : 0
+ rocksdb.number.keys.updated COUNT : 0
+ rocksdb.bytes.written COUNT : 83200000
+ rocksdb.bytes.read COUNT : 0
+ rocksdb.no.file.closes COUNT : 0
+ rocksdb.no.file.opens COUNT : 0
+ rocksdb.no.file.errors COUNT : 0
+ rocksdb.l0.slowdown.micros COUNT : 0
+ rocksdb.memtable.compaction.micros COUNT : 0
+ rocksdb.l0.num.files.stall.micros COUNT : 0
+ rocksdb.stall.micros COUNT : 0
+ rocksdb.db.mutex.wait.micros COUNT : 35670860
+ rocksdb.rate.limit.delay.millis COUNT : 0
+ rocksdb.num.iterators COUNT : 0
+ rocksdb.db.mutex.wait.micros COUNT : 35670860
+ rocksdb.rate.limit.delay.millis COUNT : 0
+ rocksdb.num.iterators COUNT : 0
+ rocksdb.number.multiget.get COUNT : 0
+ rocksdb.number.multiget.keys.read COUNT : 0
+ rocksdb.number.multiget.bytes.read COUNT : 0
+ rocksdb.number.deletes.filtered COUNT : 0
+ rocksdb.number.merge.failures COUNT : 0
+ rocksdb.sequence.number COUNT : 100000
+ rocksdb.bloom.filter.prefix.checked COUNT : 0
+ rocksdb.bloom.filter.prefix.useful COUNT : 0
+ rocksdb.number.reseeks.iteration COUNT : 0
+ rocksdb.getupdatessince.calls COUNT : 0
+ rocksdb.block.cachecompressed.miss COUNT : 0
+ rocksdb.block.cachecompressed.hit COUNT : 0
+ rocksdb.wal.synced COUNT : 0
+ rocksdb.wal.bytes COUNT : 0
+ rocksdb.write.self COUNT : 100000
+ rocksdb.write.other COUNT : 0
+ rocksdb.write.timedout COUNT : 0
+ rocksdb.write.wal COUNT : 0
+ rocksdb.flush.write.bytes COUNT : 0
+ rocksdb.compact.read.bytes COUNT : 0
+ rocksdb.compact.write.bytes COUNT : 0
+ rocksdb.number.direct.load.table.properties COUNT : 0
+ rocksdb.number.superversion_acquires COUNT : 0
+ rocksdb.number.superversion_releases COUNT : 0
+ rocksdb.number.superversion_cleanups COUNT : 0
+ rocksdb.number.block.not_compressed COUNT : 0
+ rocksdb.merge.operation.time.nanos COUNT : 0
+ rocksdb.filter.operation.time.nanos COUNT : 0
+ rocksdb.db.get.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.db.write.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.compaction.times.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.table.sync.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.compaction.outfile.sync.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.wal.file.sync.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.manifest.file.sync.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.table.open.io.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.db.multiget.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.read.block.compaction.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.read.block.get.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.write.raw.block.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.l0.slowdown.count statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.memtable.compaction.count statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.num.files.stall.count statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.hard.rate.limit.delay.count statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.soft.rate.limit.delay.count statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.numfiles.in.singlecompaction statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+ rocksdb.db.seek.micros statistics Percentiles :=> 50 : 0.000000 95 : 0.000000 99 : 0.000000
+
+Fri Apr 10 16:06:28 PDT 2015
+```
+
+Hope we can figure this one out, thanks guys
+

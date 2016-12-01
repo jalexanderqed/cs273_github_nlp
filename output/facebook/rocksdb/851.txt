@@ -1,0 +1,14 @@
+hi, when i read rocksdb's sourcecode, i have a question about write_thread,
+code segment in writeimpl,
+
+  if (w.done) {
+    // write was done by someone else, no need to grab mutex
+    RecordTick(stats_, WRITE_DONE_BY_OTHER);
+    return w.status;
+  }
+
+writethread class keep all writecontext in dequeue by link_older and link_newer, 
+i think this situation can only happen in multi write threads , so my question is if there is only one write thread, this code will not executed any more (such as one write thread and N read threads)? is this right?
+
+one write thread or several write threads, which is better ? can you give some suggestions~~
+

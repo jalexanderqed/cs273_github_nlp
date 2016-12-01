@@ -1,0 +1,9 @@
+This mostly affects Linux since for `RandomAccessFile` it does make some file system calls to optimize for access pattern.
+
+At `table_cache.cc` in `TableCache::GetTableReader()` the following is the sequence of calls for sequential file access:
+- `RandomAccessFile` is opened
+- The above is then gets wrapped into `ReadaheadRandomAccessFile`
+- Which finally gets wrapped into `RandomAccessFileReader`
+
+Then `TableCache::NewIterator` is called it calls `SetupForCompaction()` which is where it is supposed to call `Hint()`. However, `RandomAccessFileReader` does not override `Hint()` and the default implementation is called which is empty. Thus `Hint()` never reaches the `RandomAccessFile` implementation.
+

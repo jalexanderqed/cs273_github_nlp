@@ -1,0 +1,40 @@
+Hi,
+I've encountered two cases "make check" compilation failed.  I suppose It may be useful for others to share this information (I hope...).
+1. "make static_lib" before "make check"
+   If you follow INSTALL.md precisely, you could do "make static_lib" first. Then "make check".
+   The object files created by "make static_lib" are missing some debug facilities since -DNDEBUG is defined by Makefile, which causes in turn a failure during "make check" compilation.
+   It would be nicer to add a line to INSTALL.md.  "make check cannot run after make static_lib/shared_lib, because make check requires some debug facility (hence compiling without NDEBUG).  make clean first.  Then make check"
+2. Non standard library path for gflags
+   When "make check" requires gflags to be linked in.  So I changed Makefile as the below.
+
+``` diff
+$ git diff Makefile
+diff --git a/Makefile b/Makefile
+index c148aee..92364ba 100644
+--- a/Makefile
++++ b/Makefile
+@@ -50,10 +50,10 @@ else
+ endif
+
+ WARNING_FLAGS = -Wall -Werror
+-CFLAGS += $(WARNING_FLAGS) -I. -I./include $(PLATFORM_CCFLAGS) $(OPT)
+-CXXFLAGS += $(WARNING_FLAGS) -I. -I./include $(PLATFORM_CXXFLAGS) $(OPT) -Woverloaded-virtual
++CFLAGS += $(WARNING_FLAGS) -I. -I./include -I$(HOME)/local/include $(PLATFORM_CCFLAGS) $(OPT)
++CXXFLAGS += $(WARNING_FLAGS) -I. -I./include -I$(HOME)/local/include $(PLATFORM_CXXFLAGS) $(OPT) -Woverloaded-virtual
+
+-LDFLAGS += $(PLATFORM_LDFLAGS)
++LDFLAGS += $(PLATFORM_LDFLAGS) -L$(HOME)/local/lib -lgflags
+
+ LIBOBJECTS = $(SOURCES:.cc=.o)
+ LIBOBJECTS += $(SOURCESCPP:.cpp=.o)
+```
+
+The following environment variable is also needed before "make check", as everybody can guess.
+$ export LD_LIBRARY_PATH=$HOME/local/lib
+
+My environment
+- CentOS 6.5 Basic Server Installation
+- Devtoolset-2 (gcc 4.8.2 20140120)
+- zlib-devel, bzip2-devel, snappy-devel are installed using yum
+- The latest version of gflags taken from github is compiled and installed to ~/local/ using Cmake 3.0.0
+

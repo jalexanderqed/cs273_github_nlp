@@ -1,0 +1,93 @@
+We've observed some situations in production where all writes fail with "Invalid column family specified in write batch".  We're still investigating, but in an attempt to reproduce the behavior, we've noticed that once a write fails because it used a dropped column family, a subsequent write will fail as well.
+
+is this expected?  if yes, how to get writes working again?
+
+with the code below on OSX (our observations were originally rhel6, i'll try reproduce there if needed):
+
+```
+2:51 ~/tmp ditzy& git --git-dir ~/src/rocksdb/.git log --oneline | sed 1q
+149ef19 Bump up patch to 3.10.1
+2:51 ~/tmp ditzy& c++ --version
+Apple LLVM version 6.1.0 (clang-602.0.49) (based on LLVM 3.6.0svn)
+Target: x86_64-apple-darwin14.3.0
+Thread model: posix
+2:51 ~/tmp ditzy& c++ -std=c++11 -W -Wall -Wno-unused-parameter -Werror cft4.cc -I ~/src/rocksdb/include -L ~/src/rocksdb -lrocksdb -lz -lbz2
+2:51 ~/tmp ditzy& ./a.out
+2:51 ~/tmp ditzy& ./a.out f
+fatal: cft4.cc:66 Put DEFAULT: 4 Invalid argument: Invalid column family specified in write batch
+```
+
+cft4.cc is below
+
+```
+#include <iostream>
+#include <string>
+#include <vector>
+#include <cstdlib>
+
+#include <rocksdb/db.h>
+#include <rocksdb/options.h>
+#include <rocksdb/slice.h>
+
+static void fatal(const char* fn, int line,
+        const std::string& what, const rocksdb::Status& s)
+{
+    std::cerr << "fatal: " << fn << ':' << line << ' '
+        << what << ": " << s.code() << ' ' << s.ToString() << '\n';
+    std::exit(1);
+}
+
+#define FATAL(w,s) fatal(__FILE__, __LINE__, (w), (s))
+
+int main(int argc, char**)
+{
+    using namespace rocksdb;
+
+    Options options;
+    options.create_if_missing = true;
+    options.create_missing_column_families = true;
+    options.error_if_exists = true;
+
+    const std::string dbname("cft.test.db");
+
+    // cleanup from a previous run
+    DestroyDB(dbname, options);
+
+    DB* db = nullptr;
+    std::vector<ColumnFamilyHandle*> cfh;
+
+    const std::vector<ColumnFamilyDescriptor> cfd = {
+        { "1", options },
+        { kDefaultColumnFamilyName, options },
+    };
+
+    auto s = DB::Open(options, dbname, cfd, &cfh, &db);
+    if (!s.ok())
+        FATAL("DB::Open", s);
+
+    if (argc != 1) {
+        s = db->DropColumnFamily(cfh[0]);
+        if (!s.ok())
+            FATAL("DropColumnFamily", s);
+    }
+
+    const auto k = Slice{"k"};
+    const auto v = Slice{"v"};
+
+    // attempt to write to the dropped column family
+    s = db->Put(WriteOptions(), cfh[0], k, v);
+    if (s.ok())
+        std::exit(0);
+
+    if (!s.IsInvalidArgument())
+        FATAL("Put cfh[0]", s);
+
+    // write to the default column family
+    s = db->Put(WriteOptions(), k, v);
+    if (!s.ok())
+        FATAL("Put DEFAULT", s);
+
+    return 0;
+}
+```
+

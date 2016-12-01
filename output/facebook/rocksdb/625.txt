@@ -1,0 +1,2 @@
+this patch does the same thing but makes clang happy, re: https://github.com/facebook/rocksdb/pull/621 it also had a gripe about `size_t` <-> `int`. clang needs some vicodin 
+

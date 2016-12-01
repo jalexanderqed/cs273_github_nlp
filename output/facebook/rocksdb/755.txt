@@ -1,0 +1,6 @@
+It might be nice to have a method to delete all db contents,
+which can be runned while db is opened.   For example for unittesting.
+
+I do not like the idea of closing DB and running rm -rf from shell, 
+deleting every key from list of all keys is not very nice too.
+

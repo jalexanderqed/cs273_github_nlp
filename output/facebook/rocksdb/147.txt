@@ -1,0 +1,53 @@
+Hi,
+I download released rocksdb-2.8.fb and installed all the dependencies. There is no error in compilation until running 'make check' for the unit test. The following error applies to both static library build and shared library build. Any idea?
+
+****\* Running db_test
+==== Test DBTest.Empty
+==== Test DBTest.ReadOnlyDB
+==== Test DBTest.IndexAndFilterBlocksOfNewTableAddedToCache
+==== Test DBTest.GetPropertiesOfAllTablesTest
+==== Test DBTest.LevelLimitReopen
+==== Test DBTest.Preallocation
+==== Test DBTest.PutDeleteGet
+==== Test DBTest.GetFromImmutableLayer
+==== Test DBTest.GetFromVersions
+==== Test DBTest.GetSnapshot
+==== Test DBTest.GetLevel0Ordering
+==== Test DBTest.GetOrderedByLevels
+==== Test DBTest.GetPicksCorrectFile
+==== Test DBTest.GetEncountersEmptyLevel
+==== Test DBTest.KeyMayExist
+==== Test DBTest.NonBlockingIteration
+==== Test DBTest.FilterDeletes
+==== Test DBTest.IterSeekBeforePrev
+==== Test DBTest.IterLongKeys
+==== Test DBTest.IterNextWithNewerSeq
+==== Test DBTest.IterPrevWithNewerSeq
+==== Test DBTest.IterPrevWithNewerSeq2
+==== Test DBTest.IterEmpty
+==== Test DBTest.IterSingle
+==== Test DBTest.IterMulti
+==== Test DBTest.IterReseek
+==== Test DBTest.IterSmallAndLargeMix
+==== Test DBTest.IterMultiWithDelete
+==== Test DBTest.IterPrevMaxSkip
+==== Test DBTest.IterWithSnapshot
+==== Test DBTest.Recover
+==== Test DBTest.RecoverWithTableHandle
+==== Test DBTest.IgnoreRecoveredLog
+==== Test DBTest.RollLog
+==== Test DBTest.WAL
+==== Test DBTest.CheckLock
+==== Test DBTest.FlushMultipleMemtable
+==== Test DBTest.NumImmutableMemTable
+==== Test DBTest.GetProperty
+pthread destroy mutex: Device or resource busy
+/bin/sh: line 1: 17201 Aborted                 ./$t
+make: **\* [check] Error 1
+
+gcc version 4.7.2 20121015 (Red Hat 4.7.2-5) (GCC)
+OS  CentOS release 6.5 (Final)
+kernel-2.6.32-431.17.1.el6.x86_64
+
+Thanks
+

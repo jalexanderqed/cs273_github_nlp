@@ -1,0 +1,1 @@
+Exposing persistent cache stats (counters) to the user via public API.

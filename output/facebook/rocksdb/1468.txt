@@ -1,0 +1,1 @@
+It is helpful when we want to get a specified statistics in these languages that limited to call C api like rust. The `rocksdb_options_statistics_get_string` return the whole statistics in the form of a string is not we want. 

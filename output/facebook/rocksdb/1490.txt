@@ -1,0 +1,1 @@
+it'll leave an empty file behind each time open fails. once open eventually succeeds it'll delete all the accumulated empty files.

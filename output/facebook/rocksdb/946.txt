@@ -1,0 +1,27 @@
+Hi.
+
+I'm trying to migrate our system from LevelDB to RocksDB.
+
+The development environment is VS2015 and the current RocksDB code is from commit 1477dcb.
+
+Whenever I try to read old data, I get an assertion from this line:
+
+[assert(smallest_seqno <= largest_seqno);](https://github.com/facebook/rocksdb/blob/1477dcb37d0b60c8e242e35847ee32bcfe84f6f4/db/version_edit.h#L188)
+
+Call Stack:
+
+```
+lib.dll!rocksdb::VersionEdit::AddFile(int level, unsigned __int64 file, unsigned int file_path_id, unsigned __int64 file_size, const rocksdb::InternalKey & smallest, const rocksdb::InternalKey & largest, const unsigned __int64 & smallest_seqno, const unsigned __int64 & largest_seqno, bool marked_for_compaction) Line 188   C++
+lib.dll!rocksdb::VersionSet::WriteSnapshot(rocksdb::log::Writer * log) Line 3047    C++
+lib.dll!rocksdb::VersionSet::LogAndApply(rocksdb::ColumnFamilyData * column_family_data, const rocksdb::MutableCFOptions & mutable_cf_options, rocksdb::VersionEdit * edit, rocksdb::InstrumentedMutex * mu, rocksdb::Directory * db_directory, bool new_descriptor_log, const rocksdb::ColumnFamilyOptions * new_cf_options) Line 2165 C++
+lib.dll!rocksdb::DBImpl::RecoverLogFiles(const std::vector<unsigned __int64,std::allocator<unsigned __int64> > & log_numbers, unsigned __int64 * max_sequence, bool read_only) Line 1359    C++
+lib.dll!rocksdb::DBImpl::Recover(const std::vector<rocksdb::ColumnFamilyDescriptor,std::allocator<rocksdb::ColumnFamilyDescriptor> > & column_families, bool read_only, bool error_if_log_file_exist) Line 1026 C++
+lib.dll!rocksdb::DB::Open(const rocksdb::DBOptions & db_options, const std::basic_string<char,std::char_traits<char>,std::allocator<char> > & dbname, const std::vector<rocksdb::ColumnFamilyDescriptor,std::allocator<rocksdb::ColumnFamilyDescriptor> > & column_families, std::vector<rocksdb::ColumnFamilyHandle *,std::allocator<rocksdb::ColumnFamilyHandle *> > * handles, rocksdb::DB * * dbptr) Line 5300  C++
+lib.dll!rocksdb::DB::Open(const rocksdb::Options & options, const std::basic_string<char,std::char_traits<char>,std::allocator<char> > & dbname, rocksdb::DB * * dbptr) Line 5227   C++
+```
+
+The constructor of `FileMetaData` initializes those members with initial data in order to be replaced later by actual data; but it seems that it doesn't happen when reading old log files.
+However, the code still arrives to a function which asserts they are exists and set correctly.
+
+Am I missing anything?
+

@@ -1,0 +1,3 @@
+With the last folder layout change a bug was introduced which
+prevents Jacoco from working correctly.
+

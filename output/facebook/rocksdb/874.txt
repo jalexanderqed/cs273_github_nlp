@@ -1,0 +1,17 @@
+The error message is as follows:
+
+```
+tools/db_stress.cc:593:62: error: format specifies type 'long' but the argument has type 'size_t' (aka 'unsigned int') [-Werror,-Wformat]
+    fprintf(stdout, "%-12s: Single deleted %ld times\n", "", single_deletes_);
+                                           ~~~               ^~~~~~~~~~~~~~~
+                                           %zu
+1 error generated.
+Makefile:1133: recipe for target 'tools/db_stress.o' failed
+gmake[1]: *** [tools/db_stress.o] Error 1
+gmake[1]: Leaving directory '/wrkdirs/usr/ports/databases/rocksdb/work/rocksdb-4.1'
+*** Error code 1
+
+Stop.
+make: stopped in /usr/ports/databases/rocksdb
+```
+

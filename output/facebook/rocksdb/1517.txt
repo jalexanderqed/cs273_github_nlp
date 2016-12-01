@@ -1,0 +1,17 @@
+Hello everyone,
+
+Can RocksDB work on Ramdisk. Today I tried to store rocksdb in RAMdisk (8GB / Macbook Pro 2014 with 16GB RAM), and the program always crashes (segmentation fault).
+
+I did not changed anything. Before, one line of code is:
+
+``path += "/testdb/";``
+
+and now it is:
+
+``path += "/Volumes/ram_disk/testdb/";``
+
+I tested my RAMdisk in command line, indeed I can read/write on that.
+
+Can rocksdb work with ramdisk, or something is wrong with my programming?
+
+Thank you very much,

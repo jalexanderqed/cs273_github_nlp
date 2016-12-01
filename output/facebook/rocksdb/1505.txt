@@ -1,0 +1,11 @@
+Change DumpTable() so we can see the range deletion meta-block.
+
+Test Plan: try it out
+```
+$ ./sst_dump --file=./tmp/000007.sst --command=raw
+$ grep 'Range deletions' -A3 ./tmp/000007_dump.txt
+Range deletions:
+--------------------------------------
+HEX    61: 7A
+ASCII  a : z
+```

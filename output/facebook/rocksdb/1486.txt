@@ -1,0 +1,2 @@
+Originally sequence ids were calculated, in recovery, based off of the first seqid found if the first log recovered. The working seqid was then incremented from that value based on every insertion that took place. This was faulty because of the potential for missing log files or inserts that skipped the WAL. The current recovery scheme grabs sequence from current recovering batch and increments using memtableinserter to track how many actual inserts take place. This works for 2PC batches as well scenarios where some logs are missing or inserts that skip the WAL.
+

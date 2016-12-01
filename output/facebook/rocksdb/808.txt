@@ -1,0 +1,9 @@
+Currently, Statistics class only expose a limited number of counters. In the internal_stat.cc file, there are some interesting counters which can be very useful for the user, such as counters in InternalCFStatsType, InternalDBStatsType. In addtion, the compaction Statistics and block_cache memory usage could also be expose throught the same interface.
+
+Proposal:
+1) Extend existing StatisticsImpl class to expose the column family's counter, and etc. I can add the counters to TickerInternal enum type (which is empty now). 
+or
+2) Have a new class that implements Statistics interface, and include the cloumn family's counters.
+
+Comments? 
+

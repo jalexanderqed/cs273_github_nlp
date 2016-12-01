@@ -1,0 +1,6 @@
+hi everyone
+
+I recently in the study of rocksdb.I find that the value of allow_mmap_reads is set to false by default and the the performance of readrandom with allow_mmap_reads=false is very lower than allow_mmap_reads=true,because of rocksdb uses mmap to load all the data of file to os buffer in the beginning.can anybody answers to me why the value of allow_mmap_reads is set to false by default? this setting can improving the performance in some cases? 
+
+Ask this question because of leveldb without this parameter, it can using mmap by default. so i want to know the purpose of doing so by rocksdb.
+

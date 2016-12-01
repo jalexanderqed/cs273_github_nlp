@@ -1,0 +1,45 @@
+I'm use next options:
+rocksdb::Options options;
+options.error_if_exists = false;
+options.create_if_missing = true;
+options.compaction_style = rocksdb::kCompactionStyleLevel;
+options.compression = rocksdb::kSnappyCompression;
+options.compression_per_level.push_back(rocksdb::kSnappyCompression);
+options.compression_per_level.push_back(rocksdb::kBZip2Compression);
+options.comparator = new MyComparator();
+
+options.num_levels = 2;
+options.max_open_files = 12000;
+options.write_buffer_size = 128_1024_1024;
+options.max_write_buffer_number = 10000;
+options.min_write_buffer_number_to_merge = 250;
+options.max_background_compactions = 2;
+options.max_background_flushes = 2;
+options.disable_seek_compaction = false;
+options.disable_auto_compactions = false;
+options.block_size = 512_1024;
+options.block_cache = rocksdb::NewLRUCache(2_1024_1024_1024, 10);
+options.block_cache_compressed = rocksdb::NewLRUCache(2_1024_1024_1024, 10);
+options.filter_policy = rocksdb::NewBloomFilterPolicy(10);
+options.db_stats_log_interval = -1;
+options.keep_log_file_num = 10;
+options.max_log_file_size = 128_1024;
+options.target_file_size_base = 2_1024_1024;
+options.target_file_size_multiplier = 5;
+
+but requests to get archived data:
+table/format.cc:192: rocksdb::Status rocksdb::UncompressBlockContents(const char_, size_t, rocksdb::BlockContents_): Assertion `data[n] != kNoCompression' failed.
+
+after this check is the code:
+assert(data[n] != kNoCompression);
+switch (data [n]) {
+case kSnappyCompression: {...}
+case kZlibCompression: {...}
+case kBZip2Compression: {...}
+case kLZ4Compression: {...}
+case kLZ4HCCompression: {...}
+default: {...}
+}
+
+what for is necessary this assertions?
+

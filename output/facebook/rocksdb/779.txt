@@ -1,0 +1,7 @@
+  Test code errors are currently blocking Windows Release build
+  We do not want spend time building in Release what we can not run
+  We want to eliminate a source of most frequent errors when people
+  check-in test only code which can not be built in Release.
+  This feature will work only if you invoke msbuild against rocksdb.sln
+  Invoking it against ALL_BUILD target will attempt to build everything.
+

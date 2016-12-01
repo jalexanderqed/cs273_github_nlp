@@ -1,0 +1,64 @@
+I am seeing a strange problem which I am struggling to track down. Unfortunately the problem is non-deterministic, I have a suite of tests and if I run them 5 times, then the problem may only occur 3 times; It seems that **_sometimes**_ a NewIteratorWithBase taken on a Column Family for a WriteBatchWithIndex can miss some keys. 
+
+For background, I am working from Java and I have a WriteBatchWithIndex for which I take a NewIteratorWithBase on a Column Family. My column family holds serialized objects (of key/value pairs), the keys I store are composite with three parts
+1. object id (a UUID 128bits)
+2. unique key unit decoding length (stored as 4 bytes)
+3. unique key id (a hierarchical id like 1.1 or 1.1.1) which is decoded by using 2. so that a bytewise comparison will work.
+
+I have a custom comparator written in C++ which provides the ordering for my keys. It groups keys together by object id, by using memcmp on two different object ids, it also knows how to order the unique keys so that for example 1.1 comes before 1.1.1, and 1.1.2 comes before 1.2. This comparator is provided to the column family descriptor when opening the  database, the returned column family handle is used when I take a NewIteratorWithBase.
+
+When tracing my application, when I see the expected behavior the following events occur:
+
+```
+Storing object: 749b500f-9701-411e-a2a2-112bb9c855be
+Stored: 749b500f-9701-411e-a2a2-112bb9c855be:1
+Stored: 749b500f-9701-411e-a2a2-112bb9c855be:1.1
+Stored: 749b500f-9701-411e-a2a2-112bb9c855be:1.2
+Stored: 749b500f-9701-411e-a2a2-112bb9c855be:1.2.1
+
+....
+Removing object: 749b500f-9701-411e-a2a2-112bb9c855be
+Removed: 749b500f-9701-411e-a2a2-112bb9c855be:1
+Removed: 749b500f-9701-411e-a2a2-112bb9c855be:1.1
+Removed: 749b500f-9701-411e-a2a2-112bb9c855be:1.2
+Removed: 749b500f-9701-411e-a2a2-112bb9c855be:1.2.1
+```
+
+However, when I get errors, the trace shows that the following events occured:
+
+```
+Storing object: 749b500f-9701-411e-a2a2-112bb9c855be
+Stored: 749b500f-9701-411e-a2a2-112bb9c855be:1
+Stored: 749b500f-9701-411e-a2a2-112bb9c855be:1.1
+Stored: 749b500f-9701-411e-a2a2-112bb9c855be:1.2
+Stored: 749b500f-9701-411e-a2a2-112bb9c855be:1.2.1
+
+....
+Removing object: 749b500f-9701-411e-a2a2-112bb9c855be
+Removed: 749b500f-9701-411e-a2a2-112bb9c855be:1
+Removed: 749b500f-9701-411e-a2a2-112bb9c855be:1.1
+Removed: 749b500f-9701-411e-a2a2-112bb9c855be:1.2
+```
+
+**_Note**_ that the key/value pair `749b500f-9701-411e-a2a2-112bb9c855be:1.2.1` is not removed in the second trace.
+
+My code for removing an object looks like:
+
+``` java
+ObjectId objectId = object.getId();
+rocksLog.trace("Removing object: " + objectId.toString());
+
+RocksIterator baseIterator = rocks.newIterator(cf, readOptions);
+RocksIterator iterator = writeBatchWithIndex.newIteratorWithBase(cf, baseIterator);
+
+//seek to our objectId, iterate over all following key/value pairs that start with our objectId
+for (iterator.seek(objectId.serialize()); iterator.isValid() && ObjectKey.deserializeObjectId(iterator.key(), 0).startsWith(objectId); iterator.next()) {
+    writeBatchWithIndex.remove(cf, iterator.key());
+    rocksLog.trace("Removed: " + ObjectKey.deserialize(iterator.key(), 0).toString());
+}
+```
+
+Any ideas why I might see NewIteratorWithBase not always iterate all present keys? The thing that worries me is that running the same sequence of store and remove steps over and over again only shows the problem sometimes and not every time. Could this be a problem in my comparator, or is it more likely the problem is elsewhere in Rocks? I can share the comparator code if that helps.
+
+Perhaps this is a known issue that is already fixed? I am using revision `4a855c0` of RocksDB from May 18th 2015.
+

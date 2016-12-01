@@ -1,0 +1,4 @@
+This brings down write_batch_test immediately.
+Looks like a broken version of std::unique_ptr with custom deletor.
+Due to the fact that memory does not go away the code continues to operate on a destroyed internal iterator.
+

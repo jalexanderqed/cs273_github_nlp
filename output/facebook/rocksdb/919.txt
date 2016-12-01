@@ -1,0 +1,7 @@
+i find a problem recently，when hard disk is full，rocksdb always return error：Mset set keys error, err=IO error：No space left on device， even after clean the disk，rocksdb always stay error state，
+
+i think bg_error_ may be the reason，when bg_error_ is set error， this flag will stay error all the time，therr is no way to reset this flag. so once set bg_error_ to error status，it will always stay error all the time ,and rocksdb will not work.
+can you give some suggestion about this problem?
+
+Thanks~
+

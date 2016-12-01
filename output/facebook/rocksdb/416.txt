@@ -1,0 +1,16 @@
+commit 44f0ff3 introduces the use of FALLOC_FL_PUNCH_HOLE, which according to http://man7.org/linux/man-pages/man2/fallocate.2.html was introduced with the 2.6.38 kernel.  this breaks compilation on rhel6 where 3.5.1 built fine.
+
+i don't have a patch, as i'm not sure which approach is best from a code maintenance perspective:
+
+1) check FALLOC_FL_PUNCH_HOLE when deciding to define ROCKSDB_FALLOCATE_PRESENT
+
+2) more conditional goop at the single point of use in env_posix.cc
+-#ifdef ROCKSDB_FALLOCATE_PRESENT
++#if defined(ROCKSDB_FALLOCATE_PRESENT) && defined(FALLOC_FL_PUNCH_HOLE)
+
+3) dummy definition:
+# if defined(ROCKSDB_FALLOCATE_PRESENT) && !defined(FALLOC_FL_PUNCH_HOLE)
+
+  #define FALLOC_FL_PUNCH_HOLE 0
+# endif
+

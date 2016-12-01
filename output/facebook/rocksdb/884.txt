@@ -1,0 +1,44 @@
+Using the following options:
+
+``` cpp
+  options_.info_log_level = rocksdb::ERROR_LEVEL;
+  options_.log_file_time_to_roll = 0;
+  options_.keep_log_file_num = 10;
+  options_.max_log_file_size = 1024 * 1024 * 1;
+  options_.stats_dump_period_sec = 0;
+```
+
+I try to limit the logfile size. With an update from 3.10 to 4.1 (release) the LOG includes the options/column options dump.
+
+The 3.10 implementation used `Log(Logger* info_log, const char* format, ...)` while the 4.1 implementation uses `Header(Logger* info_log, const char* format, ...)`.
+
+The change occurred by @yhchiang: https://github.com/facebook/rocksdb/commit/f21c7415a7c77edf1158fc8503c41ca6a04696f7
+
+From `./util/env.cc`:
+
+``` cpp
+void Log(Logger* info_log, const char* format, ...) {
+  if (info_log && info_log->GetInfoLogLevel() <= InfoLogLevel::INFO_LEVEL) {
+    va_list ap;
+    va_start(ap, format);
+    info_log->Logv(InfoLogLevel::INFO_LEVEL, format, ap);
+    va_end(ap);
+  }
+}
+
+[...]
+
+void Header(Logger* info_log, const char* format, ...) {
+  if (info_log) {
+    va_list ap;
+    va_start(ap, format);
+    info_log->LogHeader(format, ap);
+    va_end(ap);
+  }
+}
+```
+
+When moving from pre 3.10 I noticed this went from INFO to WARN. What is the thought behind escalating these verbose logs? And is there a way to completely remove them in the 4.1 release?
+
+They should be reverted back to using `Log`.
+

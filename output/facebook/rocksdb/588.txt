@@ -1,0 +1,50 @@
+I have a rocksdb DB of size ~125GB (version 3.9.1). The memory used by rocksdb keeps going up over time. Our OOM killer kills the process when it hits ~8GB (it gets there in ~1 hour). And the leak seems to be happening along the read path (both point lookups and row iteration).
+
+Google's tcmalloc shows that allocations along ReadFilter() and CreateIndexReader() are contributing to the leak. Both of these ultimately point to ReadBlockContents() and UncompressBlockContents(). Any idea what could be happening? The larger question is if there is a way to limit cumulative memory usage by rocksdb to a certain number?
+
+Here are the DB options we're using:
+
+write_buffer_size = 64MB
+block_size = 8192;
+rocksdb::BlockBasedTableOptions table_options;
+table_options.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
+table_options.block_cache = rocksdb::NewLRUCache(128 \* 1024 \* 1024);
+min_write_buffer_number_to_merge = 3;
+max_write_buffer_number = 5;
+target_file_size_base = 64MB;
+max_bytes_for_level_base = 512MB;
+max_bytes_for_level_multiplier = 8;
+target_file_size_multiplier = 3;
+
+After seeing leaks, I tried/considered the following:
+1) Set the block cache to 1MB. It did not help.
+2) Verified that cache_index_and_filter_blocks is false.
+3) Considered setting use_block_based_builder to true, but wanted to get to the bottom of this leak before rebuilding/compacting the DB with this option.
+
+There are currently 4 levels in the DB, and the largest sstable is 1.9GB. Here are the current db stats:
+
+```
+** Compaction Stats [default] **
+Level   Files   Size(MB) Score Read(GB)  Rn(GB) Rnp1(GB) Write(GB) Wnew(GB) Moved(GB) W-Amp Rd(MB/s) Wr(MB/s) Comp(sec) Comp(cnt) Avg(sec) Stall(sec) Stall(cnt) Avg(ms)     RecordIn   RecordDrop
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  L0     3/0        122   0.4      0.0     0.0      0.0       0.3      0.3       0.0   0.0      0.0     28.4         9         8    1.176       0.00          0    0.00            0            0
+  L1    11/0        511   1.0      0.7     0.3      0.5       0.6      0.1       0.0   2.4     24.2     20.4        32         1   31.658       0.00          0    0.00      4258695       548196
+  L2    47/0       3956   1.0      0.6     0.1      0.5       0.6      0.1       0.0   4.5     18.8     18.3        34         2   16.779       0.00          0    0.00      4994999       212495
+  L3   100/0      32443   1.0      0.7     0.2      0.5       0.7      0.2       0.0   3.0     17.7     17.6        42         1   41.880       0.00          0    0.00     11112522        20936
+  L4    77/0      89758   0.3      0.0     0.0      0.0       0.0      0.0       0.0   0.0      0.0      0.0         0         0    0.000       0.00          0    0.00            0            0
+ Sum   238/0     126789   0.0      2.1     0.6      1.5       2.2      0.8       0.0   8.5     18.4     19.4       117        12    9.709       0.00          0    0.00     20366216       781627
+ Int     0/0          0   0.0      1.1     0.3      0.7       1.2      0.4       0.0   9.7     17.0     18.6        63         5   12.678       0.00          0    0.00     13075943       192579
+Flush(GB): accumulative 0.261, interval 0.119
+Stalls(secs): 0.000 level0_slowdown, 0.000 level0_numfiles, 0.000 memtable_compaction, 0.000 leveln_slowdown_soft, 0.000 leveln_slowdown_hard
+Stalls(count): 0 level0_slowdown, 0 level0_numfiles, 0 memtable_compaction, 0 leveln_slowdown_soft, 0 leveln_slowdown_hard
+
+** DB Stats **
+Uptime(secs): 1001.2 total, 471.2 interval
+Cumulative writes: 3111 writes, 4052120 keys, 3111 batches, 1.0 writes per batch, 1.02 GB user ingest
+Cumulative WAL: 3111 writes, 3111 syncs, 1.00 writes per sync, 1.02 GB written
+Interval writes: 1103 writes, 1858047 keys, 1103 batches, 1.0 writes per batch, 475.9 MB user ingest
+Interval WAL: 1103 writes, 1103 syncs, 1.00 writes per sync, 0.46 MB written
+```
+
+Thank you for taking the time to read this.
+

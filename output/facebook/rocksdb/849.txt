@@ -1,0 +1,23 @@
+## How can I delete the LOG.old.\* files?
+## thank you!
+
+```
+-rw-r--r-- 1 root root   434319 Nov 20 07:59 116280.sst
+-rw-r--r-- 1 root root   432979 Nov 20 07:59 116282.sst
+-rw-r--r-- 1 root root   434843 Nov 20 07:59 116284.sst
+-rw-r--r-- 1 root root   433350 Nov 20 07:59 116286.sst
+-rw-r--r-- 1 root root  3487174 Nov 20 07:59 116287.log
+-rw-r--r-- 1 root root   434405 Nov 20 07:59 116288.sst
+-rw-r--r-- 1 root root       16 Nov 20 07:41 CURRENT
+-rw-r--r-- 1 root root       37 Nov 20 03:40 IDENTITY
+-rw-r--r-- 1 root root        0 Nov 20 03:40 LOCK
+-rw-r--r-- 1 root root 19358719 Nov 20 07:59 LOG
+-rw-r--r-- 1 root root  3795394 Nov 20 03:45 LOG.old.1447991334341079
+-rw-r--r-- 1 root root 17880614 Nov 20 04:13 LOG.old.1447993690696363
+-rw-r--r-- 1 root root 45883143 Nov 20 05:20 LOG.old.1447997019485462
+-rw-r--r-- 1 root root  7028662 Nov 20 05:29 LOG.old.1448002770120232
+-rw-r--r-- 1 root root 39349306 Nov 20 07:34 LOG.old.1448004850881430
+-rw-r--r-- 1 root root  1910508 Nov 20 07:41 LOG.old.1448005278376423
+-rw-r--r-- 1 root root  1018567 Nov 20 07:59 MANIFEST-099716
+```
+

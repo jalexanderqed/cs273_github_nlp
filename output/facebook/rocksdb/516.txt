@@ -1,0 +1,2 @@
+Updated tickers and histogram types to 3.10.
+

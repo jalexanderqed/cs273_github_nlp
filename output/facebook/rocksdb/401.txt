@@ -1,0 +1,5 @@
+- Solved a sigsegv problem while calling MergeOperatorByName
+- Release String again after native allocation
+- Added -Xcheck:jni to test execution to prevent such problems earlier
+- Covered solution with JunitTests
+

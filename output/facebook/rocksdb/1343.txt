@@ -1,0 +1,6 @@
+Hello,
+
+I need the capability to find the smallest key in the DB. Since SSTable is sorted, I expect that performing this operation should be fast. 
+
+Is there an API for this? I am using RocksDB-JNI 4.9.0
+

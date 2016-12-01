@@ -1,0 +1,24 @@
+Hi,
+
+as soon as I use 'max_log_file_size', no LOG file is opened on database creation.
+
+Here is a very simple program. Important for reproducing: The "/tmp/testdb" directory must _not_ exists. Thus relying on the create_if_missing.
+
+``` cpp
+#include "rocksdb/db.h"
+
+int main() {
+    rocksdb::DB* db;
+    rocksdb::Options options;
+    options.max_log_file_size = 100 * 1024 * 1024;
+    options.create_if_missing = true;
+    rocksdb::Status status = rocksdb::DB::Open(options, "/tmp/testdb", &db);
+    assert(status.ok());
+}
+```
+
+I did a look at auto_roll_logger and could see that the database directory is not present when the logfile is opened => error on creating the file => no logging.
+
+However, If no 'max_log_file_size' is used the directory is created.
+So my suggestion would be to move env->CreateDir(dbname) just a few lines up, so it is always called regardless of the options.
+

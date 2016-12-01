@@ -1,0 +1,4 @@
+Fix a typo in `java/samples`:
+
+Correct `geHistogramData()` -> `getHistogramData()`
+

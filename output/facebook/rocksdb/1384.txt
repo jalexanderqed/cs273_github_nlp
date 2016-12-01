@@ -1,0 +1,8 @@
+- util/build_verion.cc.in: add this file, so cmake and make can share the
+  template file for generating util/build_version.cc.
+- CMakeLists.txt: also, cmake v2.8.11 does not support file(GENERATE ...),
+  so we are using configure_file() for creating build_version.cc.
+- Makefile: use util/build_verion.cc.in for creating build_version.cc.
+
+Signed-off-by: Kefu Chai tchaikov@gmail.com
+

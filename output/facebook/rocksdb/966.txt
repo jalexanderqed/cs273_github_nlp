@@ -1,0 +1,9 @@
+Hi,
+
+I built RocksDB on AIX including JNI. It required many changes in sources and also has prerequisite for my other pull requests. I will wait until others will be merged until I will create another pull request.
+
+I just created issue to track the progress and discussion. First of all I would like to ask if RocksDB team wants to merge AIX build?
+
+Thanks,
+Tomas
+

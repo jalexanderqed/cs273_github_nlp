@@ -1,0 +1,12 @@
+When building under Ubuntu 12.10, received subject error from make, which returned:
+
+g++ -g -Wall -Werror -I. -I./include -std=c++11  -DROCKSDB_PLATFORM_POSIX  -DOS_LINUX -fno-builtin-memcmp -DROCKSDB_ATOMIC_PRESENT -DROCKSDB_FALLOCATE_PRESENT -DSNAPPY -DGFLAGS -DZLIB -DBZIP2   -DHAVE_JEMALLOC -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -Woverloaded-virtual -c db/db_test.cc -o db/db_test.o 
+In file included from db/db_test.cc:37:0:
+./util/testharness.h: In instantiation of ‘rocksdb::test::Tester& rocksdb::test::Tester::IsEq(const X&, const Y&) [with X = int; Y = long unsigned int; rocksdb::test::Tester = rocksdb::test::Tester]’:
+db/db_test.cc:845:3:   required from here
+./util/testharness.h:93:3: error: comparison between signed and unsigned integer expressions [-Werror=sign-compare]
+cc1plus: all warnings being treated as errors
+make: **\* [db/db_test.o] Error 1
+
+Error occurred when building from (unzipped) rocksdb-master.zip file.
+

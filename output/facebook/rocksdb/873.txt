@@ -1,0 +1,3 @@
+  Fix warnings
+  Take advantage of native snprintf on VS 15
+

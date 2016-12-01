@@ -1,0 +1,7 @@
+When enabled, this option replaces range tombstones with a sequence of
+point tombstones covering the same range. This can be used to A/B test perf of
+range tombstones vs sequential point tombstones, and help us find the cross-over
+point, i.e., the size of the range above which range tombstones outperform point
+tombstones.
+
+Test Plan: ran it, verified the regular tombstones are added as expected

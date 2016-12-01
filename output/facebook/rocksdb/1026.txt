@@ -1,0 +1,14 @@
+Link to Issue https://github.com/facebook/rocksdb/issues/1009 
+
+@kradhakrishnan @siying @igorcanadi
+
+Changes in this patch
+- Replaced histogram counter type uint64_t with std::atomic_uint_fast64_t to support update atomicity
+- Extracted an interface (class Histogram) for HistogramImpl and HistogramWindowingImpl and wrapped the data in struct HistogramStat 
+- Introduced HistogramWindowingImpl class for supporting real-time histogram caculation
+- Extended histogram_test for better coverage
+
+I had run performance tests to verify no regression is introduced. 
+
+Let me know if there is anything I can do to make it easier for your review. 
+

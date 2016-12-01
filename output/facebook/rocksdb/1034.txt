@@ -1,0 +1,4 @@
+both #seekToFirst() and #seek(byte[] key) work just fine, however when I use #seekToLast() instead the iterator is always invalid.  
+
+Also, this might be expected/desired behavior, but if I continue to iterate forward on a valid iterator with #next() until #isValid() returns false I am then unable to use #prev() to go back to a valid state.  The iterator will remain invalid once it has completed its forward traversal.
+

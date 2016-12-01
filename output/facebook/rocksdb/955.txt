@@ -1,0 +1,9 @@
+These simple changes are required to allow builds on ppc64[le] systems
+consistent with X86. The Makefile now recognizes both ppc64 and ppc64le, and
+in the absence of PORTABLE=1, the code will be built analogously to the X86
+-march=native.
+
+Note that although GCC supports -mcpu=native -mtune=native on POWER, it
+doesn't work correctly on all systems. This is why we need to get the actual
+machine model from the AUX vector.
+

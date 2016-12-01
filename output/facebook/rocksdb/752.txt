@@ -1,0 +1,40 @@
+I'm using RocksDB via JNI (Java bindings) on Ubuntu Linux 64bit
+I'm getting following errors after multiple hours of putting bitcoin blockchain data into database.
+The problem is reproducible on my laptop and on our server.
+What kind of data should i provide to help this issue get resolved?
+Database dir has 47015 sst files. 91GB in size.
+
+```
+org.rocksdb.RocksDBException: Corruption: unknown WriteBatch tag
+        at org.rocksdb.RocksDB.put(Native Method)
+        at org.rocksdb.RocksDB.put(RocksDB.java:416)
+        at com.generalbytes.bitrafael.blockchain.BlockChainImpl.putTransactionPointFromAddress(BlockChainImpl.java:518)
+        at com.generalbytes.bitrafael.processors.TransactionProcessor.processTransactionInputs(TransactionProcessor.java:61)
+        at com.generalbytes.bitrafael.blockchain.BlockChainImpl.processBlock(BlockChainImpl.java:797)
+        at com.generalbytes.bitrafael.services.download.Downloader$ProcessWorker.run(Downloader.java:271)
+        at java.lang.Thread.run(Thread.java:744)
+org.rocksdb.RocksDBException: Corruption: unknown WriteBatch tag
+        at org.rocksdb.RocksDB.put(Native Method)
+        at org.rocksdb.RocksDB.put(RocksDB.java:416)
+        at com.generalbytes.bitrafael.blockchain.BlockChainImpl.putTransactionPointFromAddress(BlockChainImpl.java:518)
+        at com.generalbytes.bitrafael.processors.TransactionProcessor.processTransactionInputs(TransactionProcessor.java:61)
+        at com.generalbytes.bitrafael.blockchain.BlockChainImpl.processBlock(BlockChainImpl.java:797)
+        at com.generalbytes.bitrafael.services.download.Downloader$ProcessWorker.run(Downloader.java:271)
+        at java.lang.Thread.run(Thread.java:744)
+```
+
+```
+/#
+/# A fatal error has been detected by the Java Runtime Environment:
+/#
+/#  SIGSEGV (0xb) at pc=0x00007fb3effc2f59, pid=1989, tid=140409882760960
+/#
+/# JRE version: OpenJDK Runtime Environment (7.0_51) (build 1.7.0_51-b00)
+/# Java VM: OpenJDK 64-Bit Server VM (24.45-b08 mixed mode linux-amd64 compressed oops)
+/# Problematic frame:
+/# C  [libc.so.6+0x7ef59]2015-10-07 04:11:24 [pool-2-thread-26]
+org.rocksdb.RocksDBException: Corruption: unknown WriteBatch tag
+        at org.rocksdb.RocksDB.write0(Native Method)
+        at org.rocksdb.RocksDB.write(RocksDB.java:546)
+```
+

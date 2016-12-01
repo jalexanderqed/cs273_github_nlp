@@ -1,0 +1,14 @@
+A bug that tailingIterator->Seek(target) skips records.
+
+I think the bug is in the SeekInternal starting at lines 387:
+search_left_bound > search_right_bound
+There are only 2 cases this can happen:
+(1) target key is smaller than left most file
+(2) target key is larger than right most file
+
+The comment is wrong, there is another possibility that at the higher level there is a big gap such that the file in the lower level fits completely in the gap and then 
+indexer->GetNextLevelIndex returns search_left_bound > search_right_bound I think pointing on the files after and before the gap.
+details: https://github.com/facebook/rocksdb/issues/1372
+
+fixed this bug with test case added.
+

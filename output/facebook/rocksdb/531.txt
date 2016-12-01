@@ -1,0 +1,2 @@
+The functions in xxhash.h and xxhash.cpp do not allow the rocksdb library to be used when there is already another library using the same names. We need to use a namespace for these names
+

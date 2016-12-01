@@ -1,0 +1,13 @@
+Hi
+In our program, we use two threads to write data to RocksDB.
+- Thread A uses sync write + WAL to guarantee data consistence. 
+- Thread B uses async write + disable WAL to delete some data fast. 
+
+But to our surprise, when we use `kill -9` and restart the program, we find the newest data written by thread A is lost. E.g, thread A first writes k = v1, then k = v2, but after restart, we still get v1 for k.
+
+We can ensure the data has been written successfully through the log, so we doubt this may be a bug here, but I can't construct a simple case to reproduce it. 
+
+Btw, if we enable WAL in thread B, no matter how many times we use `kill -9` and restart the program, we don't lose data. 
+
+/cc @siying 
+

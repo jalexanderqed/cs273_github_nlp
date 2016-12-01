@@ -1,0 +1,10 @@
+Added support for the merge operation to RocksJava.
+You can specify a merge function to be used on the current database.
+The merge function can either be one of the functions defined in
+utilities/merge_operators.h, which can be specified through its
+corresponding name, or a user-created function that needs to be
+encapsulated in a JNI object in order to be used. Examples are
+provided for both use cases.
+
+Signed-off-by: Vlad Balan vlad.gm@gmail.com
+

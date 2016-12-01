@@ -1,0 +1,3 @@
+  Mostly due to the fact that there are differences in sizes of int,long
+  on 64 bit systems vs GNU.
+

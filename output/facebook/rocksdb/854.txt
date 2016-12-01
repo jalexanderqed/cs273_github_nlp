@@ -1,0 +1,19 @@
+After calling `BlockBasedTable::GenerateCachePrefix`, `compressed_cache_key_prefix_size` may be changed to 30. 
+
+``` c++
+    BlockBasedTable::GenerateCachePrefix(
+        table_options.block_cache_compressed.get(), file->writable_file(),
+        &rep_->compressed_cache_key_prefix[0],
+        &rep_->compressed_cache_key_prefix_size);
+  }
+```
+
+And in `BlockBasedTableBuilder::InsertBlockInCache`, trys to write an `uint64_t`  without checking, this may cause buffer overflow.
+
+``` c++
+    char* end = EncodeVarint64(
+                  r->compressed_cache_key_prefix +
+                  r->compressed_cache_key_prefix_size,
+                  handle->offset());
+```
+

@@ -1,0 +1,4 @@
+basically i change this CompressionType type to this
+CompressionType \* type = new CompressionType();
+to avoid the error of uninitialized
+

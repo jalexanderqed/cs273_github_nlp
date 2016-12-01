@@ -1,0 +1,29 @@
+```
+$ make clean jclean check
+
+...
+
+[       OK ] DBTest.DynamicLevelCompressionPerLevel2 (5 ms)
+[ RUN      ] DBTest.DynamicCompactionOptions
+Received signal 11 (Segmentation fault: 11)
+#0   0x00000002 (in db_test)    
+#1   rocksdb::DBImpl::WriteImpl(rocksdb::WriteOptions const&, rocksdb::WriteBatch*, rocksdb::WriteCallback*) (in db_test) (status.h:162)    
+#2   rocksdb::DBImpl::Write(rocksdb::WriteOptions const&, rocksdb::WriteBatch*) (in db_test) (db_impl.cc:3324)  
+#3   rocksdb::DBImpl::Put(rocksdb::WriteOptions const&, rocksdb::ColumnFamilyHandle*, rocksdb::Slice const&, rocksdb::Slice const&) (in db_test) (db_impl.cc:4146)  
+#4   rocksdb::DB::Put(rocksdb::WriteOptions const&, rocksdb::Slice const&, rocksdb::Slice const&) (in db_test) (db.h:184)   
+#5   rocksdb::DBTestBase::Put(rocksdb::Slice const&, rocksdb::Slice const&, rocksdb::WriteOptions) (in db_test) (db_test_util.cc:418)   
+#6   rocksdb::DBTest_DynamicCompactionOptions_Test::TestBody()::$_9::operator()(int, int, int) const (in db_test) (db_test.cc:6811) 
+#7   rocksdb::DBTest_DynamicCompactionOptions_Test::TestBody() (in db_test) (db_test.cc:6865)   
+#8   void testing::internal::HandleExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*) (in db_test) (gtest-all.cc:3822)  
+#9   testing::Test::Run() (in db_test) (gtest-all.cc:6330)  
+#10  testing::TestInfo::Run() (in db_test) (gtest-all.cc:6330)  
+#11  testing::TestCase::Run() (in db_test) (gtest-all.cc:4187)  
+#12  testing::internal::UnitTestImpl::RunAllTests() (in db_test) (gtest-all.cc:6058)    
+#13  bool testing::internal::HandleExceptionsInMethodIfSupported<testing::internal::UnitTestImpl, bool>(testing::internal::UnitTestImpl*, bool (testing::internal::UnitTestImpl::*)(), char const*) (in db_test) (gtest-all.cc:3822)    
+#14  testing::UnitTest::Run() (in db_test) (gtest-all.cc:5678)  
+#15  main (in db_test) (db_test.cc:8266)    
+#16  start (in libdyld.dylib) + 1   
+/bin/sh: line 1: 54403 Segmentation fault: 11  ./$t
+make: *** [check] Error 1
+```
+

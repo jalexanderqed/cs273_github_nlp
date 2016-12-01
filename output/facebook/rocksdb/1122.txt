@@ -1,0 +1,14 @@
+I am using rocksdb on embedded system 
+Linux tegra-ubuntu 3.10.67-g458d45c #1 SMP PREEMPT Mon Feb 8 17:44:18 PST 2016 aarch64 aarch64 aarch64 GNU/Linux
+
+I have received following error, is this compiler related ?
+
+```
+ nvcc --std=c++11 TeraCore.cpp 
+In file included from /usr/include/rocksdb/immutable_options.h:10:0,
+                 from /usr/include/rocksdb/db.h:18,
+                 from TeraCore.cpp:3:
+/usr/include/rocksdb/options.h:69:32: error: enumerator value -1 is too large for underlying type ‘char’
+   kDisableCompressionOption = -1,
+```
+

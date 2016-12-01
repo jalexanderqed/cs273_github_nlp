@@ -1,0 +1,24 @@
+The histograms array is initialised with capacity of `INTERNAL_HISTOGRAM_ENUM_MAX`, however, the following method asserts against `TICKER_ENUM_MAX` and `INTERNAL_TICKER_ENUM_MAX` instead
+
+```
+void StatisticsImpl::histogramData(uint32_t histogramType,
+                                   HistogramData* const data) const {
+  assert(
+    enable_internal_stats_ ?
+      histogramType < INTERNAL_TICKER_ENUM_MAX :
+      histogramType < TICKER_ENUM_MAX);
+  // Return its own ticker version
+  histograms_[histogramType].Data(data);
+}
+```
+
+All `rocksdb::Statistics` methods take `uint32_t` as parameter instead of the defined enums. It would be better to redeclare those methods to take the corresponding enum as parameter. Type-safe and semantically more meaningful.
+
+```
+virtual uint64_t getTickerCount(Tickers tickerType) const = 0;
+virtual void histogramData(Histograms type, HistogramData* const data) const = 0;
+virtual void recordTick(Tickers tickerType, uint64_t count = 0) = 0;
+virtual void setTickerCount(Tickers tickerType, uint64_t count) = 0;
+virtual void measureTime(Histograms histogramType, uint64_t time) = 0;
+```
+

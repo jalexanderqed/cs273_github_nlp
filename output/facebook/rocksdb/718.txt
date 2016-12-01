@@ -1,0 +1,6 @@
+While the CLA process plays out...
+
+I wanted to build the DB benchmarks, so I installed gflags locally (my primary workstation is non-root), setting EXTRA_CXXFLAGS/LDFLAGS appropriately. However, for db_bench I got the "Please install gflags [...]" message at runtime. I ended up not setting the GFLAGS macro - oops! Two questions:
+1. the most recent gflags release sets the macro GFLAGS_NAMESPACE to the name of the namespace used for gflags. Should tools now check against that macro instead of GFLAGS? If that's too breaking for dependent scripts etc., can the GFLAGS setting requirement be documented in INSTALL.md?
+2. should tool compilation fail when the gflags check fails? One could simply use a "#error" directive instead of disabling everything in the corresponding source files. Would make for a more up-front diagnosis...
+

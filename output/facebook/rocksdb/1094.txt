@@ -1,0 +1,4 @@
+Hi,
+
+I am thinking to write an S3 environment for rocksdb, turned out we can leverage the AWS cpp sdk (https://github.com/aws/aws-sdk-cpp), but I wonder what's the best practice here to wind a 3rd party lib into rocks db?
+

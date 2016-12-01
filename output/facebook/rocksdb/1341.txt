@@ -1,0 +1,4 @@
+- Is it a feature or bug? Are there any inner operations will block 'put' operation, like 'flush' or 'compact'? If so, is there a switch or something to open these operations' logs?
+- Or my JNI version is too old? It relies on version 3.7.0, the latest one with Java6.
+  Thanks a lot!
+

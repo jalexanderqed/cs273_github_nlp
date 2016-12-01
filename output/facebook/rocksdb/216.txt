@@ -1,0 +1,18 @@
+HI,
+
+I try to make version 3.3 and master branch, there is an error occurs.
+# 
+
+table/cuckoo_table_builder.cc:335:34: error: comparison of unsigned expression >= 0 is always true
+      [-Werror,-Wtautological-compare]
+    while (bucket_to_replace_pos >= 0) {
+           ~~~~~~~~~~~~~~~~~~~~~ ^  ~
+1 error generated.
+# make:  [table/cuckoo_table_builder.o] Error 1
+
+Maybe I can change my compile flag, but I think you should want to know this issue.
+
+I build in mac os.
+
+Thanks.
+

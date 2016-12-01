@@ -1,0 +1,12 @@
+After I used the current master branch code, I got some error when the app running, and crash.
+The following is the error message, and I found if I put some garbage code (ex, counter++;) before calling put(key,value), the error may not occur.
+Do you have any suggestion to solve this problem?
+
+Thanks.
+
+Yuchi
+# 
+
+Assertion failed: (cfd_->internal_comparator().Compare( (*files)[files->size() - 1]->largest, f->smallest) < 0), function MaybeAddFile, file db/version_set.cc, line 1722.
+# 
+

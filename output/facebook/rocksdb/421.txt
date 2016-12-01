@@ -1,0 +1,4 @@
+Precision problem while building RocksJava 3.8.1, having a OS with 4byte integers.
+
+Solves: https://github.com/facebook/rocksdb/issues/418
+

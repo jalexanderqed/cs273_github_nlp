@@ -1,0 +1,20 @@
+Changing Java `multiGet` API to return `List<byte[]>` instead of `Map<byte[], byte[]>`. This is for two reasons:
+1. Java arrays implement `equals()` as reference equality instead
+of comparing each value. This means a HashMap should never have an array
+as key, since anyone calling `get()` with a new array key with the exact same contents
+as an existing key will get different results. It happens to work
+currently because the `byte[]` reference is used as it is in the `Map` key.
+But it is a confusing API for the caller because they cannot make this
+assumption.
+2. `List<byte[]>` keeps it close to the native API (which returns
+`byte[][]`). It avoids the perf cost of creating a `Map`. If a caller does
+not need `Map` functionality, the API should not force it unnecessarily,
+especially in perf-critical use cases.
+
+Ideally, the existing method should be deprecated and the new one added.
+But that would require creating a new method name. multiGet is the best
+name for this method. So I am trying to avoid changing it. This should
+be a simple change for the clients to make, so as long as the major version
+is bumped up, it should be ok to break backwards compatibility. Please suggest
+if you think there are better ways to do this. I am not familiar with the rocksdb
+versioning protocol.

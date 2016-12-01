@@ -1,0 +1,2 @@
+Fixed two tests which hit an assertion in 3.10. 
+

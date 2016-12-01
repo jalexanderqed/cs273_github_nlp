@@ -1,0 +1,14 @@
+My apologies if this is not the best place to ask.
+
+I want to run a test with a single process accessing a 100 Gb dataset. The main reason we took a look at RocksDB is that doing so with LevelDB would require an incredibly high number of files.
+
+We are fine with running with files that are 200 MB (instead of the default of 2 Mb). From looking at the code, it seems that this should be done changing some flags in  rocksdb::Options . But I am not even sure if that's the best way either because you have other options about the file sizes of the files beyond level 1.
+
+In short, given that we want to maximize throughput in a workload that is 50% read, 50% write, and a dataset which is 100 Gb, what options do you recommend that keeps the total number of files opened by the process manageable and maximize throughput?
+
+After we have run the single process test successfully, we would then run several of these processes in parallel (each with its own dataset), which is why the number of files opened by the process must be manageable (as to not reach a system wide max of open files). 
+
+Thank you in advance, 
+
+Ethan. 
+

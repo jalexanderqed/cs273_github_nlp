@@ -1,0 +1,11 @@
+Looking at https://github.com/facebook/rocksdb/commit/20699df8438d14568915bb3a8e7038ce224f1e1c
+
+The commit claims to deprecate memtable_prefix_bloom_bits and memtable_prefix_bloom_probes. It removes support for them and "not supported" is stronger than "deprecated", at least in the MySQL community. Deprecated is the step before removing support where you warn people that an option will not be supported in the future and hopefully provide the new option so the migration can begin.
+
+options_helper now parses and ignores uses of the old options. Parse but ignored is unfriendly to users and we are familar with that in MySQL, http://mysqlha.blogspot.com/2009/01/parsed-but-ignored.html
+
+I think it should 
+1) log a warning for the use of memtable_prefix_bloom_probes given that there is no alternative options
+2) for the use of memtable_prefix_bloom_bits -- return an error or do both of log a warning and convert the value to a use of memtable_prefix_bloom_bits_ratio
+
+Finally, if prefix_extractor is set, can the default for memtable_prefix_bloom_bits_ratio be something greater than 0. Good defaults means we have to set few things in my.cnf

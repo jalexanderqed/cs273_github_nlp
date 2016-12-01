@@ -1,0 +1,8 @@
+- add -C ${CMAKE_CURRENT_SOURCE_DIR} to git can found revision from current source directory
+
+Tested:
+- configure project by CMake 3.0.0 successfully
+- configure project by command: cmake -G "Visual Studio 12 Win64"
+- build solution by Visual Studio
+- manually validate that file utils/build_version.cc contains valid head revision value
+

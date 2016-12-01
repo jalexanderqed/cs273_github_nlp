@@ -1,0 +1,16 @@
+Summary:
+1. Add Java bindings for tickers
+2. Add Java bindings for histograms
+3. Unit-tests for tickers and histograms
+
+make rocksdbjava
+make sample
+
+Reviewers: haobo,   yhchiang, sdong, dhruba, rsumbaly, zzbennett, swapnilghike
+
+Reviewed By: yhchiang
+
+CC: leveldb
+
+Differential Revision: https://reviews.facebook.net/D17811
+

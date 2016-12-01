@@ -1,0 +1,2 @@
+The WriteBatchWithIndex when operating on the default column family does not correctly use the comparator specified in Options when the DB is created/opened. It will always use ByteWiseComparator unless a comparator is explicitly specified in the construction of the WriteBatchWithIndex.
+

@@ -1,0 +1,5 @@
+i learned disable_seek_compaction from wiki，but it is deprecated now，i want to know how can i turn this feature on ? or if max_open_files is large, default value is true?
+
+content in wiki:
+Options::disable_seek_compaction - Disable compaction triggered by seek
+

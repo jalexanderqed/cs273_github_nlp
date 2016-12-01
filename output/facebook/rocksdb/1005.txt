@@ -1,0 +1,10 @@
+https://github.com/facebook/rocksdb/blob/master/Makefile#L1065
+
+`*.h => "*.h"`
+
+```
+    for header in `find "include/rocksdb" -type f -name *.h`; do \
+        install -C -m 644 $$header $(INSTALL_PATH)/$$header; \
+    done
+```
+

@@ -1,0 +1,6 @@
+@siying @yiwu-arbug 
+
+I tried to randomly kill server in every 5min, and after two days, the above error happened, it seems that WAL is corrupted. 
+
+We use 4.12 version, have 4 column families, and use WAL recover mode 1. 
+

@@ -1,0 +1,13 @@
+I am storing complex objects into Rocks which are de-composed into thousands of key value pairs. Each transaction in my system has it's own WriteBatch so that new objects are committed atomically. As well as replacing objects with new objects, it is also possible to update individual parts of an object and many updates may happen in a single transaction. A WriteBatch may contain of updates to many different objects, however it should be committed atomically or fail.
+
+I am interested in detecting the issue of Write-Write conflicts in RocksDB. For example if I have two threads A and B and they each take a snapshot of the database. Let's say they both want to update the value of key1 dependent on knowing not just it's current value but also the current value of other keys in the database. The problem I have at the moment is that the first thread that does the write is fine, and succeeds, however the second thread will perform a write of a value determined by an old view of the database. Which leads to it updating the value of key1 to something invalid.
+
+What I would like is a mechanism whereby when the second thread attempts to write it's WriteBatch, it realises the value of the key has changed since it took it's snapshot, and so no updates in the WriteBatch are committed. In many ways it is better explained in the first paragraph here - https://en.wikipedia.org/wiki/Snapshot_isolation#Definition
+
+I may be mistaken, but I do not think Rocks offers anything to guard against Write-Write Conflicts?
+
+I am not sure of the best way to achieve this, but one approach that I might suggest would be to create a new write function, called `WriteConditional` which takes a WriteBatch and a `Condition`. The Condition has to evaluate to `true` for the batch to be written atomically, if the condition returns false then no updates from the batch are written. Initially we would have a single Condition object perhaps called, `StableCondition` which takes a Snapshot. The purpose of StableCondition would be to make sure that the keys in the WriteBatch have not been changed in the database since the Snapshot was taken.
+I am not sure how this would be achieved in Rocks, but perhaps it is as simple as checking the sequence number in the snapshot is greater-than-or-equal to the sequence number of each key in the WriteBatch?
+
+I would also be interested to know how others are managing locking and transactions for updating complex objects in Rocks.
+

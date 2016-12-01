@@ -1,0 +1,98 @@
+JNI code in Kafka Streams creates a new Options object and then tries to set a brand new BlockBasedTableConfig via JNI which results in the crash on Windows:
+
+```
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  EXCEPTION_ACCESS_VIOLATION (0xc0000005) at pc=0x000007fed52a0831, pid=5280, tid=916
+#
+# JRE version: Java(TM) SE Runtime Environment (8.0_74-b02) (build 1.8.0_74-b02)
+# Java VM: Java HotSpot(TM) 64-Bit Server VM (25.74-b02 mixed mode windows-amd64 compressed oops)
+# Problematic frame:
+# C  [librocksdbjni-win.dll+0xa0831]  std::shared_ptr<rocksdb::TableFactory>::reset<rocksdb::TableFactory>+0x21
+#
+# Failed to write core dump. Minidumps are not enabled by default on client versions of Windows
+#
+# If you would like to submit a bug report, please visit:
+#   http://bugreport.java.com/bugreport/crash.jsp
+# The crash happened outside the Java Virtual Machine in native code.
+# See problematic frame for where to report the bug.
+#
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x0000000020d25800):  JavaThread "StreamThread-1" [_thread_in_native, id=916, stack(0x0000000021d70000,0x0000000021e70000)]
+
+siginfo: ExceptionCode=0xc0000005, reading address 0x0000000000000358
+
+Registers:
+RAX=0x00000000220c9bd0, RBX=0x0000000000000350, RCX=0x0000000021e6e070, RDX=0x0000000022132b30
+RSP=0x0000000021e6e050, RBP=0x0000000021e6e120, RSI=0x0000000040000021, RDI=0x0000000002a078a0
+R8 =0x00000000220c9bd0, R9 =0x00000000220c9bd0, R10=0x0000000002a1a840, R11=0x000000006fee96f0
+R12=0x0000000000000000, R13=0x0000000021f0c0e8, R14=0x0000000021e6e160, R15=0x0000000020d25800
+RIP=0x000007fed52a0831, EFLAGS=0x0000000000010202
+
+Top of Stack: (sp=0x0000000021e6e050)
+0x0000000021e6e050:   0000000000000350 0000000022132b30
+0x0000000021e6e060:   0000000000000000 0000000020d25800
+0x0000000021e6e070:   0000000022132b30 00000000220c9bd0
+0x0000000021e6e080:   0000000021f0c0e8 0000000002a1a86c
+0x0000000021e6e090:   0000000040000021 0000000002a078a0
+0x0000000021e6e0a0:   0000000002a078a0 0000000002a1a2bd
+0x0000000021e6e0b0:   0000000020d25800 0000000021f0c0e8
+0x0000000021e6e0c0:   0000000040000021 0000000020d25800
+0x0000000021e6e0d0:   0000000021e6e1c0 0000000002a1a282
+0x0000000021e6e0e0:   0000000021e6e0e0 0000000021f0c0e8
+0x0000000021e6e0f0:   0000000021e6e160 0000000021f10cc8
+0x0000000021e6e100:   0000000000000000 0000000021f0c0e8
+0x0000000021e6e110:   0000000000000000 0000000021e6e140
+0x0000000021e6e120:   0000000021e6e1a8 0000000002a07d8d
+0x0000000021e6e130:   0000000000000000 0000000002a142f8
+0x0000000021e6e140:   0000000022132b30 000000076e1ffd28 
+
+Instructions: (pc=0x000007fed52a0831)
+0x000007fed52a0811:   53 48 83 ec 30 48 8b d9 0f 57 c0 48 8d 4c 24 20
+0x000007fed52a0821:   f3 0f 7f 44 24 20 e8 24 fc ff ff 48 8b 44 24 28
+0x000007fed52a0831:   48 8b 4b 08 48 89 43 08 48 89 44 24 40 48 8b 44
+0x000007fed52a0841:   24 20 48 89 03 48 89 4c 24 28 48 85 c9 74 3b 48 
+
+
+Register to memory mapping:
+
+RAX=0x00000000220c9bd0 is an unknown value
+RBX=0x0000000000000350 is an unknown value
+RCX=0x0000000021e6e070 is pointing into the stack for thread: 0x0000000020d25800
+RDX=0x0000000022132b30 is an unknown value
+RSP=0x0000000021e6e050 is pointing into the stack for thread: 0x0000000020d25800
+RBP=0x0000000021e6e120 is pointing into the stack for thread: 0x0000000020d25800
+RSI=0x0000000040000021 is an unknown value
+RDI=0x0000000002a078a0 is at code_begin+832 in an Interpreter codelet
+invoke return entry points  [0x0000000002a07560, 0x0000000002a07e60]  2304 bytes
+R8 =0x00000000220c9bd0 is an unknown value
+R9 =0x00000000220c9bd0 is an unknown value
+R10=0x0000000002a1a840 is at code_begin+1632 in an Interpreter codelet
+method entry point (kind = native)  [0x0000000002a1a1e0, 0x0000000002a1b200]  4128 bytes
+R11=0x000000006fee96f0 is an unknown value
+R12=0x0000000000000000 is an unknown value
+R13={method} {0x0000000021f0c0f0} 'setTableFactory' '(JJ)V' in 'org/rocksdb/Options'
+R14=0x0000000021e6e160 is pointing into the stack for thread: 0x0000000020d25800
+R15=0x0000000020d25800 is a thread
+
+
+Stack: [0x0000000021d70000,0x0000000021e70000],  sp=0x0000000021e6e050,  free space=1016k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  [librocksdbjni-win.dll+0xa0831]  std::shared_ptr<rocksdb::TableFactory>::reset<rocksdb::TableFactory>+0x21
+C  0x0000000002a1a86c
+
+Java frames: (J=compiled Java code, j=interpreted, Vv=VM code)
+j  org.rocksdb.Options.setTableFactory(JJ)V+0
+j  org.rocksdb.Options.setTableFormatConfig(Lorg/rocksdb/TableFormatConfig;)Lorg/rocksdb/Options;+14
+j  org.apache.kafka.streams.state.internals.RocksDBStore.<init>(Ljava/lang/String;Ljava/lang/String;Lorg/apache/kafka/common/serialization/Serde;Lorg/apache/kafka/common/serialization/Serde;)V+81
+...
+```
+
+I'm not a C/C++ Pro, but based on the [shared_ptr doc](http://en.cppreference.com/w/cpp/memory/shared_ptr/reset) and the fact that the address that it complains is the same from run to run - my bet is that `shared_ptr` tried to `delete` some previous reference that it had that nobody is using twice or is pointing to a restricted location by default... (this and other misusages of `shared_ptr` are explained in [here](http://www.acodersjourney.com/2016/05/top-10-dumb-mistakes-avoid-c-11-smart-pointers/))
+
+UPDATE:
+0x0000000000000350 is for `*this` when `shared_ptr::reset` tries to do the swap with the provided value.
+

@@ -1,0 +1,30 @@
+Rocksdb open call aborts when DB is full. Looks like DB open is trying to dump the configuration to LOG file and fails with no space. DB should be allowed to be opened even if there is no space left on device. Looks like a bug. 
+Comments?
+
+Stack:
+
+```
+Program terminated with signal 6, Aborted.
+#0 0x0000007b6d6d8568 in __GI_raise (sig=<optimized out>) at ../nptl/sysdeps/unix/sysv/linux/raise.c:66
+66 ../nptl/sysdeps/unix/sysv/linux/raise.c: No such file or directory.
+(gdb) bt
+#0 0x0000007b6d6d8568 in __GI_raise (sig=<optimized out>) at ../nptl/sysdeps/unix/sysv/linux/raise.c:66
+#1 0x0000007b6d6d9fc4 in __GI_abort () at abort.c:90
+#2 0x0000007b6d6d0450 in __assert_fail_base (fmt=0x7b6d7efd00 "%s%s%s:%u: %s%sAssertion `%s' failed.\n%n", assertion=0x7b6e232930 "sz == write_size",
+file=0x7b6e232918 "./util/posix_logger.h", line=<optimized out>, function=<optimized out>) at assert.c:92
+#3 0x0000007b6d6d04fc in _GI__assert_fail (assertion=0x7b6e232930 "sz == write_size", file=0x7b6e232918 "./util/posix_logger.h", line=<optimized out>,
+function=0x7b6e232c88 "virtual void rocksdb::PosixLogger::Logv(const char*, va_list)") at assert.c:101
+#4 0x0000007b6e154414 in ?? () from /usr/lib64/librocksdb.so.3.11
+#5 0x0000007b6e13db8c in ?? () from /usr/lib64/librocksdb.so.3.11
+#6 0x0000007b6e143edc in rocksdb::Log(rocksdb::Logger*, char const*, ...) () from /usr/lib64/librocksdb.so.3.11
+#7 0x0000007b6e1e3c8c in rocksdb::DBOptions::Dump(rocksdb::Logger*) const () from /usr/lib64/librocksdb.so.3.11
+#8 0x0000007b6e0649e8 in rocksdb::DBImpl::DBImpl(rocksdb::DBOptions const&, std::string const&) () from /usr/lib64/librocksdb.so.3.11
+#9 0x0000007b6e0711b4 in rocksdb::DB::Open(rocksdb::DBOptions const&, std::string const&, std::vector<rocksdb::ColumnFamilyDescriptor, std::allocator<rocksdb::ColumnFamilyDescriptor> > const&, std::vector<rocksdb::ColumnFamilyHandle*, std::allocator<rocksdb::ColumnFamilyHandle*> >, rocksdb::DB*) () from /usr/lib64/librocksdb.so.3.11
+#10 0x0000007b6e072208 in rocksdb::DB::Open(rocksdb::Options const&, std::string const&, rocksdb::DB**) () from /usr/lib64/librocksdb.so.3.11
+#11 0x0000007b6e01de98 in rocksdb_open () from /usr/lib64/librocksdb.so.3.11
+```
+
+Code Base: rocksdb 3.11.0
+
+Thanks !
+

@@ -1,0 +1,11 @@
+On Windows `project.basedir` can return a path that contains backslashes as the file separator, but this breaks Java language syntax when it's in the string like that: `"${project.basedir}"`
+
+The error:
+
+```
+[ERROR] Failed to execute goal org.codehaus.gmaven:groovy-maven-plugin:2.0:execu
+te (default) on project rocksdbjni: Execution default of goal org.codehaus.gmave
+n:groovy-maven-plugin:2.0:execute failed: startup failed:
+[ERROR] script1.groovy: 1: unexpected char: '\' @ line 1, column 35.
+```
+

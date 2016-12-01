@@ -1,0 +1,15 @@
+As we know long time ago, `-Wsign-compare` is enabled for clang by default. 
+
+Is there any other good idea for dealing with this issue 
+other than patching manually from time to time?
+
+PS
+the result of `make check -j8` with brand-new clang 
+(version 600.0.51 which is shipped with Xcode 6.0 GM) under macosx 10.9.4 :
+
+```
+Ran 10 tests in 3.964s
+
+OK
+```
+

@@ -1,0 +1,7 @@
+I'm hitting the following assertion in `DBImpl::MarkLogsSynced()`:
+    `assert(logs_.empty() || (logs_.size() == 1 && !logs_[0].getting_synced));`
+
+This appears to be due to a `DBImpl::SyncWAL()` call that sets exactly 0 logs to `getting_synced = true`, because the loop breaks immediately from condition `it->number <= current_log_number` failing. The mutex is unlocked, during which time another `DBImpl::SyncWAL()` is called that marks the first entry with `getting_synced = true`. The first call reacquires the mutex, then enters `DBImple::MarkLogSynced()`, tripping on the assertion.
+
+I would appreciate someone verifying the scenario is valid and performing the appropriate fix.
+

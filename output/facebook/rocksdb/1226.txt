@@ -1,0 +1,4 @@
+This commit makes the code to skip empty data blocks a bit clearer.
+
+I have to admit that I don't understand the iterator code 100%, but I think my change makes sense and also `make check` passes locally.
+

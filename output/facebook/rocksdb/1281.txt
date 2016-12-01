@@ -1,0 +1,2 @@
+plain_table_reader.cc:517: bytes_read is not initialized any where, it should be initialized at definition.
+

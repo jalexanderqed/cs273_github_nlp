@@ -1,0 +1,53 @@
+Hi guys,
+
+Below the stack trace. The use case is one YCSB client running 4 threads during the loading phase, with workload,
+
+fieldcount=1
+recordcount=1000000000
+operationcount=1000000000
+workload=com.yahoo.ycsb.workloads.CoreWorkload
+readallfields=true
+readproportion=0.5
+updateproportion=0.5
+scanproportion=0
+insertproportion=0
+requestdistribution=zipfian
+
+There is a different server process that serves requests of the YCSB client and writes to RocksDB with a single writer thread with batches of size 100, writeoptions with sync flag set to true. After writting ~ 20 million entries, I get the crash. 
+#0  0x00000034bf8328a5 in raise () from /lib64/libc.so.6
+
+Missing separate debuginfos, use: debuginfo-install bzip2-libs-1.0.5-7.el6_0.x86_64 glibc-2.12-1.107.el6.x86_64 libgcc-4.4.7-3.el6.x86_64 libstdc++-4.4.7-3.el6.x86_64 zlib-1.2.3-29.el6.x86_64
+(gdb) bt
+#0  0x00000034bf8328a5 in raise () from /lib64/libc.so.6
+#1  0x00000034bf834085 in abort () from /lib64/libc.so.6
+#2  0x00007fb18fcabe85 in os::abort(bool) () from /home/fgomez/java/jdk1.7.0/jre/lib/amd64/server/libjvm.so
+#3  0x00007fb18fe00907 in VMError::report_and_die() () from /home/fgomez/java/jdk1.7.0/jre/lib/amd64/server/libjvm.so
+#4  0x00007fb18fcafab0 in JVM_handle_linux_signal () from /home/fgomez/java/jdk1.7.0/jre/lib/amd64/server/libjvm.so
+#5  <signal handler called>
+#6  _mm_crc32_u64 (crc=Unhandled dwarf expression opcode 0xf3
+
+) at /opt/centos/devtoolset-2/root/usr/lib/gcc/x86_64-redhat-linux/4.8.2/include/smmintrin.h:822
+#7  Fast_CRC32 (crc=Unhandled dwarf expression opcode 0xf3
+
+) at util/crc32c.cc:321
+#8  rocksdb::crc32c::ExtendImplrocksdb::crc32c::Fast_CRC32 (crc=Unhandled dwarf expression opcode 0xf3
+
+) at util/crc32c.cc:361
+#9  0x00007fb1668052a4 in rocksdb::log::Writer::EmitPhysicalRecord (this=0x7fb0c4b6c700, t=Unhandled dwarf expression opcode 0xf3
+
+) at db/log_writer.cc:121
+#10 0x00007fb16680551d in rocksdb::log::Writer::AddRecord (this=0x7fb0c4b6c700, slice=Unhandled dwarf expression opcode 0xf3
+
+) at db/log_writer.cc:82
+#11 0x00007fb1667d6332 in rocksdb::DBImpl::WriteImpl (this=0x7fb188265a30, write_options=Unhandled dwarf expression opcode 0xf3
+
+) at db/db_impl.cc:4381
+#12 0x00007fb1667d6c94 in rocksdb::DBImpl::Write (this=Unhandled dwarf expression opcode 0xf3
+
+) at db/db_impl.cc:4101
+#13 0x00007fb16676818c in Java_org_rocksdb_RocksDB_write0 (env=0x7fb1888869d0, jdb=0x7fb15e33f790, jwrite_options_handle=140400476573760, jwb_handle=140397742812128)
+
+```
+at java/rocksjni/rocksjni.cc:411
+```
+

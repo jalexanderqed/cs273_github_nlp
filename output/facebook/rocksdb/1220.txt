@@ -1,0 +1,27 @@
+I get a bunch of errors:
+
+rocksdb-master\java\rocksjni\ttl.cc:
+
+```
+rocksdb-master\java\rocksjni\ttl.cc(98): error C2131: expression did not evaluate to a constant
+rocksdb-master\java\rocksjni\ttl.cc(99): error C3863: array type 'jlong [resultsLen]' is not assignable
+rocksdb-master\java\rocksjni\ttl.cc(101): error C3863: array type 'jlong [resultsLen]' is not assignable
+```
+
+rocksdb-master\java\rocksjni\rocksjni.cc:
+
+```
+rocksdb-master\java\rocksjni\rocksjni.cc(118): error C2131: expression did not evaluate to a constant
+rocksdb-master\java\rocksjni\rocksjni.cc(119): error C3863: array type 'jlong [resultsLen]' is not assignable
+rocksdb-master\java\rocksjni\rocksjni.cc(121): error C3863: array type 'jlong [resultsLen]' is not assignable
+```
+
+rocksdb-master\java\rocksjni\rocksjni.cc:
+
+```
+rocksdb-master\java\rocksjni\options.cc(1107): error C2131: expression did not evaluate to a constant
+rocksdb-master\java\rocksjni\options.cc(1110): error C3863: array type 'jbyte ['function']' is not assignable
+```
+
+I suggest not to rely on the compiler to support variable-size array declaration but rather create it via `new` keyword.
+

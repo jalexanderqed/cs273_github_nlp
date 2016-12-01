@@ -1,0 +1,1 @@
+Both the single deletion and the value are included in compaction outputs, so no need to update the stat for the value's deletion yet, otherwise it'd be double-counted.

@@ -1,0 +1,154 @@
+Crash.java:
+
+``` java
+import org.rocksdb.RocksDB;
+import org.rocksdb.Options;
+
+class Crash {
+        public static void get_db() throws Throwable {
+                RocksDB.loadLibrary();
+                Options options = new Options().setCreateIfMissing(true);
+                RocksDB db = RocksDB.open(options, "/tmp/crashme");
+        }
+
+        public static void main(String[] args) throws Throwable {
+                while(true) {
+                        System.out.println("Opening");
+                        try {
+                                get_db();
+                        } catch(Throwable e) {
+                                System.out.println(e);
+                        }
+                }
+        }
+}
+```
+
+```
+# javac -cp $HOME/rocksdb/java/rocksdbjni.jar Crash.java && java -Djava.library.path=$HOME/rocksdb/java -cp $HOME/rocksdb/java/rocksdbjni.jar:. Crash                     
+Opening
+Opening
+org.rocksdb.RocksDBException: IO error: lock /tmp/crashme/LOCK: No locks available
+Opening
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  SIGSEGV (0xb) at pc=0x00007f34363530f8, pid=16122, tid=139862246147840
+#
+# JRE version: Java(TM) SE Runtime Environment (8.0_05-b13) (build 1.8.0_05-b13)
+# Java VM: Java HotSpot(TM) 64-Bit Server VM (25.5-b02 mixed mode linux-amd64 compressed oops)
+# Problematic frame:
+# V  [libjvm.so+0x66e0f8]  jni_NewObjectV+0xd8
+#
+# Failed to write core dump. Core dumps have been disabled. To enable core dumping, try "ulimit -c unlimited" before starting Java again
+#
+# An error report file with more information is saved as:
+# /mnt/ExpClj/RocksDBCrashDemo/hs_err_pid16122.log
+#
+# If you would like to submit a bug report, please visit:
+#   http://bugreport.sun.com/bugreport/crash.jsp
+#
+```
+
+Register/stack info from the log:
+
+```
+---------------  T H R E A D  ---------------
+
+Current thread (0x00007f3430009800):  JavaThread "main" [_thread_in_vm, id=16123, stack(0x00007f34376fc000,0x00007f34377fd000)]
+
+siginfo:si_signo=SIGSEGV: si_errno=0, si_code=128 (), si_addr=0x0000000000000000
+
+Registers:
+RAX=0x6b676e696e65700a, RBX=0x6b676e696e65700a, RCX=0x00007f34377fb5f8, RDX=0x00007f3436bd9c90
+RSP=0x00007f34377fb500, RBP=0x00007f34377fb5e0, RSI=0x00007f3430009800, RDI=0x00000000e0ed7700
+R8 =0x0000000000000000, R9 =0x00007f343013e550, R10=0x0000000000000034, R11=0x0000000000000206
+R12=0x00007f3430009800, R13=0x00007f3430080750, R14=0x00007f34300099e0, R15=0x00007f34377fb560
+RIP=0x00007f34363530f8, EFLAGS=0x0000000000010246, CSGSFS=0x0000000000000033, ERR=0x0000000000000000
+  TRAPNO=0x000000000000000d
+
+Top of Stack: (sp=0x00007f34377fb500)
+0x00007f34377fb500:   0000000000000000 0000000000001000
+0x00007f34377fb510:   00007f34377fb5f8 00007f34300e00a8
+0x00007f34377fb520:   0000000000000000 0000000000000000
+0x00007f34377fb530:   fffffffffffffff2 00007f3430000020
+0x00007f34377fb540:   000000000000004d 0000000000000034
+0x00007f34377fb550:   00007f34377fb660 00007f34377fb65f
+0x00007f34377fb560:   00007f3430009800 0000000000000000
+0x00007f34377fb570:   0000000100200000 00007f3430009800
+0x00007f34377fb580:   0000000100000208 0000000000000034
+0x00007f34377fb590:   00007f3430009800 00000000e0e408d8
+0x00007f34377fb5a0:   00007f3430009800 00007f34366df509
+0x00007f34377fb5b0:   0000000010000031 00007f34300099e0
+0x00007f34377fb5c0:   00007f34300e00a8 00007f3430080750
+0x00007f34377fb5d0:   00007f3405b12b60 00007f3405b12b48
+0x00007f34377fb5e0:   00007f34377fb6c0 00007f34057d6be1
+0x00007f34377fb5f0:   00007f34377fb620 0000003000000018
+0x00007f34377fb600:   00007f34377fb6d0 00007f34377fb610
+0x00007f34377fb610:   00007f343013e568 00007f343013e568
+0x00007f34377fb620:   00007f34377fb650 00007f3430080750
+0x00007f34377fb630:   0000000000000000 00007f343013e550
+0x00007f34377fb640:   00007f3430009800 00007f34377fb660
+0x00007f34377fb650:   00007f3400000000 00007f343635bcc6
+0x00007f34377fb660:   00007f3430009800 0000000000000000
+0x00007f34377fb670:   00007f34377fb6c0 00007f3404e4bf2d
+0x00007f34377fb680:   00007f3430009800 00007f343013d300
+0x00007f34377fb690:   00007f34377fb6c0 00007f34300099e0
+0x00007f34377fb6a0:   00007f34377fb750 00007f34377fb710
+0x00007f34377fb6b0:   00007f3430080750 00007f343013d5a0
+0x00007f34377fb6c0:   00007f34377fb750 00007f34057da1b5
+0x00007f34377fb6d0:   00007f34377fb820 00007f34377fb7f8
+0x00007f34377fb6e0:   00007f34377fb710 00007f34377fb710
+0x00007f34377fb6f0:   00007f343013e568 0000000000000000 
+
+Instructions: (pc=0x00007f34363530f8)
+0x00007f34363530d8:   24 58 02 00 00 06 00 00 00 4c 89 65 b0 4c 89 ff
+0x00007f34363530e8:   e8 63 72 01 00 48 8b 3b e8 cb b4 fb ff 48 89 c3
+0x00007f34363530f8:   48 8b 00 31 f6 4c 89 e2 48 89 df ff 50 70 49 83
+0x00007f3436353108:   7c 24 08 00 74 7c 45 31 ed 48 83 7d 88 00 74 08 
+
+Register to memory mapping:
+
+RAX=0x6b676e696e65700a is an unknown value
+RBX=0x6b676e696e65700a is an unknown value
+RCX=0x00007f34377fb5f8 is pointing into the stack for thread: 0x00007f3430009800
+RDX=0x00007f3436bd9c90: <offset 0xef4c90> in /usr/lib/jvm/java-8-oracle/jre/lib/amd64/server/libjvm.so at 0x00007f3435ce5000
+RSP=0x00007f34377fb500 is pointing into the stack for thread: 0x00007f3430009800
+RBP=0x00007f34377fb5e0 is pointing into the stack for thread: 0x00007f3430009800
+RSI=0x00007f3430009800 is a thread
+RDI=0x00000000e0ed7700 is an oop
+java.io.FileDescriptor 
+ - klass: 'java/io/FileDescriptor'
+R8 =0x0000000000000000 is an unknown value
+R9 =0x00007f343013e550 is an unknown value
+R10=0x0000000000000034 is an unknown value
+R11=0x0000000000000206 is an unknown value
+R12=0x00007f3430009800 is a thread
+R13=0x00007f3430080750 is an unknown value
+R14=0x00007f34300099e0 is an unknown value
+R15=0x00007f34377fb560 is pointing into the stack for thread: 0x00007f3430009800
+
+
+Stack: [0x00007f34376fc000,0x00007f34377fd000],  sp=0x00007f34377fb500,  free space=1021k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+V  [libjvm.so+0x66e0f8]  jni_NewObjectV+0xd8
+C  [librocksdbjni.so+0x90be1]  JNIEnv_::NewObject(_jclass*, _jmethodID*, ...)+0x81
+C  [librocksdbjni.so+0x941b5]  Java_org_rocksdb_RocksDB_open+0x215
+j  org.rocksdb.RocksDB.open(JJLjava/lang/String;)V+0
+j  org.rocksdb.RocksDB.open(Lorg/rocksdb/Options;Ljava/lang/String;)Lorg/rocksdb/RocksDB;+18
+j  Crash.get_db()V+18
+j  Crash.main([Ljava/lang/String;)V+8
+v  ~StubRoutines::call_stub
+V  [libjvm.so+0x627356]  JavaCalls::call_helper(JavaValue*, methodHandle*, JavaCallArguments*, Thread*)+0x1056
+V  [libjvm.so+0x66ee66]  jni_invoke_static(JNIEnv_*, JavaValue*, _jobject*, JNICallType, _jmethodID*, JNI_ArgumentPusher*, Thread*)+0x346
+V  [libjvm.so+0x680b4a]  jni_CallStaticVoidMethod+0x17a
+C  [libjli.so+0x77e4]  JavaMain+0x844
+
+Java frames: (J=compiled Java code, j=interpreted, Vv=VM code)
+j  org.rocksdb.RocksDB.open(JJLjava/lang/String;)V+0
+j  org.rocksdb.RocksDB.open(Lorg/rocksdb/Options;Ljava/lang/String;)Lorg/rocksdb/RocksDB;+18
+j  Crash.get_db()V+18
+j  Crash.main([Ljava/lang/String;)V+8
+v  ~StubRoutines::call_stub
+```
+

@@ -1,0 +1,16 @@
+I depend rocksdb's transaction logs to replicate all writes to slave nodes. In test, I construct some foreseeable data and put into db concurrently, data is ok but transaction log lost some sequences unexpected.
+
+test code:   https://gist.github.com/sorphi/c301f44b432f5df9e551
+db version: 3.5.1/3.8
+# 
+
+ulimit -S -c unlimited
+rm tmp/\* -f
+./rocksdb_concurrent_put_test > test.log             # 10 thread, 1000 puts per thread
+grep "log_key_value" test.log > log_data.log
+grep "mem_key_value" test.log > mem_data.log
+wc -l log_data.log       # 987+- sequences, unexpected.
+wc -l mem_data.log    # 10000 entries as expected.
+
+I think maybe there is race conditions in DBImpl.Write. After I comment _mutex_.Unlock() before _log.AddRecord and _mutex.Lock() after insertInfo memtable, and issue gone.
+

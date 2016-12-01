@@ -1,0 +1,9 @@
+I was reading a guide on reading SpatialDB values. 
+
+The errors I've run into is in regards to the render class. What extension in rocksdb path does render come from?
+
+![image](https://cloud.githubusercontent.com/assets/7003288/16347765/d52ac12a-3a24-11e6-8d4c-d9f314373dc2.png)
+
+Where Cursor is rocksdb::spatial::SpatialDBOptions::Cursor , 
+where does Render reside ?
+

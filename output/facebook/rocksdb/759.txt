@@ -1,0 +1,6 @@
+…mic libraries included
+
+in the Java jar.  Also build the linux libraries using the portable flag to fix a problem with
+the linux32 build and improve the general portability of the RocksDB dynamic libraries.
+==> linux32: util/crc32c.cc:318:39: error: ‘_mm_crc32_u64’ was not declared in this scope
+

@@ -1,0 +1,2 @@
+specifying minimum cmake version so that no warning has to be suppressed
+

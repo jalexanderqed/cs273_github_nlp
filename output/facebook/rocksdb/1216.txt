@@ -1,0 +1,17 @@
+LOG files should be unbuffered (writing to OS immediately), or at least should have an option to write without buffering. Otherwise full logs might not be written in case of rocksdb got crashed, which makes debugging harder.
+
+```
+diff --git a/util/env_posix.cc b/util/env_posix.cc
+index 0c14c03..cf9712b 100644
+--- a/util/env_posix.cc
++++ b/util/env_posix.cc
+@@ -561,6 +561,7 @@ class PosixEnv : public Env {
+     {
+       IOSTATS_TIMER_GUARD(open_nanos);
+       f = fopen(fname.c_str(), "w");
++      setvbuf( f, (char *)NULL, _IONBF, 0 );
+     }
+     if (f == nullptr) {
+       result->reset();
+```
+

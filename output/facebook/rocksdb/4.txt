@@ -1,0 +1,26 @@
+Thanks for makes this project.
+
+I'm tried to compile rocksdb on Ubuntu 12.04 LTS, but I got an error message.
+
+```
+g++ -g -Wall -Werror -I. -I./include -DOS_LINUX -fno-builtin-memcmp -DLEVELDB_PLATFORM_POSIX -DGFLAGS -O2 -fno-omit-frame-pointer -momit-leaf-frame-pointer -std=gnu++0x -Woverloaded-virtual -c db/db_test.cc -o db/db_test.o 
+In file included from db/db_test.cc:27:0:
+db/db_test.cc: In member function ‘void rocksdb::_Test_TransactionLogIteratorCorruptedLog::_Run()’:
+db/db_test.cc:4108:75: error: ‘truncate’ was not declared in this scope
+       truncate(logfilePath.c_str(), wal_files.front()->SizeFileBytes() / 2)     
+                                                                           ^
+./util/testharness.h:111:78: note: in definition of macro ‘ASSERT_EQ’
+ #define ASSERT_EQ(a,b) ::rocksdb::test::Tester(__FILE__, __LINE__).IsEq((a),(b))
+                                                                              ^
+make: *** [db/db_test.o] Error 1
+```
+
+so add below code.
+
+```
+#include <unistd.h>
+#include <sys/types.h>
+```
+
+Am I wrong?
+

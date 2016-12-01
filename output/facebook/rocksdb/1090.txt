@@ -1,0 +1,25 @@
+When I try to compile mongo db with rocksdb, i received following error.
+
+Compiling build/opt/mongo/db/modules/rocks/src/rocks_server_status.o
+src/mongo/db/modules/rocks/src/rocks_server_status.cpp: In member function 'virtual mongo::BSONObj mongo::RocksServerStatusSection::generateSection(mongo::OperationContext_, const mongo::BSONElement&) const':
+src/mongo/db/modules/rocks/src/rocks_server_status.cpp:184:14: error: 'NUMBER_DB_SEEK' is not a member of 'rocksdb'
+             {rocksdb::NUMBER_DB_SEEK, "num-seeks"},
+              ^
+src/mongo/db/modules/rocks/src/rocks_server_status.cpp:185:14: error: 'NUMBER_DB_NEXT' is not a member of 'rocksdb'
+             {rocksdb::NUMBER_DB_NEXT, "num-forward-iterations"},
+              ^
+src/mongo/db/modules/rocks/src/rocks_server_status.cpp:186:14: error: 'NUMBER_DB_PREV' is not a member of 'rocksdb'
+             {rocksdb::NUMBER_DB_PREV, "num-backward-iterations"},
+              ^
+src/mongo/db/modules/rocks/src/rocks_server_status.cpp:192:14: error: 'ITER_BYTES_READ' is not a member of 'rocksdb'
+             {rocksdb::ITER_BYTES_READ, "bytes-read-iteration"},
+              ^
+src/mongo/db/modules/rocks/src/rocks_server_status.cpp:196:11: error: could not convert '{{NUMBER_KEYS_WRITTEN, "num-keys-written"}, {NUMBER_KEYS_READ, "num-keys-read"}, {<expression error>, "num-seeks"}, {<expression error>, "num-forward-iterations"}, {<expression error>, "num-backward-iterations"}, {BLOCK_CACHE_MISS, "block-cache-misses"}, {BLOCK_CACHE_HIT, "block-cache-hits"}, {BLOOM_FILTER_USEFUL, "bloom-filter-useful"}, {BYTES_WRITTEN, "bytes-written"}, {BYTES_READ, "bytes-read-point-lookup"}, {<expression error>, "bytes-read-iteration"}, {FLUSH_WRITE_BYTES, "flush-bytes-written"}, {COMPACT_READ_BYTES, "compaction-bytes-read"}, {COMPACT_WRITE_BYTES, "compaction-bytes-written"}}' from '<brace-enclosed initializer list>' to 'const std::vector<std::pair<rocksdb::Tickers, std::basic_string<char> > >'
+           };
+           ^
+scons: *_\* [build/opt/mongo/db/modules/rocks/src/rocks_server_status.o] Error 1
+scons: building terminated because of errors.
+build/opt/mongo/db/modules/rocks/src/rocks_server_status.o failed: Error 1
+
+My environment is a fresh installation Centos 6.5. 
+

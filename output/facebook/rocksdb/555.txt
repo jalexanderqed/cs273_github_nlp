@@ -1,0 +1,20 @@
+Usage:
+make clean rocksdbjavastatic
+
+Dependency:
+LZ4
+
+To install LZ4:
+git clone https://github.com/Cyan4973/lz4.git && \
+cd lz4/lib && \
+make install
+
+Alternativel installation method:
+curl -O https://codeload.github.com/Cyan4973/lz4/tar.gz/r127
+mv r127 lz4-r127.tar.gz
+tar xvzf lz4-r127.tar.gz
+cd lz4-r127/lib && \
+make install
+
+Signed-off-by: Pooya Shareghi shareghi@gmail.com
+

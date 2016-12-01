@@ -1,0 +1,8 @@
+For every multiGet call, a HashMap is ultimately created and returned to
+the caller. This HashMap is never created with a capacity hint, meaning
+that resizes during map buildup are likely. We know the upper bound on
+the number of items that will be placed in the map (`values.length`)
+which we can use to size the map appropriately on creation.
+`values.length` is only an upper bound though because some entries in
+`values` can be null.
+

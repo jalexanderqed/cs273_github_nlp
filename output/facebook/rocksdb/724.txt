@@ -1,0 +1,6 @@
+An example: https://travis-ci.org/facebook/rocksdb/jobs/80884084
+
+There were 2 failures:
+1) testFatalLogLevelWithDBOptions(org.rocksdb.InfoLogLevelTest)
+2) testFatalLogLevel(org.rocksdb.InfoLogLevelTest)
+

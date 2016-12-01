@@ -1,0 +1,12 @@
+Has anyone had this problem when trying to run valgrind on a program built with rocksdb?
+
+``` text
+vex amd64->IR: unhandled instruction bytes: 0x8F 0xEA 0xF8 0x10 0xC9 0x3 0x1D 0x0
+==32477== valgrind: Unrecognised instruction at address 0x5b284e.
+==32477==    at 0x5B284E: rocksdb::NewLRUCache(unsigned long, int, int) (cache.cc:167)
+==32477==    by 0x5B2B0F: rocksdb::NewLRUCache(unsigned long) (cache.cc:529)
+==32477==    by 0x5826C0: rocksdb::BlockBasedTableFactory::BlockBasedTableFactory(rocksdb::BlockBasedTableOptions const&) (block_based_table_factory.cc:36)
+```
+
+I'm perplexed. Making everything worse, I can run valgrind on another system, but it reports no errors and the segfault I'm trying to trace never happens on it.
+

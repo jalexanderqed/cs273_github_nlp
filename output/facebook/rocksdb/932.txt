@@ -1,0 +1,2 @@
+Currently Java's ReadOptions only have very basic functions, while other features like prefix hashing cannot be enabled  through Java's API. We would like to add such features into Java ReadOptions as well.
+

@@ -1,0 +1,12 @@
+All  the  read  and write opertion are blocked 。 the  process seems deadlock.
+
+There is  the  thread  stack info
+#0  0x0000003864a0b5bc in pthread_cond_wait@@GLIBC_2.3.2 () from /lib64/libpthread.so.0
+#1  0x000000000050468d in rocksdb::port::CondVar::Wait (this=Unhandled dwarf expression opcode 0xf3
+
+) at port/port_posix.cc:83
+#2  0x00000000005365d5 in WaitInternal (this=0x7f6aa95e5448) at util/instrumented_mutex.cc:50
+#3  rocksdb::InstrumentedCondVar::Wait (this=0x7f6aa95e5448) at util/instrumented_mutex.cc:38
+#4  0x0000000000503855 in rocksdb::WriteThread::EnterWriteThread (this=0x11682a8, w=<value optimized out>, expiration_time=0) at db/write_thread.cc:22
+#5  0x00000000004c74b3 in rocksdb::DBImpl::Write (this=0x1168000, write_options=..., my_batch=0x7f6aa95e5688) at db/db_impl.cc:3044
+

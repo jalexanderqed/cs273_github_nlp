@@ -1,0 +1,8 @@
+Hello folks!
+
+I have a question regarding the efficiency of RocksDB Checkpoint: http://rocksdb.org/blog/2609/use-checkpoints-for-efficient-snapshots/
+
+As for implementation does that involve copying all the SST files of all levels to the specified directory? What if I have a more than 100GB instance that I need frequent checkpoints?
+
+cc @junrao
+

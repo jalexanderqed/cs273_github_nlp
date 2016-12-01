@@ -1,0 +1,3 @@
+- Makefile did not cleanup after test
+- Crossbuild sets explicit JDK6 which is wrong because Java7 dependencies were introduced lately.
+

@@ -1,0 +1,2 @@
+Would switching from the leveldb style makefile to autotools be a welcome contribution?  If so I would be happy to contribute this.   If not please feel free to close this issue.
+

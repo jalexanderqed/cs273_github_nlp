@@ -1,0 +1,6 @@
+If rocksdb is opened in read only mode, is read performance strictly linear with the number of reading threads? I'm not observing this in practice. I think that the problem in my case is IO latency and bounding, but I wanted to check that there are not any locks which might limit the overall throughput of a single instance of rocksdb.
+
+I'd like to open only one and use many threads for concurrent reads so as to avoid duplicating cached metadata about the db.
+
+What is the optimal way to achieve truly parallel read performance using read only mode?
+

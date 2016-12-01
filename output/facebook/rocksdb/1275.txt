@@ -1,0 +1,2 @@
+Added `RocksDB#singleDelete` and renamed/deprecated `RocksDB#remove` -> `RocksDB#delete`
+

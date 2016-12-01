@@ -1,0 +1,22 @@
+the version is  3.10.fb
+commit 3e32a88fe7a26db93669c299ef8389b4a1a33f50
+
+After  delete  db, the process seems ok。 But when process exit after delete db, A core dump there。
+
+There is the bt
+#0  0x0000003ec8032925 in raise () from /lib64/libc.so.6
+#1  0x0000003ec8034105 in abort () from /lib64/libc.so.6
+#2  0x000000000040c53e in rocksdb::port::PthreadCall (label=0x5b4dce "lock", result=Unhandled dwarf expression opcode 0xf3
+
+) at port/port_posix.cc:26
+#3  0x00000000005047a0 in PthreadCall (this=Unhandled dwarf expression opcode 0xf3
+
+) at port/port_posix.cc:24
+#4  rocksdb::port::Mutex::Lock (this=Unhandled dwarf expression opcode 0xf3
+
+) at port/port_posix.cc:53
+#5  0x0000000000598207 in MutexLock (ptr=0x175f8750) at ./util/mutexlock.h:28
+#6  rocksdb::ThreadLocalPtr::StaticMeta::OnThreadExit (ptr=0x175f8750) at util/thread_local.cc:34
+#7  0x0000003ec8407a69 in start_thread () from /lib64/libpthread.so.0
+#8  0x0000003ec80e8b6d in clone () from /lib64/libc.so.6
+

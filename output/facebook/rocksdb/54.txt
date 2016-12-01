@@ -1,0 +1,4 @@
+I've been doing some testing on a service that uses rocksdb for storage internally and finding that major compactions are sometimes causing outages which last for a few minutes (since major compactions seem to block everything else). Also, when I restart the process, sometimes a major compaction is triggered which causes the db to take many minutes to open.
+
+Wondering where I should start looking to alleviate these issues. Thanks!
+

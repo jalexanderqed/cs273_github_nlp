@@ -1,0 +1,15 @@
+Hello,
+
+I was wondering if I'm running into memory leak situation here or not? Any input is appreciated. Thank you!
+
+Applicaton overview:
+- java app, uses rocksdb 4.2.0 published in maven repo, running on ubunut linux in aws.
+- writes 3mil small records a minute, uses put, no batches, no queries. 
+- record: 8byte key / 8 byte value 
+- database is configured with 24h TTL. Uses bloom filter.  
+- db size after 24hrs is about 50GB. Approximate number of records in the database is around 4.5B.
+
+After about 25hrs application crashed with OOM. After restart memory usage remained flat for 12hrs.  Attached image shows memory usage. The interesting thing is that after restart application started to use less memory than it needed before crash. Load is constant and fairly uniform - application receives and inserts 3mil of new records per minute.  
+
+![rockdb-mem](https://cloud.githubusercontent.com/assets/7889489/14265648/be2d5a10-fa90-11e5-89e5-0acb7b2815bf.png)
+

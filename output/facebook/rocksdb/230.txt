@@ -1,0 +1,4 @@
+Previously, the prefix extractor was being supplied with the RocksDB
+key instead of a parsed user key. This makes correct interpretation
+by calling application fragile or impossible.
+

@@ -1,0 +1,1 @@
+support seek_for_prev in c abi.

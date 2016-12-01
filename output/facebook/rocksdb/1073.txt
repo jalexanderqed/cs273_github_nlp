@@ -1,0 +1,11 @@
+I fixed the wrong letters, LevelDB -> rocksDB, because I thought that LevelDB is the wrong presentation.
+
+the following show my fix :
+
+fprintf(stderr, "LevelDB:    version %d.%d\n",
+            kMajorVersion, kMinorVersion);
+
+----------------->
+fprintf(stderr, "rocksDB:    version %d.%d\n",
+            kMajorVersion, kMinorVersion);
+

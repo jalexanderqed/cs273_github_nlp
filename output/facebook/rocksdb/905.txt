@@ -1,0 +1,2 @@
+I left a debian folder containing the needed files to generate a librocksdb4 and a librocksdb4-dev packages.
+

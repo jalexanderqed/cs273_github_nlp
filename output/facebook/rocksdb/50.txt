@@ -1,0 +1,20 @@
+make clean; make results in the following error:
+overloaded-virtual -c db/builder.cc -o db/builder.o 
+In file included from ./db/dbformat.h:18:0,
+                 from db/builder.cc:13:
+./util/coding.h: In function ‘uint32_t rocksdb::DecodeFixed32(const char_)’:
+./util/coding.h:70:7: error: ‘port’ has not been declared
+   if (port::kLittleEndian) {
+       ^
+./util/coding.h: In function ‘uint64_t rocksdb::DecodeFixed64(const char_)’:
+./util/coding.h:84:7: error: ‘port’ has not been declared
+   if (port::kLittleEndian) {
+       ^
+./util/coding.h:94:1: error: control reaches end of non-void function [-Werror=return-type]
+ }
+ ^
+cc1plus: all warnings being treated as errors
+make: **\* [db/builder.o] Error 1
+
+Any help would be greatly appreciated.
+

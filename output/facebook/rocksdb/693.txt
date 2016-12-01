@@ -1,0 +1,6 @@
+The smallest_seqno/largest_seqno field in struct FileMetaData means the smallest/largest sequence number in the file.
+
+But in BuildTable(), the smallest_seqno is set as the smallest key's sequence number, and the largest_seqno is set as the largest key's sequence number, then the result range [smallest_seqno, largest_seqno] may be subset of the real range.
+
+This bug didn't cause any problem because there is little code depending on the values. One exception is NewestFirstBySeqNo(), which uses smallest_seqno as the first sort key to sort files in level-0. But luckily, all sstables in level-0 don't overlap with each other, so inaccurate smallest_seqno  doesn't cause a problem here.
+

@@ -1,0 +1,11 @@
+I got the following while building the java version (checked out this afternoon),
+
+make rocksdbjava
+Makefile:100: Warning: Compiling in debug mode. Don't use the resulting binary in production
+
+How do I make a release build of the java version? From reading the documentation, it seems the shared library used with java, librocksdbjni.so, is different from the regular librocksdb.so . What is the reason for this? I am interested in whether librocksdbjni.so is very different from librocksdb.so, functionality-wise. In particular I am interested in whether the java version of RocksDB is produciton ready.
+
+From what I see in the code, to make this work we need to set ROCKSDB_SHAREDLIB_DIR to the location of librocksdbjni.so , instead of the standard LD_LIBRARY_PATH . Is this correct?
+
+Thanks,
+
