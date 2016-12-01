@@ -48,7 +48,7 @@ public class UserScores {
             InstanceList temp = new InstanceList(tModel.instances.getPipe());
             temp.addThruPipe(new Instance(userStrings.get(user).toString(), null, "test instance", null));
 
-            double[] userTopics = inferencer.getSampledDistribution(temp.get(0), 10, 1, 5);
+            double[] userTopics = inferencer.getSampledDistribution(temp.get(0), 1000, 1, 5);
             userScores.put(user, userTopics);
         }
     }
