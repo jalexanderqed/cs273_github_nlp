@@ -36,5 +36,5 @@ The response to this request will contain a list of users with the following str
 ```
 
 `avatar` is a link to the user's GitHub user profile picture, and `keywords`
-is an array of words from topics this user specializes in. These users should be displayed in
-a list. Clicking on each user in this list should link to the page `/users/<id>` described below.
+is an array of words from topics this user specializes in. These users should be displayed on the page in
+a list, either below or next to the main input box. Clicking on a user in this list should link to the page `/users/<id>` described below.
