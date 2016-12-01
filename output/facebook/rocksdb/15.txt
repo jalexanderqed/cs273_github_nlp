@@ -1,4 +1,0 @@
-I was unable to link against RocksDB with some other libraries on x64. This fixed it.
-
-*Edit: Yes, I did sign the CLA.
-

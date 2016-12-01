@@ -1,8 +1,0 @@
-Hi,
-
-I am not able to find the api in java for prefix seek functionality in 4.5.1 version of RocksDB.
-Could anyone help me in confirming about this, would really appreciate that.
-
-Regards,
-Shashank Jain
-

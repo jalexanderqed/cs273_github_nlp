@@ -1,8 +1,0 @@
-Class HistogramImpl has virtual functions and thus should have a virtual destructor. Otherwise, a compile error will be triggered by this flag 
-
-```
--Werror=non-virtual-dtor
-
-error: 'class rocksdb::HistogramImpl' has virtual functions and accessible non-virtual destructor [-Werror=non-virtual-dtor]
-```
-

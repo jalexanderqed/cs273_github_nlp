@@ -1,2 +1,0 @@
-A small nit. If I do 'make check', it ends up creating a lot of test binaries in the root directory. They can possibly be moved into a 'bin' or 'bintests' kind of directory, so as not to clutter the root directory.
-

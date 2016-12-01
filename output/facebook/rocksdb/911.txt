@@ -1,3 +1,0 @@
-@siying 
-This fixes the build failure of hdfs environment.
-

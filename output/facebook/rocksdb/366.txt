@@ -1,6 +1,0 @@
-- BackupableDB deleteBackup method
-- BackupableDB purgeOldBackups bugfix
-- BackupInfos now available in Restorable-/BackupableDB
-- Extended BackupableDBTest to cover more of the currently implemented functionality.
-- Corrected throws RocksDBException usage.
-

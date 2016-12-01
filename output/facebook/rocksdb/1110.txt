@@ -1,9 +1,0 @@
-Mac 32 bit build now fails with the following error:
-
-```
-db/column_family.cc:152:38: error: non-type template argument evaluates to 68719476736, which cannot be narrowed to type 'unsigned long' [-Wc++11-narrowing]
-      std::integral_constant<size_t, 64ull << 30>>::type::value;
-                                     ^
-1 error generated.
-```
-

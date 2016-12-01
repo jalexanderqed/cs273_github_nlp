@@ -1,2 +1,0 @@
-The maven build had failing tests previous to this commit.
-

@@ -1,3 +1,0 @@
-Currently, deadlock cycles are held in std::unordered_map. The problem with it is that it allocates/deallocates memory on every insertion/deletion. This limits throughput since we're doing this expensive operation while holding a global mutex. Fix this by using a vector which caches memory instead.
-
-Running the deadlock stress test, this change increased throughput from 39k txns/s -> 49k txns/s. The effect is more noticeable in MyRocks.

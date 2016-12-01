@@ -1,3 +1,0 @@
-@yuslepukhin Making use of GetSystemTimePreciseAsFileTime dynamic to not break compatibility with Windows 7. The issue with rotated logs was fixed other way.
-#726
-

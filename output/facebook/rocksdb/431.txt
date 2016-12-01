@@ -1,2 +1,0 @@
-Allocation code within RocksJNI was not that readable and error prone. There were also explicit dereferencing calls missing.
-

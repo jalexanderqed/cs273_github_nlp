@@ -1,2 +1,0 @@
-We should close the fd, before overriding it. This bug was
-introduced by f89caa127baa086cb100976b14da1a531cf0e823

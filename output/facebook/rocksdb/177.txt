@@ -1,2 +1,0 @@
-Source the mac-install-gflags.sh will freeze the terminal window if script is halted somewhere.  Added a note for this in the INSTALL.md.
-

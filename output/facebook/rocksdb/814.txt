@@ -1,2 +1,0 @@
-There is no document for how to compile rocksdb with lz4 support, I work on it for whole afternoon, failed.
-

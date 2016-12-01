@@ -1,1 +1,0 @@
-Dropping family is just marking family as dropped internally. But files are deleted after handle is disposed. JNI leaks the pointer when user calls dropFamily.

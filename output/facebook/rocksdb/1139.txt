@@ -1,4 +1,0 @@
-- Make CompressType explicitly signed char because kDisableCompressionOption = -1 breaks
-  on platforms where gcc/g++ defaults to unsigned char.
-- Use cmath instead of math.h in util/options_builder.cc since std::log is defined by cmath.
-

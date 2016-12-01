@@ -1,2 +1,0 @@
-If user did not call SstFileWriter::Finish() or called Finish() but it failed.
-We need to abandon the builder, to avoid destructing it while it's open

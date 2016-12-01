@@ -1,6 +1,0 @@
-Fix outdated copyright year (update to 2014)
-
-The copyright year was out of date. Copyright notices must reflect the current year. This commit updates the listed year to 2014.
-
-see: http://www.copyright.gov/circs/circ01.pdf for more info
-

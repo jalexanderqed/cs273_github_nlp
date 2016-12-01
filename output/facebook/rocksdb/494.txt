@@ -1,2 +1,0 @@
-Is there any way to stop writing LOG entries for every db access? I have a situation in which I'll have many concurrent threads reading from the same db opened in read-only mode, and the additional log entries for every concurrent thread don't help and simply add files to the database directory.
-

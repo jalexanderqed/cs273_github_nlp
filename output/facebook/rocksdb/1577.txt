@@ -1,6 +1,0 @@
-disable UBSAN for functions with intentional left shift on -ve number / overflow
-
-These functions are
-rocksdb:: Hash
-FixedLengthColBufEncoder::Append
-FaultInjectionTest:: Key

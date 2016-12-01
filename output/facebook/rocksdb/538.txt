@@ -1,8 +1,0 @@
-Is there a known issue with random writes on RocksDb Java?  I have recently ported an application from the Java port of LevelDb and see comparable performance for sequential writes, but significantly worse performance for random writes (3-4 times worse and degrading over time).  In my scenario, I'm batch loading about 10 million rows of data that is randomly ordered (basically building an index to another RocksDB table).
-
-The Java benchmarks you've published do not include the numbers from the random write tests: https://github.com/facebook/rocksdb/wiki/RocksJava-Performance-on-Flash-Storage. Can you elaborate (or maybe publish the data for all the benchmarks you run on C++?).
-
-I've been using 3.8 on OSX 10.9.4.
-
-thanks much.
-

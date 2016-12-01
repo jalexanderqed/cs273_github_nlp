@@ -1,5 +1,0 @@
-Dose rocksdb have the bug found in leveldb?
-
-Compaction causes data inconsistency when using snapshots
-https://github.com/google/leveldb/issues/320
-

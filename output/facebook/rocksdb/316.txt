@@ -1,8 +1,0 @@
-Extended Built-in comparators with ReverseBytewiseComparator.
-
-Reverse key handling is under certain conditions essential. E.g. while
-using timestamp versioned data.
-
-As native-comparators were not available using JAVA-API. Both built-in comparators
-were exposed via JNI to be set upon database creation time.
-

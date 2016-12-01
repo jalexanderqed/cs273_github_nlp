@@ -1,4 +1,0 @@
-I hit this thing while trying run benchmark tests to read 3 billion hashes from my already existing database on ssd. The error was indicating the existence of LOCK file.  Could anyone please provide any insight on this and how to overcome this ?
-
-Regards
-

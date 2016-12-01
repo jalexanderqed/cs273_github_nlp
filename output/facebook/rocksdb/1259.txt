@@ -1,2 +1,0 @@
-In rocksdbJava API, how to pass Options argument to open function? And I tried to construction self-comparator,what should I do?
-

@@ -1,4 +1,0 @@
-Dike out the body of VerifyCompactionResult.  With assert() compiled out, the
-loop index variable in the inner loop was unused, breaking the build when
--Werror is enabled.
-

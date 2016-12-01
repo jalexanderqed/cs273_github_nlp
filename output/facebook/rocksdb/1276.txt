@@ -1,5 +1,0 @@
-These should be printed once per --stats_interval_seconds. Now they are printed once per:
-    -stats_interval_seconds X --threads
-
-see https://www.facebook.com/groups/rocksdb.dev/permalink/999367556828425/
-

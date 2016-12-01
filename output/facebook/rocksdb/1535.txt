@@ -1,1 +1,0 @@
-Dont use c_str() of temp std::string in RocksLuaCompactionFilter::Name()

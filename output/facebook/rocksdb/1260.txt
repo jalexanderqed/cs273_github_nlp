@@ -1,2 +1,0 @@
-I can not find API to set `delay_write_rate` in RocksJava? Is it not supported?
-

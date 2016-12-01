@@ -1,4 +1,0 @@
-My use case is to build the rocksdb static library and tools, and
-ideally I'd like to not spend time building the shared library and other
-targets that I won't use.
-

@@ -1,5 +1,0 @@
-Windows refuses to honor a positional read with an offset that is too big for the given file yet this apparently works for Posix. What is the rationale behind this ?
-
-c:\dev\rocksdb\rocksdb\util\env_basic_test.cc(243): error: Value of: rand_file->Read(1000, 5, &result, scratch).ok()
-ARNING:   Actual: false
-

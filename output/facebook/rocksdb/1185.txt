@@ -1,4 +1,0 @@
-Checked exceptions on every database operation are unwieldy (especially in Java 8 lambdas) and are usually handled in a higher layer so you tend to propagate them instead of handling locally.
-
-Hence the request is to make RocksDBException an un-checked exception to make the API usage more convenient.
-

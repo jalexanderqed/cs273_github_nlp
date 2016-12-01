@@ -1,2 +1,0 @@
-These are really micro optimizations, small and not at all important. Just what immediately jumped at me when looking through the code.
-

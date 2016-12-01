@@ -1,2 +1,0 @@
-All members in DBOptions use the same code style.
-

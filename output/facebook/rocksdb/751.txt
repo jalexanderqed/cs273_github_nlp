@@ -1,8 +1,0 @@
-Summary:
-  This mirrors  https://reviews.facebook.net/D45645
-  Currently, mmap returns IOError when user tries to read
-  data past the end of the file. This diff changes the behavior.
-  Now, we return just the bytes that we can, and report the size
-  we returned via a Slice result. This is consistent with non-mmap
-  behavior and also pread() system call.
-

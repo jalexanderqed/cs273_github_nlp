@@ -1,6 +1,0 @@
-I'd like to speed up the construction of a large database by breaking it up into chunks and computing each piece in parallel on separate systems, then merging the results back together.
-
-It would _seem_ that there should be a way to just drop all the .sst files into the same directory and execute a compaction to obtain a fully-sorted database with the desired layout. However, there must be some kind of metadata associated with the .sst files, and obviously they need to have unique names or there would be collisions.
-
-Is there any way to pull an external .sst into rocksdb?
-

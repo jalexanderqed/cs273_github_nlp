@@ -1,7 +1,0 @@
-I use
-
-`Status s = m_db->Get(rocksdb::ReadOptions(), keyword, &value);`
-value is right, but status is kCorruption
-
-what's that mean?
-

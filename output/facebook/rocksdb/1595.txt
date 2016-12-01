@@ -1,1 +1,0 @@
-Made delete_obsolete_files_period_micros option dynamic. It can be updating using DB::SetDBOptions().

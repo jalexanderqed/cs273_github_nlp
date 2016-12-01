@@ -1,4 +1,0 @@
-If I seek to a position that I know should be immediately past the end of particular range, I can then use `Iterator::Prev()` only if I haven't hit the end of the db.
-
-As a workaround, I call `Iterator::SeekToLast` if the iterator isn't valid after the first seek. However, it leads to a question: What is the safe way to get to the last element in a range, guarding against the case that "just past" your key of interest is another key that you can seek to? Or, how do you get something like a C++ `reverse_iterator` to the db?
-

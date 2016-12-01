@@ -1,6 +1,0 @@
-Summary:
-Fix a bug that mistakenly disable regression_test.sh to update commit
-
-Test Plan:
-regression_test.sh
-

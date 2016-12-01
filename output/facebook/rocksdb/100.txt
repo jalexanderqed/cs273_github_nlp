@@ -1,4 +1,0 @@
-There is a typo in your [INSTALL.md](https://github.com/facebook/rocksdb/blob/master/INSTALL.md) file.
-
-`RocskDB` instead of `RocksDB`
-

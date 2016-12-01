@@ -1,3 +1,0 @@
-i use roksdb java,but when i use WriteBatch method to insert data.But when I insert some 3 million data,it occurred "to many open files exception".i searched in google and issues.only found use nlimit -n command, i want to know can i merge db files to 1 or less files?
- like lucene ,it has optimize(int num) method,does rocksdb has similar method or setting?? 
-

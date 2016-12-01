@@ -1,7 +1,0 @@
-Summary: Add a subcommand to ldb with which we can delete a range of keys.
-
-Test Plan:
-  ./ldb dump_wal --walfile=tmp/000077.log
-  16,1,17,0,DELETE_RANGE(0) : 0x61 0x62
-
-Differential Revision: https://reviews.facebook.net/D62265

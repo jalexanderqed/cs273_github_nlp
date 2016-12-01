@@ -1,4 +1,0 @@
-No functional changes,
-
-PS: `make check -j8` seems all good with my apple clang-503.0.40 compiler under an OSX 10.9
-

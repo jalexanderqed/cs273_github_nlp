@@ -1,4 +1,0 @@
-Summary: This patch clarifies the contract of PositionedAppend with some unit
-tests and also implements it for PosixWritableFile. (Tasks: 14524071)
-
-Test Plan: unit tests added

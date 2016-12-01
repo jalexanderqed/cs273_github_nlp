@@ -1,2 +1,0 @@
-wiki page says rocksdb support jemalloc , how to enable it?
-

@@ -1,5 +1,0 @@
-Summary:
-Parallize persistent_cache_test and transaction_test
-
-Test Plan:
-`make check`

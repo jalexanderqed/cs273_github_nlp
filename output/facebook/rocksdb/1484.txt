@@ -1,5 +1,0 @@
-This fixes a correctness issue where ranges with same begin key would overwrite each other.
-
-This diff uses InternalKey as TombstoneMap's key such that all tombstones have unique keys even when their start keys overlap. We also update TombstoneMap to use an internal key comparator.
-
-End-to-end tests pass and are here (https://gist.github.com/ajkr/851ffe4c1b8a15a68d33025be190a7d9) but cannot be included yet since the DeleteRange() API is yet to be checked in. Note both tests failed before this fix.

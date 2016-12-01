@@ -1,4 +1,0 @@
-Strip support was previous to this request not working on MacOSX.
-
-@adamretter verified this change on his machine.
-

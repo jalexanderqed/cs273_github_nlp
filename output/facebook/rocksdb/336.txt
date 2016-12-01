@@ -1,8 +1,0 @@
-This pull request solves the jlong overflow problem on 32-Bit machines as described in https://github.com/facebook/rocksdb/issues/278:
-1. There is a new org.rocksdb.test.PlatformRandomHelper to assist in getting random values. For 32 Bit the getLong method is overriden by xpromaches code above. For 64 Bit it behaves as is.
-2. The detection should be cross-platform (Windows is supported though it is not ported completely yet).
-3. Every JNI method which sets jlong values which are set to size_t attributes must check if the value fits into size_t. If it overflows size_t a InvalidArgument Status object will be returned. If its ok a OK Status will be returned.
-4. Setters which have this check will throw a RocksDBException if its no OK Status.
-
-In the same context some other parts of code were corrected using the wrong type casts.
-

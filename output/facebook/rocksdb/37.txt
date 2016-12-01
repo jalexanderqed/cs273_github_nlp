@@ -1,2 +1,0 @@
-This commit adds a bunch (not all) of the newer configuration knobs & dials to the C API.
-

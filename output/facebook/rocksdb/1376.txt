@@ -1,2 +1,0 @@
-Level0 -1: use kNoCompression , level2-6: use kSnappyCompression , these options should improve the flush speed and decrease disk space amplification. Will it decrease the query speed?
-

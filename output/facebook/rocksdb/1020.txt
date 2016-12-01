@@ -1,2 +1,0 @@
-I made two small changes so that it could compile on Linux s390x (IBM's mainframe) out of the box. I'm wondering if it can be merged into the base code so that I don't have to maintain a separate fork. Thanks.
-

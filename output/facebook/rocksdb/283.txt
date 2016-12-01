@@ -1,9 +1,0 @@
-sh gets tripped up on the deprecated -a flag. Changing it locally to -e worked for me.
-
-``` bash
-if [ -a librocksdb.a ]; then \
-  rm -rf /usr/local/lib/librocksdb.a; \
-fi
-/bin/sh: 1: [: -a: unexpected operator
-```
-

@@ -1,2 +1,0 @@
-I notice that the performence bench haven't be edited since Dec 2014. It should been changed after 2 years development. Can you provide latest official performence bench result?  
-

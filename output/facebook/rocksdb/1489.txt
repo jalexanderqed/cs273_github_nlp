@@ -1,4 +1,0 @@
-Summary:
-Add a parameter to allow users to continue using the iterator even after committing a transaction.
-
-Test Plan: Add a unit test

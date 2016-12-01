@@ -1,2 +1,0 @@
-version.sh now works also on linux properly.
-

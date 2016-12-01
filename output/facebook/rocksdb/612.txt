@@ -1,8 +1,0 @@
-This pull request adds a compression field to sst_dump's show-properties report.
-
-The reason is that there is no real way to figure out how compression is actually being used by RocksDB. The LOG specifies what compression is requested, but there are some reasons why the actual data may be compressed differently. For example, compression libraries may not be linked properly (our motivation for this patch), or compression is changed.
-
-This patch allows a user to inspect the sst files directly and verify what compression scheme is actually used.
-
-Signed-off-by: Adam Lugowski alugowski@gmail.com
-

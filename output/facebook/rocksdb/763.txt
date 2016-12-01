@@ -1,4 +1,0 @@
-Mutex class in port_win incorrectly used unique_lock which is not thread-safe. Fixed it to use std::mutex itself and change condition_variable to create a unqiue_lock in local scope.
-
-Changes are in Windows port only.
-

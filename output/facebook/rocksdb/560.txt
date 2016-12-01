@@ -1,8 +1,0 @@
-The error was:
-
-util/logging.cc: In function 'int rocksdb::AppendHumanMicros(uint64_t, char*, int)':
-error: util/logging.cc:41:39: integer overflow in expression [-Werror=overflow]
-} else if (micros < 1000000l \* 60 \* 60) {
-^
-error: util/logging.cc:41:39: comparison between signed and unsigned integer expressions [-Werror=sign-compare]
-

@@ -1,2 +1,0 @@
-tested on macos and gnu/linux
-

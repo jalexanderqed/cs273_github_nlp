@@ -1,8 +1,0 @@
-When there are too many deleted keys, we are seeing that Seek/Next are taking too long to return. That is resulting in our threads to lock up for a potentially unbounded amount of time. There are techniques to mitigate this problem as documented in https://github.com/facebook/rocksdb/wiki/Delete-A-Range-Of-Keys, but we wanted a predictable upper bound on the time an iteration can take before returning.
-
-I am proposing a change where rocksdb will expose deleted keys through iteration. In this case, it is up to the user code to continuously call Next() until they find a non-deleted valid key. This will give our code the opportunity to periodically check the time and yield the thread if needed.
-
-Before implementing, I also considered an alternative approach of passing a timeout to Seek/Next calls but that would have made the interface/implementation much more complicated.
-
-PTAL. If this change looks acceptable, I will look into implementing some tests in the next round.
-

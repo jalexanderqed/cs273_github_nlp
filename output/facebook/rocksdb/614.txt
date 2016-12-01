@@ -1,2 +1,0 @@
-currently on DockerHub at https://registry.hub.docker.com/u/arschles/rocksdb-ldb/
-

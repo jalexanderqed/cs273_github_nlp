@@ -1,3 +1,0 @@
-how to use the bulk load which has been described in the benchmark?
-I cannot find the benchmark test code in source code
-

@@ -1,4 +1,0 @@
-For issue: https://github.com/facebook/rocksdb/issues/1333
-
-I also modified other relevant code.
-

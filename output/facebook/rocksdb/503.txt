@@ -1,2 +1,0 @@
-The JSONDocument operator== use == to check double type equality and I think it will be better use fabs(a - b) < precision. 
-

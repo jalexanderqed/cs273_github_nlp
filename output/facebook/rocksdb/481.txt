@@ -1,3 +1,0 @@
-Added simple wrappings allowing backing up RocksDB in C.
-I don't have a lot of experience in C++, so comments are welcome.
-

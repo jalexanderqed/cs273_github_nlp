@@ -1,3 +1,0 @@
-If the users use the NewLRUCache() without passing in the number of shard bits, instead of using hard-coded 6, we'll determine it based on capacity.
-
-Test Plan: Add a unit test

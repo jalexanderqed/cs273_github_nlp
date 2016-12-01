@@ -1,5 +1,0 @@
-Hi,
-what is the fastest way to delete all keys from column family? Is sequence of `DropColumnFamily(); CreateColumnFamily();` enough fast (preferable constant time) and does it guarantee that no keys from the given column family would exist after column family with the same name is reopened?
-
-I need to do this once a day - clear about 30 column families from about 30 threads, in the same time with minimal delay.
-

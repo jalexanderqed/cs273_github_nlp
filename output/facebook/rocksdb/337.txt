@@ -1,4 +1,0 @@
-The script detects now if run on a 32-Bit or a 64-Bit system and runs the JVM in 32-Bit or in 64-Bit depending on the detected architecture.
-
-Tested on Linux-32Bit and works with bash, dash and sh shells.
-

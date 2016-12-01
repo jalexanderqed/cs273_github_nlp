@@ -1,2 +1,0 @@
-I want to do a benchmark test on write speed, and don't wanna it saturate my hard disk , so how can I set a space limit on rocksDB?
-

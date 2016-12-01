@@ -1,2 +1,0 @@
-fix a bug in build_detect_platform that misses -DROCKSDB_PLATFORM_POSIX.
-

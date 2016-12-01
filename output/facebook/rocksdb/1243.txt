@@ -1,2 +1,0 @@
-Implemented `RocksDB#setOptions` and associated mutable/immutable options
-

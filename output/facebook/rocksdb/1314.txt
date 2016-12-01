@@ -1,4 +1,0 @@
-Hello, when i build solution from sources i see many warnings in most cases [-Wunused-parameter].
-
-![warn](https://cloud.githubusercontent.com/assets/4686379/18209009/8c344458-713a-11e6-95a5-1b426030ccd0.png)
-

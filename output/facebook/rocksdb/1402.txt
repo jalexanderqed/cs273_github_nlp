@@ -1,2 +1,0 @@
-Junit and our code generate lots of warning if "-Xcheck:jni" is on and force Travis to fail as the logs are too long.
-

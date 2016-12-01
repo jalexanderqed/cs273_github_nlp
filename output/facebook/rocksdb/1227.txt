@@ -1,6 +1,0 @@
-The C++ API .key() and .value() methods return Slice objects, which are just pointers to external byte arrays. This is very efficient because it avoids copying data.
-
-The Java API, unfortunately, forces some unnecessary copying internally. Instead, it should offer the option to get a slice of a native data structure. This change will yield substantial performance benefits and greatly reduce the amount of garbage that gets generated in the JVM.
-
-See related discussion on Facebook: https://www.facebook.com/groups/rocksdb.dev/permalink/985085361589978/ with @adamretter 
-

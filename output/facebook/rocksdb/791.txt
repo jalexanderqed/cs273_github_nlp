@@ -1,8 +1,0 @@
-On Windows two tests fail that use MockTable: flush_job_test and compaction_job_test with the following message:
-
-compaction_job_test_je.exe : Assertion failed: result.size() == 4, file c:\dev\rocksdb\rocksdb\table\mock_table.cc, line 110
-
-Investigation reveals that this failure occurs when a 4 byte ID written to a beginning of the physically open file (main contents remains in a in-memory map) can not be read back.
-
-The reason for the failure is that the ID is written directly to a WritableFile bypassing WritableFileWriter. The side effect of that is that pending_sync_ never becomes true so the file is never flushed, however, the direct cause of the failure is that the filesize_ member of the WritableFileWriter remains zero. At Close() the file is truncated to that size and the file becomes empty so the ID can not be read back.
-

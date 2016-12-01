@@ -1,4 +1,0 @@
-- Added  support for format version in BlockBasedTableFormatConfig
-
-This depends on: https://github.com/facebook/rocksdb/pull/464
-

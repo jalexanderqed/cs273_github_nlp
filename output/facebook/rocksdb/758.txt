@@ -1,4 +1,0 @@
-The Member `Mutex::lock` in the windows port is implemented by a `std::unique_lock`. It is called from different threads but it is not thread safe. This may leading to crashes (when the compactions is called for example).
-
-As a workaround i put the `std::unique_lock` in a map with thread id as key. So `Mutex` can provide a single  `std::unique_lock` for every thread its needed.
-

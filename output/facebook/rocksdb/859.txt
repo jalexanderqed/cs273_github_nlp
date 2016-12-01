@@ -1,8 +1,0 @@
-hi, i want to know what does disable_delete_obsolete_files_ exactly mean?
-
-case is :
-1. set WAL_ttl_seconds  = 6000
-2. turn options_.delete_scheduler on
-
-if i set disable_delete_obsolete_files_  = true, then rocksdb will not delete obsolete file（LOG.old_, archieve/_, trash sstable in some dir） any more? is this right?
-

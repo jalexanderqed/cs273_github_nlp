@@ -1,4 +1,0 @@
-I try to compile using clang 3.7 under Arch Linux.
-73b175a7738a53cf9a906ef1389962378c7ddf72 fixes all warning regarding `std::move`.
-1aef02f67b0129784cf8373d2f82e4c6742fc94c fixes a compile error. Actually the original code is valid. But clang uses `libstdc++` under Linux, and `libstdc++` does not proper implement `std::unordered_map` (it lacks user-provided default constructor, see https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/include/bits/unordered_map.h#L132). Defining const object without user-provided default constructor is invalid (http://stackoverflow.com/questions/7411515/why-does-c-require-a-user-provided-default-constructor-to-default-construct-a), and clang rejects to compile (but gcc accepts it). So I create this commit as a workaround to let it compiled.
-

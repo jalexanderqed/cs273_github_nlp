@@ -1,2 +1,0 @@
-GetPlainTableOptionsFromString() is missing from option_helper.cc
-

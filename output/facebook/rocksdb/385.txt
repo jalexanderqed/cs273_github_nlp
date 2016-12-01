@@ -1,2 +1,0 @@
-I think this is due to JDK 8 doing more checks while processing javadoc. I will create a new pull request for this issue.
-

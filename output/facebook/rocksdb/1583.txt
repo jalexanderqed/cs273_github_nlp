@@ -1,1 +1,0 @@
-I   saw that  there are two kind of choice about options.num_leves in Universal Compaction,  equal 1 or more than.   I'm confused whether this parameter can be change dynamically.   If   I have set the options.num_leves to 6 when I create the dababase,   but  then  I change it to 1 when I run universal compaction, will  it  make sense   ?

@@ -1,4 +1,0 @@
-Hello;
-I dont find interface in rocksdbJava([BackupableDBOptions.java](https://github.com/facebook/rocksdb/blob/bbb52b21f378e6c4099be6cc2694411617cac813/java/src/main/java/org/rocksdb/BackupableDBOptions.java)) to change backupDB's env so that I can't back up my db to hdfs in Java. Is there any way to back up my db to hdfs by using Java?
-Thanks : )
-

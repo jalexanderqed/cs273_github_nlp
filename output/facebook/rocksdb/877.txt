@@ -1,3 +1,0 @@
-  The code had conversion to double then casting to size_t
-  and then casting uint32_t which caused compiler warning (VS15).
-

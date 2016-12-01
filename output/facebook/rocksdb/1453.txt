@@ -1,6 +1,0 @@
-Fixes #1442.
-
-No longer add -ljemalloc to library link lines.
-
-No longer call malloc_print_stats() unless we're actually using jemalloc (use weak linking).
-

@@ -1,2 +1,0 @@
-If breaking the loop when `subcompactions==1`, the `sum` will be 0 and size of the last sub-compaction is incorrect.
-

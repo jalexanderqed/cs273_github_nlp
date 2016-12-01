@@ -1,8 +1,0 @@
-When I use db_bench tool to benchmark the rocksdb v3.1
-
-I configured the benchmark as readrandom, firsty load the data and then do readrandrom. 
-
-And I found the read operations read almost data from memory but not through the SSD, the read data always 0 from command 'iostat'.
-
-Do you think this is strange? How can I make it read data through the SSD?
-

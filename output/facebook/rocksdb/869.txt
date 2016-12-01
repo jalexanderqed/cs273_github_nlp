@@ -1,8 +1,0 @@
-The Windows porting uses certain API which is only available on Windows 8 or later.
-
-GetSystemTimePreciseAsFileTime is one of such APIs.
-
-I am not sure if there are other such APIs too...
-
-Can we eliminate using of such kind of APIs so the rockdb.dll can be used on Windows 7 too?
-

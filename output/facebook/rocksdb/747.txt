@@ -1,6 +1,0 @@
-When call > cmake -G "Visual Studio 14 Win64" .. < on the downloaded zip project an error occures on this line:
-
-string(REGEX REPLACE "[^0-9a-f]+" "" GIT_SHA ${GIT_SHA})
-
-The former call of git fails and the variable GIT_SHA is not set.
-

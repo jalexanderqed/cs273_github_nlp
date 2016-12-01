@@ -1,2 +1,0 @@
-Hi.I use the interface Merge operation. I set TTL is 10 days and open database with "DBWithTTL::Open". But I find datas not be deleted 10 days later.   I don't  know why and how to do. My email is "bingfeng198878@163.com". Please help me.   Thank you!
-

@@ -1,2 +1,0 @@
-We started using RocksDB for our high performance counters services, and it worked so well that we've started migrating as much as we can off of Riak and Redis and into custom RocksDB-based services.
-

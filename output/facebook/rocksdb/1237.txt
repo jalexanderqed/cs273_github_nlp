@@ -1,6 +1,0 @@
-- Separate targets for the compilation and execution steps of `make jtest`, now provides in addition:
-  - make `jtest_compile`
-  - make `jtest_run`
-- This is useful for running all Java tests or just a single Java test after compilation.
-- Also useful when compiling with ASAN: https://github.com/facebook/rocksdb/wiki/JNI-Debugging
-

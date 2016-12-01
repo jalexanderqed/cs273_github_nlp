@@ -1,2 +1,0 @@
-using new keyword to create variable-size arrays in order to satisfy most of the compilers
-

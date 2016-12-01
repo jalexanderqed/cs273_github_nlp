@@ -1,6 +1,0 @@
-  Introduce proper command line arguments so we can control the script
-  Add appveyor support
-  Add an ability to run all other (non db_tests) test executables in parallel
-  Use .NET HashSet instead of empty valued hashtable to improve the looks
-  TODO: Some of the tests do not use GTests and need to improve log parsing
-

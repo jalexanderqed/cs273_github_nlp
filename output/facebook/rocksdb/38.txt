@@ -1,5 +1,0 @@
-/home/gaurav.chaudhary/Downloads/rocksdb-2.6.fb/db/db_bench.cc:2416: undefined reference to `google::SetUsageMessage(std::string const&)'
-/home/gaurav.chaudhary/Downloads/rocksdb-2.6.fb/db/db_bench.cc:2417: undefined reference to`google::ParseCommandLineFlags(int_, char_*_, bool)'
-collect2: error: ld returned 1 exit status
-make: *_\* [db_bench] Error 1
-

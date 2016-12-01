@@ -1,2 +1,0 @@
-Besides compaction based on level score, leveldb can arrange to automatically compact this file after a certain number of seeks, this can reduce IO when there are duplicate datas between different levels. rocksdb without this feature? why?
-

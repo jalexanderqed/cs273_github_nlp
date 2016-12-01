@@ -1,7 +1,0 @@
-We're doing a block cache size influence on the performance,and we found that increase the size of block cache almost has no effect on performance, even in large quantity of the data set.
-
-because of the influence of os page cache? What circumstances increase block cache size can obtain better performance?
-
-In addition, I found that  Rocksdb's [Performance Benchmarks](https://github.com/facebook/rocksdb/wiki/Performance-Benchmarks) said that the block cache size is 1G,But the block cache size is set to 1048576 of actual test, and I read the code found that the unit of size maybe byte, is that right?
-_**cs=1048576;** of=500000; si=1000000; ./db_bench --benchmarks=readrandom --disable_seek_compaction=1 --mmap_read=0 --statistics=1 --histogram=1 --num=$r --threads=$t --value_size=$vs --block_size=$bs **--cache_size=$cs**_
-

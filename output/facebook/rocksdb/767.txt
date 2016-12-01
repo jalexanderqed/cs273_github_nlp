@@ -1,2 +1,0 @@
-I am currently working on an R binding for RocksDB: https://github.com/mrcsparker/rrocksdb
-

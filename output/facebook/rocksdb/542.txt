@@ -1,3 +1,0 @@
-Is there a way to set compression algorithm per level? If not, can this feature be added please?
-Thanks
-

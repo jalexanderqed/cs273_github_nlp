@@ -1,6 +1,0 @@
-Hi,
-
-i am trying to profiling rocksdb performance, basically i want to know the latency for a single PUT, GET operation spend at software part of the I/O path which excludes the real I/O transfer time.
-
-is there a way to at least know the part spend at rocksDB layer?
-

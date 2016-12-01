@@ -1,3 +1,0 @@
-The code currently makes use of **attribute**((**aligned**)) which expands to nothing on Windows.
-Does the current GCC in use supports `aligneas` ?
-

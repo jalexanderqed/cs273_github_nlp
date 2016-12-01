@@ -1,4 +1,0 @@
-The [wiki page](https://github.com/facebook/rocksdb/wiki/Basic-Operations) mistakenly states that default target_file_size_base is 2MB.
-
-It seems this should be 64MB instead (according to include/rocksdb/options.h).
-

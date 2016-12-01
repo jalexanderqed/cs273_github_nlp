@@ -1,2 +1,0 @@
-Currently Windows build is broken because of Warning C4351. Disable the warning before figuring out the right way to fix it.
-

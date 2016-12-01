@@ -1,4 +1,0 @@
-@igorcanadi 
-
-Remove duplicated declarations in C header.
-

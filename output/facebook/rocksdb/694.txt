@@ -1,2 +1,0 @@
-Fix windows build due to improper handling of move/copy constructors by MS VC++
-

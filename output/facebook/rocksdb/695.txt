@@ -1,4 +1,0 @@
-  Intro SubCompactionState move functionality
-  =delete copy functionality
-  #ifdef SyncPoint in tests for Windows Release builds
-

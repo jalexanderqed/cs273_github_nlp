@@ -1,6 +1,0 @@
-Jim M, that was a really quick fix, thanks. I downloaded rocksdb-master.zip, but the making didn't go well for me, these two things need attention, i think:
-1. Add to instructions how to specify an install path or prefix other than /usr/local. I first tried 'make PREFIX=/file/path' as many others have it. Then I looked at the install: tartget and saw an INSTALL_PATH variable needed to be set. I did 'export INSTALL_PATH=/file/path; make' and that worked, but instructions ought to mention. 
-2. The install target directories were filled only with .h files, nothing in lib or other directories, only in include/rocksdb. I am installing as regular user. The make process runs unexpectedly fast and there seems to be no .o files made at all. The command 'find . -name *.o' comes up empty in the main source directory .. 
-
-Niels L
-

@@ -1,6 +1,0 @@
-According to http://www.copyright.gov/circs/circ01.pdf , document should list its first year of publication in its copyright
-
-As the current license was applied back in 2013 ( As per the commit -  9cd221094cb14f3192228f7d )
-
-Adding present in the year range , to follow suit with other facebook license (For eg - https://github.com/facebook/react/blob/master/LICENSE )
-

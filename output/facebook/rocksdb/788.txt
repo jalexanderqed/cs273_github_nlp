@@ -1,8 +1,0 @@
-Summary: This patch moves all posix thread logic to separate library.
-The motivation is to allow another environments to easily reuse posix
-threads. HDFS wraps already posix threads; this split would simplify
-this code.
-
-Test Plan: No new functionality is added to posix Env or the threading
-library, thus the current tests should suffice.
-

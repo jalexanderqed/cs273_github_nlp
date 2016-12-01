@@ -1,2 +1,0 @@
-This avoids excessive iteration in tombstone fields.
-

@@ -1,2 +1,0 @@
-Removed few lines of code in db_bench_tool.cc to make compression_per_level option work.
-

@@ -1,2 +1,0 @@
-Minor changes to rocksdb to allow it to build on solaris with gcc49.
-

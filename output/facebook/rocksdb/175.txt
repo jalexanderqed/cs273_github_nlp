@@ -1,6 +1,0 @@
-Hello!
-
-Noticed an interesting situation for max_open_files can specify the number of open files larger than allowed by the system. For ubuntu default 1024 (ulimit-n).
-
-Appears quite unexpectedly. For FIFO style, you can choose options max_size = 200Gb write_buffer = 100Mb, 100Gb will be recorded when an error "Too many open files".
-

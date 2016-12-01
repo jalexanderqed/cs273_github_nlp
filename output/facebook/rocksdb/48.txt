@@ -1,2 +1,0 @@
-The bug was introduced from fix build bug from the recent commit: https://github.com/facebook/rocksdb/commit/43c386b72ee834c88a1a22500ce1fc36a8208277
-

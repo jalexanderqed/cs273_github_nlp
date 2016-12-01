@@ -1,4 +1,0 @@
-- fix static object initialization race (exposed when starting many rocksdb instances in the same process on windows)
-- fix RenameFile implementation on windows 
-- add missing header file for std::function on windows (compilation error with VS 2015)
-

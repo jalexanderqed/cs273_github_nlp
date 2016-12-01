@@ -1,2 +1,0 @@
-[rocksdb/universal_compaction.h](https://github.com/facebook/rocksdb/blob/31295b0a1bd8b2551e46b47e11e19a33236e1824/include/rocksdb/universal_compaction.h#L25) describes an alternate strategy for picking files to merge in a universal compaction, kCompactionStopStyleSimilarSize, but there's no apparent implementation. The strategy (if I understood it correctly) is precisely what I needed for a specific application, so I implemented it. Probably this will need some further adjustments going forward, but it's doing the trick for me.
-

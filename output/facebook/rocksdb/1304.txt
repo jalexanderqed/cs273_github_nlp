@@ -1,2 +1,0 @@
-Snappy is no longer downloadable from Google Code, instead you have to retrieve it via GitHub.
-

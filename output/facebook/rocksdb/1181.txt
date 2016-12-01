@@ -1,6 +1,0 @@
-we use rocksdb as our storage engine, we have monitor on the disk about the disk's IO util, we set the sst file size about 20Mb, since our db size is about 500Gb, we don't want to have too many small files. 
-So in this situation, when rocksdb do compaction, the disk's IO util always up to 100.
-And sometimes we also share the disk with other service, rocksdb's compaction may also affect other's service.
-
-can we add compaction disk IO limit like rsync to make compaction more smooth?
-

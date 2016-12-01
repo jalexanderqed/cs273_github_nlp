@@ -1,6 +1,0 @@
-I thought an example in C might be slightly helpful for those who solely use C.
-
-Two things though:
-1. `err` keeps giving values that are nonzero even when AFAICT there are no errors - so I had to disable the asserts and checks for that.
-2. For the CLA, where can I obtain the PDF to print and sign, and where should I send it to?
-

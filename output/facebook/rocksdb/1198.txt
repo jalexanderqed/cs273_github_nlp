@@ -1,2 +1,0 @@
-We're using the ruby API set to store a large set of k,v pairs to databases.  Inadvertently, I get into a situation where the k,v pairs can't be retrieved using the get API.  However, running an iterator on the database can see the values.  Iterating over the values, and invoking a put doesn't address this either.  Is there a flush API in ruby that can help address this?  Or is there some parameter that can be set, that can address this issue?  The default settings for SST, logs, bufs, etc. are being used.  
-

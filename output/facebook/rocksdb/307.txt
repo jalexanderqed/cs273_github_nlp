@@ -1,6 +1,0 @@
-undefined reference to `google::FlagRegisterer::FlagRegisterer(char const*, char const*, char const*, char const*, void*, void*)'
-undefined reference to`google::RegisterFlagValidator(int const_, bool (_)(char const_, int))'
-undefined reference to `google::FlagRegisterer::FlagRegisterer(char const_, char const_, char const_, char const_, void_, void_)'
-undefined reference to `google::SetUsageMessage(std::string const&)'
-undefined reference to`google::ParseCommandLineFlags(int_, char***, bool)'
-

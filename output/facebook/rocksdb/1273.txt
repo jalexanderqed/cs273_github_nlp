@@ -1,4 +1,0 @@
-Stops meaningful function result Status from the C++ API being converted into a munged Java String; Instead provides a `Status` object which can be retrieved from `RocksDBException`.
-
-Closes https://github.com/facebook/rocksdb/issues/1250
-

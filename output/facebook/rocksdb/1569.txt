@@ -1,2 +1,0 @@
-Allocate big enough buffers for large logs to avoid truncating
-huge logs.

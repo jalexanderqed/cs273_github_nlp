@@ -1,3 +1,0 @@
-The data contains about 1.3 million records(key/value pairs), with total 50 Gb storage. I save it as a RocksDB database on an NFS share file system. In the cluster, I want to use the MPI I/O to read this database using multiple client processes. In each slave node, the client process will open this database and read the part according to the cursor position given by the master process. In this way, there is no need to transfer the actual data via network, and consequently it can decrease the time of data transportation. 
-Is the RocksDB suitable for this project?
-

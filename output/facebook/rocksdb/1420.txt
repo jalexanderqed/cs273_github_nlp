@@ -1,5 +1,0 @@
-The verification condition of the test DBTest.RepeatedWritesToSameKey doesn't hold anymore after 3ce3bb3da2486c2c18a332128dda7c05a91abb85.
-Disable the test for now before we find a way to replace it.
-
-Test Plan: Run the test and make sure it is disabled.
-

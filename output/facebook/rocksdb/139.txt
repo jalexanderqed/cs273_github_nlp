@@ -1,2 +1,0 @@
-When performing "make" I am getting "db/db_bench.cc:379:5: error: ‘google’ has not been declared" and so on errors. I have gcc/g++ 4.7 and have installed all dependencies. I followed this tutorial to install gflags, and am using Ubuntu 12.04: http://askubuntu.com/questions/312173/installing-gflags-12-04
-

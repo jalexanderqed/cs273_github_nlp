@@ -1,7 +1,0 @@
-Fixes for:
-- unused variables
-- reduce scope of variables
-- remove unnecessary checks
-- static_cast vs. C-Style casts
-- pass const function parameter by reference
-

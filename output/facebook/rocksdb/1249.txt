@@ -1,8 +1,0 @@
-Hi @siying 
-
-We want to heavily use https://github.com/facebook/rocksdb/wiki/Creating-and-Ingesting-SST-files to replicate data, but we may using lots of snapshot for read when AddFile. We can use a RWLock, but we really don't want to block other reads when adding huge SST file (> 1GB). 
-
-I think maybe you can ad a configuration to let user ignore snapshot checking, If user can guarantee that we won't access the data in SST range in a snapshot?
-
-Thank you.
-

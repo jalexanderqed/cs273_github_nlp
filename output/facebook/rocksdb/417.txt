@@ -1,6 +1,0 @@
-we recently updated our rocksdb build, and noticed that there is a continuous memory grow even after setting the jvm option for max heap size. The previous version of our build does not have such problem. We are not sure this is absolutely due to the new build yet since we also have a few other application level changes (although the new build is still our current biggest suspect).
-
- While investigating other possibilities, I just want to bring this up  in case there is an known issue of a memory leak in some version of rocksdb java. 
-
-Can someone let me know if you have any insights into this? Or how we can debug such memory leak in rocksdb java. (we used to yourkit to profile our application, but it does not include the c++ part)
-

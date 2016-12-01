@@ -1,5 +1,0 @@
-Multi-write thread may update the status of the parallel_group in
-WriteThread::CompleteParallelWorker if the status of Writer is not ok!
-When copy write status to the paralle_group, the write thread just hold the
-mutex of the the writer processed by itself. it is useless. The thread
-should held the the leader of the parallel_group instead.

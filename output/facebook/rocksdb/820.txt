@@ -1,6 +1,0 @@
-  Enable C4307 'operator' : integral constant overflow
-  Longs and ints on Windows are 32-bit hence the overflow
-  Enable C4309 'conversion' : truncation of constant value
-  Enable C4512 'class' : assignment operator could not be generated
-  Enable C4701 Potentially uninitialized local variable 'name' used
-

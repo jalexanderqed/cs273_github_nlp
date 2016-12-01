@@ -1,6 +1,0 @@
-getting compile error std::function not defined, have to add `<functional>` header to resolve
-VS 2015, Windows 10 x64
-`[...] rocksdb\utilities\ldb_cmd.h(58): error C2039: "function" [...]`
-
-edit: referencing breaking commit 0e200001715c455444489d2c0372360a520ffc0b
-

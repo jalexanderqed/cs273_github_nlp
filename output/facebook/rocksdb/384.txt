@@ -1,9 +1,0 @@
-If a compaction filter implementation is simply filtering values, then
-allocating the "changed values" bitmap is an extra memory allocation
-that adds no value. Additionally, the compaction implementation has to
-do marginally more work to calculate the offset into the bitmap
-(vector<bool> specialization) for each record the filter did not mark
-for deletion.
-
-Explicitly handle the case where compact_->value_changed_buf_ is empty.
-

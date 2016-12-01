@@ -1,8 +1,0 @@
-Hi,
-
-I tried to implement the prefix seek in my golib, but I got it not working :(
-Test to reproduce my problem (phase "prefix"): https://gist.github.com/tecbot/9833739
-
-Maybe I'm missing something or configured wrong?
-Thx!
-

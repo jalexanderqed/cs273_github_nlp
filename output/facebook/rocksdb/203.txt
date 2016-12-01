@@ -1,2 +1,0 @@
-The source file copyrights mention an `AUTHORS` file, but I don't see one in the tree.
-

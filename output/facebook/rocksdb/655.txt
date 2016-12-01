@@ -1,2 +1,0 @@
-This will check if the dependencies are present in a local maven repository and use those first before attempting to download from the web.
-

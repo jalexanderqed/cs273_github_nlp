@@ -1,6 +1,0 @@
-This fixes the compile error on 32-bit mentioned in issue #634.  This allows successful compilation of 32 bit library on Linux.
-
-Debug compilation on OSX still fails because it declares -Wshorten-64-to-32, so you have to turn off warnings as errors to compile.  It does compile after that.
-
-Note that it doesn't appear that the test cases were operational in 32 bit, so I can't evaluate whether any test cases fail as a result of this change.
-

@@ -1,3 +1,0 @@
-I want know how many keys without repetition in the rocksdb.
-Dose rocksdb has a simple interface to return the number, or I need the iterator the whole database.. 
-

@@ -1,7 +1,0 @@
-Hi,
-When I create a rocksdb database over 4GiB, my app core dumps on iteration of the database. Im using the java interface to create and iterate the database but below is a snippet of the core dump where the app crashes.
-
-C  [librocksdbjni.so+0x1b2644]  rocksdb::(anonymous namespace)::SkipListRep::Iterator::key() const+0x4
-C  [librocksdbjni.so+0x13a6b7]  rocksdb::MergingIterator::Next()+0x57
-C  [librocksdbjni.so+0xefbbd]  rocksdb::DBIter::FindNextUserEntryInternal(bool)+0x1fd
-

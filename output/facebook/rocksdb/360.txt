@@ -1,3 +1,0 @@
-I know (Free)BSD is currently not supported and there's a FreeBSD port of version 3.2 available, but is this something your planning to add in a future release?
-I'm using InfluxDB on FreeBSD and upgrading versions is always painful, because RocksDB doesn't compile natively on FreeBSD.
-

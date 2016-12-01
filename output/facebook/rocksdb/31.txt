@@ -1,4 +1,0 @@
-This PR does only renames in C api, it does not change anything else.
-
-Also, updated the c_test and run it, all tests passed.
-

@@ -1,7 +1,0 @@
-My program crashed, and it seems the database is now corrupted! Next time I try to open it, I get an error:
-
-```
-/var/local/foo-db/MANIFEST-000008: No such file or directory
-```
-
-What's going on here? How do I recover from this crash?

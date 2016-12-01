@@ -1,7 +1,0 @@
-Summary:
-- "rocksdb.compaction.key.drop.range_del" - number of keys dropped during compaction due to a range tombstone covering them
-- "rocksdb.compaction.range_del.drop.obsolete" - number of range tombstones dropped due to compaction to bottom level and no snapshot saving them
-- s/CompactionIteratorStats/CompactionIterationStats/g since this class is no longer specific to CompactionIterator -- it's also updated for range tombstone iteration during compaction
-- Move the above class into a separate .h file to avoid circular dependency.
-
-Test Plan: test together with https://reviews.facebook.net/D63927, which uses these stats

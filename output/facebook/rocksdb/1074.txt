@@ -1,9 +1,0 @@
-We saw the following failure assertion consistently while using rocksDB version 4.1.0 in a streaming application runtime (cc @norwood @ijuma):
-
-```
-Assertion failed: (dummy_versions_->TEST_Next() == dummy_versions_), function ~ColumnFamilyData, file db/column_family.cc, line 405.
-Disconnected from the target VM, address: '127.0.0.1:54251', transport: 'socket'
-```
-
-Any guidance about what went wrong are appreciated, thanks!
-

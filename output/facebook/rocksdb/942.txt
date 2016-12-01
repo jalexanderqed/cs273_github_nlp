@@ -1,6 +1,0 @@
-![image](https://cloud.githubusercontent.com/assets/5534049/12257018/790d3dcc-b93d-11e5-99e5-9eb28f059230.png)
-
-I learned the same rocksDB instance cannot be shared among threads.   
-
-But if each thread has its own instance , will the extra(user level) synchronous mechanism still needed ?
-

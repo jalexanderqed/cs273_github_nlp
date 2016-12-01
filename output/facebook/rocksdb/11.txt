@@ -1,7 +1,0 @@
-Line 18: 
-env -i git rev-parse HEAD |
-should be
-env -i git rev-parse HEAD 2>&1 |
-
-or rocksdb_build_git_sha will be missed when no git repository detected
-

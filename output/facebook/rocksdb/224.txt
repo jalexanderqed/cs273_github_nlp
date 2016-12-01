@@ -1,4 +1,0 @@
-Some pressing bug fixes to the db_impl.cc v2 compaction pipeline. In particular, the compact object was keeping vectors of string copies for keys and values and also vectors of Slice objects references the underlying string copies. However, the vectors of the string copies are likely to resize, resulting in strings being reallocated and the slices becoming invalid. The fixes in this PR to db_impl.cc delay the creation of the SliceVectors until after the string copy vectors have been fully built.
-
-Test Plan: make c_test && ./c_test
-

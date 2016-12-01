@@ -1,3 +1,0 @@
-error: format specifies type 'unsigned long' but the argument has type 'SequenceNumber'
-      (aka 'unsigned long long') [-Werror,-Wformat]
-

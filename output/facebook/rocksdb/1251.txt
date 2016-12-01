@@ -1,4 +1,0 @@
-The `multiGet` function in RocksJava in the `RocksDB` and and `Transaction` class make copies of the provided `key` lists, this should be avoided by either:
-1. Using Slices instead so that the `byte[]` are encapsulated and the `List`/`Map` contains just a reference to the slice.
-2. Just returning a `List` of values as opposed to a `Map`. Probably the simplest option and closest to the C++ API!
-

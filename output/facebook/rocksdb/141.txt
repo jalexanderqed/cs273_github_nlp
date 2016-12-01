@@ -1,2 +1,0 @@
-- for compilation on kernels older than 2.6.34
-

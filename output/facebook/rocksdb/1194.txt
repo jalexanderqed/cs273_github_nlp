@@ -1,3 +1,0 @@
-is it a bug can't drop collection?
-drop collection , but it don't delete data in disk.
-

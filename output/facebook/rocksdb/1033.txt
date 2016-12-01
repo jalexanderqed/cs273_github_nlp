@@ -1,6 +1,0 @@
-I just noticed there is a cuckoo hash based memtable https://github.com/facebook/rocksdb/commit/9d9d2965cb4df6163624a31d2b5dd7364813f27f, which seems to be very good for point lookup. But I do not see wiki mentioning it. Curious is it of production quality? If so, could someone please add it to wikis:
-https://github.com/facebook/rocksdb/wiki/Hash-based-memtable-implementations
-https://github.com/facebook/rocksdb/wiki/RocksDB-Tuning-Guide#custom-memtable-and-table-format
-
-Thanks!
-

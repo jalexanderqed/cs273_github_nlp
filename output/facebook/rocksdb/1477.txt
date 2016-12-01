@@ -1,5 +1,0 @@
-Summary:
-Currently the compaction stats are printed to stdout. We want to export the compaction stats in a map format so that the upper layer apps (e.g., MySQL) could present
-the stats in any format required by the them.
-
-Test Plan: An exiting unit test is augmented to also test the new export API: "./db_test2 --gtest_filter=*AutomaticCompactionOverlapManualCompaction"

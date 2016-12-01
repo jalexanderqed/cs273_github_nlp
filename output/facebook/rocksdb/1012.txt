@@ -1,2 +1,0 @@
-In my case it caused a bug, since my build contains only LZ4
-

@@ -1,5 +1,0 @@
-Currently, we don't use options.compression_per_level[0] as the compression style for L0 compression type, unless it is None. This behavior
- doesn't look like on purpose. This diff will make sure L0 compress using the style of options.compression_per_level[0].
-
-Reviewed and accepted in: https://reviews.facebook.net/D65607
-

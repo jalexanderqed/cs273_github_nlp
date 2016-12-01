@@ -1,6 +1,0 @@
-Is the column family model in rocksdb intended to be similar to the one in HBase? In Hbase every "cell" is identified by a row key, a column family name and a cell key ([HBase Documentation here](http://hbase.apache.org/book.html#conceptual.view)). Whereas in RocksDB, I can only find a way to represent a cell by the column family name, and a cell key. Multiple families do not seem to be tied together with a row key. 
-
-Is there any way I can get the same behavior HBase provides offers with RocksDB?
-
-Thanks!
-

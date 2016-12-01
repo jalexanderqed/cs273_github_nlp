@@ -1,6 +1,0 @@
-Hi.
-Just wanted to let you guys know that in line 585 of /db/internal_stats.cc,
-In the snprintf function string constant portion saying "Interval WAL", it should be GB instead of MB
-
-Thanks
-

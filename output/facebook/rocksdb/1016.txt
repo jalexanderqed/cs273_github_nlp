@@ -1,8 +1,0 @@
-Hi, I'm new to rocksdb and we have a userspace NVMe driver that can access raw SSD device (see https://github.com/MicronSSD/unvme).  I would like to port rocksdb to run on this driver and have a couple questions:
-
-Does rocksdb access raw device or rely on a filesystem (i.e. like mysql)?
-Is there a device access layer in rocksdb that I can replace with a userspace driver?
-
-Thanks,
-Deyoung
-

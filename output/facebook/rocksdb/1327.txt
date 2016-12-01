@@ -1,2 +1,0 @@
-add C api for set wal_recovery_mode
-

@@ -1,7 +1,0 @@
-Hi,
-
-if i disable this option, does that mean RocksDB do directIO for file read?
-
-Thanks,
-Sheng
-

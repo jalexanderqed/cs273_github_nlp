@@ -1,3 +1,0 @@
-This brings down write_batch_test immediately.
-Due to the fact that memory does not go away the code continues to operate on a destroyed internal iterator.
-

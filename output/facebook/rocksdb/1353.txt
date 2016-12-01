@@ -1,2 +1,0 @@
-Remove the L0 compaction slow down and stopping conditions to not end up with a test that never finish
-

@@ -1,6 +1,0 @@
-[Travis CI](https://travis-ci.org/) is a free continuous integration system used by many public GitHub projects, particularly useful for testing pull requests automatically (as well as all pushes to the repo). I came up with this script to tell Travis how to run RocksDB's `make check`. [Example build on my fork](https://travis-ci.org/mlin/rocksdb)
-
-NB, this commit is necessary but not sufficient for Travis to work on your repo. An admin of the facebook GitHub org would also need to follow the Travis [Getting started instructions](http://docs.travis-ci.com/user/getting-started/) and flip the switch for the rocksdb repo. There are some security considerations there.
-
-Interestingly, `fallocate` within Travis' OpenVZ containers don't seem to behave exactly as one of RocksDB's test cases expects. I'm not sure what file system is being used underneath, but going by Docker's example it might be somewhat exotic like AUFS or btrfs. I put in a lousy hack to disable use and testing of fallocate in Travis.
-

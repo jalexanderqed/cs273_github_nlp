@@ -1,2 +1,0 @@
-one thing just to throw out is I'm not sure I'm a fan myself of the `func_name_cf()` naming convention for this patch. It just seems like the action is on the column family with that name, which I suppose it is. Be glad to hear other ideas there. 
-

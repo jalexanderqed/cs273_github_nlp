@@ -1,2 +1,0 @@
-This seems out of place as it's the only time RocksDB prints to stdout in the normal course of operations. A list of thread IDs can still be retrieved from the LOG file: `cut -d ' ' -f2 LOG | sort | uniq | egrep -x '[0-9a-f]+'`
-

@@ -1,2 +1,0 @@
-The rocksjava jdb_bench tool does not have any performance histograms.
-

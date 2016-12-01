@@ -1,3 +1,0 @@
-Assignment of the Snapshot never happens in release build because it is within the assert stmt. Consequently, it can not be used nor released. Is it a leak?
-https://github.com/facebook/rocksdb/blob/master/db/managed_iterator.cc#L82
-

@@ -1,9 +1,0 @@
-In the Java API, the constructor for `ColumnFamilyDescriptor` accepts the concrete class `ColumnFamilyOptions` instead of the interface `ColumnFamilyOptionsInterface`.
-
-Likewise, `RocksDB#open` accepts the concrete class `DBOptions` instead of the interface `DBOptionsInterface`.
-
-`Options` class implements `DBOptionsInterface` and `ColumnFamilyOptionsInterface`.
-Why can I not simply apply the above methods with `Options` object ?
-
-Thanks
-

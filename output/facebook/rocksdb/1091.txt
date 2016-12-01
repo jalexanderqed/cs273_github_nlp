@@ -1,4 +1,0 @@
-make -j4 shared_lib 
-
-runs out of memory on my laptop
-

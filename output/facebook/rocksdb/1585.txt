@@ -1,7 +1,0 @@
-When purging log files, we used to get the number of files to
-keep according to the max file size. However, the file sizes range
-from some kilobytes to hundreds of megabytes, so we may purge
-non-obsolete log files.
-
-This patch makes this process accurately according to the total
-size of files archived.

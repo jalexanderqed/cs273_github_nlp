@@ -1,3 +1,0 @@
-The sst file sizes and their amount are controlled by the developer.
-This shouldn't be an issue in 32 bit operating systems
-

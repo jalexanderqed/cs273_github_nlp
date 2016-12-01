@@ -1,4 +1,0 @@
-change the iterator status to NotSupported as soon as a range tombstone
-is encountered by a ForwardIterator.
-
-Test Plan: unit test

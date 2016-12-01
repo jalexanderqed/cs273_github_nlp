@@ -1,2 +1,0 @@
-Exposes a couple of more options. `rocksdb_options_set_db_write_buffer_size` already exists in `c.cc` but on in `c.h`, so just exposing it.
-

@@ -1,5 +1,0 @@
-Summary: enhancing sst_dump to be able to parse internal key
-
-Test Plan: ran --help, and with good/bad key
-
-Reviewers: siying

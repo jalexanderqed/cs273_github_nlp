@@ -1,2 +1,0 @@
-https://github.com/facebook/rocksdb/blob/master/examples/c_simple_example.c has no Facebook copyright header.
-

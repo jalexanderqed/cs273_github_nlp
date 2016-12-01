@@ -1,2 +1,0 @@
-Install snappy headers to standard locations using yum, so that build_tools/build_detect_platform sets -DSNAPPY flag to g++ . Current jars of rocksdb do no have snappy compression avaliable .
-

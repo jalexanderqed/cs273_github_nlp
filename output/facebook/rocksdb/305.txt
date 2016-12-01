@@ -1,3 +1,0 @@
-"make all" and "make check" passed!
-thanks
-

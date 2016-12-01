@@ -1,3 +1,0 @@
-When a new SSTable is generated during compaction, the # entry in the file is accumulated in the counter: VersionStorageInfo::accumulated_num_non_deletions_. 
-However, when the stale files are deleted after compaction finished, the deleted entries are not decrease from counter. 
-

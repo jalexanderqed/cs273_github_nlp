@@ -1,2 +1,0 @@
-This is useful for C libraries wrapping rocksdb, especially for tests that create a real rocksdb instance.
-

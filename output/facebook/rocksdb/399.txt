@@ -1,2 +1,0 @@
-Someone should also publish a 3.7.0 version in the 3.7.0 release branch.
-

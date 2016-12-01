@@ -1,9 +1,0 @@
-Hi,
-I found that plain table format can not support iterator->prev() and seekToLast(), but block based and cuckoo can support both of them。And I use db_bench to validate them, and there is some wrong with cuckoo's prev and seekToLast as follows:
-
-"db/db_iter.cc:605: bool rocksdb::DBIter::FindValueForCurrentKey(): Assertion `iter_->IsValuePinned()' failed."
-
-I think  it is the problem about IsValuePinned() of different table formats. Do you have any ideas about them? Thank you!
-
-Fengfeng Pan
-

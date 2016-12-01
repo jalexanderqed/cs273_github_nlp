@@ -1,4 +1,0 @@
-This PR contain the changes that to add check_snapshot in DB's AddFile function
-
-issue: #1249 
-

@@ -1,7 +1,0 @@
-Hi,
-
-What is the timeline for having a custom merge operator in rocksdbjni ?
-
-Thanks,
-Ashish
-

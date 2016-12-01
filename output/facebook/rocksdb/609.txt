@@ -1,2 +1,0 @@
-Basic concurrent write operations + WAL + snapshots.
-

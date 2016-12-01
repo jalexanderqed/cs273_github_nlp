@@ -1,3 +1,0 @@
-With this change, we know the value size distribution in the DB. 
-This is a very important piece of info for optimizing DB options, e.g. selecting block_size according to the value size.
-

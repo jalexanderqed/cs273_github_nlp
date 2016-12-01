@@ -1,2 +1,0 @@
-Currently the members `enum Code` and `code()` of the `Status` class are private. To find out what error occurred, it is necessary to call a series of member functions like `Status::IsCorruption`. Not only is this inconvenient, but it breaks the use case where one wants to pass the raw error number for diagnostics and logging when integrating with an enclosing wrapper. Unless there is a very good reason, I can't think of why we'd want these members private.
-

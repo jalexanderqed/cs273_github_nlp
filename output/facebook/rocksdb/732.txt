@@ -1,2 +1,0 @@
-I'm trying to run `make check` so that the tests use a custom directory (rather than e.g. `/tmp/rocksdbtest-0/db_test/LOG`). Looking at the Makefile it seems as though `TMPD=/path/ make check` should work, but /tmp is still being used. Am I invoking make check incorrectly?
-

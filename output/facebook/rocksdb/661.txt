@@ -1,5 +1,0 @@
-1, if the param new_descriptor_log is true, new manifest file number may re-use and overwrite the old one, which is an unexpected behavior.
-2, check s.ok() to avoid unnecessary invoking of v->PrepareApply().
-3, add current_file_updated flag for assert.
-4, fix incorrect log printing when deleting manifest file.
-

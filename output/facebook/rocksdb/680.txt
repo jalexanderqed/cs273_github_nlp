@@ -1,5 +1,0 @@
-In https://github.com/facebook/rocksdb/commit/384400128f6eb9f1111f41efd9712c6879411cfc
-rocksdb_options_set_no_block_cache and rocksdb_options_set_block_size_deviation are removed from the implementation but not from the .h.
-
-(Noticed this while working on my ocaml rocksdb binding.)
-

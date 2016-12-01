@@ -1,1 +1,0 @@
-Fix the bug that --dump_malloc_stats is set before opening the DB.

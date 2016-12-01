@@ -1,9 +1,0 @@
-Commit d0c5f28a5c0ec27744512695c90be69c74281950 breaks cross-compiling for iOS, since it does not support the '__thread' specifier (utils/thread_status_impl.h:134).
-
-Compiler error:
-In file included from db/db_impl.cc:78:
-./util/thread_status_impl.h:134:10: error: thread-local storage is unsupported for the current target
-  static __thread ThreadStatusData\* thread_status_data_;
-
-Could be fixed with 'pthread_setspecific' or exclusion via 'NROCKSDB_THREAD_STATUS`
-

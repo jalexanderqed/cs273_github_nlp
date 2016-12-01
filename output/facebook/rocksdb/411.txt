@@ -1,2 +1,0 @@
-This pull requests adds manual range compaction support to Java API.
-

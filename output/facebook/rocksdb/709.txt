@@ -1,2 +1,0 @@
-I recently downloaded and am playing around with RocksDB and was getting runtime errors when running examples/simple_example.cc. Digging into it, I found out that the kSnappyCompression option is used whether or not RocksDB was configured to use it. Would fix it myself, but I'm not sure what the alternative "optimal" compression settings are when snappy isn't around. No compression? zlib/lz4/etc. (if available)?
-

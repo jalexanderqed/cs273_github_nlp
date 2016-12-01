@@ -1,3 +1,0 @@
-pinned_iters_mgr_ pins iterators allocated with arena_, so we should order the
-instance variable declarations such that the pinned iterators have their destructors
-executed before the arena is destroyed.

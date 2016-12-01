@@ -1,3 +1,0 @@
-Added information about performance penalties using a custom
-logger implementation.
-

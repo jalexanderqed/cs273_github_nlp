@@ -1,6 +1,0 @@
-@yuslepukhin Here is fix for generated GenerateBuildVersion.vcxproj when one builds on different locale than english. The problem is that date and time CLI utilities generates different format so that REGEX in CMake does not work.
-
-It also contains fix for util/auto_roll_logger.cc that was recently moved to different directory.
-
-facebook/rocksdb#868
-

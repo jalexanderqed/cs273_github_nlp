@@ -1,3 +1,0 @@
-In Java: if one wants to open a db without knowing all the column families, the listColumnFamilies can be used. However that returns a list of byte[] whereas for opening the database one needs a list of ColumnFamilyDescriptor which itself is built from a String.
-In addition it is not clear how the options can influence the return of listColumnFamilies. 
-

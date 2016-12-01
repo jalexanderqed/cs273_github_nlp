@@ -1,8 +1,0 @@
-Hi,
-
-I'd like to make use of the readonly DB implementation in the Go bindings:
-
-https://github.com/tecbot/gorocksdb
-
-but a patch requires a corresponding call in the c.h header file. Is this easily accomplished?
-

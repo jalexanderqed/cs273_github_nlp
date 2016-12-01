@@ -1,5 +1,0 @@
-We tested to use the HDFS environment for rocksDB backup. From our experience, the hdfsConnect() will constantly crash on large rocksdb instances (1.5-3G).  It is related to this JDK6 bug:
-http://bugs.java.com/bugdatabase/view_bug.do?bug_id=6964776
-
-After we change to jvm7, the issue goes away. So change readme to suggest people use java7 to run the hdfs environemnt.
-

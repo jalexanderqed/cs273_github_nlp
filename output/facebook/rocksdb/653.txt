@@ -1,4 +1,0 @@
-- Use PlainTableOptions for plaint_table_builder/factory/reader
-- Added GetPlainTableOptionsFromMap() for string option parser
-- Added corresponding test for GetPlainTableOptionsFromMap()
-

@@ -1,2 +1,0 @@
-Latest maven RocksDB Java jar (http://mvnrepository.com/artifact/org.rocksdb/rocksdbjni/3.10.1) only appears to support Linux and MacOs. Anyone know how to use RocksDB Java library in Windows Development environment? 
-

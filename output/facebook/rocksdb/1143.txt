@@ -1,6 +1,0 @@
-Is there any APIs available s.t. we can tell what's the current expiration time associated w/ a record in RocksDB database w/ TTL?
-
-The use case is: since the TTL RocksDB expires records w/ background compaction threads, there may be time that get() or iterator.next() will get records that should be expired. For application that can not run correct logic w/ stale records, the application will need to tell whether the record it gets from RocksDB has actually expired at the moment of access. Is there anyway to expose this internally kept expiration timestamp via the get or iterator APIs?
-
-Thanks!
-

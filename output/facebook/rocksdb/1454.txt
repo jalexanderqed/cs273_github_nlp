@@ -1,1 +1,0 @@
-IngestExternalFile is very useful when doing bulk load. This pr expose this API to c so many bindings can benefit from it too.

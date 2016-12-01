@@ -1,2 +1,0 @@
-On Mac OSX Java 6 is not available by default, and now even when installed the jni.h file is not present. Instead you need to install Java 7 or 8 on Yosemite and set your JAVA_HOME var. This change should be backwards compatible for those not on Yosemite yet.
-

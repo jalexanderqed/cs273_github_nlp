@@ -1,3 +1,0 @@
-incrementing current_restart_index_ in OnKeyAdded function is more intuitive,
-because member data current_restart_index_ has nothing to do with other member functions.
-

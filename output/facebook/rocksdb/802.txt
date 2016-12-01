@@ -1,5 +1,0 @@
-See https://github.com/facebook/rocksdb/issues/792
-
-@sying, as we have discussed, I have added a new option skip_table_builder_flush
- In addition, I make the buffer size configurable through option. This allows user to tune for optimal disk I/O size for flush. 
-

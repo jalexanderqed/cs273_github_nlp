@@ -1,9 +1,0 @@
-Release: 2.8
-Tag: question
-1 Is it possible to have multiple merge operators for the same data base? If yes then is there a way to atomically switch (reset()) the merge operator, or that is left to the application programmer?
-example: I am currently using a merge operator for appending to existing data in the value fields, using : m_options.merge_operator.reset(new StringAppendTESTOperator('#'));
-Likewise, I would like to use another merge operator, on the same DB for operations where instead of append, I need to do say a "erase" of a portion of the value.
-
-2 Going through the sample code on StringAppendTESTOperator(char\* delimit), I see it is allocated on the heap using merge_operator.reset(new StringAppendTESTOperator('#'));
-In the destructor of my db, am I supposed to explicitly call delete for the merge operator, apart from delete on the db_ptr itself?
-

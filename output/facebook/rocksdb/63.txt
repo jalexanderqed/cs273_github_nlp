@@ -1,4 +1,0 @@
-**This PR probably isn't ready to merge yet** (see FIXMEs) but I wanted to solicit any early comments/feedback.
-
-Adds a read option for RocksDB iterators to schedule background thread tasks to "prefetch" upcoming data blocks. This can significantly speed up forward sequential scans by overlapping disk I/O and decompression with the reader's activities. The benefit is quite marked on large, universally-compacted databases residing on rotating disk(s), since scanning these incurs a lot of seeks that currently block iterators. The new behavior must be enabled by creating the iterator with ReadOptions.prefetch = true.
-

@@ -1,2 +1,0 @@
-This pull request exposes the flush functionality of RocksDB to Java.
-

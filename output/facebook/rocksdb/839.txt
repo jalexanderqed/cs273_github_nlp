@@ -1,5 +1,0 @@
-New pull request for https://github.com/facebook/rocksdb/pull/817.
-
-Hi @IslamAbdelRahman, as requested, rebased and resolved the conflicts. 
-Thank you. 
-

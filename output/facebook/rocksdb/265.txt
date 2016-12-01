@@ -1,6 +1,0 @@
-const qualifiers on return types make no sense and will trigger a compile warning:
-
-```
-warning: type qualifiers ignored on function return type [-Wignored-qualifiers]
-```
-

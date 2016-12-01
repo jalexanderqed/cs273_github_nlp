@@ -1,2 +1,0 @@
-A couple "New Features" headers needed a blank line before them.
-

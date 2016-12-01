@@ -1,3 +1,0 @@
-  Conditionally retrofit thread_posix for use with std::thread
-  and reuse the same logic. Posix users continue using Posix interfaces.
-

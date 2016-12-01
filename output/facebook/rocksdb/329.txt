@@ -1,4 +1,0 @@
-In https://github.com/facebook/rocksdb/commit/5ec53f3edf62bec1b690ce12fb21a6c52203f3c8 the Java code was not adjusted which lead to a non working Java build. This commit resolves the build problem.
-
-Referring issue is: https://github.com/facebook/rocksdb/issues/328
-

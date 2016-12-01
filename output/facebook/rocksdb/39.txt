@@ -1,6 +1,0 @@
-error: ‘res.rocksdb::BatchResult::sequence’ may be used uninitialized in this function [-Werror=maybe-uninitialized]
-   return res.sequence;
-              ^
-cc1plus: all warnings being treated as errors
-make: **\* [db/db_test.o] Error 1
-

@@ -1,2 +1,0 @@
-This provides support for getting an iterator on a WriteBatch by means of a callback Handler.
-

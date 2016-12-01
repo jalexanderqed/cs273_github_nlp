@@ -1,5 +1,0 @@
-I have 2 machines , one is for service , one is for backup . 
-Is there any synchronous tools I can use to give some degree of consistency guarantee?
-
-like mysql's master - slave mode.
-

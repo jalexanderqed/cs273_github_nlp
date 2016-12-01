@@ -1,4 +1,0 @@
-I'm working on a rocksdb to nudb importer and its taking seven minutes just to open the rocksdb database (784GB, 330k+ .sst files). On a non-raid spinning disk almost half an hour or more. The operating system shows that its opening each .sst file.
-
-I don't see any options to improve this, so I'm thinking about resorting to just iterating each .sst file myself. The code is a bit complex, are there any pointers on how to do this? Can I re-use some rocksdb code like plain_table_reader or something like that? I just need to iterate all the key/value pairs in the entire database in any order.
-

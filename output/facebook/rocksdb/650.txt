@@ -1,4 +1,0 @@
-Hello, I'm interested in using WBWI from Rust, which requires adding support for it to the C API.
-
-Thanks!
-

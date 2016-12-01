@@ -1,8 +1,0 @@
-There seems to be a typo error in the following paragraph of the [_Write-Ahead-Log-File-Format.md_](https://github.com/facebook/rocksdb/wiki/Write-Ahead-Log-File-Format) :
-
-_Write ahead log (WAL) serializes memtable operations to persistent medium as log files. In the event of a failure, WAL files can be used to recover the database to its consistent state, by reconstructing the memtable from the logs. When a memtable is flushed out to persistent medium safely, the corresponding WAL log(s) become obsolete and are **achieved.** Eventually the archived logs are purged from disk after a certain period of time._
-
-Shouldn't **achieved** be corrected to **archived** ? 
-
-If this seems legit, then you can find the corrected version in my [repo](https://github.com/aayushKumarJarvis/rocks-wiki). I request people to review this change and merge the correction.
-

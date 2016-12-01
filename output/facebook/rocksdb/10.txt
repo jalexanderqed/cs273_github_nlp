@@ -1,6 +1,0 @@
-```
-util/env_test.cc:214: Assertion failure id_size > 0
-```
-
-id_size value is returned 0. 
-

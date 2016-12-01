@@ -1,2 +1,0 @@
-Here it is unnecessary to use `std::set`. We can just construct a `std::vector` containing all boundaries, and then sort it. `std::set` uses balanced tree as internal implementation, which has more overhead than sorting.
-

@@ -1,7 +1,0 @@
-The persistent cache is designed to hop over errors and return key not found. So far, it has shown resilience to write errors, encoding errors, data corruption etc. It is not resilient against disappearing files/directories. This was exposed during testing when multiple instances of persistence cache was started sharing the same directory simulating an unpredictable filesystem environment.
-
-This patch
-
-- makes the write code path more resilient to errors while creating files
-- makes the read code path more resilient to handle situation where files are not found
-- added a test that does negative write/read testing by removing the directory while writes are in progress

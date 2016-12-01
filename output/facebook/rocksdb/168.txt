@@ -1,5 +1,0 @@
-This set of changes allows RocksDB to be compiled as a "unity build" (http://buffered.io/posts/the-magic-of-unity-builds/). I realize that this is an odd use-case: we inline the entire rocksdb repository within our own respotory using `git subtree` (http://blogs.atlassian.com/2013/05/alternatives-to-git-submodule-git-subtree/). But the RocksDB sources only needed very minor cosmetic changes. Mostly eliminating duplicate symbols in different translation units. And also, moving some identifiers out of anonymous namespaces to prevent compilation warnings when those symbols appear as data members of classes in non-anonymous namespaces.
-
-Here's the source file used to compile RocksDB as a unity build:
-https://github.com/ripple/rippled/blob/develop/src/ripple/unity/rocksdb.cpp
-

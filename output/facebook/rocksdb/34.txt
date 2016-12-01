@@ -1,4 +1,0 @@
-Hi,
-I have general question but dont know wher to ask this:
-How is RocksDB compared with Redis?
-

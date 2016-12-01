@@ -1,8 +1,0 @@
-I am planning to code rocksdb bindings for python. So far, I am able to use basic rocksdb functionality in python :)
-
-I think, I will use python ctypes and rocksdb C API. ATM, rocksdb/include/c.h is almost the same with leveldb counterpart (eg. all function names and structs starts with leveldb). Will you keep it that way, or do you plan to change it? or I can maintain and take care of that part happily :)
-
-As a second option, I can directly use rocksdb C++ API, by writing CPython extension. But the outcome won't be portable between different python implementations and will only work with CPython.
-
-What do you think about that?
-

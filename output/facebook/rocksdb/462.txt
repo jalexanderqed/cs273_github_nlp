@@ -1,5 +1,0 @@
-Previous to this commit there was a problem with unterminated
-String usage as jByteArrays are not zero terminated.
-
-Differential: https://reviews.facebook.net/D31809
-

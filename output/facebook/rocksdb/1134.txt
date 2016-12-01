@@ -1,8 +1,0 @@
-Hello!
-
-We have a use case of RocksDB where the application itself keeps its own caching layer as well as WAL on top of the RocksDB, and hence all writes to RocksDB itself is batched writes upon cache flushing. We have already `setDisableWAL` in the write options.
-
-I'm wondering if there is a recommended way to "turn off" memtable as well in RocksDB, and only use sstfile?
-
-cc @enothereska @mjsax
-

@@ -1,6 +1,0 @@
-I am storing metadata about files into RocksDB, however the binary files themselves are living on the filesystem alongside my Rocks data dir.
-
-Whilst I can use BackupEngine to backup the database, I wondered if there was an elegant solution for also backing up my binary files.
-
-I know that I can scan through my metadata stored in RocksDB to find the binary files that I need to backup. However, to be consistent I would need to access RocksDB at the same sequence number as the BackupEngine when `createNewBackup` is called. Is there any mechanism for getting a snapshot or iterator on a column family which is based on the same sequence number used by `createNewBackup`?
-

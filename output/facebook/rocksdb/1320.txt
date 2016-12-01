@@ -1,2 +1,0 @@
-This will enable users to distinguish "out of disk space" errors from other I/O error and maybe take the appropriate action.
-

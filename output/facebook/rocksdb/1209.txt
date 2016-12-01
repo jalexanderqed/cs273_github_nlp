@@ -1,4 +1,0 @@
-using reinterpret_cast instead of static_cast where it's not application due to contract
-
-Please check the issue comment for more details
-

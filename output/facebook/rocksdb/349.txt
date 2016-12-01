@@ -1,2 +1,0 @@
-Would love to see something like repcached Master/Master replication support.
-

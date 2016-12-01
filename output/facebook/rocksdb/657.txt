@@ -1,5 +1,0 @@
-- Remove make file defines from public headers and use _WIN32 because it is compiler defined
-- use **GNUC** and **clang** to guard non-portable attributes
-- add #include "port/port.h" to some new .cc files.
-- minor changes in CMakeLists to reflect recent changes
-

@@ -1,7 +1,0 @@
-Reverse key handling is under certain conditions essential. E.g. while
-using timestamp versioned data access to most recent data might be the standard
-usecase.
-
-As comparators were not available using JAVA-API both(default and reverse version) built-in comparators
-were exposed via JNI to be set upon database creation time.
-

@@ -1,6 +1,0 @@
-Hi,
-
-i am trying to evaluate the hit rate of block cache in rocksDB, is there a way to do this?
-
-Thanks
-

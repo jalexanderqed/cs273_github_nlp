@@ -1,4 +1,0 @@
-We implemented a custom sstable, and our sstable need scan input two passes to achieve better compression, but through TableBuilder we can not scan input two passes, so we store the input data to a temporary file for second pass scan, this is very inefficient.
-
-Would you provide a way to allowing two pass scan, by any way, such as provide a rewind-able iterator, or provide an option to push all data by TableBuilder::Add(key, value) two passes.
-

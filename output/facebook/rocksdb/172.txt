@@ -1,8 +1,0 @@
-RocksDB has a very big number of different configuration options that we added to make it flexible and suitable for various workloads and environments (in-memory, SSD, point lookups, etc). Configuring all these options to get the most out of RocksDB is not easy and requires very high familiarity with RocksDB internals.
-
-On the other hand, RocksDB's default options are inherited from LevelDB and not suitable for any high-performance server workload.
-
-We should invest some time in making RocksDB's options easier to configure and understand. For starting proposals, see: https://github.com/facebook/rocksdb/wiki/Proposals-on-Improving-Rocksdb's-Options
-
-We're welcoming all contributions and thoughts in this effort.
-

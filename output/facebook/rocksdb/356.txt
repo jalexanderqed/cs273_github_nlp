@@ -1,8 +1,0 @@
-BlockBasedTableConfig
-- ported Checksum
-- ported IndexType
-
-PlainTableConfig
-- added missing options
-- added EncodingType
-

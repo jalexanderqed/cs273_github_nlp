@@ -1,2 +1,0 @@
-The optional  "std::vector<DbPath> db_paths" is  supported now?
-

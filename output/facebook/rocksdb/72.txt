@@ -1,5 +1,0 @@
-<b>port/port_posix.h, line 339</b>
-A constant Z_BUF_ERROR is used, which seems to be undefined if zlib was not found while bzip2 was (since it is defined in zlib headers).
-
-It seems that just deleting this line would be a nice workaround, since it is a case followed by the default case.
-

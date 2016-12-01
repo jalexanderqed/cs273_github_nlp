@@ -1,6 +1,0 @@
-FreeBSD 11.0 with cmake clang 3.8.0
-
-```
-/home/anan/projects/rocksdb/util/env_test.cc:1067:22: error: use of undeclared identifier 'O_DIRECT'
-```
-

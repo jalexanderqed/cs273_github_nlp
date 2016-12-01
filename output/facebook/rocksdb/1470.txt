@@ -1,1 +1,0 @@
-The general convention in RocksDB is to use GFLAGS instead of google. Fixing the anomaly.

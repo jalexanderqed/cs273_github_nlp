@@ -1,3 +1,0 @@
-Java needs a pom and for this to be in public maven repo.
-Example how to do this is at: https://github.com/fusesource/rocksdbjni/blob/master/pom.xml
-

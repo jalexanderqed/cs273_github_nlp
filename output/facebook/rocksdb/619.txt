@@ -1,4 +1,0 @@
-I have a read-bound application (aligning DNA reads to a graph reference genome). I notice that I can align about 1000 reads/second on a single CPU. However, using 32 provides only 8000 reads/second. Obviously there is some contention preventing near-linear scaling. Is it possible this is driven by rocksdb itself? Or am I seeing some kind of system-level contention?
-
-In principle, what might be limiting the performance when I increase the number of threads? Is there any locking in read-only mode? For instance, is there a shared cache? I believe I've set up cache sharding correctly but I am not sure.
-

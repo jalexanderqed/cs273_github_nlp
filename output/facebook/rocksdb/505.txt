@@ -1,2 +1,0 @@
-Removed redundant access modifier in interfaces.
-

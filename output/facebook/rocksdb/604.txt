@@ -1,2 +1,0 @@
-This I think is a feature request. Today TTLDB lacks MultiGet api support. It would be good to have for all those who want to switch from normal DB to TTLDB.
-

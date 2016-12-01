@@ -1,1 +1,0 @@
-Currently, in the Direct I/O read mode, the last sector of the file, if not full, is not handled correctly. If the return value of pread is not multiplier of kSectorSize, we still go ahead and continue reading, even if the buffer is not aligned. With the commit, if the return value is not multiplier of kSectorSize, and all but the last sector has been read, we simply return.

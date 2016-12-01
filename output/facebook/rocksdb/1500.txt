@@ -1,1 +1,0 @@
-char is unsigned on power by default causing this test to fail with the FF case. ppc64 return 255 while x86 returned -1. Casting works on both platforms.

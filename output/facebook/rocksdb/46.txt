@@ -1,4 +1,0 @@
-I ran `make` and see that it created static library only for the librocks.
-
-There are some systems (e.g. Linux Arch) that strongly prefer to use shared libraries. It would be great that the build system provide shared libs as well.
-

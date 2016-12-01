@@ -1,3 +1,0 @@
-As proposed in https://github.com/facebook/rocksdb/issues/310 the Bloomfilter can now be set in Java for
-a BlockBasedTableConfig instance.
-

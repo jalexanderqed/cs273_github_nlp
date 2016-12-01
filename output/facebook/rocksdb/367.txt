@@ -1,2 +1,0 @@
-RocksJava build is broken after commit: f184198.
-

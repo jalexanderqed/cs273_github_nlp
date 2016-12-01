@@ -1,3 +1,0 @@
-Currently the compression suppport and fast CRC support information is printed as info level. They should be in the same level as options, which is header level.
-
-Also add ZSTD to this printing.

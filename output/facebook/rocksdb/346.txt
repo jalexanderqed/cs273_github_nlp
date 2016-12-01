@@ -1,8 +1,0 @@
-Given that -Werror is a compilation flag, the tests in the current tar.gz don't compile flawlessly.
-
-When issueing "make all", you get "unused variable" errors or worse, something like this:
-
-In file included from tools/db_stress.cc:35:0:
-tools/db_stress.cc:194:40: error: integer overflow in expression [-Werror=overflow]
- DEFINE_int64(cache_size, 2 \* KB \* KB \* KB,
-

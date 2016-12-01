@@ -1,5 +1,0 @@
-Hi,
-
-Can someone please comment if there are any plans to publish JNI library to Maven? That will make it easier for open-source applications to consume the same. I am willing to help with the same if there are any such plans for the future.
-- Ankit
-

@@ -1,4 +1,0 @@
-Summary:
-Currently plain table bloom filter is required if storing metadata on file. Remove the constraint.
-
-Test Plan: Relax existing unit test to cover this scenario.

@@ -1,7 +1,0 @@
-32 bit build is broken due to use of pedantic /WX flag in compile options.
-There is a couple(not too many)warnings about casts from int64 to int or std::size_t. Naturally, GCC never warns about conversion errors, you can cast long longs to  chars, so this only pops up on Windows.
-
-The easiest way to fix broken build seems to be to provide way to compile with less pedantic settings. Ideally, CMakeLists.txt could provide a way not to force own compiler flags, except the absolutely necessary ones (for gcc, this seems to be --std=c++11)
-
-Alternatively, one could fix the warnings and use appropriate data types instead of int64 everywhere.
-

@@ -1,2 +1,0 @@
-The original "append(str, sizeof(str))" would make wal_info string truncated.
-

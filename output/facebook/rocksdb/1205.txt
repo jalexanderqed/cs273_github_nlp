@@ -1,3 +1,0 @@
-When creating a snapshot and the directory already exists for instance we get Status IOError
-but only the string has at the end "File exists" we should preserve the errno code
-

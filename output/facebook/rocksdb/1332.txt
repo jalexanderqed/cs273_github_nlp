@@ -1,2 +1,0 @@
-When use java api get() function to make random access to DB, the time spent firstly is much longer than follow? 
-

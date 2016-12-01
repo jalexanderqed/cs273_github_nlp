@@ -1,7 +1,0 @@
-11:30:29 from ./util/histogram.h:13,
-11:30:29 from util/histogram.cc:18:
-11:30:29 util/histogram.cc: In member function ‘void rocksdb::HistogramStat::Add(uint64_t)’:
-11:30:29 util/histogram.cc:104:40: error: comparison of unsigned expression >= 0 is always true [-Werror=type-limits]
-11:30:29 assert(index < num_buckets_ && index >= 0);
-11:30:29 ^
-

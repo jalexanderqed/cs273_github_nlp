@@ -1,8 +1,0 @@
-I have restructured the layout of the Java class files so that they are in a standard directory layout as popularised by Maven but recognised by many tools, e.g. `src/main/java` and `src/test/java`.
-
-The main advantage here is that it is now possible and simple to build and debug the Java code from IDEs such as IntelliJ. In addition the fact that test classes and source classes are now in the same correct packages, means that tests can access _package-private_ and _protected_ methods of classes under test.
-
-These changes are backwards compatible, as the packages and classes of the Java API itself have not been changed.
-
-Review is available here: https://reviews.facebook.net/D32643
-

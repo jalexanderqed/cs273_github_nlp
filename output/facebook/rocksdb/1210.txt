@@ -1,2 +1,0 @@
-Otherwise a warning is raised that has to be suppressed explicitly (via -Wno-dev) - this is not very convenient.
-

@@ -1,2 +1,0 @@
-Minor corrections to resolve -WShadow build problems with RocksJava code.
-

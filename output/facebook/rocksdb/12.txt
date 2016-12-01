@@ -1,4 +1,0 @@
-I think I'm following the INSTALL correctly but still getting an error.
-
-./include/rocksdb/statistics.h:9:10: fatal error: 'atomic' file not found
-

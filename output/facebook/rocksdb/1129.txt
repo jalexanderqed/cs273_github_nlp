@@ -1,2 +1,0 @@
-I do not want to use:  count++ 。Is there a function?  Sorry, my English is not well, thank you for your help.
-

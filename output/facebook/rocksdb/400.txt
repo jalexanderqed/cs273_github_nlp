@@ -1,9 +1,0 @@
-i exec "make rocksdbjava" command,but in the end an error has occurred.the error is : 
-
-/usr/bin/ld: db/builder.o: relocation R_X86_64_32 against `.rodata' can not be used when making a shared object; recompile with -fPIC
-db/builder.o: could not read symbols: Bat value
-collect2: error：ld return 1
-make: **\* [rocksdbjava] error 1
-
-i use centos7 x64
-

@@ -1,2 +1,0 @@
-Hello @igorcanadi : is this the kind of thing you are looking for? You only wanted some of the methods of `Iterator` implemented so I have currently put in dummy methods for the other abstract methods but I could easily implement them too if required. 
-

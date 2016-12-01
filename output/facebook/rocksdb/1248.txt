@@ -1,2 +1,0 @@
-C++ API has API for creating SST file and ingesting the SST file into rocksdb. (https://github.com/facebook/rocksdb/wiki/Creating-and-Ingesting-SST-files) However, rocksdbjni has no API for that. For bulk-loading data into rocksdb, it is very efficient way, thus, Java needs to implement this API.
-

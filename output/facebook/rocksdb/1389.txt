@@ -1,2 +1,0 @@
-Closes https://github.com/facebook/rocksdb/issues/1377
-

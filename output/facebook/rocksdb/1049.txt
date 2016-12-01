@@ -1,2 +1,0 @@
-Using async file handle and wrapping sync operations on top of async seems to provide better parallelism on Windows.
-

@@ -1,2 +1,0 @@
-I am trying to define my own merger operator. it works fine without any errors. but when I call rocksdb_get after then, I can get the value as expected, but the vallen is 0. any suggestions?
-

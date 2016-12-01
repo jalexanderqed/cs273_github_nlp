@@ -1,4 +1,0 @@
-The function `CompareCandidateFile` incorrectly compares a file's `path_id` against itself and will always return false.
-
-This is my first pull request against `rocksdb` and I have completed the CLA.
-

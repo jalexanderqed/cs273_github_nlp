@@ -1,2 +1,0 @@
-These are two handy options I used in my experiment. Sending this PR in hope that others might find it helpful when they also want to use direct I/O (for bypassing OS page cache or other purposes).
-

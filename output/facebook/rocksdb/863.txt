@@ -1,3 +1,0 @@
-- include `util/string_util.h` which contains `ToString` macro in `env_hdfs.cc` to fix ToString not declared error
-- implement `LinkFile` function by returning a NotSupported status to avoid LinkFile undefined reference error, because HdfsEnv class defines LinkFile function without implementing it and actually, HDFS does not provide such API in c.
-

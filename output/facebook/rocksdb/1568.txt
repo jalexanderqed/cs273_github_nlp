@@ -1,2 +1,0 @@
-Use cache_bench set cache_size to 2000000000, the RSS of this program is increasing along the time,  much larger than 2000000000.
-RocksDB Version: 4.9

@@ -1,2 +1,0 @@
-i see thhat we can create a new rocksdb threadpool. But how to use it ? Can it be used by qnogher program that embed rocksdb?
-

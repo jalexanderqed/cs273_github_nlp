@@ -1,2 +1,0 @@
-This would enable people to redirect include and lib paths to the 3rd party libs such as gflags and zlib for build purposes using env vars instead of modifying thirdparty.inc
-

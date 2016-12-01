@@ -1,2 +1,0 @@
-The `%zu` and `%z` format specifiers do not work on Windows. This change replaces two instances of `%zu` that managed to sneak in with the `ROCKSDB_PRIszt` macro defined in each port header file.
-

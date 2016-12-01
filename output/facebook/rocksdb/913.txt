@@ -1,6 +1,0 @@
-Hi,
-
-I noticed that CompactionFilterV2 and its factory methods are deprecated in 3.13. When we try to upgrade to 4.1, it caused our service (which is built on top of RocksDB) break, and we still rely on it for some internal use cases. I wonder if we can have a patch to add it back? This can definitely help since we don't need to make a large amount of change on our side :)
-
-Thanks! 
-

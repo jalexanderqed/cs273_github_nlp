@@ -1,4 +1,0 @@
-I think It would be better to check expiration before return it.
-
-We could check the timestamp of data on `SanityCheckTimestamp`. and.. honestly I don't know why it doesn't now
-https://github.com/facebook/rocksdb/blob/master/utilities/ttl/db_ttl_impl.cc#L192

@@ -1,3 +1,0 @@
-Is there someone working to add support for Column Families in the java bindings?
-Or I should do it myself?
-

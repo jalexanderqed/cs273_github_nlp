@@ -1,8 +1,0 @@
-  Add an optimized build config switch for faster test runs
-  Change compiler options to introduce more opitmizations and be more inline with MS internal switches.
-  Make appveyor build to utilize all the avaiable cores on the VM (parallel)
-  Introduce new appveyor configuration for daily test runs as it would take too long
-  to run db_test after each checkin even in paralell.
-  With some exclusions we make it in 38 minutes. We currently fail to install ramdisk during the build.
-  Add a powershell script to faicilitate paralell run for db_test cases.
-

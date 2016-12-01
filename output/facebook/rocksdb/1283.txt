@@ -1,5 +1,0 @@
-Looks like there's a bug in `db_ttl_impl`. `DBWithTTLImpl` overrides only the `NewIterator` method. There's no 'NewIterators' in this class, so this method is inherited, and iterators obtained as the result of this method are not `TtlIterator`. They don't know anything about TTL and won't strip the time from value.
-
-example of patch against 4.5.1
-http://textuploader.com/58c63
-

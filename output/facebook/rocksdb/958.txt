@@ -1,3 +1,0 @@
-More context:
-We are building a replication library for RocksDB. Slaves read updates from Master, and apply them locally. Currently WriteBatch takes std::string as input, which means we will have to do a string copy for all replicated data before applying it to Slave db. It will be more efficient if we can save this copy.
-

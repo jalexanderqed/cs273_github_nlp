@@ -1,2 +1,0 @@
-Is there any PPA, or any way to install rocksdb without building from source?
-

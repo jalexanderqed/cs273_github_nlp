@@ -1,1 +1,0 @@
-Expose DeleteRange() interface since we think the implementation is functionally correct now.

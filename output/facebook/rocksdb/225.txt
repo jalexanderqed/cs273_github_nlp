@@ -1,2 +1,0 @@
-Fix compiling errors found in Mac OS X 10.9.4
-

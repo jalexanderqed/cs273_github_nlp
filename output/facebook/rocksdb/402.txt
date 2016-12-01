@@ -1,4 +1,0 @@
-Previously the NativeLibraryLoader attempted to use the SystemClassLoader to load the native library. Not all applications will necessarily explicitly set the SystemClassLoader classpath when they start up, instead they may use custom or 3rd party classloaders (e.g. dependency injection).
-
-This fix, makes sure to load the native library by using the same class loader which loaded the RocksDB Java classes.
-

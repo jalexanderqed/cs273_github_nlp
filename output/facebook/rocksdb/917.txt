@@ -1,4 +1,0 @@
-Should fix #634.
-
-This re-enabled cross compiling 32-bit on both 64-bit Mac and 64-bit Linux.
-

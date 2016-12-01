@@ -1,2 +1,0 @@
-Currently, `MemTableIterator::Seek` uses the prefix extractor only if memtable bloom filters are enabled. If a non-total-order seek is specified, the prefix extractor could also be used to limit the keys to those which contain the same prefix as the seek key. Note that the user can manually accomplish the same effect by setting `ReadOptions::iterate_upper_bound`, this would just be a way to automatically provide that optimization.
-

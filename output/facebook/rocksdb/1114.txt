@@ -1,4 +1,0 @@
-Hi all --
-
-Some users are requesting rocksdb packages for RHEL-based operating systems.  I found build_tools/make_packages.sh script but was not able to find any of the build artifacts in any external repos.  So I wonder if you are interested in getting rocksdb packaged for Fedora, CentOS (EPEL), etc?
-

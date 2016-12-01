@@ -1,6 +1,0 @@
-Hi,
-We'd like to make use of https://github.com/facebook/rocksdb/wiki/EventListener, but in the java API. Are there any plans to add this?
-
-Thanks,
-Damian
-

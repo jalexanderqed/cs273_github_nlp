@@ -1,8 +1,0 @@
-I was trying to use rocksdb as a shared lib and keep getting some unresolved symbols related to bz2.
-
-As a solution, I changed the relevant Makefile section, and put LDFLAGS after the object files, and the problem gone. BTW, there was a similar fix in leveldb, too:
-
-https://code.google.com/p/leveldb/source/detail?r=40768657bc8ec3ded60712eeeab7c25b1b07deca
-
-And leveldb is building shared lib at default target, so I added that too.
-

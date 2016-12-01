@@ -1,6 +1,0 @@
-We are using rocksdb inside dataswft as  a caching layer. The indexed files stay in HDFS/S3 and based on hotness it moves to  ssd/ram (rocksdb). 
-
-1) In java how we define the TTL?
-2) For keeping cells/values of 1-10MB size, what kind of settings we should look for?
-3) Is there a way to define storage cap on rocksdb? Based on LRU rows will be deleted.
-

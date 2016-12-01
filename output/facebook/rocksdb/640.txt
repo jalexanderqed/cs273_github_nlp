@@ -1,8 +1,0 @@
-I have got the Uint64 example to work fine using the example from https://github.com/facebook/rocksdb/blob/master/db/merge_test.cc
-
-Is there an example for List or Set? Do I have to redefine counters, merge based counters and a set add operator all over again? Is it possible to trim down the lines of code?
-
-WIP code at https://github.com/sshivaji/polyglot/blob/leveldb/src/book_make.cpp (just moved from leveldb)
-
-Thanks in advance.
-

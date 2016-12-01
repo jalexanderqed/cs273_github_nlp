@@ -1,8 +1,0 @@
-i am using vs community under windows7
-
-there are warnings about some 32bit/64bit conversion or bit-wise operations, vs complains with C4244 and C4334 warnings.
-but the original CMakeLists.txt set /WX on in CMAKE_CXX_FLAGS, thus my compilation fails
-so i remove this /WX from CMakeLists.txt, although the warning still exists, 32bit rocksdb.dll was generated successfully.
-
-so does rocksdb support 32bit dll generating? can i ignore these warnings safely?
-

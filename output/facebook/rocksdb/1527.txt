@@ -1,6 +1,0 @@
-Summary:
-If the WriteOptions.no_slowdown flag is set AND we need to wait or sleep for
-the write request, then fail immediately with Status::Incomplete().
-
-Test Plan:
-unit test added

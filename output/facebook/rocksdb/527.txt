@@ -1,4 +1,0 @@
-I have a database that I'd like to keep entirely in RAM. It will fit quite easily (it's 150G on disk and I have 250G of RAM available), so in theory this shouldn't be a problem. However, I don't have root access on the system in order to set up a ramfs filesystem into which I can cache the db. I could probably get similar performance by modifying the linux memory subsystem's caching options, but again I don't have root access.
-
-Is there an option I could give to rocksdb on open that will load/cache the entire db in memory. My target user base is unlikely to have root access on their systems.
-

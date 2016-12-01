@@ -1,2 +1,0 @@
-This will prevent integer overflow to return negative values.
-

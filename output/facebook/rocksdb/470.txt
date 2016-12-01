@@ -1,8 +1,0 @@
-Does the Java API support the concept of getting all records after a certain point in time?
-
-The RocksDB documents read:
-
-"Incremental Backups and Replication need to be able to find and tail all the recent changes to the database. The API GetUpdatesSince allows an application to tail the RocksDB transaction log." from https://github.com/facebook/rocksdb/wiki/RocksDB-Basics
-
-The GetUpdatesSince API does not seem to be available in the RocksDB Java API. Is there another way to do this in Java?
-

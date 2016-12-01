@@ -1,6 +1,0 @@
-This is the 6th largest source of CPU time from a sysbench test. Can we make it cheaper by reducing the number of counters tracked here - https://github.com/facebook/mysql-5.6/blob/webscalesql-5.6.27.75/storage/rocksdb/rdb_perf_context.cc#L29
-
-The code is here -> https://github.com/facebook/mysql-5.6/blob/webscalesql-5.6.27.75/storage/rocksdb/rdb_perf_context.cc#L194
-
-See this for the CPU profile - https://github.com/facebook/mysql-5.6/issues/150#issuecomment-175834238
-

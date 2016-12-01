@@ -1,4 +1,0 @@
-OptimizeLevelStyleCompaction unconditionally defaulted to kSnappyCompression,
-which is a problem if it's not supported. Checks for and uses it, LZ4, or no
-compression if neither are around.
-

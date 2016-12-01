@@ -1,2 +1,0 @@
-Note. port headers exist for abstracting platform differences not bringing them up by including platform specific headers.
-

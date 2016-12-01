@@ -1,3 +1,0 @@
-The latest version seems require jre1.7 at least, while our product environment is jdk1.6.
-Thanks!
-

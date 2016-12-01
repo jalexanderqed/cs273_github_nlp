@@ -1,5 +1,0 @@
-In benchmarks that mix multiple types of operations, such as readrandomwriterandom and seekrandomwhilemerging, we wish to have separate histogram measurements for latency.
-
-This change split the histogram to per OperationType: 
- std::unordered_map<OperationType, HistogramImpl> hist_
-

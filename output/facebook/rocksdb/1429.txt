@@ -1,5 +1,0 @@
-this breaks the cross-compiling, and we can not assume that the building
-machine and the target machine share the same CPU spec.
-
-Signed-off-by: Kefu Chai kchai@redhat.com
-

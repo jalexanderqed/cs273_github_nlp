@@ -1,2 +1,0 @@
-In my environment (gcc 4.9.1) this wasn't building. Simple fix similar to the one a couple of lines above.
-

@@ -1,3 +1,0 @@
-This commit solves build problems in Java8 due
-to wrong JavaDoc.
-

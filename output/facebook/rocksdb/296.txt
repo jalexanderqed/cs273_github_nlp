@@ -1,5 +1,0 @@
-Hi,
-When I do serialisation and Deserialization of Map of type Map<String, String[]> or Map<Object1, Object2[]> then said process is done successFully but json created does not contain values for array, instead its an Object reference Id (as Ljava.lang.String;@1b77f8).
-I will be greatfull for any solution.
-thank you.
-

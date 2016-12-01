@@ -1,1 +1,0 @@
-This makes it easier to implement future optimizations like range collapsing.

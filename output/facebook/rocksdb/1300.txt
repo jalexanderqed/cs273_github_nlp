@@ -1,3 +1,0 @@
-We can add prev_ for skiplist node to run Prev in O(1) instead of O(logN) as it locks when inserting.
-And it does no harm to read without lock.
-

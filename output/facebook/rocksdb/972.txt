@@ -1,2 +1,0 @@
-Influenced by https://github.com/facebook/rocksdb/issues/971
-

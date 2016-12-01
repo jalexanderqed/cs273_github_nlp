@@ -1,6 +1,0 @@
-On Centos 6, you need to explicitely include linux/falloc.h which is
-where the  FALLOC_FL_\* flags are defined. Otherwise, the fallocate()
-support test defined in build_detect_platform will fail.
-
-Signed-off-by: Pooya Shareghi shareghi@gmail.com
-

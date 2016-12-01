@@ -1,2 +1,0 @@
-I   knew the wal is supported。 But the wal is too big to saved for longtime。 why not and when operatelog  is supported?
-

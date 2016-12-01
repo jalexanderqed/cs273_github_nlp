@@ -1,4 +1,0 @@
-Some platforms, particularly Windows, do not have a single method that can release both a held reader lock and a held writer lock; instead, a separate method (`ReleaseSRWLockShared` or `ReleaseSRWLockExclusive`) must be called in each case.
-
-This may also be necessary to back `MutexRW` with a `shared_mutex` in C++14; the current language proposal includes both an `unlock()` and a `shared_unlock()` method.
-

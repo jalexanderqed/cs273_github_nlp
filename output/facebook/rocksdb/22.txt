@@ -1,2 +1,0 @@
-There are two   memtablerep.h and two slice_tansform.h included in options.h
-

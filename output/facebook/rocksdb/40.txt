@@ -1,2 +1,0 @@
-Like Apache Software Foundation, is there a way to email copy of CLA before contributing to rocksdb without going through the facebook.com page which requires fb login?
-

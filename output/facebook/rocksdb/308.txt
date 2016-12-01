@@ -1,6 +1,0 @@
-Once the ongoing RocksDB JNI work is committed (https://github.com/facebook/rocksdb/pull/235), I'm looking at publishing RocksDB's JNI libraries to Maven central so that the work can be consumed by other Java projects.
-
-My proposal is to use [Sonatype](http://www.sonatype.org/)'s open source Maven repo as the host for RocksDB JARs. This repo gets mirrored into Maven central. The artifacts will be published under the 'org.rocksdb' group.
-
-Does this sound OK with everyone?
-

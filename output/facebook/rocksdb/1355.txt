@@ -1,2 +1,0 @@
-Fristly write all data(8.7G) into level-0 with options max_bytes_for_level_base=1*SizeUnit.GB, than call CompactRange() to compact , after compaction, I find that all data are compacted into level-1 and the size is 8.4G far greater than the option  max_bytes_for_level_base. Why is this?
-

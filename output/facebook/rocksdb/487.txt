@@ -1,2 +1,0 @@
-Is there any reason to keep [this logging warning about background threads around](https://github.com/facebook/rocksdb/blob/bf287b76e0e7b5998de49e3ceaa2b34d1f3c13ae/util/env_posix.cc#L1640)?
-

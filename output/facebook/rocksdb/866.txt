@@ -1,3 +1,0 @@
-LRU Cache Handle was using malloc and free. In Windows port, malloc() and free() were not override in the JEmalloc version. 
-Replacing them with new and delete such that jemalloc is used for this allocation. 
-

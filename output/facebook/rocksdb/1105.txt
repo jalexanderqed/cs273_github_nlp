@@ -1,4 +1,0 @@
-This reverts commit b54c34742412af0001a69c2f7d909bc05e1ea71f.
-
-Revert async file handle change as it causes failures with appveyor
-

@@ -1,4 +1,0 @@
-ColumnFamilyOptions + ColumnFamilyOptionsTest 
-
-Relates to Options Refactoring (Part3)
-

@@ -1,7 +1,0 @@
-Summary: Now that we have userspace persisted cache, we don't need flashcache anymore.
-
-Test Plan: I ran 'make check' and it failed, but I don't know why. I'm assuming flaky tests since this is only removing code and the compile passed.
-
-Reviewers: sdong
-
-Differential Revision: https://phabricator.intern.facebook.com/D4244842

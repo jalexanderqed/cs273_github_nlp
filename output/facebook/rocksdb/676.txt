@@ -1,2 +1,0 @@
-Current fixed length prefix extractor restricts in usage of keys smaller that the prefix length. 
-

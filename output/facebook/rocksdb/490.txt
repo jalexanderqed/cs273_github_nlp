@@ -1,4 +1,0 @@
-I just spent a fair bit of time and tweaking debugging poor bulk loading performance in rocksdb. One thing that tripped me up is that [simply calling IncreaseParallelism on the options doesn't increase the number of available threads for background flushes](https://github.com/facebook/rocksdb/blob/62ad0a9b19f0be4cefa70b6b32876e764b7f3c11/util/options.cc#L581). Once I realized this and set a high maximum number of flushes I was able to quadruple my application's throughput! rocksdb is no longer the major bottleneck in my process.
-
-Is there any reason this doesn't happen by default? It seems particularly problematic for bulk loads.
-
