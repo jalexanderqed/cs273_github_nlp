@@ -38,3 +38,7 @@ The response to this request will contain a list of users with the following str
 `avatar` is a link to the user's GitHub user profile picture, and `keywords`
 is an array of words from topics this user specializes in. These users should be displayed on the page in
 a list, either below or next to the main input box. Clicking on a user in this list should link to the page `/users/<id>` described below.
+
+## User Page
+
+These pages (which will be built dynamically by the backend) will include the user's GitHub photo and a list of the users top topics. In this case, a "topic" is the internal number of the topic used by the model followed by a list of words that describe that topic. The page should also include a list of links to the issues this user has commented on so we can demonstrate the original source of the data.
