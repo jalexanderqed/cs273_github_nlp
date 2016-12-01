@@ -20,12 +20,15 @@ import java.util.Properties;
 
 public class IssueGetter {
     private String repository;
+    File usersSaveFile = null;
+    HashMap<String, User> users = new HashMap<>();
 
-    public IssueGetter(String repoName) {
-        repository = repoName;
+    public IssueGetter() {
+        repository = Main.repository;
+        usersSaveFile = Main.usersSaveFile;
     }
 
-    public void read() throws IOException {
+    public void read() throws Exception {
         String oauth;
         try {
             Charset charset = Charset.forName("ISO-8859-1");
@@ -51,20 +54,24 @@ public class IssueGetter {
                 PrintWriter issueWriter = new PrintWriter(issuesDir + issue.getNumber() + ".txt", "UTF-8");
                 issueWriter.println(issue.getBody());
                 List<GHIssueComment> comments = issue.getComments();
-                String originalPoster = issue.getUser().getLogin();
+                GHUser originalPoster = issue.getUser();
+                String originalPosterId = originalPoster.getLogin();
 
                 Properties relatedUsers = new Properties();
 
-                for(GHIssueComment comment : comments){
-                    issueWriter.println(comment.getBody());
-                    String poster = comment.getUser().getLogin();
-                    if(!originalPoster.equals(poster)) {
-                        relatedUsers.setProperty(poster, "1");
-                    }
+                if (issue.isPullRequest()) {
+                    addUser(originalPoster, issue.getNumber());
+                    relatedUsers.setProperty(originalPosterId, "2");
                 }
 
-                if(issue.isPullRequest()) {
-                    relatedUsers.setProperty(originalPoster, "2");
+                for (GHIssueComment comment : comments) {
+                    issueWriter.println(comment.getBody());
+                    GHUser poster = comment.getUser();
+                    String posterId = poster.getLogin();
+                    if (!originalPoster.equals(posterId)) {
+                        addUser(poster, issue.getNumber());
+                        relatedUsers.setProperty(posterId, "1");
+                    }
                 }
 
                 issueWriter.close();
@@ -79,5 +86,17 @@ public class IssueGetter {
         }
 
         System.out.println("Got " + count + " issues.");
+        Util.writeUsers(usersSaveFile, users);
+    }
+
+    private void addUser(GHUser ghUser, int issue) {
+        String login = ghUser.getLogin();
+        User user;
+        if ((user = users.get(login)) == null) {
+            user = new User(login);
+            user.avatar = ghUser.getAvatarUrl();
+            users.put(user.id, user);
+        }
+        user.issues.add(issue);
     }
 }

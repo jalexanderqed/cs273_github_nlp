@@ -7,19 +7,21 @@ import cc.mallet.types.InstanceList;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.Serializable;
 import java.util.*;
 
 /**
  * Created by john on 11/30/16.
  */
-public class UserScores {
+public class UserScores implements Serializable{
     private String repository;
-    HashMap<String, double[]> userScores = new HashMap<String, double[]>();
+    HashMap<String, User> userScores;
     TopicModel tModel;
 
-    public UserScores(String repoName, TopicModel m) {
-        repository = repoName;
+    public UserScores(TopicModel m) throws Exception{
+        repository = Main.repository;
         tModel = m;
+        userScores = Util.readUsers(Main.usersSaveFile);
     }
 
     public void run() throws Exception{
@@ -44,13 +46,18 @@ public class UserScores {
         }
 
         TopicInferencer inferencer = tModel.model.getInferencer();
-        for(String user : userStrings.keySet()) {
+        for(String userId : userStrings.keySet()) {
             InstanceList temp = new InstanceList(tModel.instances.getPipe());
-            temp.addThruPipe(new Instance(userStrings.get(user).toString(), null, "test instance", null));
-
+            temp.addThruPipe(new Instance(userStrings.get(userId).toString(), null, "test instance", null));
             double[] userTopics = inferencer.getSampledDistribution(temp.get(0), 1000, 1, 5);
-            userScores.put(user, userTopics);
+
+            if(!userScores.containsKey(userId)){
+                throw new IllegalStateException("User " + userId + " was not present when generating topic scores.");
+            }
+            userScores.get(userId).setTopics(userTopics);
         }
+
+        Util.writeUsers(Main.usersSaveFile, userScores);
     }
 
     public ArrayList<StringDoubleTuple> getUsersForString(String query){
@@ -59,10 +66,11 @@ public class UserScores {
         TopicInferencer inferencer = tModel.model.getInferencer();
         InstanceList temp = new InstanceList(tModel.instances.getPipe());
         temp.addThruPipe(new Instance(query, null, "test instance", null));
-        double[] queryTopics = inferencer.getSampledDistribution(temp.get(0), 100, 1, 5);
+        double[] queryTopics = inferencer.getSampledDistribution(temp.get(0), 1000, 1, 5);
 
         for(String user : userScores.keySet()) {
-            scores.add(new StringDoubleTuple(user, Util.dot(userScores.get(user), queryTopics)));
+            User currUser = userScores.get(user);
+            scores.add(new StringDoubleTuple(user, Util.dot(currUser.getTopics(), queryTopics) * Math.log(currUser.issues.size() * 1)));
         }
 
         Collections.sort(scores, new Comparator<StringDoubleTuple>() {

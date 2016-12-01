@@ -6,39 +6,39 @@ package edu.ucsb.cs273;
 
 import cc.mallet.pipe.*;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.regex.Pattern;
 
 public class Util {
-    public static String getIssuesDir(String repo){
+    public static String getIssuesDir(String repo) {
         return "output/" + repo + "/issues/";
     }
 
-    public static String getUsersDir(String repo){
-        return "output/" + repo + "/users/";
+    public static String getUsersDir(String repo) {
+        return "output/" + repo + "/userCalc/";
     }
 
-    public static List<String> readLines(String file) throws IOException{
+    public static List<String> readLines(String file) throws IOException {
         Charset charset = Charset.forName("ISO-8859-1");
         return Files.readAllLines(Paths.get(file), charset);
     }
 
-    public static String readText(String file) throws IOException{
+    public static String readText(String file) throws IOException {
         Charset charset = Charset.forName("ISO-8859-1");
         StringBuilder ret = new StringBuilder();
-        for(String line : Files.readAllLines(Paths.get(file), charset)){
+        for (String line : Files.readAllLines(Paths.get(file), charset)) {
             ret.append(line + "\n");
         }
         return ret.toString();
     }
 
-    public static ArrayList<Pipe> getStandardPipes(){
+    public static ArrayList<Pipe> getStandardPipes() {
         // Begin by importing documents from text to feature sequences
         ArrayList<Pipe> pipeList = new ArrayList<Pipe>();
 
@@ -52,14 +52,32 @@ public class Util {
         return pipeList;
     }
 
-    public static double dot(double[] a, double[] b) throws ArithmeticException{
-        if(a.length != b.length){
+    public static double dot(double[] a, double[] b) throws ArithmeticException {
+        if (a.length != b.length) {
             throw new ArithmeticException("Cannot dot product arrays of differen lengths");
         }
         double res = 0;
-        for(int i = 0; i < a.length; i++){
+        for (int i = 0; i < a.length; i++) {
             res += a[i] * b[i];
         }
         return res;
+    }
+
+    public static void writeUsers(File usersFile, HashMap<String, User> users) throws Exception {
+        FileOutputStream fileOut = new FileOutputStream(usersFile.getAbsolutePath());
+        ObjectOutputStream objOut = new ObjectOutputStream(fileOut);
+        objOut.writeObject(users);
+        objOut.close();
+        fileOut.close();
+        System.out.println("Serialized userCalc to: " + usersFile.getAbsolutePath());
+    }
+
+    public static HashMap<String, User> readUsers(File usersFile) throws Exception {
+        FileInputStream fileIn = new FileInputStream(usersFile.getAbsolutePath());
+        ObjectInputStream objIn = new ObjectInputStream(fileIn);
+        HashMap<String, User> users = (HashMap<String, User>) objIn.readObject();
+        objIn.close();
+        fileIn.close();
+        return users;
     }
 }

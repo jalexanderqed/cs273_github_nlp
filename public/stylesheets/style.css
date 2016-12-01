@@ -1,0 +1,32 @@
+#top_image{
+    width:400px;
+}
+
+#wrapper{
+    text-align: center;
+}
+
+#main_table th{
+    text-align: center;
+}
+
+#inner_wrapper{
+    display: inline-block;
+}
+
+#query_area{
+    width: 500px;
+    height: 250px;
+}
+
+.avatar_image{
+    width: 40px;
+}
+
+.user_pic{
+    width: 200px;
+}
+
+.user_margin{
+    margin: 50px;
+}

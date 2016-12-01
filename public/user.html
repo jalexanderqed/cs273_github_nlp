@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title> Smart Git </title>
+    <link rel="icon" type="image/ico" href="/icon.ico"/>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script
+            src="https://code.jquery.com/jquery-3.1.1.min.js"
+            integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+            crossorigin="anonymous"></script>
+
+    <!-- Created stylesheet -->
+    <link rel="stylesheet" type="text/css" href="/stylesheets/style.css">
+
+    <!-- Google material design icons -->
+    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css">
+
+    <!-- Google font -->
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Tangerine">
+
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
+          integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+            crossorigin="anonymous"></script>
+</head>
+
+<body>
+<div id="wrapper">
+    <div id="inner_wrapper">
+        <!-- <div style="background-image:url(git.jpg); width:auto; height:auto"> -->
+        <div class="top">
+            <div id="avatar_div">
+                <img id="avatar_img" src="" class="user_pic user_margin"/>
+            </div>
+            <h2>Username:</h2>
+            <div id="name_div">
+                <h3 id="name_head"></h3>
+            </div>
+            <h2 style="margin-top: 50px;">Common Topics:</h2>
+            <div style="text-align: center;">
+                <div id="topics_div" style="width: 70%;display: inline-block;"></div>
+            </div>
+            <h2 style="margin-top: 50px;">Issues: <span id="num_issues"></span></h2>
+            <div id="issues_div"></div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var pathName = window.location.pathname.split('/');
+    var user = pathName[pathName.length - 1];
+
+    function buildLinkString(links){
+        var str = "";
+        for(var i = 0; i < links.length; i++){
+            str += "<a href='" + links[i] + "'>" + links[i] + "</a>";
+            str += "<br/>";
+        }
+        return str;
+    }
+
+    $(document).ready(function () {
+        $.ajax({
+            url: "/api/users/" + user,
+            type: 'GET',
+            success: function (data) {
+                console.log(data);
+                document.getElementById("avatar_img").setAttribute("src", data.avatar);
+                document.getElementById("name_head").innerHTML = data.id;
+                document.getElementById("topics_div").innerHTML = data.keywords.slice(0, 40).join(", ");
+                document.getElementById("num_issues").innerHTML = data.issues.length;
+                document.getElementById("issues_div").innerHTML = buildLinkString(data.issues);
+            }
+        });
+    });
+</script>
+</body>
+</html>

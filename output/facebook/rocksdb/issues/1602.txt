@@ -1,0 +1,80 @@
+Hi,
+
+I am running Centos 6 and I encountered an error at 5% when building the Git repository. I have also installed successfully at the prerequisites. Any help is greatly appreciated!
+
+>code as follows ```
+git clone https://github.com/facebook/mysql-5.6.git
+cd mysql-5.6
+git submodule init
+git submodule update
+cmake . -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWITH_SSL=system \
+-DWITH_ZLIB=bundled -DMYSQL_MAINTAINER_MODE=0 -DENABLED_LOCAL_INFILE=1 \
+-DENABLE_DTRACE=0 -DCMAKE_CXX_FLAGS="-march=native"
+make -j8
+```
+
+[  0%] [  1%] [  1%] Built target regex
+[  2%] Built target zlib
+Built target vio
+[  5%] Built target strings
+Building CXX object sql/CMakeFiles/gen_lex_hash.dir/gen_lex_hash.cc.o
+cc1plus: error: unrecognized command line option "-std=c++11"
+make[2]: *** [sql/CMakeFiles/gen_lex_hash.dir/gen_lex_hash.cc.o] Error 1
+make[1]: *** [sql/CMakeFiles/gen_lex_hash.dir/all] Error 2
+make[1]: *** Waiting for unfinished jobs....
+Scanning dependencies of target mysqlservices
+Scanning dependencies of target semisync_slave_client
+Scanning dependencies of target comp_sql
+Scanning dependencies of target my_safe_process
+[  5%] Built target INFO_SRC
+[  5%] [  5%] [  5%] Built target INFO_BIN
+[  5%] [  5%] [  5%] Building C object libservices/CMakeFiles/mysqlservices.dir/my_snprintf_service.c.o
+Building C object libservices/CMakeFiles/mysqlservices.dir/thd_alloc_service.c.o
+Building C object scripts/CMakeFiles/comp_sql.dir/comp_sql.c.o
+[  5%] [  5%] [  5%] Built target abi_check
+Building CXX object mysql-test/lib/My/SafeProcess/CMakeFiles/my_safe_process.dir/safe_process.cc.o
+Building C object libservices/CMakeFiles/mysqlservices.dir/thd_wait_service.c.o
+cc1plus: error: unrecognized command line option "-std=c++11"
+make[2]: *** [mysql-test/lib/My/SafeProcess/CMakeFiles/my_safe_process.dir/safe_process.cc.o] Error 1
+make[1]: *** [mysql-test/lib/My/SafeProcess/CMakeFiles/my_safe_process.dir/all] Error 2
+Building C object libservices/CMakeFiles/mysqlservices.dir/my_plugin_log_service.c.o
+Building CXX object plugin/semisync/CMakeFiles/semisync_slave_client.dir/semisync_slave_client.cc.o
+cc1plus: error: unrecognized command line option "-std=c++11"
+make[2]: *** [plugin/semisync/CMakeFiles/semisync_slave_client.dir/semisync_slave_client.cc.o] Error 1
+make[2]: *** Waiting for unfinished jobs....
+[  5%] [  5%] [  5%] [  5%] Building C object libservices/CMakeFiles/mysqlservices.dir/my_thread_scheduler_service.c.o
+Building CXX object plugin/semisync/CMakeFiles/semisync_slave_client.dir/semisync_slave.cc.o
+cc1plus: error: unrecognized command line option "-std=c++11"
+make[2]: *** [plugin/semisync/CMakeFiles/semisync_slave_client.dir/semisync_slave.cc.o] Error 1
+Building C object libservices/CMakeFiles/mysqlservices.dir/mysql_string_service.c.o
+Building CXX object plugin/semisync/CMakeFiles/semisync_slave_client.dir/semisync.cc.o
+cc1plus: error: unrecognized command line option "-std=c++11"
+make[2]: *** [plugin/semisync/CMakeFiles/semisync_slave_client.dir/semisync.cc.o] Error 1
+make[1]: *** [plugin/semisync/CMakeFiles/semisync_slave_client.dir/all] Error 2
+Linking C static library libmysqlservices.a
+Linking C executable comp_sql
+[  5%] Built target mysqlservices
+[  5%] Built target comp_sql
+make: *** [all] Error 2
+
+
+your gcc's version is too low, please execute following commands in your bash:
+
+```bash
+gcc --version
+g++ --version
+```
+Thanks for the quick response. Output as follows:
+
+> [root@myrocksdb mysql-5.6]# gcc --version
+gcc (GCC) 4.4.7 20120313 (Red Hat 4.4.7-17)
+Copyright (C) 2010 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+[root@myrocksdb mysql-5.6]# g++ --version
+g++ (GCC) 4.4.7 20120313 (Red Hat 4.4.7-17)
+Copyright (C) 2010 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+

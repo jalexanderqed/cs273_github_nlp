@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title> Smart Git </title>
+    <link rel="icon" type="image/ico" href="/icon.ico"/>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script
+            src="https://code.jquery.com/jquery-3.1.1.min.js"
+            integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+            crossorigin="anonymous"></script>
+
+    <!-- Created stylesheet -->
+    <link rel="stylesheet" type="text/css" href="/stylesheets/style.css">
+
+    <!-- Google material design icons -->
+    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css">
+
+    <!-- Google font -->
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Tangerine">
+
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
+          integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+            crossorigin="anonymous"></script>
+</head>
+
+<body>
+<div id="wrapper">
+    <div id="inner_wrapper">
+        <!-- <div style="background-image:url(git.jpg); width:auto; height:auto"> -->
+        <div class="top">
+            <img id="top_image" src="git.jpg" alt="SMARTGIT" class="gitimage">
+        </div>
+
+        <div class="query">
+            <h2>Query or issue text:</h2>
+            <textarea id="query_area"></textarea>
+        </div>
+
+        <div>
+            <h2>Suggested Users</h2>
+            <table id="main_table" class="table table-striped">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>User Name</th>
+                    <th>Avatar</th>
+                    <th>Common Words</th>
+                </tr>
+                </thead>
+                <tbody id="list_table">
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var val;
+
+    $(document).ready(function () {
+        $('#query_area').bind('input propertychange', function () {
+            getUsers();
+        });
+        //document.getElementById("query_area").innerHTML = "test";
+        $('#query_area').trigger("input");
+    });
+
+    function getUsers() {
+        $.ajax({
+            url: "/api/users/search",
+            type: 'POST',
+            data: JSON.stringify({
+                query: $('#query_area').val()
+            }),
+            success: function (data) {
+                val = data; // debugging
+                var table = document.getElementById('list_table');
+                table.innerHTML = "";
+                for (var i = 0; i < data.users.length; i++) {
+                    table.appendChild(getUserRow(data.users[i], i));
+                }
+            }
+        });
+    }
+
+    function getUserRow(user, num) {
+        var row = document.createElement("tr");
+
+        var numData = document.createElement("th");
+        numData.setAttribute("scope", "row");
+        numData.innerHTML = num;
+        row.appendChild(numData);
+
+        var userData = document.createElement("td");
+        userData.innerHTML = "<a href='users/" + user.id + "'>" + user.id + "</a>";
+        row.appendChild(userData);
+
+        var avatarData = document.createElement("td");
+        avatarData.innerHTML = "<img src='" + user.avatar + "' class='avatar_image'>";
+        row.appendChild(avatarData);
+
+        var wordData = document.createElement("td");
+        wordData.innerHTML = user.keywords.slice(0, 10).join(", ");
+        row.appendChild(wordData);
+        return row;
+    }
+
+</script>
+</body>
+</html>

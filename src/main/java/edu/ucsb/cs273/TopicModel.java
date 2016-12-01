@@ -15,7 +15,7 @@ import java.io.*;
  * Created by john on 11/22/16.
  */
 
-public class TopicModel {
+public class TopicModel implements Serializable{
     private String directory;
     File modelLocation;
     File instancesLocation;
@@ -29,9 +29,9 @@ public class TopicModel {
         instancesLocation = instancesLoc;
     }
 
-    public TopicModel(File modelLoc, File instancesLoc){
-        modelLocation = modelLoc;
-        instancesLocation = instancesLoc;
+    public TopicModel(){
+        modelLocation = Main.modelSaveFile;
+        instancesLocation = Main.instancesSaveFile;
     }
 
     public void load() throws Exception{
@@ -117,6 +117,8 @@ public class TopicModel {
         model.estimate();
 
         model.write(modelLocation);
+        System.out.println("Saved model to " + modelLocation.getAbsolutePath());
         instances.save(instancesLocation);;
+        System.out.println("Saved instances to " + instancesLocation.getAbsolutePath());
     }
 }

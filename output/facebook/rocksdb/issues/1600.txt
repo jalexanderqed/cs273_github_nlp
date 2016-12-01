@@ -1,0 +1,96 @@
+Reduce number of comparisons in heap by caching which child node in the first level is smallest (left_child or right_child)
+So next time we can compare directly against the smallest child
+
+I see that the total number of calls to comparator drops significantly when using this optimization
+
+Before caching (~2mil key comparison for iterating the DB)
+```
+$ DEBUG_LEVEL=0 make db_bench -j64 && ./db_bench --benchmarks="readseq" --db="/dev/shm/heap_opt" --use_existing_db --disable_auto_compactions --cache_size=1000000000  --perf_level=2
+readseq      :       0.338 micros/op 2959201 ops/sec;  327.4 MB/s user_key_comparison_count = 2000008
+```
+After caching (~1mil key comparison for iterating the DB)
+```
+$ DEBUG_LEVEL=0 make db_bench -j64 && ./db_bench --benchmarks="readseq" --db="/dev/shm/heap_opt" --use_existing_db --disable_auto_compactions --cache_size=1000000000 --perf_level=2
+readseq      :       0.309 micros/op 3236801 ops/sec;  358.1 MB/s user_key_comparison_count = 1000011
+```
+
+It also improves read throughput
+
+Before caching
+```
+$ DEBUG_LEVEL=0 make db_bench -j64 && ./db_bench --benchmarks="readseq[X25-W5]" --db="/dev/shm/heap_opt" --use_existing_db --disable_auto_compactions --cache_size=1000000000
+Warming up benchmark by running 5 times
+readseq      :       0.323 micros/op 3097778 ops/sec;  342.7 MB/s
+readseq      :       0.172 micros/op 5814697 ops/sec;  643.3 MB/s
+readseq      :       0.166 micros/op 6024241 ops/sec;  666.4 MB/s
+readseq      :       0.161 micros/op 6201088 ops/sec;  686.0 MB/s
+readseq      :       0.161 micros/op 6225952 ops/sec;  688.8 MB/s
+Running benchmark for 25 times
+readseq      :       0.163 micros/op 6136851 ops/sec;  678.9 MB/s
+readseq      :       0.161 micros/op 6209406 ops/sec;  686.9 MB/s
+readseq      :       0.162 micros/op 6187735 ops/sec;  684.5 MB/s
+readseq      :       0.174 micros/op 5738255 ops/sec;  634.8 MB/s
+readseq      :       0.162 micros/op 6174669 ops/sec;  683.1 MB/s
+readseq      :       0.160 micros/op 6243561 ops/sec;  690.7 MB/s
+readseq      :       0.174 micros/op 5741022 ops/sec;  635.1 MB/s
+readseq      :       0.162 micros/op 6165418 ops/sec;  682.1 MB/s
+readseq      :       0.161 micros/op 6207478 ops/sec;  686.7 MB/s
+readseq      :       0.163 micros/op 6124673 ops/sec;  677.5 MB/s
+readseq      :       0.174 micros/op 5736773 ops/sec;  634.6 MB/s
+readseq      :       0.163 micros/op 6131809 ops/sec;  678.3 MB/s
+readseq      :       0.174 micros/op 5747027 ops/sec;  635.8 MB/s
+readseq      :       0.165 micros/op 6051730 ops/sec;  669.5 MB/s
+readseq      :       0.172 micros/op 5812196 ops/sec;  643.0 MB/s
+readseq      :       0.168 micros/op 5967406 ops/sec;  660.2 MB/s
+readseq      :       0.167 micros/op 5977214 ops/sec;  661.2 MB/s
+readseq      :       0.173 micros/op 5772139 ops/sec;  638.5 MB/s
+readseq      :       0.168 micros/op 5964558 ops/sec;  659.8 MB/s
+readseq      :       0.160 micros/op 6241262 ops/sec;  690.4 MB/s
+readseq      :       0.172 micros/op 5802012 ops/sec;  641.9 MB/s
+readseq      :       0.173 micros/op 5781315 ops/sec;  639.6 MB/s
+readseq      :       0.160 micros/op 6239821 ops/sec;  690.3 MB/s
+readseq      :       0.161 micros/op 6200742 ops/sec;  686.0 MB/s
+readseq      :       0.162 micros/op 6190608 ops/sec;  684.8 MB/s
+readseq [AVG    25 runs] : 6021827 ops/sec;  666.2 MB/sec
+readseq [MEDIAN 25 runs] : 6124673 ops/sec;  677.5 MB/sec 
+```
+
+After caching
+```
+$ DEBUG_LEVEL=0 make db_bench -j64 && ./db_bench --benchmarks="readseq[X25-W5]" --db="/dev/shm/heap_opt" --use_existing_db --disable_auto_compactions --cache_size=1000000000
+Warming up benchmark by running 5 times
+readseq      :       0.308 micros/op 3249517 ops/sec;  359.5 MB/s
+readseq      :       0.156 micros/op 6423185 ops/sec;  710.6 MB/s
+readseq      :       0.151 micros/op 6638166 ops/sec;  734.4 MB/s
+readseq      :       0.152 micros/op 6584839 ops/sec;  728.5 MB/s
+readseq      :       0.155 micros/op 6449116 ops/sec;  713.4 MB/s
+Running benchmark for 25 times
+readseq      :       0.152 micros/op 6576610 ops/sec;  727.5 MB/s
+readseq      :       0.153 micros/op 6529972 ops/sec;  722.4 MB/s
+readseq      :       0.153 micros/op 6538383 ops/sec;  723.3 MB/s
+readseq      :       0.153 micros/op 6542961 ops/sec;  723.8 MB/s
+readseq      :       0.150 micros/op 6658232 ops/sec;  736.6 MB/s
+readseq      :       0.152 micros/op 6574060 ops/sec;  727.3 MB/s
+readseq      :       0.150 micros/op 6652297 ops/sec;  735.9 MB/s
+readseq      :       0.151 micros/op 6633015 ops/sec;  733.8 MB/s
+readseq      :       0.151 micros/op 6635832 ops/sec;  734.1 MB/s
+readseq      :       0.152 micros/op 6578168 ops/sec;  727.7 MB/s
+readseq      :       0.154 micros/op 6510331 ops/sec;  720.2 MB/s
+readseq      :       0.148 micros/op 6736365 ops/sec;  745.2 MB/s
+readseq      :       0.152 micros/op 6575140 ops/sec;  727.4 MB/s
+readseq      :       0.153 micros/op 6518607 ops/sec;  721.1 MB/s
+readseq      :       0.150 micros/op 6671247 ops/sec;  738.0 MB/s
+readseq      :       0.160 micros/op 6246291 ops/sec;  691.0 MB/s
+readseq      :       0.152 micros/op 6573843 ops/sec;  727.2 MB/s
+readseq      :       0.151 micros/op 6606547 ops/sec;  730.9 MB/s
+readseq      :       0.153 micros/op 6533641 ops/sec;  722.8 MB/s
+readseq      :       0.149 micros/op 6706458 ops/sec;  741.9 MB/s
+readseq      :       0.150 micros/op 6683821 ops/sec;  739.4 MB/s
+readseq      :       0.154 micros/op 6505799 ops/sec;  719.7 MB/s
+readseq      :       0.151 micros/op 6628574 ops/sec;  733.3 MB/s
+readseq      :       0.151 micros/op 6633587 ops/sec;  733.8 MB/s
+readseq      :       0.150 micros/op 6650085 ops/sec;  735.7 MB/s
+readseq [AVG    25 runs] : 6587995 ops/sec;  728.8 MB/sec
+readseq [MEDIAN 25 runs] : 6578168 ops/sec;  727.7 MB/sec 
+```
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4256027).

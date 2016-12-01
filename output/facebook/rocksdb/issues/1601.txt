@@ -1,0 +1,4 @@
+Travis fail because it uses clang 3.6 which don't recognize 
+`__attribute__((__no_sanitize__("undefined")))`
+@IslamAbdelRahman updated the pull request - [view changes](https://github.com/facebook/rocksdb/pull/1601/files/6982f3b9ba91c526e7d573ea4b3fa5b77b609b9f..956caf56f63c28b8a27422f987f6d3367db40e33)
+@IslamAbdelRahman has imported this pull request.  If you are a Facebook employee, you can view this diff [on Phabricator](https://phabricator.intern.facebook.com/D4257175).

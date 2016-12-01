@@ -1,9 +1,11 @@
 package edu.ucsb.cs273;
 
+import java.io.Serializable;
+
 /**
  * Created by john on 11/30/16.
  */
-public class StringDoubleTuple implements Comparable{
+public class StringDoubleTuple implements Comparable, Serializable{
     public String str;
     public double val;
 
