@@ -1,7 +1,51 @@
 ## CS273: Data and Knowledge Base
 ### GitHub data - Jack Alexander and Harshitha Chidananda
 
-###Project Proposal: 
+### Operating the code:
+
+The project depends on Java, (specifically Java 8) and Maven. Please install these if you do not have them already.
+
+#### Training and running a topic model
+
+There are 3 steps to downloading data from a GitHub repository and trainging a model from it. Each requires an ID be passed for uniquely identifying the model. The provided data, which already has a model built for it, has ID 1. To start a prompt that will accept queries and print relevant users, run
+
+```
+./run.sh prompt 1
+```
+
+To start a server at http://localhost:4567/ run:
+
+
+```
+./run.sh serve 1
+```
+
+If you wish to train your own model with a new id `<id>`, run the following:
+
+
+```
+./run.sh get <id>   # Pull issue and user data from the GitHub repository
+./run.sh run <id>   # Builds and saves a topic model
+./run.sh score <id> # Assigns a topic distribution to each GitHub user based on the previously generated topic model.
+```
+
+You can then run the new model as described above with:
+
+```
+./run.sh prompt <id>
+```
+
+Or
+
+```
+./run.sh serve <id>
+```
+
+`<id>` can be any alphanumeric string.
+
+Each of the training steps will take significant time (up to several minutes) to run, so if the process isn't finishing, give it time.
+
+### Project Proposal: 
 
 **Problem Statement**
 The aim of the project is to use existing data in large well-developed GitHub repositories to build a knowledge base that can assist in the continued development of the project and in more quickly resolving issues posted to the repository. 
